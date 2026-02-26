@@ -15,6 +15,23 @@
   }
 }
 
+/* iOS keyboard stability fixes */
+@supports (-webkit-touch-callout: none) {
+  .page.messages-content {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+  }
+
+  .messagebar textarea {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    will-change: transform;
+  }
+}
+
 .messages-page.chat-thread-page {
   &.page-current .message-appear-from-bottom {
     animation-duration: 0ms; // optional: disable animation when not current
@@ -88,5 +105,40 @@
   .link-disabled {
     pointer-events: none;
     opacity: 0.6;
+  }
+}
+
+/* Prevent iOS keyboard jump when sending messages */
+.ios .messages-page.chat-thread-page .page-content {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Lock input focus to prevent keyboard dismissal */
+.android .messagebar textarea,
+.ios .messagebar textarea {
+  /* Prevent keyboard from dismissing */
+  user-select: none;
+  -webkit-user-select: none;
+  /* Improve tap response */
+  -webkit-tap-highlight-color: transparent;
+  tap-highlight-color: transparent;
+}
+
+/* Prevent form submission that could blur input */
+.messagebar form,
+.messagebar .messagebar-area {
+  pointer-events: none;
+}
+
+.messagebar .messagebar-area textarea,
+.messagebar .messagebar-area .messagebar-send-link {
+  pointer-events: auto;
+}
+
+/* Messagebar container stability */
+.messages-page.chat-thread-page {
+  .toolbar-inner {
+    align-items: center;
   }
 }

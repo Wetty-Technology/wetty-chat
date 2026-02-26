@@ -44,6 +44,13 @@ const MyApp = () => {
       theme: 'auto', // Automatic theme detection
       // App routes
       routes: routes,
+      // Keyboard handling - minimal intervention
+      input: {
+        scrollIntoViewCentered: false,
+      },
+      touch: {
+        fastClicks: false, // Disable fast clicks for better touch handling
+      },
   };
   const alertLoginData = () => {
     f7.dialog.alert('Username: ' + username + '<br>Password: ' + password, () => {
