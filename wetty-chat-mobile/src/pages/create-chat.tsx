@@ -11,8 +11,8 @@ export default function CreateChat() {
     setSubmitting(true);
     createChat({ name: trimmed })
       .then(() => {
-        const view = f7.views.viewChats ?? f7.views.main;
-        view?.router?.navigate('/chats/?refresh=1', { replaceState: true });
+        const view = f7.views.main;
+        view?.router?.navigate('/chats/', { reloadCurrent: true });
       })
       .catch((err: { message?: string }) => {
         f7.dialog.alert(err?.message ?? 'Failed to create chat');

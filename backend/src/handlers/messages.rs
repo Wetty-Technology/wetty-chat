@@ -49,7 +49,7 @@ pub struct MessageResponse {
     client_generated_id: String,
     sender_uid: i32,
     #[serde(with = "crate::serde_i64_string")]
-    gid: i64,
+    chat_id: i64,
     created_at: DateTime<Utc>,
     updated_at: Option<DateTime<Utc>>,
     deleted_at: Option<DateTime<Utc>>,
@@ -66,7 +66,7 @@ impl From<Message> for MessageResponse {
             reply_root_id: m.reply_root_id,
             client_generated_id: m.client_generated_id,
             sender_uid: m.sender_uid,
-            gid: m.gid,
+            chat_id: m.chat_id,
             created_at: m.created_at,
             updated_at: m.updated_at,
             deleted_at: m.deleted_at,
@@ -78,12 +78,12 @@ impl From<Message> for MessageResponse {
 /// Check if user is a member of the chat; return 403 if not.
 fn check_membership(
     conn: &mut diesel::r2d2::PooledConnection<diesel::r2d2::ConnectionManager<diesel::PgConnection>>,
-    gid: i64,
+    chat_id: i64,
     uid: i32,
 ) -> Result<(), (StatusCode, &'static str)> {
     use crate::schema::group_membership::dsl;
     let exists = group_membership::table
-        .filter(dsl::gid.eq(gid).and(dsl::uid.eq(uid)))
+        .filter(dsl::chat_id.eq(chat_id).and(dsl::uid.eq(uid)))
         .count()
         .get_result::<i64>(conn)
         .map_err(|e| {
@@ -119,13 +119,13 @@ pub async fn get_messages(
     use crate::schema::messages::dsl;
     let rows: Vec<Message> = match q.before {
         None => messages::table
-            .filter(dsl::gid.eq(chat_id))
+            .filter(dsl::chat_id.eq(chat_id))
             .order(dsl::id.desc())
             .limit(max + 1)
             .select(Message::as_select())
             .load(conn),
         Some(before) => messages::table
-            .filter(dsl::gid.eq(chat_id).and(dsl::id.lt(before)))
+            .filter(dsl::chat_id.eq(chat_id).and(dsl::id.lt(before)))
             .order(dsl::id.desc())
             .limit(max + 1)
             .select(Message::as_select())
@@ -193,7 +193,7 @@ pub async fn post_message(
         created_at: now,
         client_generated_id: body.client_generated_id,
         sender_uid: uid,
-        gid: chat_id,
+        chat_id,
         updated_at: None,
         deleted_at: None,
         has_attachments: false,
@@ -215,7 +215,7 @@ pub async fn post_message(
         reply_root_id: new_msg.reply_root_id,
         client_generated_id: new_msg.client_generated_id,
         sender_uid: new_msg.sender_uid,
-        gid: new_msg.gid,
+        chat_id: new_msg.chat_id,
         created_at: new_msg.created_at,
         updated_at: new_msg.updated_at,
         deleted_at: new_msg.deleted_at,
@@ -223,7 +223,7 @@ pub async fn post_message(
     };
 
     let member_uids: Vec<i32> = group_membership::table
-        .filter(gm_dsl::gid.eq(chat_id))
+        .filter(gm_dsl::chat_id.eq(chat_id))
         .select(group_membership::uid)
         .load(conn)
         .map_err(|e| {

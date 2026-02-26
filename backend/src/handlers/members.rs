@@ -24,12 +24,12 @@ pub struct MemberResponse {
 /// Check if user is a member of the chat; return 403 if not.
 fn check_membership(
     conn: &mut diesel::r2d2::PooledConnection<diesel::r2d2::ConnectionManager<diesel::PgConnection>>,
-    gid: i64,
+    chat_id: i64,
     uid: i32,
 ) -> Result<(), (StatusCode, &'static str)> {
     use crate::schema::group_membership::dsl;
     let exists = group_membership::table
-        .filter(dsl::gid.eq(gid).and(dsl::uid.eq(uid)))
+        .filter(dsl::chat_id.eq(chat_id).and(dsl::uid.eq(uid)))
         .count()
         .get_result::<i64>(conn)
         .map_err(|e| {
@@ -56,7 +56,7 @@ pub async fn get_members(
     check_membership(conn, chat_id, uid)?;
 
     let rows: Vec<(i32, String, DateTime<Utc>, String)> = group_membership::table
-        .filter(crate::schema::group_membership::gid.eq(chat_id))
+        .filter(crate::schema::group_membership::chat_id.eq(chat_id))
         .inner_join(users::table)
         .select((
             crate::schema::group_membership::uid,

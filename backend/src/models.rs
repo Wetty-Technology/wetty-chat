@@ -13,24 +13,28 @@ pub struct User {
 #[derive(Debug, Clone, Queryable, Selectable, Serialize, Insertable)]
 #[diesel(table_name = schema::groups)]
 pub struct Group {
-    pub gid: i64,
-    pub name: Option<String>,
+    pub id: i64,
+    pub name: String,
+    pub description: Option<String>,
+    pub avatar: Option<String>,
     pub created_at: DateTime<Utc>,
 }
 
-/// For inserting a group. Set `gid` and `created_at` (e.g. `Utc::now()`) when not relying on DB defaults.
+/// For inserting a group. Set `id` and `created_at` (e.g. `Utc::now()`) when not relying on DB defaults.
 #[derive(Debug, Clone, Insertable)]
 #[diesel(table_name = schema::groups)]
 pub struct NewGroup {
-    pub gid: i64,
-    pub name: Option<String>,
+    pub id: i64,
+    pub name: String,
+    pub description: Option<String>,
+    pub avatar: Option<String>,
     pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize, Insertable)]
 #[diesel(table_name = schema::group_membership)]
 pub struct GroupMembership {
-    pub gid: i64,
+    pub chat_id: i64,
     pub uid: i32,
     pub role: String,
     pub joined_at: DateTime<Utc>,
@@ -40,7 +44,7 @@ pub struct GroupMembership {
 #[derive(Debug, Clone, Insertable)]
 #[diesel(table_name = schema::group_membership)]
 pub struct NewGroupMembership {
-    pub gid: i64,
+    pub chat_id: i64,
     pub uid: i32,
     pub role: String,
     pub joined_at: DateTime<Utc>,
@@ -54,10 +58,10 @@ pub struct Message {
     pub message_type: String,
     pub reply_to_id: Option<i64>,
     pub reply_root_id: Option<i64>,
-    pub created_at: DateTime<Utc>,
     pub client_generated_id: String,
     pub sender_uid: i32,
-    pub gid: i64,
+    pub chat_id: i64,
+    pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
     pub deleted_at: Option<DateTime<Utc>>,
     pub has_attachments: bool,
@@ -71,10 +75,10 @@ pub struct NewMessage {
     pub message_type: String,
     pub reply_to_id: Option<i64>,
     pub reply_root_id: Option<i64>,
-    pub created_at: DateTime<Utc>,
     pub client_generated_id: String,
     pub sender_uid: i32,
-    pub gid: i64,
+    pub chat_id: i64,
+    pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
     pub deleted_at: Option<DateTime<Utc>>,
     pub has_attachments: bool,
@@ -83,7 +87,7 @@ pub struct NewMessage {
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = schema::attachments)]
 pub struct Attachment {
-    pub attachment_id: i64,
+    pub id: i64,
     pub message_id: i64,
     pub kind: String,
     pub external_reference: String,
@@ -95,7 +99,7 @@ pub struct Attachment {
 #[derive(Debug, Clone, Insertable)]
 #[diesel(table_name = schema::attachments)]
 pub struct NewAttachment {
-    pub attachment_id: i64,
+    pub id: i64,
     pub message_id: i64,
     pub kind: String,
     pub external_reference: String,

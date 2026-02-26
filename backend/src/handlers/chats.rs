@@ -16,12 +16,12 @@ use crate::utils::auth::CurrentUid;
 use crate::utils::ids;
 use crate::{AppState, MAX_CHATS_LIMIT};
 
-/// Row type for GET /chats raw query (gid, name, created_at, last_message_at).
+/// Row type for GET /chats raw query (id, name, created_at, last_message_at).
 #[derive(diesel::QueryableByName)]
 struct ChatListRow {
     #[diesel(sql_type = BigInt)]
-    #[diesel(column_name = gid)]
-    gid: i64,
+    #[diesel(column_name = id)]
+    id: i64,
     #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Varchar>)]
     #[diesel(column_name = name)]
     name: Option<String>,
@@ -33,15 +33,15 @@ struct ChatListRow {
     last_message_at: Option<DateTime<Utc>>,
 }
 
-/// Row type for cursor lookup (last_message_at, gid).
+/// Row type for cursor lookup (last_message_at, id).
 #[derive(diesel::QueryableByName)]
 struct CursorRow {
     #[diesel(sql_type = diesel::sql_types::Nullable<Timestamptz>)]
     #[diesel(column_name = last_message_at)]
     last_message_at: Option<DateTime<Utc>>,
     #[diesel(sql_type = BigInt)]
-    #[diesel(column_name = gid)]
-    gid: i64,
+    #[diesel(column_name = id)]
+    id: i64,
 }
 
 #[derive(serde::Deserialize)]
@@ -85,15 +85,15 @@ pub async fn get_chats(
         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database connection failed"))?;
 
     // Query chats the user is a member of, with last_message_at from messages.
-    // Cursor: when `after` (gid) is set, we return chats that sort before that chat.
+    // Cursor: when `after` (chat id) is set, we return chats that sort before that chat.
     let rows: Vec<ChatListRow> = match q.after {
         None => sql_query(
             r#"
-            SELECT g.gid, g.name, g.created_at,
-                   (SELECT max(m.created_at) FROM messages m WHERE m.gid = g.gid) AS last_message_at
+            SELECT g.id, g.name, g.created_at,
+                   (SELECT max(m.created_at) FROM messages m WHERE m.chat_id = g.id) AS last_message_at
             FROM groups g
-            INNER JOIN group_membership gm ON gm.gid = g.gid AND gm.uid = $1
-            ORDER BY last_message_at DESC NULLS LAST, g.gid DESC
+            INNER JOIN group_membership gm ON gm.chat_id = g.id AND gm.uid = $1
+            ORDER BY last_message_at DESC NULLS LAST, g.id DESC
             LIMIT $2
             "#,
         )
@@ -104,18 +104,18 @@ pub async fn get_chats(
             tracing::error!("list chats: {:?}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, "Failed to list chats")
         })?,
-        Some(after_gid) => {
-            // Get cursor row's last_message_at so we can filter (last_message_at, gid) < (cursor_at, cursor_gid)
+        Some(after_id) => {
+            // Get cursor row's last_message_at so we can filter (last_message_at, id) < (cursor_at, cursor_id)
             let cursor: Option<CursorRow> = sql_query(
                 r#"
-                SELECT (SELECT max(m.created_at) FROM messages m WHERE m.gid = g.gid) AS last_message_at, g.gid
+                SELECT (SELECT max(m.created_at) FROM messages m WHERE m.chat_id = g.id) AS last_message_at, g.id
                 FROM groups g
-                INNER JOIN group_membership gm ON gm.gid = g.gid AND gm.uid = $1 AND g.gid = $2
+                INNER JOIN group_membership gm ON gm.chat_id = g.id AND gm.uid = $1 AND g.id = $2
                 LIMIT 1
                 "#,
             )
             .bind::<diesel::sql_types::Integer, _>(uid)
-            .bind::<diesel::sql_types::BigInt, _>(after_gid)
+            .bind::<diesel::sql_types::BigInt, _>(after_id)
             .load::<CursorRow>(conn)
             .map_err(|e| {
                 tracing::error!("list chats cursor: {:?}", e);
@@ -133,25 +133,25 @@ pub async fn get_chats(
                     }))
                 }
             };
-            let cursor_gid = cursor.unwrap().gid;
+            let cursor_id = cursor.unwrap().id;
 
             sql_query(
                 r#"
                 WITH ordered AS (
-                    SELECT g.gid, g.name, g.created_at,
-                           (SELECT max(m.created_at) FROM messages m WHERE m.gid = g.gid) AS last_message_at
+                    SELECT g.id, g.name, g.created_at,
+                           (SELECT max(m.created_at) FROM messages m WHERE m.chat_id = g.id) AS last_message_at
                     FROM groups g
-                    INNER JOIN group_membership gm ON gm.gid = g.gid AND gm.uid = $1
+                    INNER JOIN group_membership gm ON gm.chat_id = g.id AND gm.uid = $1
                 )
                 SELECT * FROM ordered
-                WHERE (COALESCE(last_message_at, '1970-01-01'::timestamptz), gid) < (COALESCE($2, '1970-01-01'::timestamptz), $3)
-                ORDER BY last_message_at DESC NULLS LAST, gid DESC
+                WHERE (COALESCE(last_message_at, '1970-01-01'::timestamptz), id) < (COALESCE($2, '1970-01-01'::timestamptz), $3)
+                ORDER BY last_message_at DESC NULLS LAST, id DESC
                 LIMIT $4
                 "#,
             )
             .bind::<diesel::sql_types::Integer, _>(uid)
             .bind::<Nullable<Timestamptz>, _>(cursor_at)
-            .bind::<BigInt, _>(cursor_gid)
+            .bind::<BigInt, _>(cursor_id)
             .bind::<BigInt, _>(limit + 1)
             .load(conn)
             .map_err(|e| {
@@ -166,7 +166,7 @@ pub async fn get_chats(
         .into_iter()
         .take(limit as usize)
         .map(|r| ChatListItem {
-            id: r.gid,
+            id: r.id,
             name: r.name,
             last_message_at: r.last_message_at,
         })
@@ -198,7 +198,7 @@ pub async fn post_chats(
     State(state): State<AppState>,
     Json(body): Json<CreateChatBody>,
 ) -> Result<impl IntoResponse, (StatusCode, &'static str)> {
-    let gid = ids::next_gid(state.id_gen.as_ref())
+    let id = ids::next_gid(state.id_gen.as_ref())
         .await
         .map_err(|e| {
             tracing::error!("ferroid next_gid: {:?}", e);
@@ -206,7 +206,10 @@ pub async fn post_chats(
         })?;
 
     let now = Utc::now();
-    let name = body.name.filter(|s| !s.trim().is_empty());
+    let name = body
+        .name
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or_else(|| String::new());
 
     let conn = &mut state
         .db
@@ -215,8 +218,10 @@ pub async fn post_chats(
 
     diesel::insert_into(groups::table)
         .values(&NewGroup {
-            gid,
+            id,
             name: name.clone(),
+            description: None,
+            avatar: None,
             created_at: now,
         })
         .execute(conn)
@@ -227,7 +232,7 @@ pub async fn post_chats(
 
     diesel::insert_into(group_membership::table)
         .values(&NewGroupMembership {
-            gid,
+            chat_id: id,
             uid,
             role: "member".to_string(),
             joined_at: now,
@@ -241,8 +246,8 @@ pub async fn post_chats(
     Ok((
         StatusCode::CREATED,
         Json(CreateChatResponse {
-            id: gid,
-            name,
+            id,
+            name: if name.is_empty() { None } else { Some(name) },
             created_at: now,
         }),
     ))

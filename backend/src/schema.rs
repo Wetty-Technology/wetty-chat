@@ -1,8 +1,8 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
-    attachments (attachment_id) {
-        attachment_id -> Int8,
+    attachments (id) {
+        id -> Int8,
         message_id -> Int8,
         #[max_length = 20]
         kind -> Varchar,
@@ -14,8 +14,8 @@ diesel::table! {
 }
 
 diesel::table! {
-    group_membership (gid, uid) {
-        gid -> Int8,
+    group_membership (chat_id, uid) {
+        chat_id -> Int8,
         uid -> Int4,
         #[max_length = 20]
         role -> Varchar,
@@ -24,10 +24,12 @@ diesel::table! {
 }
 
 diesel::table! {
-    groups (gid) {
-        gid -> Int8,
+    groups (id) {
+        id -> Int8,
         #[max_length = 255]
-        name -> Nullable<Varchar>,
+        name -> Varchar,
+        description -> Nullable<Text>,
+        avatar -> Nullable<Text>,
         created_at -> Timestamptz,
     }
 }
@@ -42,7 +44,7 @@ diesel::table! {
         reply_root_id -> Nullable<Int8>,
         client_generated_id -> Varchar,
         sender_uid -> Int4,
-        gid -> Int8,
+        chat_id -> Int8,
         created_at -> Timestamptz,
         updated_at -> Nullable<Timestamptz>,
         deleted_at -> Nullable<Timestamptz>,
@@ -59,10 +61,9 @@ diesel::table! {
 }
 
 diesel::joinable!(attachments -> messages (message_id));
-diesel::joinable!(group_membership -> groups (gid));
+diesel::joinable!(group_membership -> groups (chat_id));
 diesel::joinable!(group_membership -> users (uid));
-diesel::joinable!(messages -> groups (gid));
-diesel::joinable!(messages -> users (sender_uid));
+diesel::joinable!(messages -> groups (chat_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     attachments,
