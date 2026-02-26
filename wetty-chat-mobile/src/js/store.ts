@@ -1,4 +1,3 @@
-
 import { createStore } from 'framework7/lite';
 
 const store = createStore({
@@ -31,5 +30,5 @@ const store = createStore({
       state.products = [...state.products, product];
     },
   },
-})
+});
 export default store;

@@ -1,8 +1,9 @@
+import type { Router } from 'framework7/types';
 
-import NotFoundPage from '@/pages/404.jsx';
-import ChatsPage from '@/pages/chats.jsx';
+import NotFoundPage from '@/pages/404';
+import ChatsPage from '@/pages/chats';
 
-var routes = [
+const routes: Router.RouteParameters[] = [
   {
     path: '/',
     component: ChatsPage,

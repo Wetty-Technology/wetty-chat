@@ -11,9 +11,9 @@ import {
   Icon,
 } from 'framework7-react';
 import '@/css/chats.scss';
-import { getChats } from '@/api/chats.js';
+import { getChats, type ChatListItem } from '@/api/chats';
 
-function formatLastActivity(isoString) {
+function formatLastActivity(isoString: string | null): string {
   if (!isoString) return '';
   const date = new Date(isoString);
   return Intl.DateTimeFormat('en', {
@@ -23,15 +23,15 @@ function formatLastActivity(isoString) {
   }).format(date);
 }
 
-function chatDisplayName(chat) {
+function chatDisplayName(chat: ChatListItem): string {
   if (chat.name && chat.name.trim()) return chat.name;
   return `Chat ${chat.id}`;
 }
 
 export default function Chats() {
-  const [chats, setChats] = useState([]);
+  const [chats, setChats] = useState<ChatListItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -42,7 +42,7 @@ export default function Chats() {
           setError(null);
         }
       })
-      .catch((err) => {
+      .catch((err: Error) => {
         if (!cancelled) {
           setError(err.message || 'Failed to load chats');
           setChats([]);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 import {
   f7,
@@ -94,14 +94,14 @@ const MyApp = () => {
                 name="username"
                 placeholder="Your username"
                 value={username}
-                onInput={(e) => setUsername(e.target.value)}
+                onInput={(e) => setUsername((e.target as HTMLInputElement).value)}
               ></ListInput>
               <ListInput
                 type="password"
                 name="password"
                 placeholder="Your password"
                 value={password}
-                onInput={(e) => setPassword(e.target.value)}
+                onInput={(e) => setPassword((e.target as HTMLInputElement).value)}
               ></ListInput>
             </List>
             <List>

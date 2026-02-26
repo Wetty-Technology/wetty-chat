@@ -1,8 +1,12 @@
 import React from 'react';
 import { Page, Navbar, Block } from 'framework7-react';
 
-export default function ChatThread(props) {
-  const { id } = props.f7route?.params || {};
+interface Props {
+  f7route?: { params: Record<string, string> };
+}
+
+export default function ChatThread({ f7route }: Props) {
+  const { id } = f7route?.params || {};
   return (
     <Page>
       <Navbar title={`Chat ${id || '?'}`} backLink />
