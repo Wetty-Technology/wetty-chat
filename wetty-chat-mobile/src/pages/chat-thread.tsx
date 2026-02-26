@@ -292,19 +292,17 @@ export default function ChatThread({ f7route }: Props) {
   const displayMessages = messages;
   const isMessageFirst = (index: number): boolean => {
     if (index <= 0) return true;
-    return isSent(displayMessages[index]) !== isSent(displayMessages[index - 1]);
+    return displayMessages[index].sender_uid !== displayMessages[index - 1].sender_uid;
   };
   const isMessageLast = (index: number): boolean => {
     if (index >= displayMessages.length - 1) return true;
-    return isSent(displayMessages[index]) !== isSent(displayMessages[index + 1]);
+    return displayMessages[index].sender_uid !== displayMessages[index + 1].sender_uid;
   };
   const isSameAvatarAsPrevious = (index: number): boolean => {
     if (index <= 0) return false;
     const prev = displayMessages[index - 1];
     const curr = displayMessages[index];
-    if (isSent(curr) && isSent(prev)) return true;
-    if (!isSent(curr) && !isSent(prev) && prev.sender_uid === curr.sender_uid) return true;
-    return false;
+    return curr.sender_uid === prev.sender_uid;
   };
 
   return (
@@ -361,7 +359,7 @@ export default function ChatThread({ f7route }: Props) {
                 last={isMessageLast(index)}
                 tail={isMessageLast(index)}
                 sameAvatar={isSameAvatarAsPrevious(index)}
-                avatar={messageAvatarUrl(message)}
+                avatar={isSent(message) ? undefined : messageAvatarUrl(message)}
                 text={message.deleted_at ? '[Deleted]' : (message.message ?? '')}
                 className="message-appear-from-bottom"
               >
