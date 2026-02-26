@@ -45,3 +45,22 @@ export function sendMessage(
 ): Promise<AxiosResponse<MessageResponse>> {
   return apiClient.post(`/chats/${chatId}/messages`, body);
 }
+
+export interface UpdateMessageBody {
+  message: string;
+}
+
+export function updateMessage(
+  chatId: string | number,
+  messageId: string,
+  body: UpdateMessageBody
+): Promise<AxiosResponse<MessageResponse>> {
+  return apiClient.patch(`/chats/${chatId}/messages/${messageId}`, body);
+}
+
+export function deleteMessage(
+  chatId: string | number,
+  messageId: string
+): Promise<AxiosResponse<void>> {
+  return apiClient.delete(`/chats/${chatId}/messages/${messageId}`);
+}
