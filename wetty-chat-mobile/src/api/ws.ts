@@ -1,10 +1,12 @@
 /**
  * WebSocket client: connects to /_api/ws?uid=, sends JSON ping every 10s, handles pong and message delivery.
- * Dispatches incoming messages to the store (add or confirm pending). Same host as REST so Vite proxy works in dev.
+ * Dispatches incoming messages to the Redux store (add or confirm pending). Same host as REST so Vite proxy works in dev.
  */
 
 import { getCurrentUserId } from '@/js/current-user';
-import store from '@/js/store';
+import store from '@/store/index';
+import { selectMessagesForChat, addMessage, confirmPendingMessage } from '@/store/messagesSlice';
+import { setWsConnected } from '@/store/connectionSlice';
 import type { MessageResponse } from '@/api/messages';
 
 const WS_PATH = '/_api/ws';
@@ -77,18 +79,19 @@ function handleWsMessage(payload: unknown): void {
   const message = normalizePayload(payload);
   if (!message) return;
   const chatId = message.gid;
-  const list = store.state.messagesByChat[chatId] ?? [];
+  const state = store.getState();
+  const list = selectMessagesForChat(state, chatId);
   const pending = list.find((m: MessageResponse) => m.client_generated_id === message.client_generated_id && m.id === '0');
   if (pending) {
-    store.dispatch('confirmPendingMessage', {
+    store.dispatch(confirmPendingMessage({
       chatId,
       clientGeneratedId: message.client_generated_id,
       message,
-    });
+    }));
   } else {
     const exists = list.some((m: MessageResponse) => m.id === message.id || m.client_generated_id === message.client_generated_id);
     if (!exists) {
-      store.dispatch('addMessage', { chatId, message });
+      store.dispatch(addMessage({ chatId, message }));
     }
   }
 }
@@ -113,7 +116,7 @@ export function initWebSocket(): void {
 
   socket.onopen = () => {
     clearReconnectTimeout();
-    store.dispatch('setWsConnected', true);
+    store.dispatch(setWsConnected(true));
     console.log('ws opened');
     pingIntervalId = setInterval(() => {
       if (socket.readyState === WebSocket.OPEN) {
@@ -139,7 +142,7 @@ export function initWebSocket(): void {
   function markDisconnected(): void {
     if (ws !== socket) return;
     clearPingInterval();
-    store.dispatch('setWsConnected', false);
+    store.dispatch(setWsConnected(false));
     ws = null;
     scheduleReconnect();
   }

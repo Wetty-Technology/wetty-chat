@@ -18,6 +18,7 @@
     "last 5 Firefox versions"
   ],
   "dependencies": {
+    "@reduxjs/toolkit": "^2.11.2",
     "axios": "^1.13.5",
     "dom7": "^4.0.6",
     "framework7": "^9.0.3",
@@ -27,6 +28,7 @@
     "prop-types": "^15.8.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "react-redux": "^9.2.0",
     "skeleton-elements": "^4.0.1",
     "swiper": "^12.1.2"
   },

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
 
 import {
   f7,
@@ -28,28 +29,18 @@ import {
 
 import { initWebSocket } from '@/api/ws';
 import routes from '@/js/routes';
-import store from '@/js/store';
+import type { RootState } from '@/store/index';
 
 const MyApp = () => {
   // Login screen demo data
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [wsConnected, setWsConnected] = useState(store.state.wsConnected);
+  const wsConnected = useSelector((state: RootState) => state.connection.wsConnected);
 
-  useEffect(() => {
-    const handler = (e: CustomEvent<{ connected: boolean }>) => {
-      setWsConnected(e.detail.connected);
-    };
-    window.addEventListener('ws-connection-change', handler as EventListener);
-    return () => window.removeEventListener('ws-connection-change', handler as EventListener);
-  }, []);
-
-  // Framework7 Parameters
+  // Framework7 Parameters (store omitted; using Redux)
   const f7params = {
     name: 'wetty-chat-mobile', // App name
       theme: 'auto', // Automatic theme detection
-      // App store
-      store: store,
       // App routes
       routes: routes,
   };

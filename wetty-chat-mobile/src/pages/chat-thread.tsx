@@ -10,6 +10,7 @@ import {
   Messagebar,
 } from 'framework7-react';
 import type { Messagebar as F7MessagebarInstance } from 'framework7/types';
+import { useDispatch, useSelector } from 'react-redux';
 import '@/css/chat-thread.scss';
 import {
   getMessages,
@@ -17,7 +18,17 @@ import {
   type MessageResponse,
 } from '@/api/messages';
 import { getCurrentUserId } from '@/js/current-user';
-import store from '@/js/store';
+import {
+  selectMessagesForChat,
+  selectNextCursorForChat,
+  setMessagesForChat,
+  setNextCursorForChat,
+  addMessage,
+  prependMessages,
+  confirmPendingMessage,
+} from '@/store/messagesSlice';
+import store from '@/store/index';
+import type { RootState } from '@/store/index';
 
 interface Props {
   f7route?: {
@@ -47,14 +58,6 @@ function messageAvatarUrl(message: MessageResponse): string {
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&size=64&background=random`;
 }
 
-function getMessagesFromStore(chatId: string): MessageResponse[] {
-  return store.state.messagesByChat[chatId] ?? [];
-}
-
-function getNextCursorFromStore(chatId: string): string | null {
-  return store.state.nextCursorByChat[chatId] ?? null;
-}
-
 export default function ChatThread({ f7route }: Props) {
   const { id } = f7route?.params || {};
   const chatId = id ? String(id) : '';
@@ -63,23 +66,19 @@ export default function ChatThread({ f7route }: Props) {
     f7route?.route?.context?.chatName ??
     (id ? `Chat ${id}` : 'Chat');
 
+  const dispatch = useDispatch();
+  const messages = useSelector((state: RootState) => selectMessagesForChat(state, chatId));
+  const nextCursor = useSelector((state: RootState) => selectNextCursorForChat(state, chatId));
+
   type MessagebarRefValue = { el: HTMLElement | null; f7Messagebar: () => F7MessagebarInstance.Messagebar };
   const messagebarRef = useRef<MessagebarRefValue | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const wasAtBottomRef = useRef(true);
   const scrollContainerRef = useRef<HTMLElement | null>(null);
-  const [messages, setMessages] = useState<MessageResponse[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [messageText, setMessageText] = useState('');
   const [error, setError] = useState<string | null>(null);
-
-  const syncFromStore = useCallback(() => {
-    if (!chatId) return;
-    setMessages(getMessagesFromStore(chatId));
-    setNextCursor(getNextCursorFromStore(chatId));
-  }, [chatId]);
 
   const scrollToBottom = useCallback(() => {
     const endEl = messagesEndRef.current;
@@ -134,19 +133,11 @@ export default function ChatThread({ f7route }: Props) {
     };
   }, [messages.length, loading, error]);
 
+  // When Redux messages for this chat change and user was at bottom, scroll to bottom.
   useEffect(() => {
-    if (!chatId) return;
-    const handler = (e: CustomEvent<{ chatId: string }>) => {
-      if (e.detail?.chatId !== chatId) return;
-      const shouldScroll = wasAtBottomRef.current;
-      syncFromStore();
-      if (shouldScroll) {
-        requestAnimationFrame(() => scrollToBottom());
-      }
-    };
-    window.addEventListener('store-messages-changed', handler as EventListener);
-    return () => window.removeEventListener('store-messages-changed', handler as EventListener);
-  }, [chatId, syncFromStore, scrollToBottom]);
+    if (!chatId || !wasAtBottomRef.current) return;
+    requestAnimationFrame(() => scrollToBottom());
+  }, [chatId, messages, scrollToBottom]);
 
   // Initial load: fetch from API and write to store.
   useEffect(() => {
@@ -157,21 +148,18 @@ export default function ChatThread({ f7route }: Props) {
       .then((res) => {
         const list = res.data.messages ?? [];
         const ordered = [...list].reverse();
-        store.dispatch('setMessagesForChat', { chatId, messages: ordered });
-        store.dispatch('setNextCursorForChat', { chatId, cursor: res.data.next_cursor ?? null });
-        syncFromStore();
+        dispatch(setMessagesForChat({ chatId, messages: ordered }));
+        dispatch(setNextCursorForChat({ chatId, cursor: res.data.next_cursor ?? null }));
         requestAnimationFrame(() => scrollToBottom());
       })
       .catch((err: Error) => {
         setError(err.message || 'Failed to load messages');
-        store.dispatch('setMessagesForChat', { chatId, messages: [] });
-        store.dispatch('setNextCursorForChat', { chatId, cursor: null });
-        setMessages([]);
-        setNextCursor(null);
+        dispatch(setMessagesForChat({ chatId, messages: [] }));
+        dispatch(setNextCursorForChat({ chatId, cursor: null }));
         f7.toast.create({ text: err.message || 'Failed to load messages', closeTimeout: 3000 }).open();
       })
       .finally(() => setLoading(false));
-  }, [chatId, syncFromStore, scrollToBottom]);
+  }, [chatId, dispatch, scrollToBottom]);
 
   const loadMore = () => {
     if (!chatId || nextCursor == null || loadingMore) return;
@@ -180,9 +168,8 @@ export default function ChatThread({ f7route }: Props) {
       .then((res) => {
         const list = res.data.messages ?? [];
         const older = [...list].reverse();
-        store.dispatch('prependMessages', { chatId, messages: older });
-        store.dispatch('setNextCursorForChat', { chatId, cursor: res.data.next_cursor ?? null });
-        syncFromStore();
+        dispatch(prependMessages({ chatId, messages: older }));
+        dispatch(setNextCursorForChat({ chatId, cursor: res.data.next_cursor ?? null }));
       })
       .catch((err: Error) => {
         f7.toast.create({ text: err.message || 'Failed to load more', closeTimeout: 3000 }).open();
@@ -209,8 +196,7 @@ export default function ChatThread({ f7route }: Props) {
       deleted_at: null,
       has_attachments: false,
     };
-    store.dispatch('addMessage', { chatId, message: optimistic });
-    syncFromStore();
+    dispatch(addMessage({ chatId, message: optimistic }));
     requestAnimationFrame(() => scrollToBottom());
 
     sendMessage(chatId, {
@@ -221,26 +207,28 @@ export default function ChatThread({ f7route }: Props) {
       .then((res) => {
         const postResponse = res.data;
         setTimeout(() => {
-          const current = getMessagesFromStore(chatId);
+          const state = store.getState();
+          const current = selectMessagesForChat(state, chatId);
           const stillPending = current.find(
             (m) => m.client_generated_id === clientGeneratedId && m.id === '0'
           );
           if (stillPending) {
-            store.dispatch('confirmPendingMessage', {
+            dispatch(confirmPendingMessage({
               chatId,
               clientGeneratedId,
               message: postResponse,
-            });
+            }));
           }
         }, 15000);
       })
       .catch((err: Error) => {
         f7.toast.create({ text: err.message || 'Failed to send', closeTimeout: 3000 }).open();
-        const current = getMessagesFromStore(chatId).filter(
+        const state = store.getState();
+        const currentMessages = selectMessagesForChat(state, chatId);
+        const current = currentMessages.filter(
           (m) => m.client_generated_id !== clientGeneratedId
         );
-        store.dispatch('setMessagesForChat', { chatId, messages: current });
-        syncFromStore();
+        dispatch(setMessagesForChat({ chatId, messages: current }));
         setMessageText(text);
       });
     setTimeout(() => {
