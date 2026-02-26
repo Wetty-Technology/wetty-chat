@@ -10,7 +10,7 @@ import {
   SwipeoutButton,
   Icon,
 } from 'framework7-react';
-import '@/css/chats.scss';
+import './chats.scss';
 import { getChats, type ChatListItem } from '@/api/chats';
 
 function formatLastActivity(isoString: string | null): string {

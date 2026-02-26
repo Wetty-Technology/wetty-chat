@@ -30,6 +30,7 @@ import {
 import { initWebSocket } from '@/api/ws';
 import routes from '@/js/routes';
 import type { RootState } from '@/store/index';
+import './app.scss';
 
 const MyApp = () => {
   // Login screen demo data

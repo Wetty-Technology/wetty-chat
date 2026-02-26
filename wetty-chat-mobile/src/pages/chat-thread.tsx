@@ -11,7 +11,7 @@ import {
 } from 'framework7-react';
 import type { Messagebar as F7MessagebarInstance } from 'framework7/types';
 import { useDispatch, useSelector } from 'react-redux';
-import '@/css/chat-thread.scss';
+import './chat-thread.scss';
 import {
   getMessages,
   sendMessage,

@@ -13,8 +13,7 @@ import Framework7React from 'framework7-react';
 import 'framework7/css/bundle';
 
 // Import Icons and App Custom Styles
-import '../css/icons.css';
-import '../css/app.scss';
+import '../fonts/icons.css';
 
 // Import App Component and Redux store
 import App from '../components/app';
