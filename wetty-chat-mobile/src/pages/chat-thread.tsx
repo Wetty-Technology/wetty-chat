@@ -182,11 +182,16 @@ export default function ChatThread({ f7route }: Props) {
       .finally(() => setLoadingMore(false));
   };
 
-  const handleSend = () => {
+  const handleSend = (e?: React.BaseSyntheticEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+
     const text = messageText.trim();
     if (!text || !chatId) return;
+
     const clientGeneratedId = generateClientId();
     setMessageText('');
+
     const optimistic: MessageResponse = {
       id: '0',
       message: text,
@@ -245,10 +250,6 @@ export default function ChatThread({ f7route }: Props) {
         dispatch(setMessagesForChat({ chatId, messages: current }));
         setMessageText(text);
       });
-    setTimeout(() => {
-      const mb = messagebarRef.current?.f7Messagebar?.();
-      if (typeof mb?.focus === 'function') mb.focus();
-    }, 0);
   };
 
   const handleEdit = (message: MessageResponse) => {
@@ -436,15 +437,17 @@ export default function ChatThread({ f7route }: Props) {
         placeholder="Message"
         value={messageText}
         onInput={(e) => setMessageText((e.target as HTMLInputElement)?.value ?? '')}
-        onSubmit={handleSend}
       >
         <button
           type="button"
           slot="send-link"
           className={`messagebar-send-link ${messageText.trim().length === 0 ? 'messagebar-send-link--disabled' : ''}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            handleSend();
+          onClick={handleSend}
+          onTouchEnd={(e) => {
+            if (messageText.trim()) {
+              e.preventDefault();
+              handleSend(e);
+            }
           }}
           aria-label="Send message"
         >
