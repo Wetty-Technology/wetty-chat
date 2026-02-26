@@ -239,3 +239,158 @@ pub async fn post_message(
 
     Ok((StatusCode::CREATED, Json(response)))
 }
+
+#[derive(serde::Deserialize)]
+pub struct MessageIdPath {
+    chat_id: i64,
+    #[serde(deserialize_with = "crate::serde_i64_string::deserialize")]
+    message_id: i64,
+}
+
+#[derive(serde::Deserialize)]
+pub struct UpdateMessageBody {
+    message: String,
+}
+
+/// PATCH /chats/:chat_id/messages/:message_id — Edit a message.
+pub async fn patch_message(
+    CurrentUid(uid): CurrentUid,
+    State(state): State<AppState>,
+    Path(MessageIdPath { chat_id, message_id }): Path<MessageIdPath>,
+    Json(body): Json<UpdateMessageBody>,
+) -> Result<Json<MessageResponse>, (StatusCode, &'static str)> {
+    let conn = &mut state
+        .db
+        .get()
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database connection failed"))?;
+
+    check_membership(conn, chat_id, uid)?;
+
+    // Verify message exists and belongs to the user
+    use crate::schema::messages::dsl;
+    let message: Message = messages::table
+        .filter(dsl::id.eq(message_id).and(dsl::chat_id.eq(chat_id)))
+        .select(Message::as_select())
+        .first(conn)
+        .map_err(|_| (StatusCode::NOT_FOUND, "Message not found"))?;
+
+    if message.sender_uid != uid {
+        return Err((StatusCode::FORBIDDEN, "You can only edit your own messages"));
+    }
+
+    if message.deleted_at.is_some() {
+        return Err((StatusCode::BAD_REQUEST, "Cannot edit deleted message"));
+    }
+
+    if body.message.trim().is_empty() {
+        return Err((StatusCode::BAD_REQUEST, "Message cannot be empty"));
+    }
+
+    // Update message
+    let now = Utc::now();
+    diesel::update(messages::table.filter(dsl::id.eq(message_id)))
+        .set((dsl::message.eq(&body.message), dsl::updated_at.eq(Some(now))))
+        .execute(conn)
+        .map_err(|e| {
+            tracing::error!("update message: {:?}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update message")
+        })?;
+
+    let updated_message: Message = messages::table
+        .filter(dsl::id.eq(message_id))
+        .select(Message::as_select())
+        .first(conn)
+        .map_err(|e| {
+            tracing::error!("fetch updated message: {:?}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to fetch updated message")
+        })?;
+
+    let response = MessageResponse::from(updated_message);
+
+    // Broadcast update to all members
+    let member_uids: Vec<i32> = group_membership::table
+        .filter(gm_dsl::chat_id.eq(chat_id))
+        .select(group_membership::uid)
+        .load(conn)
+        .map_err(|e| {
+            tracing::error!("list members for broadcast: {:?}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
+        })?;
+    if let Ok(ws_json) = serde_json::to_string(&serde_json::json!({
+        "type": "message_updated",
+        "payload": &response
+    })) {
+        state.ws_registry.broadcast_to_uids(&member_uids, &ws_json);
+    }
+
+    Ok(Json(response))
+}
+
+/// DELETE /chats/:chat_id/messages/:message_id — Delete a message (soft delete).
+pub async fn delete_message(
+    CurrentUid(uid): CurrentUid,
+    State(state): State<AppState>,
+    Path(MessageIdPath { chat_id, message_id }): Path<MessageIdPath>,
+) -> Result<StatusCode, (StatusCode, &'static str)> {
+    let conn = &mut state
+        .db
+        .get()
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database connection failed"))?;
+
+    check_membership(conn, chat_id, uid)?;
+
+    // Verify message exists and belongs to the user
+    use crate::schema::messages::dsl;
+    let message: Message = messages::table
+        .filter(dsl::id.eq(message_id).and(dsl::chat_id.eq(chat_id)))
+        .select(Message::as_select())
+        .first(conn)
+        .map_err(|_| (StatusCode::NOT_FOUND, "Message not found"))?;
+
+    if message.sender_uid != uid {
+        return Err((StatusCode::FORBIDDEN, "You can only delete your own messages"));
+    }
+
+    if message.deleted_at.is_some() {
+        return Err((StatusCode::GONE, "Message already deleted"));
+    }
+
+    // Soft delete message
+    let now = Utc::now();
+    diesel::update(messages::table.filter(dsl::id.eq(message_id)))
+        .set(dsl::deleted_at.eq(Some(now)))
+        .execute(conn)
+        .map_err(|e| {
+            tracing::error!("delete message: {:?}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to delete message")
+        })?;
+
+    let deleted_message: Message = messages::table
+        .filter(dsl::id.eq(message_id))
+        .select(Message::as_select())
+        .first(conn)
+        .map_err(|e| {
+            tracing::error!("fetch deleted message: {:?}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to fetch deleted message")
+        })?;
+
+    let response = MessageResponse::from(deleted_message);
+
+    // Broadcast deletion to all members
+    let member_uids: Vec<i32> = group_membership::table
+        .filter(gm_dsl::chat_id.eq(chat_id))
+        .select(group_membership::uid)
+        .load(conn)
+        .map_err(|e| {
+            tracing::error!("list members for broadcast: {:?}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
+        })?;
+    if let Ok(ws_json) = serde_json::to_string(&serde_json::json!({
+        "type": "message_deleted",
+        "payload": &response
+    })) {
+        state.ws_registry.broadcast_to_uids(&member_uids, &ws_json);
+    }
+
+    Ok(StatusCode::NO_CONTENT)
+}

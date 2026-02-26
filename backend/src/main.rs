@@ -1,6 +1,10 @@
 use axum::body::Body;
 use axum::http::Request;
-use axum::{extract::State, routing::{delete, get}, Router};
+use axum::{
+    extract::State,
+    routing::{delete, get, patch},
+    Router,
+};
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::PgConnection;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
@@ -95,6 +99,10 @@ async fn main() {
         .route(
             "/{chat_id}/messages",
             get(handlers::messages::get_messages).post(handlers::messages::post_message),
+        )
+        .route(
+            "/{chat_id}/messages/{message_id}",
+            patch(handlers::messages::patch_message).delete(handlers::messages::delete_message),
         )
         .route(
             "/{chat_id}/members",
