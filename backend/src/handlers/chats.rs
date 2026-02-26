@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Query, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     Json,
@@ -14,6 +14,7 @@ use crate::models::{NewGroup, NewGroupMembership};
 use crate::schema::{group_membership, groups};
 use crate::utils::auth::CurrentUid;
 use crate::utils::ids;
+use crate::handlers::members;
 use crate::{AppState, MAX_CHATS_LIMIT};
 
 /// Row type for GET /chats raw query (id, name, created_at, last_message_at).
@@ -65,6 +66,16 @@ pub struct ListChatsResponse {
     chats: Vec<ChatListItem>,
     #[serde(with = "crate::serde_i64_string::opt")]
     next_cursor: Option<i64>,
+}
+
+#[derive(Serialize)]
+pub struct ChatDetailResponse {
+    #[serde(with = "crate::serde_i64_string")]
+    id: i64,
+    name: Option<String>,
+    description: Option<String>,
+    avatar: Option<String>,
+    created_at: DateTime<Utc>,
 }
 
 /// GET /chats — List chats for the current user (cursor-based).
@@ -179,6 +190,42 @@ pub async fn get_chats(
     }))
 }
 
+/// GET /chats/:chat_id — Get a single group's metadata (caller must be a member).
+pub async fn get_chat(
+    CurrentUid(uid): CurrentUid,
+    State(state): State<AppState>,
+    Path(members::ChatIdPath { chat_id }): Path<members::ChatIdPath>,
+) -> Result<Json<ChatDetailResponse>, (StatusCode, &'static str)> {
+    let conn = &mut state
+        .db
+        .get()
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database connection failed"))?;
+
+    members::check_membership(conn, chat_id, uid)?;
+
+    let group: crate::models::Group = groups::table
+        .find(chat_id)
+        .get_result(conn)
+        .map_err(|e| {
+            use diesel::result::Error;
+            match e {
+                Error::NotFound => (StatusCode::NOT_FOUND, "Chat not found"),
+                _ => {
+                    tracing::error!("get chat: {:?}", e);
+                    (StatusCode::INTERNAL_SERVER_ERROR, "Failed to load chat")
+                }
+            }
+        })?;
+
+    Ok(Json(ChatDetailResponse {
+        id: group.id,
+        name: Some(group.name),
+        description: group.description,
+        avatar: group.avatar,
+        created_at: group.created_at,
+    }))
+}
+
 #[derive(serde::Deserialize)]
 pub struct CreateChatBody {
     name: Option<String>,
@@ -234,7 +281,7 @@ pub async fn post_chats(
         .values(&NewGroupMembership {
             chat_id: id,
             uid,
-            role: "member".to_string(),
+            role: "admin".to_string(),
             joined_at: now,
         })
         .execute(conn)

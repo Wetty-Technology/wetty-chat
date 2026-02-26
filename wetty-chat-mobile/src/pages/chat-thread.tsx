@@ -301,7 +301,11 @@ export default function ChatThread({ f7route }: Props) {
       onPageBeforeIn={handlePageBeforeIn}
       onPageAfterIn={handlePageAfterIn}
     >
-      <Navbar className="messages-navbar" title={chatName} backLink backLinkShowText={false} />
+      <Navbar className="messages-navbar" title={chatName} backLink backLinkShowText={false}>
+        {chatId ? (
+          <Link slot="right" iconF7="menu" href={`/chats/${chatId}/group/`} aria-label="Group info" />
+        ) : null}
+      </Navbar>
       <Messagebar
         ref={messagebarRef as React.RefObject<MessagebarRefValue>}
         placeholder="Message"
