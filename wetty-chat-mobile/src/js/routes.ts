@@ -4,6 +4,8 @@ import NotFoundPage from '@/pages/404';
 import ChatsPage from '@/pages/chats';
 import CreateChatPage from '@/pages/create-chat';
 import ChatThreadPage from '@/pages/chat-thread';
+import ChatSettingsPage from '@/pages/chat-settings';
+import ChatMembersPage from '@/pages/chat-members';
 import SettingsPage from '@/pages/settings';
 
 const routes: Router.RouteParameters[] = [
@@ -22,6 +24,14 @@ const routes: Router.RouteParameters[] = [
   {
     path: '/chats/:id/',
     component: ChatThreadPage,
+  },
+  {
+    path: '/chats/:id/settings/',
+    component: ChatSettingsPage,
+  },
+  {
+    path: '/chats/:id/members/',
+    component: ChatMembersPage,
   },
   {
     path: '/settings/',

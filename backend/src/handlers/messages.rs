@@ -54,6 +54,16 @@ pub struct MessageResponse {
     updated_at: Option<DateTime<Utc>>,
     deleted_at: Option<DateTime<Utc>>,
     has_attachments: bool,
+    reply_to_message: Option<Box<ReplyToMessage>>,
+}
+
+#[derive(Serialize)]
+pub struct ReplyToMessage {
+    #[serde(with = "crate::serde_i64_string")]
+    id: i64,
+    message: Option<String>,
+    sender_uid: i32,
+    deleted_at: Option<DateTime<Utc>>,
 }
 
 impl From<Message> for MessageResponse {
@@ -71,6 +81,7 @@ impl From<Message> for MessageResponse {
             updated_at: m.updated_at,
             deleted_at: m.deleted_at,
             has_attachments: m.has_attachments,
+            reply_to_message: None,
         }
     }
 }
@@ -137,10 +148,59 @@ pub async fn get_messages(
     })?;
 
     let has_more = rows.len() as i64 > max;
-    let messages_vec: Vec<MessageResponse> = rows
+    let messages_to_process: Vec<Message> = rows.into_iter().take(max as usize).collect();
+
+    // Collect all reply_to_ids
+    let reply_ids: Vec<i64> = messages_to_process
+        .iter()
+        .filter_map(|m| m.reply_to_id)
+        .collect();
+
+    // Fetch all referenced messages in one query
+    let mut reply_messages_map = std::collections::HashMap::new();
+    if !reply_ids.is_empty() {
+        let reply_messages: Vec<Message> = messages::table
+            .filter(dsl::id.eq_any(&reply_ids))
+            .select(Message::as_select())
+            .load(conn)
+            .unwrap_or_default();
+
+        for msg in reply_messages {
+            reply_messages_map.insert(msg.id, msg);
+        }
+    }
+
+    // Build MessageResponse with reply_to_message
+    let messages_vec: Vec<MessageResponse> = messages_to_process
         .into_iter()
-        .take(max as usize)
-        .map(MessageResponse::from)
+        .map(|m| {
+            let reply_to_message = m.reply_to_id.and_then(|reply_id| {
+                reply_messages_map.get(&reply_id).map(|reply_msg| {
+                    Box::new(ReplyToMessage {
+                        id: reply_msg.id,
+                        message: reply_msg.message.clone(),
+                        sender_uid: reply_msg.sender_uid,
+                        deleted_at: reply_msg.deleted_at,
+                    })
+                })
+            });
+
+            MessageResponse {
+                id: m.id,
+                message: m.message,
+                message_type: m.message_type,
+                reply_to_id: m.reply_to_id,
+                reply_root_id: m.reply_root_id,
+                client_generated_id: m.client_generated_id,
+                sender_uid: m.sender_uid,
+                chat_id: m.chat_id,
+                created_at: m.created_at,
+                updated_at: m.updated_at,
+                deleted_at: m.deleted_at,
+                has_attachments: m.has_attachments,
+                reply_to_message,
+            }
+        })
         .collect();
     let next_cursor = has_more.then(|| messages_vec.last().map(|m| m.id)).flatten();
 
@@ -207,6 +267,26 @@ pub async fn post_message(
             (StatusCode::INTERNAL_SERVER_ERROR, "Failed to send message")
         })?;
 
+    // Fetch reply_to_message if exists
+    let reply_to_message = if let Some(reply_id) = new_msg.reply_to_id {
+        use crate::schema::messages::dsl;
+        messages::table
+            .filter(dsl::id.eq(reply_id))
+            .select(Message::as_select())
+            .first(conn)
+            .ok()
+            .map(|reply_msg: Message| {
+                Box::new(ReplyToMessage {
+                    id: reply_msg.id,
+                    message: reply_msg.message,
+                    sender_uid: reply_msg.sender_uid,
+                    deleted_at: reply_msg.deleted_at,
+                })
+            })
+    } else {
+        None
+    };
+
     let response = MessageResponse {
         id: new_msg.id,
         message: new_msg.message,
@@ -220,6 +300,7 @@ pub async fn post_message(
         updated_at: new_msg.updated_at,
         deleted_at: new_msg.deleted_at,
         has_attachments: new_msg.has_attachments,
+        reply_to_message,
     };
 
     let member_uids: Vec<i32> = group_membership::table
@@ -269,7 +350,7 @@ pub async fn patch_message(
     // Verify message exists and belongs to the user
     use crate::schema::messages::dsl;
     let message: Message = messages::table
-        .filter(dsl::id.eq(message_id).and(dsl::gid.eq(chat_id)))
+        .filter(dsl::id.eq(message_id).and(dsl::chat_id.eq(chat_id)))
         .select(Message::as_select())
         .first(conn)
         .map_err(|_| (StatusCode::NOT_FOUND, "Message not found"))?;
@@ -309,7 +390,7 @@ pub async fn patch_message(
 
     // Broadcast update to all members
     let member_uids: Vec<i32> = group_membership::table
-        .filter(gm_dsl::gid.eq(chat_id))
+        .filter(gm_dsl::chat_id.eq(chat_id))
         .select(group_membership::uid)
         .load(conn)
         .map_err(|e| {
@@ -342,7 +423,7 @@ pub async fn delete_message(
     // Verify message exists and belongs to the user
     use crate::schema::messages::dsl;
     let message: Message = messages::table
-        .filter(dsl::id.eq(message_id).and(dsl::gid.eq(chat_id)))
+        .filter(dsl::id.eq(message_id).and(dsl::chat_id.eq(chat_id)))
         .select(Message::as_select())
         .first(conn)
         .map_err(|_| (StatusCode::NOT_FOUND, "Message not found"))?;
@@ -378,7 +459,7 @@ pub async fn delete_message(
 
     // Broadcast deletion to all members
     let member_uids: Vec<i32> = group_membership::table
-        .filter(gm_dsl::gid.eq(chat_id))
+        .filter(gm_dsl::chat_id.eq(chat_id))
         .select(group_membership::uid)
         .load(conn)
         .map_err(|e| {

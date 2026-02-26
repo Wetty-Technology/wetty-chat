@@ -195,11 +195,17 @@ export default function ChatThread({ f7route }: Props) {
       reply_root_id: replyingTo?.reply_root_id ?? replyingTo?.id ?? null,
       client_generated_id: clientGeneratedId,
       sender_uid: getCurrentUserId(),
-      gid: chatId,
+      chat_id: chatId,
       created_at: new Date().toISOString(),
       updated_at: null,
       deleted_at: null,
       has_attachments: false,
+      reply_to_message: replyingTo ? {
+        id: replyingTo.id,
+        message: replyingTo.message,
+        sender_uid: replyingTo.sender_uid,
+        deleted_at: replyingTo.deleted_at,
+      } : undefined,
     };
     dispatch(addMessage({ chatId, message: optimistic }));
     setReplyingTo(null);
@@ -402,7 +408,10 @@ export default function ChatThread({ f7route }: Props) {
       onPageBeforeIn={handlePageBeforeIn}
       onPageAfterIn={handlePageAfterIn}
     >
-      <Navbar className="messages-navbar" title={chatName} backLink backLinkShowText={false} />
+      <Navbar className="messages-navbar" title={chatName} backLink backLinkShowText={false}>
+        <Link slot="right" iconF7="person_2" href={`/chats/${chatId}/members/`} />
+        <Link slot="right" iconF7="gear" href={`/chats/${chatId}/settings/`} />
+      </Navbar>
       {replyingTo && (
         <div className="reply-preview" style={{ padding: '8px 16px', backgroundColor: '#f0f0f0', borderBottom: '1px solid #ddd' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -496,9 +505,34 @@ export default function ChatThread({ f7route }: Props) {
                   className="message-appear-from-bottom"
                   onClick={() => !message.deleted_at && handleMessageAction(message)}
                 >
-                  {message.reply_to_id && (
-                    <div slot="text-header" style={{ fontSize: '12px', color: '#666', fontStyle: 'italic', marginBottom: '4px' }}>
-                      Replying to a message
+                  {message.reply_to_message && (
+                    <div
+                      slot="text-header"
+                      style={{
+                        fontSize: '12px',
+                        color: '#666',
+                        backgroundColor: 'rgba(0,0,0,0.05)',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        marginBottom: '4px',
+                        borderLeft: '3px solid #007aff'
+                      }}
+                    >
+                      <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>
+                        {message.reply_to_message.deleted_at
+                          ? 'Replying to deleted message'
+                          : `Replying to User ${message.reply_to_message.sender_uid}`}
+                      </div>
+                      {!message.reply_to_message.deleted_at && message.reply_to_message.message && (
+                        <div style={{
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          fontStyle: 'italic'
+                        }}>
+                          {message.reply_to_message.message}
+                        </div>
+                      )}
                     </div>
                   )}
                   <span slot="text-footer">

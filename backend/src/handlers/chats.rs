@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Query, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     Json,
@@ -223,6 +223,7 @@ pub async fn post_chats(
             description: None,
             avatar: None,
             created_at: now,
+            visibility: "public".to_string(),
         })
         .execute(conn)
         .map_err(|e| {
@@ -234,7 +235,7 @@ pub async fn post_chats(
         .values(&NewGroupMembership {
             chat_id: id,
             uid,
-            role: "member".to_string(),
+            role: "admin".to_string(),
             joined_at: now,
         })
         .execute(conn)
@@ -251,4 +252,170 @@ pub async fn post_chats(
             created_at: now,
         }),
     ))
+}
+
+#[derive(serde::Deserialize)]
+pub struct ChatIdPath {
+    chat_id: i64,
+}
+
+#[derive(Serialize)]
+pub struct ChatDetailResponse {
+    #[serde(with = "crate::serde_i64_string")]
+    id: i64,
+    name: String,
+    description: Option<String>,
+    avatar: Option<String>,
+    visibility: String,
+    created_at: DateTime<Utc>,
+}
+
+/// GET /chats/:chat_id — Get chat details.
+pub async fn get_chat(
+    CurrentUid(uid): CurrentUid,
+    State(state): State<AppState>,
+    Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
+) -> Result<Json<ChatDetailResponse>, (StatusCode, &'static str)> {
+    let conn = &mut state
+        .db
+        .get()
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database connection failed"))?;
+
+    // Check membership
+    use crate::schema::group_membership::dsl as gm_dsl;
+    let is_member = group_membership::table
+        .filter(gm_dsl::chat_id.eq(chat_id).and(gm_dsl::uid.eq(uid)))
+        .count()
+        .get_result::<i64>(conn)
+        .map_err(|e| {
+            tracing::error!("check membership: {:?}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
+        })?;
+
+    if is_member == 0 {
+        return Err((StatusCode::FORBIDDEN, "Not a member of this chat"));
+    }
+
+    // Get group details
+    use crate::schema::groups::dsl as groups_dsl;
+    let group: crate::models::Group = groups::table
+        .filter(groups_dsl::id.eq(chat_id))
+        .first(conn)
+        .map_err(|_| (StatusCode::NOT_FOUND, "Chat not found"))?;
+
+    Ok(Json(ChatDetailResponse {
+        id: group.id,
+        name: group.name,
+        description: group.description,
+        avatar: group.avatar,
+        visibility: group.visibility,
+        created_at: group.created_at,
+    }))
+}
+
+#[derive(serde::Deserialize)]
+pub struct UpdateChatBody {
+    name: Option<String>,
+    description: Option<String>,
+    avatar: Option<String>,
+    visibility: Option<String>,
+}
+
+/// PATCH /chats/:chat_id — Update chat metadata (admin only).
+pub async fn patch_chat(
+    CurrentUid(uid): CurrentUid,
+    State(state): State<AppState>,
+    Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
+    Json(body): Json<UpdateChatBody>,
+) -> Result<Json<ChatDetailResponse>, (StatusCode, &'static str)> {
+    let conn = &mut state
+        .db
+        .get()
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database connection failed"))?;
+
+    // Check if user is admin
+    use crate::schema::group_membership::dsl as gm_dsl;
+    let role: Option<String> = group_membership::table
+        .filter(gm_dsl::chat_id.eq(chat_id).and(gm_dsl::uid.eq(uid)))
+        .select(gm_dsl::role)
+        .first(conn)
+        .optional()
+        .map_err(|e| {
+            tracing::error!("check admin role: {:?}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
+        })?;
+
+    match role {
+        Some(r) if r == "admin" => {},
+        Some(_) => return Err((StatusCode::FORBIDDEN, "Admin role required")),
+        None => return Err((StatusCode::FORBIDDEN, "Not a member of this chat")),
+    }
+
+    // Validate visibility if provided
+    if let Some(ref vis) = body.visibility {
+        if vis != "public" && vis != "private" {
+            return Err((StatusCode::BAD_REQUEST, "Invalid visibility value"));
+        }
+    }
+
+    // Update group
+    use crate::schema::groups::dsl as groups_dsl;
+
+    if body.name.is_some() {
+        diesel::update(groups::table.filter(groups_dsl::id.eq(chat_id)))
+            .set(groups_dsl::name.eq(body.name.as_ref().unwrap()))
+            .execute(conn)
+            .map_err(|e| {
+                tracing::error!("update group name: {:?}", e);
+                (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update chat")
+            })?;
+    }
+
+    if body.description.is_some() {
+        diesel::update(groups::table.filter(groups_dsl::id.eq(chat_id)))
+            .set(groups_dsl::description.eq(&body.description))
+            .execute(conn)
+            .map_err(|e| {
+                tracing::error!("update group description: {:?}", e);
+                (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update chat")
+            })?;
+    }
+
+    if body.avatar.is_some() {
+        diesel::update(groups::table.filter(groups_dsl::id.eq(chat_id)))
+            .set(groups_dsl::avatar.eq(&body.avatar))
+            .execute(conn)
+            .map_err(|e| {
+                tracing::error!("update group avatar: {:?}", e);
+                (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update chat")
+            })?;
+    }
+
+    if body.visibility.is_some() {
+        diesel::update(groups::table.filter(groups_dsl::id.eq(chat_id)))
+            .set(groups_dsl::visibility.eq(body.visibility.as_ref().unwrap()))
+            .execute(conn)
+            .map_err(|e| {
+                tracing::error!("update group visibility: {:?}", e);
+                (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update chat")
+            })?;
+    }
+
+    // Get updated group
+    let group: crate::models::Group = groups::table
+        .filter(groups_dsl::id.eq(chat_id))
+        .first(conn)
+        .map_err(|e| {
+            tracing::error!("get updated group: {:?}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to get updated chat")
+        })?;
+
+    Ok(Json(ChatDetailResponse {
+        id: group.id,
+        name: group.name,
+        description: group.description,
+        avatar: group.avatar,
+        visibility: group.visibility,
+        created_at: group.created_at,
+    }))
 }

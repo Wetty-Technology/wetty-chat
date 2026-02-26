@@ -20,6 +20,7 @@ diesel::table! {
         #[max_length = 20]
         role -> Varchar,
         joined_at -> Timestamptz,
+        last_read_message_id -> Nullable<Int8>,
     }
 }
 
@@ -31,6 +32,8 @@ diesel::table! {
         description -> Nullable<Text>,
         avatar -> Nullable<Text>,
         created_at -> Timestamptz,
+        #[max_length = 20]
+        visibility -> Varchar,
     }
 }
 

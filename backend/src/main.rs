@@ -92,6 +92,10 @@ async fn main() {
             get(handlers::chats::get_chats).post(handlers::chats::post_chats),
         )
         .route(
+            "/{chat_id}",
+            get(handlers::chats::get_chat).patch(handlers::chats::patch_chat),
+        )
+        .route(
             "/{chat_id}/messages",
             get(handlers::messages::get_messages).post(handlers::messages::post_message),
         )
@@ -99,7 +103,14 @@ async fn main() {
             "/{chat_id}/messages/{message_id}",
             patch(handlers::messages::patch_message).delete(handlers::messages::delete_message),
         )
-        .route("/{chat_id}/members", get(handlers::members::get_members));
+        .route(
+            "/{chat_id}/members",
+            get(handlers::members::get_members).post(handlers::members::post_member),
+        )
+        .route(
+            "/{chat_id}/members/{uid}",
+            delete(handlers::members::delete_member).patch(handlers::members::patch_member),
+        );
 
     let trace_layer = TraceLayer::new_for_http()
         .make_span_with(|request: &Request<Body>| {
