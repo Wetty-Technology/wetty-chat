@@ -1,0 +1,15 @@
+# Build artifacts and local dev
+target/
+.env
+.env.*
+
+# Git and editor
+.git
+.gitignore
+*.swp
+*~
+
+# Docs and misc
+*.md
+Dockerfile
+.dockerignore

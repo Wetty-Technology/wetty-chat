@@ -1,0 +1,92 @@
+// Chat thread / messages page – bubble colors and layout (adapted from reference Messages.less)
+:root {
+  --f7-message-sent-bg-color: #dcf7c7;
+  --f7-message-sent-text-color: #000;
+  --f7-message-received-bg-color: #fff;
+  --f7-message-received-text-color: #000;
+  --f7-messages-content-bg-color: transparent;
+  --f7-messagebar-textarea-padding: 6px 36px 6px 16px;
+
+  &.dark {
+    --f7-message-sent-bg-color: #056161;
+    --f7-message-sent-text-color: #fff;
+    --f7-message-received-bg-color: #3c3c3e;
+    --f7-message-received-text-color: #fff;
+  }
+}
+
+.messages-page.chat-thread-page {
+  &.page-current .message-appear-from-bottom {
+    animation-duration: 0ms; // optional: disable animation when not current
+  }
+  &:not(.page-current) .message-appear-from-bottom {
+    animation-duration: 0ms;
+  }
+  // Extra spacing between message bubbles
+  .message + .message {
+    margin-top: 0.5rem;
+  }
+}
+
+.messages-navbar {
+  .title {
+    width: 100%;
+    min-width: 0;
+  }
+  .link.back.icon-only {
+    justify-content: flex-start;
+  }
+}
+
+.messagebar .link i {
+  font-size: 24px;
+}
+
+.messagebar .messagebar-send-link {
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.messagebar .messagebar-send-link i {
+  width: 32px;
+  height: 32px;
+  background: var(--f7-theme-color);
+  border-radius: 50%;
+  color: #fff;
+  line-height: 32px;
+  font-size: 18px;
+}
+
+.messagebar .messagebar-send-link--disabled {
+  pointer-events: none;
+}
+.messagebar .messagebar-send-link--disabled i {
+  opacity: 0.5;
+}
+
+.chat-thread-loading,
+.chat-thread-error {
+  padding: 16px;
+  text-align: center;
+  color: var(--f7-text-color);
+}
+
+.chat-thread-error {
+  color: var(--f7-color-red);
+}
+
+.chat-thread-load-more {
+  text-align: center;
+  padding: 12px;
+  .link {
+    font-size: 14px;
+  }
+  .link-disabled {
+    pointer-events: none;
+    opacity: 0.6;
+  }
+}

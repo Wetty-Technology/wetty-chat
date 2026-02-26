@@ -1,30 +1,46 @@
 {
   "name": "wetty-chat-mobile",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "version": "1.0.0",
+  "description": "wetty-chat-mobile",
+  "repository": "",
+  "license": "UNLICENSED",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "start": "npm run dev",
+    "dev": "cross-env NODE_ENV=development vite",
+    "build": "cross-env NODE_ENV=production vite build",
+    "postinstall": "cpy --flat ./node_modules/framework7-icons/fonts/*.* ./src/fonts/ && cpy --flat ./node_modules/material-icons/iconfont/*.* ./src/fonts/"
   },
+  "browserslist": [
+    "IOS >= 15",
+    "Safari >= 15",
+    "last 5 Chrome versions",
+    "last 5 Firefox versions"
+  ],
   "dependencies": {
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "@reduxjs/toolkit": "^2.11.2",
+    "axios": "^1.13.5",
+    "dom7": "^4.0.6",
+    "framework7": "^9.0.3",
+    "framework7-icons": "^5.0.5",
+    "framework7-react": "^9.0.3",
+    "material-icons": "^1.13.14",
+    "prop-types": "^15.8.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-redux": "^9.2.0",
+    "skeleton-elements": "^4.0.1",
+    "swiper": "^12.1.2"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.1",
-    "@types/node": "^24.10.1",
-    "@types/react": "^19.2.7",
+    "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react-swc": "^4.2.2",
-    "eslint": "^9.39.1",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "eslint-plugin-react-refresh": "^0.4.24",
-    "globals": "^16.5.0",
-    "typescript": "~5.9.3",
-    "typescript-eslint": "^8.48.0",
+    "@vitejs/plugin-react": "^5.1.4",
+    "cpy-cli": "^7.0.0",
+    "cross-env": "^10.1.0",
+    "postcss-preset-env": "^11.2.0",
+    "sass": "^1.97.3",
+    "typescript": "^5.9.3",
     "vite": "^7.3.1"
   }
 }

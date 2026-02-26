@@ -1,0 +1,18 @@
+{
+  "cwd": "/home/codetector/dev/wetty-chat",
+  "type": [
+    "web"
+  ],
+  "name": "wetty-chat-mobile",
+  "framework": "react",
+  "template": "tabs",
+  "cssPreProcessor": "scss",
+  "bundler": "vite",
+  "theming": {
+    "customColor": false,
+    "color": "#007aff",
+    "darkMode": false,
+    "iconFonts": true
+  },
+  "customBuild": false
+}
