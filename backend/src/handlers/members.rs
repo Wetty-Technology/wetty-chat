@@ -77,7 +77,7 @@ fn check_admin(
 }
 
 // TODO: deal with pagination later. I think we just return a list of member IDs for now
-/// GET /chats/:chat_id/members — List members of a chat.
+/// GET /a/group/:chat_id/members — List members of a chat.
 pub async fn get_members(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
@@ -116,7 +116,7 @@ pub async fn get_members(
     Ok(Json(members))
 }
 
-/// POST /chats/:chat_id/members — Add a member to the chat (caller must be admin).
+/// POST /a/group/:chat_id/members — Add a member to the chat (caller must be admin).
 pub async fn post_add_member(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
@@ -182,7 +182,7 @@ pub async fn post_add_member(
     Ok(StatusCode::CREATED)
 }
 
-/// DELETE /chats/:chat_id/members/:uid — Remove a member from the chat (caller must be admin).
+/// DELETE /a/group/:chat_id/members/:uid — Remove a member from the chat (caller must be admin).
 pub async fn delete_remove_member(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,

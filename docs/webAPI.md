@@ -14,77 +14,86 @@
 
 ## 第一部分：HTTP-API 文档
 
-### 1. 用户模块 (模块 Key: `f43a78`)
+### 1. 用户模块 (模块 Key: `users`)
 
 _此模块负责用户凭证和基础信息维护。_
-- **POST** `/a/f43a78/auth/register`
+- **POST** `/a/users/auth/register`
     - **说明:** 用户注册。
     - **Req:** `{"username": "xx", "password": "xx"}`
-- **POST** `/a/f43a78/auth/login`
+- **POST** `/a/users/auth/login`
     - **说明:** 用户登录。根据客户端类型下发不同生命周期的 Token。
     - **Req:** `{"username": "xx", "password": "xx", "client_type": "web|mobile"}`
     - **Res:** `{"token": "xxx", "user_key": "xxx"}` _(Web端返回临时Token，Mobile端返回永久Token)_
-- **GET** `/a/f43a78/profile`
+- **GET** `/a/users/profile`
     - **说明:** 获取个人资料。
     - **Res:** `{"nickname": "xx", "avatar_fid": "xx", "bio": "xx", "sr_link": "xx", "add_friend_setting": "xx"}`
-- **PUT** `/a/f43a78/profile`
+- **PUT** `/a/users/profile`
     - **说明:** 更新个人资料（头像、bio、sr主站link、添加好友限制等）。
     - **Req:** `{"avatar_fid": "xx", "bio": "xx", ...}`
 
-### 2. 好友与群组模块 (模块 Key: `1e24c5`)
+### 2. 好友模块 (模块 Key: `friend`)
 
-_此模块负责社交关系链的维护。_
-**【好友相关】**
-- **POST** `/a/1e24c5/friend/apply`
+_此模块负责好友关系链的维护。_
+- **POST** `/a/friend/apply`
     - **说明:** 申请加好友。
     - **Req:** `{"target_user_id": "xx", "apply_msg": "你好"}`
-- **DELETE** `/a/1e24c5/friend/{user_id}`
+- **DELETE** `/a/friend/{user_id}`
     - **说明:** 解除好友关系。
-- **POST** `/a/1e24c5/friend/block`
+- **POST** `/a/friend/block`
     - **说明:** 拉黑用户。
     - **Req:** `{"target_user_id": "xx"}`
 
-**【群组相关】**
-- **POST** `/a/1e24c5/group/create`
-    - **说明:** 建群。
-    - **Req:** `{"group_name": "xx", "is_public": true, "category": "xx"}`
-    - **Res:** `{"group_id": "xxx"}`
-- **DELETE** `/a/1e24c5/group/{group_id}`
+### 3. 群组模块 (模块 Key: `group`)
+
+_此模块负责群组生命周期和成员管理。_
+- **POST** `/a/group`
+    - **说明:** 建群。**(已实现)**
+    - **Req:** `{"name": "xx"}`
+    - **Res:** `{"id": "xxx", "name": "xx", "created_at": "..."}`  
+- **GET** `/a/group/{group_id}`
+    - **说明:** 获取群资料。**(已实现)**
+- **DELETE** `/a/group/{group_id}`
     - **说明:** 解散群（仅限群主）。
-- **PUT** `/a/1e24c5/group/{group_id}/profile`
+- **PUT** `/a/group/{group_id}/profile`
     - **说明:** 修改群资料（群名、群头像、public/private、入群验证规则、群类别）。
-- **POST** `/a/1e24c5/group/{group_id}/members/admin_add`
-    - **说明:** 管理员邀请入群。
-- **POST** `/a/1e24c5/group/{group_id}/members/apply`
+- **GET** `/a/group/{group_id}/members`
+    - **说明:** 拉取群成员列表。**(已实现)**
+- **POST** `/a/group/{group_id}/members`
+    - **说明:** 管理员加人入群。**(已实现)**
+- **POST** `/a/group/{group_id}/members/apply`
     - **说明:** 申请入群。
-- **DELETE** `/a/1e24c5/group/{group_id}/members/{user_id}`
+- **DELETE** `/a/group/{group_id}/members/{user_id}`
     - **说明:** 减人/踢出群聊。
-- **PUT** `/a/1e24c5/group/{group_id}/managers`
+- **PUT** `/a/group/{group_id}/managers`
     - **说明:** 群管设置（分配/取消管理员权限）。
-- **POST** `/a/1e24c5/group/{group_id}/mute`
+- **POST** `/a/group/{group_id}/mute`
     - **说明:** 禁言/取消禁言。
     - **Req:** `{"target_user_id": "xx", "mute_status": true, "duration_seconds": 3600}`
 
-### 3. 会话模块 (模块 Key: `1f619b`) - HTTP部分
+### 4. 会话模块 (模块 Key: `chats`) - HTTP部分
 
 _发送动作通过 HTTP 保证到达率，接收动作通过 WS 推送。具体消息类型见其他相关文档。_
-- **POST** `/a/1f619b/message/send`
-    - **说明:** 发送消息（支持文本、动作表情、文件转发、@提醒等）。
-    - **Req:** `{"target_id": "xx", "chat_type": "single|group", "msg_type": "text|image|file|emote|...", "content": "...", "at_users": ["id1"]}`
-- **POST** `/a/1f619b/message/recall`
+- **GET** `/a/chats`
+    - **说明:** 拉取当前用户会话列表。**(已实现)**
+- **GET** `/a/chats/{chat_id}/messages?before={message_id}&max={max_num_message}`
+    - **说明:** 拉取会话消息（游标分页）。**(已实现)**
+- **POST** `/a/chats/{chat_id}/messages`
+    - **说明:** 发送消息（支持文本、动作表情、文件转发、@提醒等）。**(已实现)**
+    - **Req:** `{"message": "...", "message_type": "text|image|file|emote|...", "client_generated_id": "idempotency_key", "reply_to_id": "xx", "reply_root_id": "xx"}`
+- **POST** `/a/chats/message/recall`
     - **说明:** 撤回消息。
     - **Req:** `{"msg_id": "xx"}`
 
-### 4. 文件模块 (模块 Key: `b50ca1`)
+### 5. 文件模块 (模块 Key: `fserv`)
 
 写入操作仅允许会话模块转发写入，需要会话模块在header设置内部key（不写入客户端）；支持客户端直接读文件，但依然需要鉴权。
 - **写入文件 (Upload)**
-    - **API:** `POST /a/b50ca1/upload`
+    - **API:** `POST /a/fserv/upload`
     - **说明:** 会话模块以 File Stream (流式) 形式上传文件。
     - **Header:** `Content-Type: multipart/form-data` 或 `application/octet-stream`
     - **Res:** 返回唯一的文件ID：`{"fid": "file_xxx123"}`。该 `fid` 随后用于消息发送。
 - **读取文件 (Download/Stream)**
-    - **API:** `GET /f/b50ca1/download/{fid}`
+    - **API:** `GET /f/fserv/download/{fid}`
     - **说明:** 客户端通过此接口获取文件流进行展示（如前端加载图片、下载附件）。
 
 ---
@@ -96,7 +105,7 @@ _发送动作通过 HTTP 保证到达率，接收动作通过 WS 推送。具体
 
 _建立长连接以实现消息实时送达。_
 
-- **连接地址:** `ws://<domain>/ws/1f619b?token=<user_token>`
+- **连接地址:** `ws://<domain>/ws/chats?uid=<uid>`
 - **心跳机制:** 客户端每 30s 发送 `ping`，服务端回复 `pong`。
 - **服务端推送事件 (Downstream Events):**
     - `on_message`: 收到新消息（包含文本、动作表情、文件消息）。
@@ -114,15 +123,17 @@ _建立长连接以实现消息实时送达。_
 - **个人中心:** 用户可以自定义头像、Bio 简介，并可关联 SR 主站 Link。
 - **隐私控制:** 用户可设置他人加好友的限制规则（类似 QQ 的“需要验证信息”、“拒绝任何人添加”、“允许任何人”）。
 
-### 2. 好友/群组模块需求
+### 2. 好友模块需求
 - **关系链管理:** 支持双向好友关系，以及单向拉黑（屏蔽对方消息）。
+
+### 3. 群组模块需求
 - **群组全生命周期:** 包含建群、解散群。
 - **精细化群管:**
     - **基础属性:** 群名、群头像、群类别（如大群、小群划分，影响性能分配）。
     - **权限管理:** 群主可设置群管（分权限等级）；支持对特定成员禁言/取消禁言；踢人/加人。
     - **群隐私:** 支持 Public（可搜索加入）和 Private（隐藏群）。入群需支持不同的验证方式。
 
-### 3. 会话模块 (核心消息流)需求
+### 4. 会话模块 (核心消息流)需求
 - **丰富消息格式:** 支持纯文本、动作表情（仿tg支持对消息进行单表情评论等动作）、文件收发、@特定人提醒。
 - **伪 Markdown 格式处理 (前端/内部逻辑):** 用户发送带有特定语法的文本，**由前端渲染**（或后端解析后下发 AST）成粗体、斜体、代码块等伪 MD 格式，不单独暴露 API。
 - **消息转发与撤回:** 支持消息实体的转发（若转发的是文件，则携带对应 `fid`）；支持消息的限时撤回。
@@ -131,10 +142,10 @@ _建立长连接以实现消息实时送达。_
     - **用户状态机:** 这是一个**后端内部服务**。当发起发送或接收消息的请求时，会话模块必须调用“用户状态机”。
     - **鉴权内容:** 检查用户是否已登录；检查双方是否为好友关系；检查是否在对方黑名单内；检查是否在同一群组内；检查该用户是否被群禁言。鉴权通过后消息才允许流转。
 
-### 4. 文件模块需求
+### 5. 文件模块需求
 - **流式处理:** 针对 Web、Android 等多端，文件上传下载必须采用 File Stream 流式传输，以节省内存并支持大文件。
 - **文件标识:** 文件上传后统一产生 `fid`，会话记录中只保存 `fid`，不保存文件实体。
-- **【核心内部逻辑】文件鉴权:** 与消息鉴权共用逻辑。当用户请求读取 `GET /f/b50ca1/download/{fid}` 时，系统需验证该用户是否有权限查看该文件（例如：该文件是否发送在当前用户所在的群里？发送者是否拉黑了当前用户？），防止通过猜解 `fid` 越权盗取文件。
+- **【核心内部逻辑】文件鉴权:** 与消息鉴权共用逻辑。当用户请求读取 `GET /f/fserv/download/{fid}` 时，系统需验证该用户是否有权限查看该文件（例如：该文件是否发送在当前用户所在的群里？发送者是否拉黑了当前用户？），防止通过猜解 `fid` 越权盗取文件。
 
 
 ## 第四部分：技术选型

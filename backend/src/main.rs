@@ -1,6 +1,6 @@
 use axum::body::Body;
 use axum::http::Request;
-use axum::{extract::State, routing::{delete, get}, Router};
+use axum::{extract::State, routing::{delete, get, post}, Router};
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::PgConnection;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
@@ -86,25 +86,6 @@ async fn main() {
         }
     });
 
-    let chat_routes = Router::new()
-        .route(
-            "/",
-            get(handlers::chats::get_chats).post(handlers::chats::post_chats),
-        )
-        .route("/{chat_id}", get(handlers::chats::get_chat))
-        .route(
-            "/{chat_id}/messages",
-            get(handlers::messages::get_messages).post(handlers::messages::post_message),
-        )
-        .route(
-            "/{chat_id}/members",
-            get(handlers::members::get_members).post(handlers::members::post_add_member),
-        )
-        .route(
-            "/{chat_id}/members/{uid}",
-            delete(handlers::members::delete_remove_member),
-        );
-
     let trace_layer = TraceLayer::new_for_http()
         .make_span_with(|request: &Request<Body>| {
             let request_id = request
@@ -128,8 +109,22 @@ async fn main() {
 
     let app = Router::new()
         .route("/health", get(health))
-        .route("/ws", get(handlers::ws::ws_handler))
-        .nest("/chats", chat_routes)
+        .route("/ws/chats", get(handlers::ws::ws_handler))
+        .route("/a/chats", get(handlers::chats::get_chats))
+        .route(
+            "/a/chats/{chat_id}/messages",
+            get(handlers::messages::get_messages).post(handlers::messages::post_message),
+        )
+        .route("/a/group", post(handlers::chats::post_chats))
+        .route("/a/group/{chat_id}", get(handlers::chats::get_chat))
+        .route(
+            "/a/group/{chat_id}/members",
+            get(handlers::members::get_members).post(handlers::members::post_add_member),
+        )
+        .route(
+            "/a/group/{chat_id}/members/{uid}",
+            delete(handlers::members::delete_remove_member),
+        )
         .layer(
             ServiceBuilder::new()
                 .layer(trace_layer)
