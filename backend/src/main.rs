@@ -140,7 +140,21 @@ async fn main() {
     let app = Router::new()
         .route("/health", get(health))
         .route("/ws", get(handlers::ws::ws_handler))
-        .nest("/chats", chat_routes)
+        .route("/chats", get(handlers::chats::get_chats))
+        .route(
+            "/chats/{chat_id}/messages",
+            get(handlers::messages::get_messages).post(handlers::messages::post_message),
+        )
+        .route("/group", post(handlers::chats::post_chats))
+        .route("/group/{chat_id}", get(handlers::chats::get_chat))
+        .route(
+            "/group/{chat_id}/members",
+            get(handlers::members::get_members).post(handlers::members::post_add_member),
+        )
+        .route(
+            "/group/{chat_id}/members/{uid}",
+            delete(handlers::members::delete_remove_member),
+        )
         .layer(
             ServiceBuilder::new()
                 .layer(trace_layer)

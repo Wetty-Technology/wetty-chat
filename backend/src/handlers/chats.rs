@@ -179,6 +179,42 @@ pub async fn get_chats(
     }))
 }
 
+/// GET /group/:chat_id — Get a single group's metadata (caller must be a member).
+pub async fn get_chat(
+    CurrentUid(uid): CurrentUid,
+    State(state): State<AppState>,
+    Path(members::ChatIdPath { chat_id }): Path<members::ChatIdPath>,
+) -> Result<Json<ChatDetailResponse>, (StatusCode, &'static str)> {
+    let conn = &mut state
+        .db
+        .get()
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database connection failed"))?;
+
+    members::check_membership(conn, chat_id, uid)?;
+
+    let group: crate::models::Group = groups::table
+        .find(chat_id)
+        .get_result(conn)
+        .map_err(|e| {
+            use diesel::result::Error;
+            match e {
+                Error::NotFound => (StatusCode::NOT_FOUND, "Chat not found"),
+                _ => {
+                    tracing::error!("get chat: {:?}", e);
+                    (StatusCode::INTERNAL_SERVER_ERROR, "Failed to load chat")
+                }
+            }
+        })?;
+
+    Ok(Json(ChatDetailResponse {
+        id: group.id,
+        name: Some(group.name),
+        description: group.description,
+        avatar: group.avatar,
+        created_at: group.created_at,
+    }))
+}
+
 #[derive(serde::Deserialize)]
 pub struct CreateChatBody {
     name: Option<String>,
@@ -192,7 +228,7 @@ pub struct CreateChatResponse {
     created_at: DateTime<Utc>,
 }
 
-/// POST /chats — Create a new chat.
+/// POST /group — Create a new chat.
 pub async fn post_chats(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,

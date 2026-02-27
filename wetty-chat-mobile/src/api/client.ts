@@ -3,7 +3,7 @@ import { getCurrentUserId } from '@/js/current-user';
 
 /**
  * Base URL for API requests.
- * - Development: /api (same-origin; Vite proxies to backend at localhost:3000).
+ * - Development: /_api (same-origin; Vite proxies to backend at localhost:3000).
  * - Production: VITE_API_BASE_URL (must be set in build env).
  */
 

@@ -31,11 +31,11 @@ export function getChats(params: { limit?: number; after?: string } = {}): Promi
 }
 
 export function getChat(chatId: string): Promise<AxiosResponse<ChatDetail>> {
-  return apiClient.get(`/chats/${chatId}`);
+  return apiClient.get(`/group/${chatId}`);
 }
 
 export function createChat(body: { name?: string } = {}): Promise<AxiosResponse<CreateChatResponse>> {
-  return apiClient.post('/chats', body);
+  return apiClient.post('/group', body);
 }
 
 export interface ChatDetailResponse {

@@ -8,9 +8,9 @@ export interface MemberResponse {
 }
 
 export function getMembers(chatId: string): Promise<AxiosResponse<MemberResponse[]>> {
-  return apiClient.get(`/chats/${chatId}/members`);
+  return apiClient.get(`/group/${chatId}/members`);
 }
 
 export function addMember(chatId: string, uid: number): Promise<AxiosResponse<void>> {
-  return apiClient.post(`/chats/${chatId}/members`, { uid });
+  return apiClient.post(`/group/${chatId}/members`, { uid });
 }
