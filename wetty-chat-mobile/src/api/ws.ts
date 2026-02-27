@@ -1,5 +1,5 @@
 /**
- * WebSocket client: connects to /_api/ws?uid=, sends JSON ping every 10s, handles pong and message delivery.
+ * WebSocket client: connects to /_api/ws/chats?uid=, sends JSON ping every 10s, handles pong and message delivery.
  * Dispatches incoming messages to the Redux store (add or confirm pending). Same host as REST so Vite proxy works in dev.
  */
 
@@ -9,7 +9,7 @@ import { selectMessagesForChat, addMessage, confirmPendingMessage } from '@/stor
 import { setWsConnected } from '@/store/connectionSlice';
 import type { MessageResponse } from '@/api/messages';
 
-const WS_PATH = '/_api/ws';
+const WS_PATH = '/_api/ws/chats';
 const PING_INTERVAL_MS = 10_000;
 const RECONNECT_DELAY_MS = 5_000;
 
