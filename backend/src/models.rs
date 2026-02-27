@@ -18,6 +18,7 @@ pub struct Group {
     pub description: Option<String>,
     pub avatar: Option<String>,
     pub created_at: DateTime<Utc>,
+    pub visibility: String,
 }
 
 /// For inserting a group. Set `id` and `created_at` (e.g. `Utc::now()`) when not relying on DB defaults.
@@ -29,6 +30,7 @@ pub struct NewGroup {
     pub description: Option<String>,
     pub avatar: Option<String>,
     pub created_at: DateTime<Utc>,
+    pub visibility: String,
 }
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize, Insertable)]

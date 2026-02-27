@@ -15,6 +15,8 @@ import './chat-thread.scss';
 import {
   getMessages,
   sendMessage,
+  updateMessage,
+  deleteMessage,
   type MessageResponse,
 } from '@/api/messages';
 import { getCurrentUserId } from '@/js/current-user';
@@ -79,6 +81,9 @@ export default function ChatThread({ f7route }: Props) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [messageText, setMessageText] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
+  const [replyingTo, setReplyingTo] = useState<MessageResponse | null>(null);
 
   const scrollToBottom = useCallback(() => {
     const endEl = messagesEndRef.current;
@@ -177,32 +182,46 @@ export default function ChatThread({ f7route }: Props) {
       .finally(() => setLoadingMore(false));
   };
 
-  const handleSend = () => {
+  const handleSend = (e?: React.BaseSyntheticEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+
     const text = messageText.trim();
     if (!text || !chatId) return;
+
     const clientGeneratedId = generateClientId();
     setMessageText('');
+
     const optimistic: MessageResponse = {
       id: '0',
       message: text,
       message_type: 'text',
-      reply_to_id: null,
-      reply_root_id: null,
+      reply_to_id: replyingTo?.id ?? null,
+      reply_root_id: replyingTo?.reply_root_id ?? replyingTo?.id ?? null,
       client_generated_id: clientGeneratedId,
       sender_uid: getCurrentUserId(),
-      gid: chatId,
+      chat_id: chatId,
       created_at: new Date().toISOString(),
       updated_at: null,
       deleted_at: null,
       has_attachments: false,
+      reply_to_message: replyingTo ? {
+        id: replyingTo.id,
+        message: replyingTo.message,
+        sender_uid: replyingTo.sender_uid,
+        deleted_at: replyingTo.deleted_at,
+      } : undefined,
     };
     dispatch(addMessage({ chatId, message: optimistic }));
+    setReplyingTo(null);
     requestAnimationFrame(() => scrollToBottom());
 
     sendMessage(chatId, {
       message: text,
       message_type: 'text',
       client_generated_id: clientGeneratedId,
+      reply_to_id: replyingTo?.id,
+      reply_root_id: replyingTo?.reply_root_id ?? replyingTo?.id,
     })
       .then((res) => {
         const postResponse = res.data;
@@ -231,10 +250,99 @@ export default function ChatThread({ f7route }: Props) {
         dispatch(setMessagesForChat({ chatId, messages: current }));
         setMessageText(text);
       });
-    setTimeout(() => {
-      const mb = messagebarRef.current?.f7Messagebar?.();
-      if (typeof mb?.focus === 'function') mb.focus();
-    }, 0);
+  };
+
+  const handleEdit = (message: MessageResponse) => {
+    setEditingMessageId(message.id);
+    setEditingText(message.message ?? '');
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingMessageId || !chatId) return;
+    const text = editingText.trim();
+    if (!text) {
+      f7.toast.create({ text: 'Message cannot be empty', closeTimeout: 3000 }).open();
+      return;
+    }
+
+    updateMessage(chatId, editingMessageId, { message: text })
+      .then((res) => {
+        const state = store.getState();
+        const currentMessages = selectMessagesForChat(state, chatId);
+        const updated = currentMessages.map(m => m.id === editingMessageId ? res.data : m);
+        dispatch(setMessagesForChat({ chatId, messages: updated }));
+        setEditingMessageId(null);
+        setEditingText('');
+        f7.toast.create({ text: 'Message updated', closeTimeout: 2000 }).open();
+      })
+      .catch((err: Error) => {
+        f7.toast.create({ text: err.message || 'Failed to update message', closeTimeout: 3000 }).open();
+      });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessageId(null);
+    setEditingText('');
+  };
+
+  const handleDelete = (message: MessageResponse) => {
+    if (!chatId) return;
+    f7.dialog.confirm('Are you sure you want to delete this message?', () => {
+      deleteMessage(chatId, message.id)
+        .then(() => {
+          const state = store.getState();
+          const currentMessages = selectMessagesForChat(state, chatId);
+          const updated = currentMessages.map(m =>
+            m.id === message.id
+              ? { ...m, deleted_at: new Date().toISOString(), message: null }
+              : m
+          );
+          dispatch(setMessagesForChat({ chatId, messages: updated }));
+          f7.toast.create({ text: 'Message deleted', closeTimeout: 2000 }).open();
+        })
+        .catch((err: Error) => {
+          f7.toast.create({ text: err.message || 'Failed to delete message', closeTimeout: 3000 }).open();
+        });
+    });
+  };
+
+  const handleReply = (message: MessageResponse) => {
+    setReplyingTo(message);
+    const mb = messagebarRef.current?.f7Messagebar?.();
+    if (typeof mb?.focus === 'function') mb.focus();
+  };
+
+  const handleMessageAction = (message: MessageResponse) => {
+    if (message.deleted_at) return;
+
+    const isOwn = isSent(message);
+    const buttons = [];
+
+    buttons.push({
+      text: 'Reply',
+      onClick: () => handleReply(message),
+    });
+
+    if (isOwn) {
+      buttons.push({
+        text: 'Edit',
+        onClick: () => handleEdit(message),
+      });
+      buttons.push({
+        text: 'Delete',
+        color: 'red',
+        onClick: () => handleDelete(message),
+      });
+    }
+
+    buttons.push({
+      text: 'Cancel',
+      color: 'gray',
+    });
+
+    f7.actions.create({
+      buttons: [buttons],
+    }).open();
   };
 
   const moveFocusToThisPage = () => {
@@ -302,24 +410,44 @@ export default function ChatThread({ f7route }: Props) {
       onPageAfterIn={handlePageAfterIn}
     >
       <Navbar className="messages-navbar" title={chatName} backLink backLinkShowText={false}>
-        {chatId ? (
-          <Link slot="right" iconF7="menu" href={`/chats/${chatId}/group/`} aria-label="Group info" />
-        ) : null}
+        <Link slot="right" iconF7="person_2" href={`/chats/${chatId}/members/`} />
+        <Link slot="right" iconF7="gear" href={`/chats/${chatId}/settings/`} />
       </Navbar>
+      {replyingTo && (
+        <div className="reply-preview" style={{ padding: '8px 16px', backgroundColor: '#f0f0f0', borderBottom: '1px solid #ddd' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '12px', color: '#666' }}>Replying to</div>
+              <div style={{ fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {replyingTo.message}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setReplyingTo(null)}
+              style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', padding: '0 8px' }}
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
       <Messagebar
         ref={messagebarRef as React.RefObject<MessagebarRefValue>}
         placeholder="Message"
         value={messageText}
         onInput={(e) => setMessageText((e.target as HTMLInputElement)?.value ?? '')}
-        onSubmit={handleSend}
       >
         <button
           type="button"
           slot="send-link"
           className={`messagebar-send-link ${messageText.trim().length === 0 ? 'messagebar-send-link--disabled' : ''}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            handleSend();
+          onClick={handleSend}
+          onTouchEnd={(e) => {
+            if (messageText.trim()) {
+              e.preventDefault();
+              handleSend(e);
+            }
           }}
           aria-label="Send message"
         >
@@ -343,21 +471,80 @@ export default function ChatThread({ f7route }: Props) {
                 </Link>
               </div>
             )}
-            {displayMessages.map((message, index) => (
-              <Message
-                key={message.id || message.client_generated_id}
-                type={isSent(message) ? 'sent' : 'received'}
-                first={isMessageFirst(index)}
-                last={isMessageLast(index)}
-                tail={isMessageLast(index)}
-                sameAvatar={isSameAvatarAsPrevious(index)}
-                avatar={isSent(message) ? undefined : messageAvatarUrl(message)}
-                text={message.deleted_at ? '[Deleted]' : (message.message ?? '')}
-                className="message-appear-from-bottom"
-              >
-                <span slot="text-footer">{messageTime(message.created_at)}</span>
-              </Message>
-            ))}
+            {displayMessages.map((message, index) => {
+              const isEditing = editingMessageId === message.id;
+              return isEditing ? (
+                <div key={message.id || message.client_generated_id} style={{ padding: '8px 16px', backgroundColor: '#f9f9f9', borderRadius: '8px', margin: '8px' }}>
+                  <textarea
+                    value={editingText}
+                    onChange={(e) => setEditingText(e.target.value)}
+                    style={{ width: '100%', minHeight: '60px', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '14px' }}
+                  />
+                  <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={handleSaveEdit}
+                      style={{ flex: 1, padding: '8px', backgroundColor: '#007aff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      style={{ flex: 1, padding: '8px', backgroundColor: '#ccc', color: 'black', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <Message
+                  key={message.id || message.client_generated_id}
+                  type={isSent(message) ? 'sent' : 'received'}
+                  first={isMessageFirst(index)}
+                  last={isMessageLast(index)}
+                  tail={isMessageLast(index)}
+                  sameAvatar={isSameAvatarAsPrevious(index)}
+                  avatar={isSent(message) ? undefined : messageAvatarUrl(message)}
+                  text={message.deleted_at ? '[Deleted]' : (message.message ?? '')}
+                  className="message-appear-from-bottom"
+                  onClick={() => !message.deleted_at && handleMessageAction(message)}
+                >
+                  {message.reply_to_message && (
+                    <div
+                      slot="text-header"
+                      style={{
+                        fontSize: '12px',
+                        color: '#666',
+                        backgroundColor: 'rgba(0,0,0,0.05)',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        marginBottom: '4px',
+                        borderLeft: '3px solid #007aff'
+                      }}
+                    >
+                      <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>
+                        {message.reply_to_message.deleted_at
+                          ? 'Replying to deleted message'
+                          : `Replying to User ${message.reply_to_message.sender_uid}`}
+                      </div>
+                      {!message.reply_to_message.deleted_at && message.reply_to_message.message && (
+                        <div style={{
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          fontStyle: 'italic'
+                        }}>
+                          {message.reply_to_message.message}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <span slot="text-footer">
+                    {messageTime(message.created_at)}
+                    {message.updated_at && !message.deleted_at && ' (edited)'}
+                  </span>
+                </Message>
+              );
+            })}
             <div ref={messagesEndRef} aria-hidden="true" />
           </>
         )}

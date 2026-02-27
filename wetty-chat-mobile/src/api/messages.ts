@@ -1,6 +1,13 @@
 import type { AxiosResponse } from 'axios';
 import apiClient from './client';
 
+export interface ReplyToMessage {
+  id: string;
+  message: string | null;
+  sender_uid: number;
+  deleted_at: string | null;
+}
+
 export interface MessageResponse {
   id: string;
   message: string | null;
@@ -9,11 +16,12 @@ export interface MessageResponse {
   reply_root_id: string | null;
   client_generated_id: string;
   sender_uid: number;
-  gid: string;
+  chat_id: string;
   created_at: string;
   updated_at: string | null;
   deleted_at: string | null;
   has_attachments: boolean;
+  reply_to_message?: ReplyToMessage;
 }
 
 export interface ListMessagesResponse {
@@ -44,4 +52,23 @@ export function sendMessage(
   body: CreateMessageBody
 ): Promise<AxiosResponse<MessageResponse>> {
   return apiClient.post(`/chats/${chatId}/messages`, body);
+}
+
+export interface UpdateMessageBody {
+  message: string;
+}
+
+export function updateMessage(
+  chatId: string | number,
+  messageId: string,
+  body: UpdateMessageBody
+): Promise<AxiosResponse<MessageResponse>> {
+  return apiClient.patch(`/chats/${chatId}/messages/${messageId}`, body);
+}
+
+export function deleteMessage(
+  chatId: string | number,
+  messageId: string
+): Promise<AxiosResponse<void>> {
+  return apiClient.delete(`/chats/${chatId}/messages/${messageId}`);
 }
