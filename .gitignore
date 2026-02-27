@@ -9,5 +9,3 @@
 # Where I keep my runspace for testing / docker compose
 /runspace
 /reference
-
-upload.ps1

@@ -109,7 +109,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/health", get(health))
-        .route("/ws/chats", get(handlers::ws::ws_handler))
+        .route("/ws", get(handlers::ws::ws_handler))
         .route("/chats", get(handlers::chats::get_chats))
         .route(
             "/chats/{chat_id}/messages",

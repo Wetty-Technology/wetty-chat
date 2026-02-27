@@ -107,7 +107,7 @@ _发送动作通过 HTTP 保证到达率，接收动作通过 WS 推送。具体
 
 _建立长连接以实现消息实时送达。_
 
-- **连接地址:** `ws://<domain>/ws/chats?uid=<uid>`
+- **连接地址:** `ws://<domain>/ws?uid=<uid>`
 - **心跳机制:** 客户端每 30s 发送 `ping`，服务端回复 `pong`。
 - **服务端推送事件 (Downstream Events):**
     - `on_message`: 收到新消息（包含文本、动作表情、文件消息）。

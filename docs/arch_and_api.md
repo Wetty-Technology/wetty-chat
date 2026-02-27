@@ -106,7 +106,7 @@ Writing requires internal key in header (not exposed to clients). Clients may st
 
 _Persistent connection for real‑time push._
 
-- **Endpoint:** `ws://<domain>/ws/chats?uid=<uid>`
+- **Endpoint:** `ws://<domain>/ws?uid=<uid>`
 - **Heartbeat:** Client sends `ping` every 30s; server replies `pong`.
 - **Server downstream events:**
   - `on_message`: New message received (text, emoji, file, etc.).
