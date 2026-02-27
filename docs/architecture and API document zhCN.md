@@ -3,7 +3,7 @@
 **全局说明：**
 
 - **网关/路由规则：** HTTP API 请求路径遵循 `/<模块key>/<具体业务>` 的格式。
-- **请求/响应格式：** HTTP API 默认使用 `application/json`，统一返回标准格式 `{ "code": 200, "msg": "success", "data": {} }`。以下API未说明res即无需data数据块。
+- **请求/响应格式：** HTTP API 默认使用 `application/json`，返回码直接使用 http status code。
 - **鉴权：** 除注册/登录接口外，所有 HTTP/WS/File 请求均需要在 Header (如 `Authorization: Bearer <token>`) 或连接参数中携带 Token。Token长度为100位：
 	- 1~32位 为用户uuid
 	- 33~64位 为用户永续key（32位）

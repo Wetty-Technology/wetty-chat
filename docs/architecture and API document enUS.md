@@ -3,7 +3,7 @@
 ## Global Notes
 
 - **Routing convention:** HTTP API paths follow the pattern `/<module key>/<business action>`.
-- **Request/response format:** Default content type is `application/json`; standard response body is `{ "code": 200, "msg": "success", "data": {} }`. Unless otherwise noted, endpoints that are effectively “yes/no” may omit `data`.
+- **Request/response format:** Default content type is `application/json`; the default response code just uses http status code.
 - **Authentication:** Apart from registration/login, all HTTP/WS/File requests must carry a Token in the header (e.g., `Authorization: Bearer <token>`) or as a query parameter. Token length is 100 chars, composed as:
   - 1–32: user uid
   - 33–64: user secret key (32 chars)
