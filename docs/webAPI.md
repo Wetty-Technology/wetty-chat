@@ -1,6 +1,6 @@
 **全局说明：**
 
-- **网关/路由规则：** HTTP API 请求路径遵循 `/a/<模块key>/<具体业务>` 的格式。
+- **网关/路由规则：** HTTP API 请求路径遵循 `/<模块key>/<具体业务>` 的格式。
 - **请求/响应格式：** HTTP API 默认使用 `application/json`，统一返回标准格式 `{ "code": 200, "msg": "success", "data": {} }`。以下API未说明res即无需data数据块。
 - **鉴权：** 除注册/登录接口外，所有 HTTP/WS/File 请求均需要在 Header (如 `Authorization: Bearer <token>`) 或连接参数中携带 Token。Token长度为100位：
 	- 1~32位 为用户uuid
@@ -17,70 +17,70 @@
 ### 1. 用户模块 (模块 Key: `users`)
 
 _此模块负责用户凭证和基础信息维护。_
-- **POST** `/a/users/auth/register`
+- **POST** `/users/auth/register`
     - **说明:** 用户注册。
     - **Req:** `{"username": "xx", "password": "xx"}`
-- **POST** `/a/users/auth/login`
+- **POST** `/users/auth/login`
     - **说明:** 用户登录。根据客户端类型下发不同生命周期的 Token。
     - **Req:** `{"username": "xx", "password": "xx", "client_type": "web|mobile"}`
     - **Res:** `{"token": "xxx", "user_key": "xxx"}` _(Web端返回临时Token，Mobile端返回永久Token)_
-- **GET** `/a/users/profile`
+- **GET** `/users/profile`
     - **说明:** 获取个人资料。
     - **Res:** `{"nickname": "xx", "avatar_fid": "xx", "bio": "xx", "sr_link": "xx", "add_friend_setting": "xx"}`
-- **PUT** `/a/users/profile`
+- **PUT** `/users/profile`
     - **说明:** 更新个人资料（头像、bio、sr主站link、添加好友限制等）。
     - **Req:** `{"avatar_fid": "xx", "bio": "xx", ...}`
 
 ### 2. 好友模块 (模块 Key: `friend`)
 
 _此模块负责好友关系链的维护。_
-- **POST** `/a/friend/apply`
+- **POST** `/friend/apply`
     - **说明:** 申请加好友。
     - **Req:** `{"target_user_id": "xx", "apply_msg": "你好"}`
-- **DELETE** `/a/friend/{user_id}`
+- **DELETE** `/friend/{user_id}`
     - **说明:** 解除好友关系。
-- **POST** `/a/friend/block`
+- **POST** `/friend/block`
     - **说明:** 拉黑用户。
     - **Req:** `{"target_user_id": "xx"}`
 
 ### 3. 群组模块 (模块 Key: `group`)
 
 _此模块负责群组生命周期和成员管理。_
-- **POST** `/a/group`
+- **POST** `/group`
     - **说明:** 建群。**(已实现)**
     - **Req:** `{"name": "xx"}`
     - **Res:** `{"id": "xxx", "name": "xx", "created_at": "..."}`  
-- **GET** `/a/group/{group_id}`
+- **GET** `/group/{group_id}`
     - **说明:** 获取群资料。**(已实现)**
-- **DELETE** `/a/group/{group_id}`
+- **DELETE** `/group/{group_id}`
     - **说明:** 解散群（仅限群主）。
-- **PUT** `/a/group/{group_id}/profile`
+- **PUT** `/group/{group_id}/profile`
     - **说明:** 修改群资料（群名、群头像、public/private、入群验证规则、群类别）。
-- **GET** `/a/group/{group_id}/members`
+- **GET** `/group/{group_id}/members`
     - **说明:** 拉取群成员列表。**(已实现)**
-- **POST** `/a/group/{group_id}/members`
+- **POST** `/group/{group_id}/members`
     - **说明:** 管理员加人入群。**(已实现)**
-- **POST** `/a/group/{group_id}/members/apply`
+- **POST** `/group/{group_id}/members/apply`
     - **说明:** 申请入群。
-- **DELETE** `/a/group/{group_id}/members/{user_id}`
+- **DELETE** `/group/{group_id}/members/{user_id}`
     - **说明:** 减人/踢出群聊。
-- **PUT** `/a/group/{group_id}/managers`
+- **PUT** `/group/{group_id}/managers`
     - **说明:** 群管设置（分配/取消管理员权限）。
-- **POST** `/a/group/{group_id}/mute`
+- **POST** `/group/{group_id}/mute`
     - **说明:** 禁言/取消禁言。
     - **Req:** `{"target_user_id": "xx", "mute_status": true, "duration_seconds": 3600}`
 
 ### 4. 会话模块 (模块 Key: `chats`) - HTTP部分
 
 _发送动作通过 HTTP 保证到达率，接收动作通过 WS 推送。具体消息类型见其他相关文档。_
-- **GET** `/a/chats`
+- **GET** `/chats`
     - **说明:** 拉取当前用户会话列表。**(已实现)**
-- **GET** `/a/chats/{chat_id}/messages?before={message_id}&max={max_num_message}`
+- **GET** `/chats/{chat_id}/messages?before={message_id}&max={max_num_message}`
     - **说明:** 拉取会话消息（游标分页）。**(已实现)**
-- **POST** `/a/chats/{chat_id}/messages`
+- **POST** `/chats/{chat_id}/messages`
     - **说明:** 发送消息（支持文本、动作表情、文件转发、@提醒等）。**(已实现)**
     - **Req:** `{"message": "...", "message_type": "text|image|file|emote|...", "client_generated_id": "idempotency_key", "reply_to_id": "xx", "reply_root_id": "xx"}`
-- **POST** `/a/chats/message/recall`
+- **POST** `/chats/message/recall`
     - **说明:** 撤回消息。
     - **Req:** `{"msg_id": "xx"}`
 
@@ -88,7 +88,7 @@ _发送动作通过 HTTP 保证到达率，接收动作通过 WS 推送。具体
 
 写入操作仅允许会话模块转发写入，需要会话模块在header设置内部key（不写入客户端）；支持客户端直接读文件，但依然需要鉴权。
 - **写入文件 (Upload)**
-    - **API:** `POST /a/fserv/upload`
+    - **API:** `POST /fserv/upload`
     - **说明:** 会话模块以 File Stream (流式) 形式上传文件。
     - **Header:** `Content-Type: multipart/form-data` 或 `application/octet-stream`
     - **Res:** 返回唯一的文件ID：`{"fid": "file_xxx123"}`。该 `fid` 随后用于消息发送。

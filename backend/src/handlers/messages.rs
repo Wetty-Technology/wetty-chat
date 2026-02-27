@@ -96,7 +96,7 @@ fn check_membership(
     Ok(())
 }
 
-/// GET /a/chats/:chat_id/messages — List messages in a chat (cursor-based).
+/// GET /chats/:chat_id/messages — List messages in a chat (cursor-based).
 pub async fn get_messages(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
@@ -161,7 +161,7 @@ pub struct CreateMessageBody {
     reply_root_id: Option<i64>,
 }
 
-/// POST /a/chats/:chat_id/messages — Send a message.
+/// POST /chats/:chat_id/messages — Send a message.
 pub async fn post_message(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,

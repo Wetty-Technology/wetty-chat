@@ -110,19 +110,19 @@ async fn main() {
     let app = Router::new()
         .route("/health", get(health))
         .route("/ws/chats", get(handlers::ws::ws_handler))
-        .route("/a/chats", get(handlers::chats::get_chats))
+        .route("/chats", get(handlers::chats::get_chats))
         .route(
-            "/a/chats/{chat_id}/messages",
+            "/chats/{chat_id}/messages",
             get(handlers::messages::get_messages).post(handlers::messages::post_message),
         )
-        .route("/a/group", post(handlers::chats::post_chats))
-        .route("/a/group/{chat_id}", get(handlers::chats::get_chat))
+        .route("/group", post(handlers::chats::post_chats))
+        .route("/group/{chat_id}", get(handlers::chats::get_chat))
         .route(
-            "/a/group/{chat_id}/members",
+            "/group/{chat_id}/members",
             get(handlers::members::get_members).post(handlers::members::post_add_member),
         )
         .route(
-            "/a/group/{chat_id}/members/{uid}",
+            "/group/{chat_id}/members/{uid}",
             delete(handlers::members::delete_remove_member),
         )
         .layer(

@@ -17,7 +17,7 @@ use crate::utils::ids;
 use crate::handlers::members;
 use crate::{AppState, MAX_CHATS_LIMIT};
 
-/// Row type for GET /a/chats raw query (id, name, created_at, last_message_at).
+/// Row type for GET /chats raw query (id, name, created_at, last_message_at).
 #[derive(diesel::QueryableByName)]
 struct ChatListRow {
     #[diesel(sql_type = BigInt)]
@@ -78,7 +78,7 @@ pub struct ChatDetailResponse {
     created_at: DateTime<Utc>,
 }
 
-/// GET /a/chats — List chats for the current user (cursor-based).
+/// GET /chats — List chats for the current user (cursor-based).
 pub async fn get_chats(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
@@ -190,7 +190,7 @@ pub async fn get_chats(
     }))
 }
 
-/// GET /a/group/:chat_id — Get a single group's metadata (caller must be a member).
+/// GET /group/:chat_id — Get a single group's metadata (caller must be a member).
 pub async fn get_chat(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
@@ -239,7 +239,7 @@ pub struct CreateChatResponse {
     created_at: DateTime<Utc>,
 }
 
-/// POST /a/group — Create a new chat.
+/// POST /group — Create a new chat.
 pub async fn post_chats(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
