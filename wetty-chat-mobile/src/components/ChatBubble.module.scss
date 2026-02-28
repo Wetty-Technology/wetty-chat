@@ -1,0 +1,55 @@
+.row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 4px 12px;
+
+  &.sent {
+    flex-direction: row-reverse;
+  }
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  user-select: none;
+}
+
+.bubble {
+  max-width: 75%;
+  padding: 8px 12px;
+  line-height: 1.4;
+  font-size: 14px;
+}
+
+.received .bubble {
+  background: #e8e8ec;
+  color: #1a1a1a;
+  border-radius: 18px 18px 18px 4px;
+}
+
+.sent .bubble {
+  background: #3b82f6;
+  color: #fff;
+  border-radius: 18px 18px 4px 18px;
+}
+
+.senderName {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 2px;
+  color: inherit;
+  opacity: 0.85;
+}
+
+.messageText {
+  word-break: break-word;
+}
