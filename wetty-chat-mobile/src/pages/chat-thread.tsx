@@ -1,17 +1,22 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import {
-  f7,
-  Icon,
-  Navbar,
-  Link,
-  Page,
-  Messages,
-  Message,
-  Messagebar,
-} from 'framework7-react';
-import type { Messagebar as F7MessagebarInstance } from 'framework7/types';
+  IonPage,
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonContent,
+  IonFooter,
+  IonButtons,
+  IonButton,
+  IonIcon,
+  IonBackButton,
+  useIonToast,
+  useIonAlert,
+  useIonActionSheet,
+} from '@ionic/react';
+import { useParams, useHistory, useLocation } from 'react-router-dom';
+import { paperPlane, people, settings } from 'ionicons/icons';
 import { useDispatch, useSelector } from 'react-redux';
-import './chat-thread.scss';
 import {
   getMessages,
   sendMessage,
@@ -31,12 +36,10 @@ import {
 } from '@/store/messagesSlice';
 import store from '@/store/index';
 import type { RootState } from '@/store/index';
+import './chat-thread.scss';
 
-interface Props {
-  f7route?: {
-    params: Record<string, string>;
-    route?: { context?: { chatName?: string }; options?: { props?: { chatName?: string } } };
-  };
+interface LocationState {
+  chatName?: string;
 }
 
 function generateClientId(): string {
@@ -54,29 +57,26 @@ function isSent(message: MessageResponse): boolean {
   return message.sender_uid === getCurrentUserId();
 }
 
-/** Placeholder avatar URL (initials). Self = "Me", others = "U{sender_uid}". */
 function messageAvatarUrl(message: MessageResponse): string {
   const name = isSent(message) ? 'Me' : `U${message.sender_uid}`;
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&size=64&background=random`;
 }
 
-export default function ChatThread({ f7route }: Props) {
-  const { id } = f7route?.params || {};
+export default function ChatThread() {
+  const { id } = useParams<{ id: string }>();
   const chatId = id ? String(id) : '';
-  const chatName =
-    f7route?.route?.options?.props?.chatName ??
-    f7route?.route?.context?.chatName ??
-    (id ? `Chat ${id}` : 'Chat');
+  const history = useHistory();
+  const location = useLocation<LocationState>();
+  const chatName = location.state?.chatName ?? (id ? `Chat ${id}` : 'Chat');
 
   const dispatch = useDispatch();
   const messages = useSelector((state: RootState) => selectMessagesForChat(state, chatId));
   const nextCursor = useSelector((state: RootState) => selectNextCursorForChat(state, chatId));
 
-  type MessagebarRefValue = { el: HTMLElement | null; f7Messagebar: () => F7MessagebarInstance.Messagebar };
-  const messagebarRef = useRef<MessagebarRefValue | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const contentRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const wasAtBottomRef = useRef(true);
-  const scrollContainerRef = useRef<HTMLElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [messageText, setMessageText] = useState('');
@@ -85,66 +85,19 @@ export default function ChatThread({ f7route }: Props) {
   const [editingText, setEditingText] = useState('');
   const [replyingTo, setReplyingTo] = useState<MessageResponse | null>(null);
 
+  const [presentToast] = useIonToast();
+  const [presentAlert] = useIonAlert();
+  const [presentActionSheet] = useIonActionSheet();
+
+  const showToast = useCallback((text: string, duration = 3000) => {
+    presentToast({ message: text, duration, position: 'bottom' });
+  }, [presentToast]);
+
   const scrollToBottom = useCallback(() => {
-    const endEl = messagesEndRef.current;
-    if (!endEl) return;
-    endEl.scrollIntoView({ behavior: 'auto', block: 'end' });
-    // Account for fixed Messagebar: scroll a bit more so the last message is above the bar.
-    requestAnimationFrame(() => {
-      let el: HTMLElement | null = endEl.parentElement;
-      let container: HTMLElement | null = null;
-      while (el) {
-        const style = getComputedStyle(el);
-        const overflowY = style.overflowY;
-        if (el.scrollHeight > el.clientHeight && (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay')) {
-          container = el;
-          break;
-        }
-        el = el.parentElement;
-      }
-      const messagebarEl = messagebarRef.current?.el;
-      const messagebarHeight = messagebarEl ? messagebarEl.offsetHeight : 0;
-      if (container && messagebarHeight > 0) {
-        container.scrollBy(0, messagebarHeight);
-      }
-    });
+    contentRef.current?.scrollToBottom(0);
   }, []);
 
-  // Track scroll position to know if user is at bottom (for auto-scroll on new messages).
-  useEffect(() => {
-    const endEl = messagesEndRef.current;
-    if (!endEl) return;
-    let el: HTMLElement | null = endEl.parentElement;
-    while (el) {
-      const style = getComputedStyle(el);
-      const overflowY = style.overflowY;
-      if (el.scrollHeight > el.clientHeight && (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay')) {
-        scrollContainerRef.current = el;
-        break;
-      }
-      el = el.parentElement;
-    }
-    const container = scrollContainerRef.current;
-    if (!container) return;
-    const updateAtBottom = () => {
-      const threshold = 80;
-      wasAtBottomRef.current = container.scrollTop + container.clientHeight >= container.scrollHeight - threshold;
-    };
-    updateAtBottom();
-    container.addEventListener('scroll', updateAtBottom, { passive: true });
-    return () => {
-      container.removeEventListener('scroll', updateAtBottom);
-      scrollContainerRef.current = null;
-    };
-  }, [messages.length, loading, error]);
-
-  // When Redux messages for this chat change and user was at bottom, scroll to bottom.
-  useEffect(() => {
-    if (!chatId || !wasAtBottomRef.current) return;
-    requestAnimationFrame(() => scrollToBottom());
-  }, [chatId, messages, scrollToBottom]);
-
-  // Initial load: fetch from API and write to store.
+  // Initial load
   useEffect(() => {
     if (!chatId) return;
     setLoading(true);
@@ -155,16 +108,22 @@ export default function ChatThread({ f7route }: Props) {
         const ordered = [...list].reverse();
         dispatch(setMessagesForChat({ chatId, messages: ordered }));
         dispatch(setNextCursorForChat({ chatId, cursor: res.data.next_cursor ?? null }));
-        requestAnimationFrame(() => scrollToBottom());
+        setTimeout(() => scrollToBottom(), 100);
       })
       .catch((err: Error) => {
         setError(err.message || 'Failed to load messages');
         dispatch(setMessagesForChat({ chatId, messages: [] }));
         dispatch(setNextCursorForChat({ chatId, cursor: null }));
-        f7.toast.create({ text: err.message || 'Failed to load messages', closeTimeout: 3000 }).open();
+        showToast(err.message || 'Failed to load messages');
       })
       .finally(() => setLoading(false));
-  }, [chatId, dispatch, scrollToBottom]);
+  }, [chatId, dispatch, scrollToBottom, showToast]);
+
+  // Auto-scroll when messages change
+  useEffect(() => {
+    if (!chatId || loading) return;
+    setTimeout(() => scrollToBottom(), 50);
+  }, [chatId, messages.length, loading, scrollToBottom]);
 
   const loadMore = () => {
     if (!chatId || nextCursor == null || loadingMore) return;
@@ -177,15 +136,12 @@ export default function ChatThread({ f7route }: Props) {
         dispatch(setNextCursorForChat({ chatId, cursor: res.data.next_cursor ?? null }));
       })
       .catch((err: Error) => {
-        f7.toast.create({ text: err.message || 'Failed to load more', closeTimeout: 3000 }).open();
+        showToast(err.message || 'Failed to load more');
       })
       .finally(() => setLoadingMore(false));
   };
 
-  const handleSend = (e?: React.BaseSyntheticEvent) => {
-    e?.preventDefault();
-    e?.stopPropagation();
-
+  const handleSend = useCallback(() => {
     const text = messageText.trim();
     if (!text || !chatId) return;
 
@@ -205,16 +161,18 @@ export default function ChatThread({ f7route }: Props) {
       updated_at: null,
       deleted_at: null,
       has_attachments: false,
-      reply_to_message: replyingTo ? {
-        id: replyingTo.id,
-        message: replyingTo.message,
-        sender_uid: replyingTo.sender_uid,
-        deleted_at: replyingTo.deleted_at,
-      } : undefined,
+      reply_to_message: replyingTo
+        ? {
+            id: replyingTo.id,
+            message: replyingTo.message,
+            sender_uid: replyingTo.sender_uid,
+            deleted_at: replyingTo.deleted_at,
+          }
+        : undefined,
     };
     dispatch(addMessage({ chatId, message: optimistic }));
     setReplyingTo(null);
-    requestAnimationFrame(() => scrollToBottom());
+    setTimeout(() => scrollToBottom(), 50);
 
     sendMessage(chatId, {
       message: text,
@@ -232,25 +190,45 @@ export default function ChatThread({ f7route }: Props) {
             (m) => m.client_generated_id === clientGeneratedId && m.id === '0'
           );
           if (stillPending) {
-            dispatch(confirmPendingMessage({
-              chatId,
-              clientGeneratedId,
-              message: postResponse,
-            }));
+            dispatch(
+              confirmPendingMessage({
+                chatId,
+                clientGeneratedId,
+                message: postResponse,
+              })
+            );
           }
         }, 15000);
       })
       .catch((err: Error) => {
-        f7.toast.create({ text: err.message || 'Failed to send', closeTimeout: 3000 }).open();
+        showToast(err.message || 'Failed to send');
         const state = store.getState();
         const currentMessages = selectMessagesForChat(state, chatId);
-        const current = currentMessages.filter(
+        const without = currentMessages.filter(
           (m) => m.client_generated_id !== clientGeneratedId
         );
-        dispatch(setMessagesForChat({ chatId, messages: current }));
+        dispatch(setMessagesForChat({ chatId, messages: without }));
         setMessageText(text);
       });
-  };
+  }, [chatId, dispatch, messageText, replyingTo, scrollToBottom, showToast]);
+
+  const handleSendRef = useRef(handleSend);
+  handleSendRef.current = handleSend;
+
+  // Configure textarea: Enter sends
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.setAttribute('enterkeyhint', 'send');
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSendRef.current();
+      }
+    };
+    textarea.addEventListener('keydown', onKeyDown);
+    return () => textarea.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   const handleEdit = (message: MessageResponse) => {
     setEditingMessageId(message.id);
@@ -261,22 +239,23 @@ export default function ChatThread({ f7route }: Props) {
     if (!editingMessageId || !chatId) return;
     const text = editingText.trim();
     if (!text) {
-      f7.toast.create({ text: 'Message cannot be empty', closeTimeout: 3000 }).open();
+      showToast('Message cannot be empty');
       return;
     }
-
     updateMessage(chatId, editingMessageId, { message: text })
       .then((res) => {
         const state = store.getState();
         const currentMessages = selectMessagesForChat(state, chatId);
-        const updated = currentMessages.map(m => m.id === editingMessageId ? res.data : m);
+        const updated = currentMessages.map((m) =>
+          m.id === editingMessageId ? res.data : m
+        );
         dispatch(setMessagesForChat({ chatId, messages: updated }));
         setEditingMessageId(null);
         setEditingText('');
-        f7.toast.create({ text: 'Message updated', closeTimeout: 2000 }).open();
+        showToast('Message updated', 2000);
       })
       .catch((err: Error) => {
-        f7.toast.create({ text: err.message || 'Failed to update message', closeTimeout: 3000 }).open();
+        showToast(err.message || 'Failed to update message');
       });
   };
 
@@ -287,103 +266,62 @@ export default function ChatThread({ f7route }: Props) {
 
   const handleDelete = (message: MessageResponse) => {
     if (!chatId) return;
-    f7.dialog.confirm('Are you sure you want to delete this message?', () => {
-      deleteMessage(chatId, message.id)
-        .then(() => {
-          const state = store.getState();
-          const currentMessages = selectMessagesForChat(state, chatId);
-          const updated = currentMessages.map(m =>
-            m.id === message.id
-              ? { ...m, deleted_at: new Date().toISOString(), message: null }
-              : m
-          );
-          dispatch(setMessagesForChat({ chatId, messages: updated }));
-          f7.toast.create({ text: 'Message deleted', closeTimeout: 2000 }).open();
-        })
-        .catch((err: Error) => {
-          f7.toast.create({ text: err.message || 'Failed to delete message', closeTimeout: 3000 }).open();
-        });
+    presentAlert({
+      header: 'Delete Message',
+      message: 'Are you sure you want to delete this message?',
+      buttons: [
+        { text: 'Cancel', role: 'cancel' },
+        {
+          text: 'Delete',
+          role: 'destructive',
+          handler: () => {
+            deleteMessage(chatId, message.id)
+              .then(() => {
+                const state = store.getState();
+                const currentMessages = selectMessagesForChat(state, chatId);
+                const updated = currentMessages.map((m) =>
+                  m.id === message.id
+                    ? { ...m, deleted_at: new Date().toISOString(), message: null }
+                    : m
+                );
+                dispatch(setMessagesForChat({ chatId, messages: updated }));
+                showToast('Message deleted', 2000);
+              })
+              .catch((err: Error) => {
+                showToast(err.message || 'Failed to delete message');
+              });
+          },
+        },
+      ],
     });
   };
 
   const handleReply = (message: MessageResponse) => {
     setReplyingTo(message);
-    const mb = messagebarRef.current?.f7Messagebar?.();
-    if (typeof mb?.focus === 'function') mb.focus();
+    textareaRef.current?.focus();
   };
 
   const handleMessageAction = (message: MessageResponse) => {
     if (message.deleted_at) return;
 
     const isOwn = isSent(message);
-    const buttons = [];
-
-    buttons.push({
-      text: 'Reply',
-      onClick: () => handleReply(message),
-    });
+    const buttons: Parameters<typeof presentActionSheet>[0]['buttons'] = [
+      { text: 'Reply', handler: () => handleReply(message) },
+    ];
 
     if (isOwn) {
-      buttons.push({
-        text: 'Edit',
-        onClick: () => handleEdit(message),
-      });
+      buttons.push({ text: 'Edit', handler: () => handleEdit(message) });
       buttons.push({
         text: 'Delete',
-        color: 'red',
-        onClick: () => handleDelete(message),
+        role: 'destructive',
+        handler: () => handleDelete(message),
       });
     }
 
-    buttons.push({
-      text: 'Cancel',
-      color: 'gray',
-    });
+    buttons.push({ text: 'Cancel', role: 'cancel' });
 
-    f7.actions.create({
-      buttons: [buttons],
-    }).open();
+    presentActionSheet({ buttons });
   };
-
-  const moveFocusToThisPage = () => {
-    const mb = messagebarRef.current?.f7Messagebar?.();
-    if (typeof mb?.focus === 'function') {
-      mb.focus();
-    } else {
-      const pageEl = document.querySelector('.chat-thread-page.page-current, .chat-thread-page.page-next');
-      if (pageEl instanceof HTMLElement) {
-        if (!pageEl.hasAttribute('tabindex')) pageEl.setAttribute('tabindex', '-1');
-        pageEl.focus({ preventScroll: true });
-      }
-    }
-  };
-  const handleSendRef = useRef(handleSend);
-  handleSendRef.current = handleSend;
-
-  const handlePageBeforeIn = () => requestAnimationFrame(moveFocusToThisPage);
-  const handlePageAfterIn = () => moveFocusToThisPage();
-
-  // Configure messagebar textarea: Enter sends, enterkeyhint shows "Send" (simplifies mobile keyboard bar).
-  useEffect(() => {
-    let teardown: (() => void) | undefined;
-    const id = setTimeout(() => {
-      const textarea = messagebarRef.current?.el?.querySelector('textarea');
-      if (!textarea) return;
-      textarea.setAttribute('enterkeyhint', 'send');
-      const onKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          handleSendRef.current();
-        }
-      };
-      textarea.addEventListener('keydown', onKeyDown);
-      teardown = () => textarea.removeEventListener('keydown', onKeyDown);
-    }, 0);
-    return () => {
-      clearTimeout(id);
-      teardown?.();
-    };
-  }, []);
 
   const displayMessages = messages;
   const isMessageFirst = (index: number): boolean => {
@@ -394,161 +332,169 @@ export default function ChatThread({ f7route }: Props) {
     if (index >= displayMessages.length - 1) return true;
     return displayMessages[index].sender_uid !== displayMessages[index + 1].sender_uid;
   };
-  const isSameAvatarAsPrevious = (index: number): boolean => {
-    if (index <= 0) return false;
-    const prev = displayMessages[index - 1];
-    const curr = displayMessages[index];
-    return curr.sender_uid === prev.sender_uid;
-  };
 
   return (
-    <Page
-      className="messages-page chat-thread-page"
-      noToolbar
-      messagesContent
-      onPageBeforeIn={handlePageBeforeIn}
-      onPageAfterIn={handlePageAfterIn}
-    >
-      <Navbar className="messages-navbar" title={chatName} backLink backLinkShowText={false}>
-        <Link slot="right" iconF7="person_2" href={`/chats/${chatId}/members/`} />
-        <Link slot="right" iconF7="gear" href={`/chats/${chatId}/settings/`} />
-      </Navbar>
-      {replyingTo && (
-        <div className="reply-preview" style={{ padding: '8px 16px', backgroundColor: '#f0f0f0', borderBottom: '1px solid #ddd' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '12px', color: '#666' }}>Replying to</div>
-              <div style={{ fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {replyingTo.message}
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setReplyingTo(null)}
-              style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', padding: '0 8px' }}
-            >
-              ×
-            </button>
-          </div>
-        </div>
-      )}
-      <Messagebar
-        ref={messagebarRef as React.RefObject<MessagebarRefValue>}
-        placeholder="Message"
-        value={messageText}
-        onInput={(e) => setMessageText((e.target as HTMLInputElement)?.value ?? '')}
-      >
-        <button
-          type="button"
-          slot="send-link"
-          className={`messagebar-send-link ${messageText.trim().length === 0 ? 'messagebar-send-link--disabled' : ''}`}
-          onClick={handleSend}
-          onTouchEnd={(e) => {
-            if (messageText.trim()) {
-              e.preventDefault();
-              handleSend(e);
-            }
-          }}
-          aria-label="Send message"
-        >
-          <Icon f7="paperplane_fill" />
-        </button>
-      </Messagebar>
-      <Messages>
+    <IonPage className="chat-thread-page">
+      <IonHeader>
+        <IonToolbar>
+          <IonButtons slot="start">
+            <IonBackButton defaultHref="/chats" text="" />
+          </IonButtons>
+          <IonTitle>{chatName}</IonTitle>
+          <IonButtons slot="end">
+            <IonButton onClick={() => history.push(`/chats/members/${chatId}`, { chatName })}>
+              <IonIcon slot="icon-only" icon={people} />
+            </IonButton>
+            <IonButton onClick={() => history.push(`/chats/settings/${chatId}`, { chatName })}>
+              <IonIcon slot="icon-only" icon={settings} />
+            </IonButton>
+          </IonButtons>
+        </IonToolbar>
+      </IonHeader>
+
+      <IonContent ref={contentRef} className="chat-thread-content" scrollEvents>
         {loading ? (
           <div className="chat-thread-loading">Loading…</div>
         ) : error ? (
           <div className="chat-thread-error">{error}</div>
         ) : (
-          <>
+          <div className="messages-container">
             {nextCursor != null && (
               <div className="chat-thread-load-more">
-                <Link
-                  className={loadingMore ? 'link-disabled' : undefined}
+                <button
+                  className={`load-more-btn${loadingMore ? ' disabled' : ''}`}
                   onClick={() => !loadingMore && loadMore()}
+                  disabled={loadingMore}
                 >
                   {loadingMore ? 'Loading…' : 'Load older messages'}
-                </Link>
+                </button>
               </div>
             )}
             {displayMessages.map((message, index) => {
               const isEditing = editingMessageId === message.id;
-              return isEditing ? (
-                <div key={message.id || message.client_generated_id} style={{ padding: '8px 16px', backgroundColor: '#f9f9f9', borderRadius: '8px', margin: '8px' }}>
-                  <textarea
-                    value={editingText}
-                    onChange={(e) => setEditingText(e.target.value)}
-                    style={{ width: '100%', minHeight: '60px', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '14px' }}
-                  />
-                  <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
-                    <button
-                      onClick={handleSaveEdit}
-                      style={{ flex: 1, padding: '8px', backgroundColor: '#007aff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                    >
-                      Save
-                    </button>
-                    <button
-                      onClick={handleCancelEdit}
-                      style={{ flex: 1, padding: '8px', backgroundColor: '#ccc', color: 'black', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                    >
-                      Cancel
-                    </button>
+              const sent = isSent(message);
+              const first = isMessageFirst(index);
+              const last = isMessageLast(index);
+
+              if (isEditing) {
+                return (
+                  <div
+                    key={message.id || message.client_generated_id}
+                    className="message-edit-container"
+                  >
+                    <textarea
+                      value={editingText}
+                      onChange={(e) => setEditingText(e.target.value)}
+                      className="message-edit-textarea"
+                    />
+                    <div className="message-edit-actions">
+                      <button className="btn-save" onClick={handleSaveEdit}>
+                        Save
+                      </button>
+                      <button className="btn-cancel" onClick={handleCancelEdit}>
+                        Cancel
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <Message
+                );
+              }
+
+              return (
+                <div
                   key={message.id || message.client_generated_id}
-                  type={isSent(message) ? 'sent' : 'received'}
-                  first={isMessageFirst(index)}
-                  last={isMessageLast(index)}
-                  tail={isMessageLast(index)}
-                  sameAvatar={isSameAvatarAsPrevious(index)}
-                  avatar={isSent(message) ? undefined : messageAvatarUrl(message)}
-                  text={message.deleted_at ? '[Deleted]' : (message.message ?? '')}
-                  className="message-appear-from-bottom"
+                  className={`message-row ${sent ? 'message-row--sent' : 'message-row--received'} ${first ? 'message-row--first' : ''} ${last ? 'message-row--last' : ''}`}
                   onClick={() => !message.deleted_at && handleMessageAction(message)}
                 >
-                  {message.reply_to_message && (
-                    <div
-                      slot="text-header"
-                      style={{
-                        fontSize: '12px',
-                        color: '#666',
-                        backgroundColor: 'rgba(0,0,0,0.05)',
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        marginBottom: '4px',
-                        borderLeft: '3px solid #007aff'
-                      }}
-                    >
-                      <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>
-                        {message.reply_to_message.deleted_at
-                          ? 'Replying to deleted message'
-                          : `Replying to User ${message.reply_to_message.sender_uid}`}
-                      </div>
-                      {!message.reply_to_message.deleted_at && message.reply_to_message.message && (
-                        <div style={{
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          fontStyle: 'italic'
-                        }}>
-                          {message.reply_to_message.message}
-                        </div>
+                  {!sent && (
+                    <div className="message-avatar">
+                      {last ? (
+                        <img
+                          src={messageAvatarUrl(message)}
+                          alt={`User ${message.sender_uid}`}
+                          className="message-avatar-img"
+                        />
+                      ) : (
+                        <div className="message-avatar-spacer" />
                       )}
                     </div>
                   )}
-                  <span slot="text-footer">
-                    {messageTime(message.created_at)}
-                    {message.updated_at && !message.deleted_at && ' (edited)'}
-                  </span>
-                </Message>
+                  <div className="message-bubble-wrap">
+                    {message.reply_to_message && (
+                      <div className="reply-quote">
+                        <div className="reply-quote-author">
+                          {message.reply_to_message.deleted_at
+                            ? 'Replying to deleted message'
+                            : `Replying to User ${message.reply_to_message.sender_uid}`}
+                        </div>
+                        {!message.reply_to_message.deleted_at &&
+                          message.reply_to_message.message && (
+                            <div className="reply-quote-text">
+                              {message.reply_to_message.message}
+                            </div>
+                          )}
+                      </div>
+                    )}
+                    <div
+                      className={`message-bubble ${sent ? 'message-bubble--sent' : 'message-bubble--received'} ${message.deleted_at ? 'message-bubble--deleted' : ''}`}
+                    >
+                      {message.deleted_at ? '[Deleted]' : (message.message ?? '')}
+                    </div>
+                    <div className={`message-meta ${sent ? 'message-meta--sent' : ''}`}>
+                      {messageTime(message.created_at)}
+                      {message.updated_at && !message.deleted_at && ' (edited)'}
+                    </div>
+                  </div>
+                </div>
               );
             })}
-            <div ref={messagesEndRef} aria-hidden="true" />
-          </>
+            <div ref={messagesEndRef} />
+          </div>
         )}
-      </Messages>
-    </Page>
+      </IonContent>
+
+      {replyingTo && (
+        <div className="reply-preview-bar">
+          <div className="reply-preview-content">
+            <div className="reply-preview-label">Replying to</div>
+            <div className="reply-preview-text">{replyingTo.message}</div>
+          </div>
+          <button
+            type="button"
+            className="reply-preview-close"
+            onClick={() => setReplyingTo(null)}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      <IonFooter>
+        <IonToolbar className="messagebar-toolbar">
+          <div className="messagebar">
+            <textarea
+              ref={textareaRef}
+              className="messagebar-textarea"
+              placeholder="Message"
+              value={messageText}
+              rows={1}
+              onChange={(e) => {
+                setMessageText(e.target.value);
+                // Auto-grow textarea
+                e.target.style.height = 'auto';
+                e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+              }}
+            />
+            <button
+              type="button"
+              className={`messagebar-send-btn${messageText.trim().length === 0 ? ' messagebar-send-btn--disabled' : ''}`}
+              onClick={handleSend}
+              aria-label="Send message"
+            >
+              <IonIcon icon={paperPlane} />
+            </button>
+          </div>
+        </IonToolbar>
+      </IonFooter>
+    </IonPage>
   );
 }

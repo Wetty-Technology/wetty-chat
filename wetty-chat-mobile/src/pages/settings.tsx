@@ -1,10 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { f7, Page, Navbar, List, ListInput, ListButton, Block, BlockTitle } from 'framework7-react';
+import { useState, useEffect } from 'react';
+import {
+  IonPage,
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonContent,
+  IonList,
+  IonItem,
+  IonLabel,
+  IonInput,
+  IonButton,
+  useIonToast,
+} from '@ionic/react';
 import { getCurrentUserId, setCurrentUserId } from '@/js/current-user';
-import styles from './settings.module.scss';
 
 export default function Settings() {
   const [uidInput, setUidInput] = useState(String(getCurrentUserId()));
+  const [presentToast] = useIonToast();
 
   useEffect(() => {
     setUidInput(String(getCurrentUserId()));
@@ -14,7 +26,7 @@ export default function Settings() {
     const trimmed = uidInput.trim();
     const n = parseInt(trimmed, 10);
     if (!Number.isFinite(n) || n < 1) {
-      f7.toast.create({ text: 'Enter a valid User ID (integer ≥ 1)' }).open();
+      presentToast({ message: 'Enter a valid User ID (integer ≥ 1)', duration: 3000 });
       return;
     }
     setCurrentUserId(n);
@@ -22,23 +34,32 @@ export default function Settings() {
   };
 
   return (
-    <Page>
-      <Navbar title="Settings" />
-      <Block strong inset>
-        <BlockTitle>Account</BlockTitle>
-        <List form>
-          <ListInput
-            className={styles['uid-input']}
-            type="number"
-            label="User ID"
-            placeholder="e.g. 1"
-            value={uidInput}
-            inputId="uid-input"
-            onInput={(e) => setUidInput((e.target as HTMLInputElement).value)}
-          />
-          <ListButton title="Save" onClick={handleSave} />
-        </List>
-      </Block>
-    </Page>
+    <IonPage>
+      <IonHeader>
+        <IonToolbar>
+          <IonTitle>Settings</IonTitle>
+        </IonToolbar>
+      </IonHeader>
+      <IonContent>
+        <div style={{ padding: '16px' }}>
+          <IonList>
+            <IonItem>
+              <IonLabel position="stacked">User ID</IonLabel>
+              <IonInput
+                type="number"
+                placeholder="e.g. 1"
+                value={uidInput}
+                onIonInput={(e) => setUidInput(e.detail.value ?? '')}
+              />
+            </IonItem>
+          </IonList>
+          <div style={{ marginTop: '16px' }}>
+            <IonButton expand="block" onClick={handleSave}>
+              Save
+            </IonButton>
+          </div>
+        </div>
+      </IonContent>
+    </IonPage>
   );
 }

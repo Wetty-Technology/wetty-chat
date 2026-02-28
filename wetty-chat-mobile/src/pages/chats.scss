@@ -1,38 +1,21 @@
-.chats-page {
-  html:not(.dark) & {
-    --f7-page-bg-color: #fff;
-  }
+.chats-list-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--ion-color-medium);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--ion-color-primary);
+  margin-right: 12px;
+  flex-shrink: 0;
 }
-.chats-list {
-  --f7-list-bg-color: transparent;
-  --f7-list-item-after-font-size: 15px;
-  --f7-swipeout-button-padding-horizontal: 16px;
-  .item-media img {
-    width: 58px;
-    height: 58px;
-    object-fit: cover;
-    object-position: center;
-    border-radius: 50%;
-  }
-  .chats-list-avatar {
-    width: 58px;
-    height: 58px;
-    border-radius: 50%;
-    background: var(--f7-list-item-border-color);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    font-weight: 500;
-    color: var(--f7-theme-color);
-  }
-  .swipeout-actions-left,
-  .swipeout-actions-right {
-    a {
-      width: 80px;
-      box-sizing: border-box;
-      flex-direction: column;
-      justify-content: center;
-    }
-  }
+
+.chats-list-time {
+  font-size: 13px;
+  color: var(--ion-color-medium);
+  flex-shrink: 0;
+  text-align: right;
 }

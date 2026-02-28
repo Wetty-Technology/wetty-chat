@@ -1,8 +1,25 @@
-import React, { useState } from 'react';
-import { f7, Page, Navbar, List, ListInput, ListButton, Block, BlockTitle } from 'framework7-react';
+import { useState } from 'react';
+import {
+  IonPage,
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonContent,
+  IonList,
+  IonItem,
+  IonLabel,
+  IonInput,
+  IonButton,
+  IonBackButton,
+  IonButtons,
+  useIonAlert,
+} from '@ionic/react';
+import { useHistory } from 'react-router-dom';
 import { createChat } from '@/api/chats';
 
 export default function CreateChat() {
+  const history = useHistory();
+  const [presentAlert] = useIonAlert();
   const [name, setName] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -11,11 +28,14 @@ export default function CreateChat() {
     setSubmitting(true);
     createChat({ name: trimmed })
       .then(() => {
-        const view = f7.views.main;
-        view?.router?.navigate('/chats/', { reloadCurrent: true });
+        history.replace('/chats');
       })
       .catch((err: { message?: string }) => {
-        f7.dialog.alert(err?.message ?? 'Failed to create chat');
+        presentAlert({
+          header: 'Error',
+          message: err?.message ?? 'Failed to create chat',
+          buttons: ['OK'],
+        });
       })
       .finally(() => {
         setSubmitting(false);
@@ -23,25 +43,36 @@ export default function CreateChat() {
   };
 
   return (
-    <Page>
-      <Navbar title="New Chat" backLink />
-      <Block strong inset>
-        <BlockTitle>Chat name</BlockTitle>
-        <List form>
-          <ListInput
-            type="text"
-            placeholder="Optional"
-            value={name}
-            onInput={(e) => setName((e.target as HTMLInputElement).value)}
-            clearButton
-          />
-          <ListButton
-            title="Create"
-            onClick={handleSubmit}
-            disabled={submitting}
-          />
-        </List>
-      </Block>
-    </Page>
+    <IonPage>
+      <IonHeader>
+        <IonToolbar>
+          <IonButtons slot="start">
+            <IonBackButton defaultHref="/chats" text="" />
+          </IonButtons>
+          <IonTitle>New Chat</IonTitle>
+        </IonToolbar>
+      </IonHeader>
+      <IonContent>
+        <div style={{ padding: '16px' }}>
+          <IonList>
+            <IonItem>
+              <IonLabel position="stacked">Chat name</IonLabel>
+              <IonInput
+                type="text"
+                placeholder="Optional"
+                value={name}
+                onIonInput={(e) => setName(e.detail.value ?? '')}
+                clearInput
+              />
+            </IonItem>
+          </IonList>
+          <div style={{ marginTop: '16px' }}>
+            <IonButton expand="block" disabled={submitting} onClick={handleSubmit}>
+              {submitting ? 'Creating...' : 'Create'}
+            </IonButton>
+          </div>
+        </div>
+      </IonContent>
+    </IonPage>
   );
 }

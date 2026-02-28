@@ -52,13 +52,14 @@ function normalizePayload(p: unknown): MessageResponse | null {
   if (p == null || typeof p !== 'object') return null;
   const o = p as Record<string, unknown>;
   const id = o.id != null ? String(o.id) : undefined;
-  const gid = o.gid != null ? String(o.gid) : undefined;
+  // Server sends group/chat id as 'gid'; map to chat_id used in MessageResponse
+  const chat_id = o.gid != null ? String(o.gid) : (o.chat_id != null ? String(o.chat_id) : undefined);
   const client_generated_id = typeof o.client_generated_id === 'string' ? o.client_generated_id : '';
   const sender_uid = typeof o.sender_uid === 'number' ? o.sender_uid : 0;
   const message = o.message != null ? String(o.message) : null;
   const message_type = typeof o.message_type === 'string' ? o.message_type : 'text';
   const created_at = typeof o.created_at === 'string' ? o.created_at : new Date().toISOString();
-  if (gid == null) return null;
+  if (chat_id == null) return null;
   return {
     id: id ?? '0',
     message,
@@ -67,7 +68,7 @@ function normalizePayload(p: unknown): MessageResponse | null {
     reply_root_id: o.reply_root_id != null ? String(o.reply_root_id) : null,
     client_generated_id,
     sender_uid,
-    gid,
+    chat_id,
     created_at,
     updated_at: o.updated_at != null ? String(o.updated_at) : null,
     deleted_at: o.deleted_at != null ? String(o.deleted_at) : null,
@@ -78,7 +79,7 @@ function normalizePayload(p: unknown): MessageResponse | null {
 function handleWsMessage(payload: unknown): void {
   const message = normalizePayload(payload);
   if (!message) return;
-  const chatId = message.gid;
+  const chatId = message.chat_id;
   const state = store.getState();
   const list = selectMessagesForChat(state, chatId);
   const pending = list.find((m: MessageResponse) => m.client_generated_id === message.client_generated_id && m.id === '0');

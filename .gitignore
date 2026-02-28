@@ -1,14 +1,17 @@
-.vscode
-.cursor
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
 .idea
-
 .DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.cursor
 
 .env
 
 # Where I keep my runspace for testing / docker compose
 /runspace
 /reference
-
-# Local development scripts
-backend/start.ps1

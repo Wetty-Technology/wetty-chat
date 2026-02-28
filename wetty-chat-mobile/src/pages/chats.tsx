@@ -1,17 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
-  f7,
-  List,
-  ListItem,
-  Navbar,
-  Link,
-  Page,
-  SwipeoutActions,
-  SwipeoutButton,
-  Icon,
-} from 'framework7-react';
-import './chats.scss';
+  IonPage,
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonContent,
+  IonList,
+  IonItem,
+  IonLabel,
+  IonItemSliding,
+  IonItemOptions,
+  IonItemOption,
+  IonButtons,
+  IonButton,
+  IonIcon,
+  useIonAlert,
+} from '@ionic/react';
+import { useHistory } from 'react-router-dom';
+import { createOutline } from 'ionicons/icons';
 import { getChats, type ChatListItem } from '@/api/chats';
+import './chats.scss';
 
 function formatLastActivity(isoString: string | null): string {
   if (!isoString) return '';
@@ -28,34 +36,14 @@ function chatDisplayName(chat: ChatListItem): string {
   return `Chat ${chat.id}`;
 }
 
-export default function Chats({ f7route }: { f7route?: { query?: Record<string, string> } }) {
+export default function Chats() {
+  const history = useHistory();
+  const [presentAlert] = useIonAlert();
   const [chats, setChats] = useState<ChatListItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    getChats()
-      .then((res) => {
-        if (!cancelled) {
-          setChats(res.data.chats || []);
-          setError(null);
-        }
-      })
-      .catch((err: Error) => {
-        if (!cancelled) {
-          setError(err.message || 'Failed to load chats');
-          setChats([]);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, []);
-
-  useEffect(() => {
-    if (!f7route?.query?.refresh) return;
+  const loadChats = () => {
     setLoading(true);
     getChats()
       .then((res) => {
@@ -67,71 +55,98 @@ export default function Chats({ f7route }: { f7route?: { query?: Record<string, 
         setChats([]);
       })
       .finally(() => setLoading(false));
-  }, [f7route?.query?.refresh]);
+  };
 
-  const swipeoutUnread = () => f7.dialog.alert('Unread');
-  const swipeoutPin = () => f7.dialog.alert('Pin');
-  const swipeoutMore = () => f7.dialog.alert('More');
-  const swipeoutArchive = () => f7.dialog.alert('Archive');
+  useEffect(() => {
+    loadChats();
+  }, []);
+
+  const handleUnread = () => presentAlert({ header: 'Unread', buttons: ['OK'] });
+  const handlePin = () => presentAlert({ header: 'Pin', buttons: ['OK'] });
+  const handleMore = () => presentAlert({ header: 'More', buttons: ['OK'] });
+  const handleArchive = () => presentAlert({ header: 'Archive', buttons: ['OK'] });
 
   return (
-    <Page className="chats-page">
-      <Navbar title="Chats" large transparent>
-        <Link slot="left">Edit</Link>
-        <Link slot="right" iconF7="square_pencil" href="/chats/new/" />
-      </Navbar>
-      {error && (
-        <List>
-          <ListItem title="Error" after={error} />
-        </List>
-      )}
-      {loading && !error && (
-        <List>
-          <ListItem title="Loading…" />
-        </List>
-      )}
-      {!loading && !error && (
-        <List noChevron dividers mediaList className="chats-list">
-          {chats.length === 0 && (
-            <ListItem title="No chats yet" />
-          )}
-          {chats.map((chat) => (
-            <ListItem
-              key={chat.id}
-              link={`/chats/${chat.id}/`}
-              routeProps={{ chatName: chatDisplayName(chat) }}
-              title={chatDisplayName(chat)}
-              after={formatLastActivity(chat.last_message_at)}
-              swipeout
-            >
-              <div slot="media" className="chats-list-avatar">
-                {chat.name && chat.name.trim() ? chat.name.trim().charAt(0).toUpperCase() : '?'}
-              </div>
-              <span slot="text">Last activity</span>
-              <SwipeoutActions left>
-                <SwipeoutButton close overswipe color="blue" onClick={swipeoutUnread}>
-                  <Icon f7="chat_bubble_fill" />
-                  <span>Unread</span>
-                </SwipeoutButton>
-                <SwipeoutButton close color="gray" onClick={swipeoutPin}>
-                  <Icon f7="pin_fill" />
-                  <span>Pin</span>
-                </SwipeoutButton>
-              </SwipeoutActions>
-              <SwipeoutActions right>
-                <SwipeoutButton close color="gray" onClick={swipeoutMore}>
-                  <Icon f7="ellipsis" />
-                  <span>More</span>
-                </SwipeoutButton>
-                <SwipeoutButton close overswipe color="light-blue" onClick={swipeoutArchive}>
-                  <Icon f7="archivebox_fill" />
-                  <span>Archive</span>
-                </SwipeoutButton>
-              </SwipeoutActions>
-            </ListItem>
-          ))}
-        </List>
-      )}
-    </Page>
+    <IonPage className="chats-page">
+      <IonHeader>
+        <IonToolbar>
+          <IonButtons slot="start">
+            <IonButton>Edit</IonButton>
+          </IonButtons>
+          <IonTitle>Chats</IonTitle>
+          <IonButtons slot="end">
+            <IonButton routerLink="/chats/new">
+              <IonIcon slot="icon-only" icon={createOutline} />
+            </IonButton>
+          </IonButtons>
+        </IonToolbar>
+      </IonHeader>
+      <IonContent fullscreen>
+        {error && (
+          <IonList>
+            <IonItem>
+              <IonLabel>
+                <h3>Error</h3>
+                <p>{error}</p>
+              </IonLabel>
+            </IonItem>
+          </IonList>
+        )}
+        {loading && !error && (
+          <IonList>
+            <IonItem>
+              <IonLabel>Loading…</IonLabel>
+            </IonItem>
+          </IonList>
+        )}
+        {!loading && !error && (
+          <IonList className="chats-list">
+            {chats.length === 0 && (
+              <IonItem>
+                <IonLabel>No chats yet</IonLabel>
+              </IonItem>
+            )}
+            {chats.map((chat) => (
+              <IonItemSliding key={chat.id}>
+                <IonItemOptions side="start">
+                  <IonItemOption color="primary" onClick={handleUnread}>
+                    Unread
+                  </IonItemOption>
+                  <IonItemOption color="medium" onClick={handlePin}>
+                    Pin
+                  </IonItemOption>
+                </IonItemOptions>
+
+                <IonItem
+                  button
+                  detail={false}
+                  onClick={() => history.push(`/chats/chat/${chat.id}`, { chatName: chatDisplayName(chat) })}
+                >
+                  <div slot="start" className="chats-list-avatar">
+                    {chat.name && chat.name.trim() ? chat.name.trim().charAt(0).toUpperCase() : '?'}
+                  </div>
+                  <IonLabel>
+                    <h2>{chatDisplayName(chat)}</h2>
+                    <p>Last activity</p>
+                  </IonLabel>
+                  <IonLabel slot="end" className="chats-list-time">
+                    {formatLastActivity(chat.last_message_at)}
+                  </IonLabel>
+                </IonItem>
+
+                <IonItemOptions side="end">
+                  <IonItemOption color="medium" onClick={handleMore}>
+                    More
+                  </IonItemOption>
+                  <IonItemOption color="tertiary" onClick={handleArchive}>
+                    Archive
+                  </IonItemOption>
+                </IonItemOptions>
+              </IonItemSliding>
+            ))}
+          </IonList>
+        )}
+      </IonContent>
+    </IonPage>
   );
 }
