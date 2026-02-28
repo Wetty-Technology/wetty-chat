@@ -4,12 +4,13 @@
   --background: #ece5dd;
 }
 
-.messages-container {
-  padding: 8px 12px;
-  padding-bottom: 8px;
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
+.messages-virtuoso {
+  height: 100%;
+
+  // Style the inner scroller items
+  [data-testid="virtuoso-item-list"] > div {
+    padding: 0 12px;
+  }
 }
 
 /* Loading / Error */
@@ -27,7 +28,9 @@
 /* Load more */
 .chat-thread-load-more {
   text-align: center;
-  padding: 12px;
+  padding: 16px;
+  display: flex;
+  justify-content: center;
 }
 
 .load-more-btn {
@@ -38,11 +41,6 @@
   padding: 6px 16px;
   font-size: 13px;
   cursor: pointer;
-}
-
-.load-more-btn.disabled {
-  opacity: 0.5;
-  pointer-events: none;
 }
 
 /* Message rows */

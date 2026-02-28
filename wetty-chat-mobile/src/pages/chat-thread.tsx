@@ -10,6 +10,7 @@ import {
   IonButton,
   IonIcon,
   IonBackButton,
+  IonSpinner,
   useIonToast,
   useIonAlert,
   useIonActionSheet,
@@ -17,6 +18,7 @@ import {
 import { useParams, useHistory, useLocation } from 'react-router-dom';
 import { paperPlane, people, settings } from 'ionicons/icons';
 import { useDispatch, useSelector } from 'react-redux';
+import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso';
 import {
   getMessages,
   sendMessage,
@@ -73,12 +75,13 @@ export default function ChatThread() {
   const messages = useSelector((state: RootState) => selectMessagesForChat(state, chatId));
   const nextCursor = useSelector((state: RootState) => selectNextCursorForChat(state, chatId));
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const contentRef = useRef<any>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const virtuosoRef = useRef<VirtuosoHandle>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const loadingMoreRef = useRef(false);
+  const START_INDEX = 1_000_000;
+  const [firstItemIndex, setFirstItemIndex] = useState(START_INDEX);
   const [messageText, setMessageText] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
@@ -94,7 +97,7 @@ export default function ChatThread() {
   }, [presentToast]);
 
   const scrollToBottom = useCallback(() => {
-    contentRef.current?.scrollToBottom(0);
+    virtuosoRef.current?.scrollToIndex({ index: 'LAST', behavior: 'auto' });
   }, []);
 
   // Initial load
@@ -119,27 +122,27 @@ export default function ChatThread() {
       .finally(() => setLoading(false));
   }, [chatId, dispatch, scrollToBottom, showToast]);
 
-  // Auto-scroll when messages change
-  useEffect(() => {
-    if (!chatId || loading) return;
-    setTimeout(() => scrollToBottom(), 50);
-  }, [chatId, messages.length, loading, scrollToBottom]);
-
-  const loadMore = () => {
-    if (!chatId || nextCursor == null || loadingMore) return;
+  const loadMore = useCallback(() => {
+    const cursor = selectNextCursorForChat(store.getState(), chatId);
+    if (!chatId || cursor == null || loadingMoreRef.current) return;
+    loadingMoreRef.current = true;
     setLoadingMore(true);
-    getMessages(chatId, { before: nextCursor, max: 50 })
+    getMessages(chatId, { before: cursor, max: 50 })
       .then((res) => {
         const list = res.data.messages ?? [];
         const older = [...list].reverse();
+        setFirstItemIndex((prev) => prev - older.length);
         dispatch(prependMessages({ chatId, messages: older }));
         dispatch(setNextCursorForChat({ chatId, cursor: res.data.next_cursor ?? null }));
       })
       .catch((err: Error) => {
         showToast(err.message || 'Failed to load more');
       })
-      .finally(() => setLoadingMore(false));
-  };
+      .finally(() => {
+        loadingMoreRef.current = false;
+        setLoadingMore(false);
+      });
+  }, [chatId, dispatch, showToast]);
 
   const handleSend = useCallback(() => {
     const text = messageText.trim();
@@ -352,36 +355,44 @@ export default function ChatThread() {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent ref={contentRef} className="chat-thread-content" scrollEvents>
+      <IonContent className="chat-thread-content" scrollY={false}>
         {loading ? (
           <div className="chat-thread-loading">Loading…</div>
         ) : error ? (
           <div className="chat-thread-error">{error}</div>
         ) : (
-          <div className="messages-container">
-            {nextCursor != null && (
-              <div className="chat-thread-load-more">
-                <button
-                  className={`load-more-btn${loadingMore ? ' disabled' : ''}`}
-                  onClick={() => !loadingMore && loadMore()}
-                  disabled={loadingMore}
-                >
-                  {loadingMore ? 'Loading…' : 'Load older messages'}
-                </button>
-              </div>
-            )}
-            {displayMessages.map((message, index) => {
+          <Virtuoso
+            ref={virtuosoRef}
+            className="messages-virtuoso"
+            data={displayMessages}
+            firstItemIndex={firstItemIndex}
+            initialTopMostItemIndex={displayMessages.length - 1}
+            followOutput="smooth"
+            alignToBottom
+            components={{
+              Header: () =>
+                nextCursor != null ? (
+                  <div className="chat-thread-load-more">
+                    {loadingMore ? (
+                      <IonSpinner name="dots" />
+                    ) : (
+                      <button className="load-more-btn" onClick={loadMore}>
+                        Load older messages
+                      </button>
+                    )}
+                  </div>
+                ) : null,
+            }}
+            itemContent={(index, message) => {
+              const arrayIndex = index - firstItemIndex;
               const isEditing = editingMessageId === message.id;
               const sent = isSent(message);
-              const first = isMessageFirst(index);
-              const last = isMessageLast(index);
+              const first = isMessageFirst(arrayIndex);
+              const last = isMessageLast(arrayIndex);
 
               if (isEditing) {
                 return (
-                  <div
-                    key={message.id || message.client_generated_id}
-                    className="message-edit-container"
-                  >
+                  <div className="message-edit-container">
                     <textarea
                       value={editingText}
                       onChange={(e) => setEditingText(e.target.value)}
@@ -401,7 +412,6 @@ export default function ChatThread() {
 
               return (
                 <div
-                  key={message.id || message.client_generated_id}
                   className={`message-row ${sent ? 'message-row--sent' : 'message-row--received'} ${first ? 'message-row--first' : ''} ${last ? 'message-row--last' : ''}`}
                   onClick={() => !message.deleted_at && handleMessageAction(message)}
                 >
@@ -446,9 +456,8 @@ export default function ChatThread() {
                   </div>
                 </div>
               );
-            })}
-            <div ref={messagesEndRef} />
-          </div>
+            }}
+          />
         )}
       </IonContent>
 
