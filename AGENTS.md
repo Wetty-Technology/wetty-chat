@@ -1,6 +1,6 @@
 ## Project Overview
 
-wetty-chat is a chat application targeting ~20k users / ~10k messages per day. It has a **Rust backend** (Axum + Diesel/PostgreSQL) and a **React frontend** (Framework7 + Vite).
+wetty-chat is a chat application targeting ~20k users / ~10k messages per day. It has a **Rust backend** (Axum + Diesel/PostgreSQL) and a **React frontend** (Ionic + Vite).
 
 ## Commands
 ### Backend (Rust)
@@ -49,11 +49,11 @@ GET  /chats/{id}/members       → list members
 
 ### Frontend (`/wetty-chat-mobile`)
 
-- **Build:** Vite 7, root at `./src`, output to `./www`
-- **Dev proxy:** `/api/*` → `http://localhost:3000` (configured in `vite.config.js`)
+- **Build:** Vite, root at `./src`, output to `./dist`
+- **Framework:** Ionic React
+- **Dev proxy:** `/_api/*` → `http://localhost:3000` (configured in `vite.config.js`)
 - **API client:** `src/api/client.js` — Axios with `X-User-Id` header interceptor (hardcoded to `1` currently — placeholder for real auth)
-- **Routing:** Framework7 routes in `src/js/routes.js`
-- **Pages:** `src/pages/chats.jsx` (chat list), `src/pages/chat-thread.jsx` (messages)
+- **Routing:** Ionic Router (Based on React Router 5)
 - **Path alias:** `@` → `./src`
 
 ### Database Schema
