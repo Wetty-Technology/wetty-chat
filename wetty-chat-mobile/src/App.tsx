@@ -9,7 +9,7 @@ import {
   setupIonicReact,
 } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
-import { Route, Redirect, Switch } from 'react-router-dom';
+import { Route, Redirect } from 'react-router-dom';
 import { chatbubbles, settings } from 'ionicons/icons';
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/store/index';

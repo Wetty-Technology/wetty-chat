@@ -58,6 +58,11 @@ export default function Settings() {
               Save
             </IonButton>
           </div>
+          <IonList style={{ marginTop: '24px' }}>
+            <IonItem button detail href="/demo/infinite-scroll">
+              <IonLabel>Infinite Scroll + Virtuoso demo</IonLabel>
+            </IonItem>
+          </IonList>
         </div>
       </IonContent>
     </IonPage>

@@ -4,12 +4,14 @@
   --background: #ece5dd;
 }
 
-.messages-container {
-  padding: 8px 12px;
-  padding-bottom: 8px;
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
+.messages-scroll-container {
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.message-item-wrapper {
+  padding: 0 12px;
 }
 
 /* Loading / Error */
@@ -27,7 +29,15 @@
 /* Load more */
 .chat-thread-load-more {
   text-align: center;
-  padding: 12px;
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.chat-thread-load-more-error {
+  color: var(--ion-color-danger);
 }
 
 .load-more-btn {
@@ -38,11 +48,6 @@
   padding: 6px 16px;
   font-size: 13px;
   cursor: pointer;
-}
-
-.load-more-btn.disabled {
-  opacity: 0.5;
-  pointer-events: none;
 }
 
 /* Message rows */
