@@ -1,25 +1,31 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
-  f7,
-  Page,
-  Navbar,
-  List,
-  ListInput,
-  ListItem,
-  Block,
-  Button,
-} from 'framework7-react';
+  IonPage,
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonContent,
+  IonList,
+  IonItem,
+  IonLabel,
+  IonInput,
+  IonTextarea,
+  IonSelect,
+  IonSelectOption,
+  IonButton,
+  IonBackButton,
+  IonButtons,
+  IonSpinner,
+  useIonToast,
+} from '@ionic/react';
+import { useParams, useHistory } from 'react-router-dom';
 import { getChatDetails, updateChat } from '@/api/chats';
 
-interface Props {
-  f7route?: {
-    params: Record<string, string>;
-  };
-}
-
-export default function ChatSettingsPage({ f7route }: Props) {
-  const { id } = f7route?.params || {};
+export default function ChatSettingsPage() {
+  const { id } = useParams<{ id: string }>();
   const chatId = id ? String(id) : '';
+  const history = useHistory();
+  const [presentToast] = useIonToast();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -39,10 +45,10 @@ export default function ChatSettingsPage({ f7route }: Props) {
         setVisibility(res.data.visibility as 'public' | 'private');
       })
       .catch((err: Error) => {
-        f7.toast.create({ text: err.message || 'Failed to load chat details', closeTimeout: 3000 }).open();
+        presentToast({ message: err.message || 'Failed to load chat details', duration: 3000 });
       })
       .finally(() => setLoading(false));
-  }, [chatId]);
+  }, [chatId, presentToast]);
 
   const handleSave = () => {
     if (!chatId) return;
@@ -54,66 +60,78 @@ export default function ChatSettingsPage({ f7route }: Props) {
       visibility,
     })
       .then(() => {
-        f7.toast.create({ text: 'Settings saved', closeTimeout: 2000 }).open();
-        f7.views.main.router.back();
+        presentToast({ message: 'Settings saved', duration: 2000 });
+        history.goBack();
       })
       .catch((err: Error) => {
-        f7.toast.create({ text: err.message || 'Failed to save settings', closeTimeout: 3000 }).open();
+        presentToast({ message: err.message || 'Failed to save settings', duration: 3000 });
       })
       .finally(() => setSaving(false));
   };
 
   return (
-    <Page>
-      <Navbar title="Group Settings" backLink />
-      {loading ? (
-        <Block>Loading...</Block>
-      ) : (
-        <>
-          <List>
-            <ListInput
-              label="Group Name"
-              type="text"
-              placeholder="Enter group name"
-              value={name}
-              onInput={(e) => setName((e.target as HTMLInputElement).value)}
-            />
-            <ListInput
-              label="Description"
-              type="textarea"
-              placeholder="Enter group description"
-              value={description}
-              onInput={(e) => setDescription((e.target as HTMLTextAreaElement).value)}
-            />
-            <ListInput
-              label="Avatar URL"
-              type="url"
-              placeholder="Enter avatar URL"
-              value={avatar}
-              onInput={(e) => setAvatar((e.target as HTMLInputElement).value)}
-            />
-            <ListItem
-              title="Visibility"
-              smartSelect
-              smartSelectParams={{ openIn: 'popover' }}
-            >
-              <select
-                name="visibility"
-                value={visibility}
-                onChange={(e) => setVisibility(e.target.value as 'public' | 'private')}
-              >
-                <option value="public">Public</option>
-                <option value="private">Private</option>
-              </select>
-            </ListItem>
-          </List>
-          <Block>
-            <Button fill large disabled={saving} onClick={handleSave}>
-              {saving ? 'Saving...' : 'Save Settings'}
-            </Button>
-          </Block>
-        </>
-      )}
-    </Page>
+    <IonPage>
+      <IonHeader>
+        <IonToolbar>
+          <IonButtons slot="start">
+            <IonBackButton defaultHref={`/chats/${chatId}`} text="" />
+          </IonButtons>
+          <IonTitle>Group Settings</IonTitle>
+        </IonToolbar>
+      </IonHeader>
+      <IonContent>
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '24px' }}>
+            <IonSpinner />
+          </div>
+        ) : (
+          <>
+            <IonList>
+              <IonItem>
+                <IonLabel position="stacked">Group Name</IonLabel>
+                <IonInput
+                  value={name}
+                  placeholder="Enter group name"
+                  onIonInput={(e) => setName(e.detail.value ?? '')}
+                />
+              </IonItem>
+              <IonItem>
+                <IonLabel position="stacked">Description</IonLabel>
+                <IonTextarea
+                  value={description}
+                  placeholder="Enter group description"
+                  onIonInput={(e) => setDescription(e.detail.value ?? '')}
+                  rows={3}
+                />
+              </IonItem>
+              <IonItem>
+                <IonLabel position="stacked">Avatar URL</IonLabel>
+                <IonInput
+                  type="url"
+                  value={avatar}
+                  placeholder="Enter avatar URL"
+                  onIonInput={(e) => setAvatar(e.detail.value ?? '')}
+                />
+              </IonItem>
+              <IonItem>
+                <IonLabel>Visibility</IonLabel>
+                <IonSelect
+                  value={visibility}
+                  onIonChange={(e) => setVisibility(e.detail.value as 'public' | 'private')}
+                >
+                  <IonSelectOption value="public">Public</IonSelectOption>
+                  <IonSelectOption value="private">Private</IonSelectOption>
+                </IonSelect>
+              </IonItem>
+            </IonList>
+            <div style={{ padding: '16px' }}>
+              <IonButton expand="block" disabled={saving} onClick={handleSave}>
+                {saving ? 'Saving...' : 'Save Settings'}
+              </IonButton>
+            </div>
+          </>
+        )}
+      </IonContent>
+    </IonPage>
   );
 }

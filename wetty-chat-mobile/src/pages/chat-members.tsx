@@ -1,33 +1,45 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
-  f7,
-  Page,
-  Navbar,
-  List,
-  ListItem,
-  Block,
-  Button,
-  Chip,
-} from 'framework7-react';
+  IonPage,
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonContent,
+  IonList,
+  IonItem,
+  IonLabel,
+  IonChip,
+  IonButton,
+  IonBackButton,
+  IonButtons,
+  IonSpinner,
+  useIonToast,
+  useIonAlert,
+  useIonActionSheet,
+} from '@ionic/react';
+import { useParams, useHistory } from 'react-router-dom';
 import { getMembers, addMember, removeMember, updateMemberRole, type MemberResponse } from '@/api/chats';
 import { getCurrentUserId } from '@/js/current-user';
 
-interface Props {
-  f7route?: {
-    params: Record<string, string>;
-  };
-}
-
-export default function ChatMembersPage({ f7route }: Props) {
-  const { id } = f7route?.params || {};
+export default function ChatMembersPage() {
+  const { id } = useParams<{ id: string }>();
   const chatId = id ? String(id) : '';
+  const history = useHistory();
   const currentUserId = getCurrentUserId();
+
+  const [presentToast] = useIonToast();
+  const [presentAlert] = useIonAlert();
+  const [presentActionSheet] = useIonActionSheet();
 
   const [members, setMembers] = useState<MemberResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  const loadMembers = () => {
+  const showToast = useCallback((msg: string, duration = 3000) => {
+    presentToast({ message: msg, duration });
+  }, [presentToast]);
+
+  const loadMembers = useCallback(() => {
     if (!chatId) return;
     setLoading(true);
     getMembers(chatId)
@@ -37,138 +49,187 @@ export default function ChatMembersPage({ f7route }: Props) {
         setIsAdmin(currentMember?.role === 'admin');
       })
       .catch((err: Error) => {
-        f7.toast.create({ text: err.message || 'Failed to load members', closeTimeout: 3000 }).open();
+        showToast(err.message || 'Failed to load members');
       })
       .finally(() => setLoading(false));
-  };
+  }, [chatId, currentUserId, showToast]);
 
   useEffect(() => {
     loadMembers();
-  }, [chatId]);
+  }, [loadMembers]);
 
   const handleAddMember = () => {
-    f7.dialog.prompt('Enter user ID to add:', (uid: string) => {
-      const userId = parseInt(uid, 10);
-      if (isNaN(userId)) {
-        f7.toast.create({ text: 'Invalid user ID', closeTimeout: 2000 }).open();
-        return;
-      }
-      addMember(chatId, { uid: userId })
-        .then(() => {
-          f7.toast.create({ text: 'Member added', closeTimeout: 2000 }).open();
-          loadMembers();
-        })
-        .catch((err: Error) => {
-          f7.toast.create({ text: err.message || 'Failed to add member', closeTimeout: 3000 }).open();
-        });
+    presentAlert({
+      header: 'Add Member',
+      message: 'Enter user ID to add:',
+      inputs: [{ type: 'number', placeholder: 'User ID' }],
+      buttons: [
+        { text: 'Cancel', role: 'cancel' },
+        {
+          text: 'Add',
+          handler: (data: { 0: string }) => {
+            const userId = parseInt(data[0], 10);
+            if (isNaN(userId)) {
+              showToast('Invalid user ID', 2000);
+              return;
+            }
+            addMember(chatId, { uid: userId })
+              .then(() => {
+                showToast('Member added', 2000);
+                loadMembers();
+              })
+              .catch((err: Error) => {
+                showToast(err.message || 'Failed to add member');
+              });
+          },
+        },
+      ],
     });
   };
 
   const handleRemoveMember = (member: MemberResponse) => {
-    f7.dialog.confirm(
-      `Remove ${member.username || `User ${member.uid}`} from this group?`,
-      () => {
-        removeMember(chatId, member.uid)
-          .then(() => {
-            f7.toast.create({ text: 'Member removed', closeTimeout: 2000 }).open();
-            loadMembers();
-          })
-          .catch((err: Error) => {
-            f7.toast.create({ text: err.message || 'Failed to remove member', closeTimeout: 3000 }).open();
-          });
-      }
-    );
+    presentAlert({
+      header: 'Remove Member',
+      message: `Remove ${member.username || `User ${member.uid}`} from this group?`,
+      buttons: [
+        { text: 'Cancel', role: 'cancel' },
+        {
+          text: 'Remove',
+          role: 'destructive',
+          handler: () => {
+            removeMember(chatId, member.uid)
+              .then(() => {
+                showToast('Member removed', 2000);
+                loadMembers();
+              })
+              .catch((err: Error) => {
+                showToast(err.message || 'Failed to remove member');
+              });
+          },
+        },
+      ],
+    });
   };
 
   const handleToggleRole = (member: MemberResponse) => {
     const newRole = member.role === 'admin' ? 'member' : 'admin';
     const action = newRole === 'admin' ? 'Promote' : 'Demote';
-    f7.dialog.confirm(
-      `${action} ${member.username || `User ${member.uid}`} to ${newRole}?`,
-      () => {
-        updateMemberRole(chatId, member.uid, { role: newRole })
-          .then(() => {
-            f7.toast.create({ text: `Member ${action.toLowerCase()}d`, closeTimeout: 2000 }).open();
-            loadMembers();
-          })
-          .catch((err: Error) => {
-            f7.toast.create({ text: err.message || 'Failed to update role', closeTimeout: 3000 }).open();
-          });
-      }
-    );
+    presentAlert({
+      header: `${action} Member`,
+      message: `${action} ${member.username || `User ${member.uid}`} to ${newRole}?`,
+      buttons: [
+        { text: 'Cancel', role: 'cancel' },
+        {
+          text: action,
+          handler: () => {
+            updateMemberRole(chatId, member.uid, { role: newRole })
+              .then(() => {
+                showToast(`Member ${action.toLowerCase()}d`, 2000);
+                loadMembers();
+              })
+              .catch((err: Error) => {
+                showToast(err.message || 'Failed to update role');
+              });
+          },
+        },
+      ],
+    });
   };
 
   const handleLeaveGroup = () => {
-    f7.dialog.confirm('Are you sure you want to leave this group?', () => {
-      removeMember(chatId, currentUserId)
-        .then(() => {
-          f7.toast.create({ text: 'Left group', closeTimeout: 2000 }).open();
-          f7.views.main.router.navigate('/chats/', { reloadCurrent: true });
-        })
-        .catch((err: Error) => {
-          f7.toast.create({ text: err.message || 'Failed to leave group', closeTimeout: 3000 }).open();
-        });
+    presentAlert({
+      header: 'Leave Group',
+      message: 'Are you sure you want to leave this group?',
+      buttons: [
+        { text: 'Cancel', role: 'cancel' },
+        {
+          text: 'Leave',
+          role: 'destructive',
+          handler: () => {
+            removeMember(chatId, currentUserId)
+              .then(() => {
+                showToast('Left group', 2000);
+                history.replace('/chats');
+              })
+              .catch((err: Error) => {
+                showToast(err.message || 'Failed to leave group');
+              });
+          },
+        },
+      ],
+    });
+  };
+
+  const handleMemberTap = (member: MemberResponse) => {
+    if (!isAdmin || member.uid === currentUserId) return;
+    presentActionSheet({
+      buttons: [
+        {
+          text: member.role === 'admin' ? 'Demote to Member' : 'Promote to Admin',
+          handler: () => handleToggleRole(member),
+        },
+        {
+          text: 'Remove from Group',
+          role: 'destructive',
+          handler: () => handleRemoveMember(member),
+        },
+        { text: 'Cancel', role: 'cancel' },
+      ],
     });
   };
 
   return (
-    <Page>
-      <Navbar title="Group Members" backLink />
-      {loading ? (
-        <Block>Loading...</Block>
-      ) : (
-        <>
-          {isAdmin && (
-            <Block>
-              <Button fill onClick={handleAddMember}>
-                Add Member
-              </Button>
-            </Block>
-          )}
-          <List>
-            {members.map((member) => (
-              <ListItem
-                key={member.uid}
-                title={member.username || `User ${member.uid}`}
-                after={
-                  <Chip
-                    text={member.role}
-                    color={member.role === 'admin' ? 'blue' : 'gray'}
-                  />
-                }
-                onClick={() => {
-                  if (!isAdmin || member.uid === currentUserId) return;
-                  const buttons = [
-                    [
-                      {
-                        text: member.role === 'admin' ? 'Demote to Member' : 'Promote to Admin',
-                        onClick: () => handleToggleRole(member),
-                      },
-                      {
-                        text: 'Remove from Group',
-                        color: 'red',
-                        onClick: () => handleRemoveMember(member),
-                      },
-                    ],
-                    [
-                      {
-                        text: 'Cancel',
-                        color: 'gray',
-                      },
-                    ],
-                  ];
-                  f7.actions.create({ buttons }).open();
-                }}
-              />
-            ))}
-          </List>
-          <Block>
-            <Button fill color="red" onClick={handleLeaveGroup}>
-              Leave Group
-            </Button>
-          </Block>
-        </>
-      )}
-    </Page>
+    <IonPage>
+      <IonHeader>
+        <IonToolbar>
+          <IonButtons slot="start">
+            <IonBackButton defaultHref={`/chats/${chatId}`} text="" />
+          </IonButtons>
+          <IonTitle>Group Members</IonTitle>
+        </IonToolbar>
+      </IonHeader>
+      <IonContent>
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '24px' }}>
+            <IonSpinner />
+          </div>
+        ) : (
+          <>
+            {isAdmin && (
+              <div style={{ padding: '16px' }}>
+                <IonButton expand="block" onClick={handleAddMember}>
+                  Add Member
+                </IonButton>
+              </div>
+            )}
+            <IonList>
+              {members.map((member) => (
+                <IonItem
+                  key={member.uid}
+                  button={isAdmin && member.uid !== currentUserId}
+                  detail={false}
+                  onClick={() => handleMemberTap(member)}
+                >
+                  <IonLabel>
+                    {member.username || `User ${member.uid}`}
+                  </IonLabel>
+                  <IonChip
+                    color={member.role === 'admin' ? 'primary' : 'medium'}
+                    slot="end"
+                  >
+                    {member.role}
+                  </IonChip>
+                </IonItem>
+              ))}
+            </IonList>
+            <div style={{ padding: '16px' }}>
+              <IonButton expand="block" color="danger" onClick={handleLeaveGroup}>
+                Leave Group
+              </IonButton>
+            </div>
+          </>
+        )}
+      </IonContent>
+    </IonPage>
   );
 }
