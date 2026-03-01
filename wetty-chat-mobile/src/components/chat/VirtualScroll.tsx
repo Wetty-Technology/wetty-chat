@@ -9,7 +9,9 @@ interface VirtualScrollProps {
   onLoadMore?: () => void;
   loadMoreThreshold?: number;
   loading?: boolean;
+  prependedCount?: number;
   scrollToBottomRef?: React.MutableRefObject<(() => void) | null>;
+  bottomPadding?: number;
 }
 
 function MeasuredItem({
@@ -55,12 +57,15 @@ export function VirtualScroll({
   onLoadMore,
   loadMoreThreshold = 500,
   loading = false,
+  prependedCount = 0,
   scrollToBottomRef,
+  bottomPadding = 0,
 }: VirtualScrollProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
   const prevTotalRef = useRef(totalItems);
+  const prevPrependedCountRef = useRef(prependedCount);
   const hasInitialScrolled = useRef(false);
   const heightCache = useRef(new Map<number, number>());
   const isAtBottomRef = useRef(true);
@@ -110,22 +115,25 @@ export function VirtualScroll({
     hasInitialScrolled.current = true;
   }, [totalHeight]);
 
-  // When totalItems grows (items prepended at top), adjust scrollTop
+  // When items are prepended at top, adjust scrollTop to maintain position
   useLayoutEffect(() => {
-    const prev = prevTotalRef.current;
-    if (totalItems > prev && hasInitialScrolled.current) {
-      const added = totalItems - prev;
+    const newPrepended = prependedCount - prevPrependedCountRef.current;
+    if (newPrepended > 0 && hasInitialScrolled.current) {
       const el = containerRef.current;
       if (el) {
-        // Sum heights of the newly prepended items (indices 0..added-1)
         let addedHeight = 0;
-        for (let i = 0; i < added; i++) {
+        for (let i = 0; i < newPrepended; i++) {
           addedHeight += heightCache.current.get(i) ?? estimatedItemHeight;
         }
         el.scrollTop += addedHeight;
       }
     }
-    // Auto-scroll to bottom when new messages appended and user was at bottom
+    prevPrependedCountRef.current = prependedCount;
+  }, [prependedCount, estimatedItemHeight]);
+
+  // Auto-scroll to bottom when new messages appended and user was at bottom
+  useLayoutEffect(() => {
+    const prev = prevTotalRef.current;
     if (isAtBottomRef.current && totalItems > prev) {
       const el = containerRef.current;
       if (el) {
@@ -135,7 +143,7 @@ export function VirtualScroll({
       }
     }
     prevTotalRef.current = totalItems;
-  }, [totalItems, estimatedItemHeight]);
+  }, [totalItems]);
 
   // Expose scrollToBottom for imperative use
   useEffect(() => {
@@ -154,6 +162,12 @@ export function VirtualScroll({
     if (prev !== height) {
       heightCache.current.set(index, height);
       forceUpdate(c => c + 1);
+      if (isAtBottomRef.current) {
+        requestAnimationFrame(() => {
+          const el = containerRef.current;
+          if (el) el.scrollTop = el.scrollHeight - el.clientHeight;
+        });
+      }
     }
   }, []);
 
@@ -215,7 +229,7 @@ export function VirtualScroll({
 
   return (
     <div ref={containerRef} className={styles.container} onScroll={handleScroll}>
-      <div className={styles.spacer} style={{ height: totalHeight + topPadding }}>
+      <div className={styles.spacer} style={{ height: totalHeight + topPadding + bottomPadding }}>
         {loading && (
           <div className={styles.loadingRow} style={{ height: loadingRowHeight }}>
             Loading…

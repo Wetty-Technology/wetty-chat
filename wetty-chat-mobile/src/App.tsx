@@ -10,7 +10,7 @@ import {
 } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
 import { Route, Redirect } from 'react-router-dom';
-import { chatbubbles, settings } from 'ionicons/icons';
+import { chatbubbles, settings, flask } from 'ionicons/icons';
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/store/index';
 
@@ -22,6 +22,7 @@ import ChatMembersPage from '@/pages/chat-members';
 import SettingsPage from '@/pages/settings';
 import GroupDetailPage from '@/pages/group-detail';
 import NotFoundPage from '@/pages/not-found';
+import ComponentDemoPage from '@/pages/component-demo';
 
 import './app.scss';
 
@@ -46,6 +47,7 @@ const App: React.FC = () => {
             <Route path="/chats/settings/:id" exact component={ChatSettingsPage} />
             <Route path="/chats/members/:id" exact component={ChatMembersPage} />
             <Route path="/chats/detail/:id" exact component={GroupDetailPage} />
+            <Route path="/demo" exact component={ComponentDemoPage} />
             <Route path="/settings" exact component={SettingsPage} />
             <Redirect exact from="/" to="/chats" />
             <Route component={NotFoundPage} />
@@ -54,6 +56,10 @@ const App: React.FC = () => {
             <IonTabButton tab="chats" href="/chats">
               <IonIcon icon={chatbubbles} />
               <IonLabel>Chats</IonLabel>
+            </IonTabButton>
+            <IonTabButton tab="demo" href="/demo">
+              <IonIcon icon={flask} />
+              <IonLabel>Demo</IonLabel>
             </IonTabButton>
             <IonTabButton tab="settings" href="/settings">
               <IonIcon icon={settings} />
