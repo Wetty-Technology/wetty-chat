@@ -117,3 +117,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.replyPreviewTappable {
+  cursor: pointer;
+
+  &:active {
+    opacity: 0.6;
+  }
+}

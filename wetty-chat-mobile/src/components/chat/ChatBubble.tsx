@@ -11,6 +11,7 @@ interface ChatBubbleProps {
   showName?: boolean;
   showAvatar?: boolean;
   onReply?: () => void;
+  onReplyTap?: () => void;
   onLongPress?: () => void;
   onAvatarClick?: () => void;
   replyTo?: {
@@ -33,7 +34,7 @@ function getInitials(name: string): string {
 const SWIPE_THRESHOLD = 60;
 const SWIPE_MAX = 80;
 
-export function ChatBubble({ senderName, message, isSent, avatarColor, showName = true, showAvatar = true, onReply, onLongPress, onAvatarClick, replyTo, timestamp }: ChatBubbleProps) {
+export function ChatBubble({ senderName, message, isSent, avatarColor, showName = true, showAvatar = true, onReply, onReplyTap, onLongPress, onAvatarClick, replyTo, timestamp }: ChatBubbleProps) {
   const [offset, setOffset] = useState(0);
   const [animating, setAnimating] = useState(false);
   const startX = useRef(0);
@@ -148,7 +149,10 @@ export function ChatBubble({ senderName, message, isSent, avatarColor, showName 
           <div className={styles.bubble}>
             {!isSent && showName && <div className={styles.senderName}>{senderName}</div>}
             {replyTo && (
-              <div className={styles.replyPreview}>
+              <div
+                className={`${styles.replyPreview} ${onReplyTap ? styles.replyPreviewTappable : ''}`}
+                onClick={onReplyTap}
+              >
                 <div className={styles.replyPreviewName}>{replyTo.senderName}</div>
                 <div className={styles.replyPreviewText}>{replyTo.message}</div>
               </div>

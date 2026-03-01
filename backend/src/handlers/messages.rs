@@ -25,6 +25,10 @@ pub struct ChatIdPath {
 pub struct ListMessagesQuery {
     #[serde(default, deserialize_with = "crate::serde_i64_string::opt::deserialize")]
     before: Option<i64>,
+    #[serde(default, deserialize_with = "crate::serde_i64_string::opt::deserialize")]
+    around: Option<i64>,
+    #[serde(default, deserialize_with = "crate::serde_i64_string::opt::deserialize")]
+    after: Option<i64>,
     #[serde(default)]
     max: Option<i64>,
 }
@@ -34,6 +38,8 @@ pub struct ListMessagesResponse {
     messages: Vec<MessageResponse>,
     #[serde(with = "crate::serde_i64_string::opt")]
     next_cursor: Option<i64>,
+    #[serde(with = "crate::serde_i64_string::opt")]
+    prev_cursor: Option<i64>,
 }
 
 #[derive(Serialize)]
@@ -107,6 +113,61 @@ fn check_membership(
     Ok(())
 }
 
+/// Attach reply_to_message to a list of messages by fetching referenced messages in one query.
+fn attach_replies(
+    conn: &mut diesel::r2d2::PooledConnection<diesel::r2d2::ConnectionManager<diesel::PgConnection>>,
+    messages_to_process: Vec<Message>,
+) -> Vec<MessageResponse> {
+    use crate::schema::messages::dsl;
+    let reply_ids: Vec<i64> = messages_to_process
+        .iter()
+        .filter_map(|m| m.reply_to_id)
+        .collect();
+
+    let mut reply_messages_map = std::collections::HashMap::new();
+    if !reply_ids.is_empty() {
+        let reply_messages: Vec<Message> = messages::table
+            .filter(dsl::id.eq_any(&reply_ids))
+            .select(Message::as_select())
+            .load(conn)
+            .unwrap_or_default();
+        for msg in reply_messages {
+            reply_messages_map.insert(msg.id, msg);
+        }
+    }
+
+    messages_to_process
+        .into_iter()
+        .map(|m| {
+            let reply_to_message = m.reply_to_id.and_then(|reply_id| {
+                reply_messages_map.get(&reply_id).map(|reply_msg| {
+                    Box::new(ReplyToMessage {
+                        id: reply_msg.id,
+                        message: reply_msg.message.clone(),
+                        sender_uid: reply_msg.sender_uid,
+                        deleted_at: reply_msg.deleted_at,
+                    })
+                })
+            });
+            MessageResponse {
+                id: m.id,
+                message: m.message,
+                message_type: m.message_type,
+                reply_to_id: m.reply_to_id,
+                reply_root_id: m.reply_root_id,
+                client_generated_id: m.client_generated_id,
+                sender_uid: m.sender_uid,
+                chat_id: m.chat_id,
+                created_at: m.created_at,
+                updated_at: m.updated_at,
+                deleted_at: m.deleted_at,
+                has_attachments: m.has_attachments,
+                reply_to_message,
+            }
+        })
+        .collect()
+}
+
 /// GET /chats/:chat_id/messages — List messages in a chat (cursor-based).
 pub async fn get_messages(
     CurrentUid(uid): CurrentUid,
@@ -128,6 +189,85 @@ pub async fn get_messages(
         .max(1);
 
     use crate::schema::messages::dsl;
+
+    // around=<id>: fetch a window centered on the target message
+    if let Some(target) = q.around {
+        let half = max / 2;
+
+        // Messages with id >= target, ordered ASC (target first, then newer)
+        let newer_rows: Vec<Message> = messages::table
+            .filter(dsl::chat_id.eq(chat_id).and(dsl::id.ge(target)))
+            .order(dsl::id.asc())
+            .limit(half + 2)
+            .select(Message::as_select())
+            .load(conn)
+            .map_err(|e| {
+                tracing::error!("around newer: {:?}", e);
+                (StatusCode::INTERNAL_SERVER_ERROR, "Failed to list messages")
+            })?;
+
+        // Messages with id < target, ordered DESC (closest to target first)
+        let older_rows: Vec<Message> = messages::table
+            .filter(dsl::chat_id.eq(chat_id).and(dsl::id.lt(target)))
+            .order(dsl::id.desc())
+            .limit(half + 1)
+            .select(Message::as_select())
+            .load(conn)
+            .map_err(|e| {
+                tracing::error!("around older: {:?}", e);
+                (StatusCode::INTERNAL_SERVER_ERROR, "Failed to list messages")
+            })?;
+
+        let has_older = older_rows.len() as i64 > half;
+        let has_newer = newer_rows.len() as i64 > half + 1;
+
+        let older_to_use: Vec<Message> = older_rows.into_iter().take(half as usize).collect();
+        let newer_to_use: Vec<Message> = newer_rows.into_iter().take((half + 1) as usize).collect();
+
+        // next_cursor = oldest id (for loading older), prev_cursor = newest id (for loading newer)
+        let next_cursor = has_older.then(|| older_to_use.last().map(|m| m.id)).flatten();
+        let prev_cursor = has_newer.then(|| newer_to_use.last().map(|m| m.id)).flatten();
+
+        // Combine: older reversed (oldest first) + newer (target first, ascending)
+        let mut combined: Vec<Message> = older_to_use.into_iter().rev().collect();
+        combined.extend(newer_to_use);
+
+        let messages_vec = attach_replies(conn, combined);
+
+        return Ok(Json(ListMessagesResponse {
+            messages: messages_vec,
+            next_cursor,
+            prev_cursor,
+        }));
+    }
+
+    // after=<id>: fetch messages newer than `after`, ascending order
+    if let Some(after) = q.after {
+        let rows: Vec<Message> = messages::table
+            .filter(dsl::chat_id.eq(chat_id).and(dsl::id.gt(after)))
+            .order(dsl::id.asc())
+            .limit(max + 1)
+            .select(Message::as_select())
+            .load(conn)
+            .map_err(|e| {
+                tracing::error!("after query: {:?}", e);
+                (StatusCode::INTERNAL_SERVER_ERROR, "Failed to list messages")
+            })?;
+
+        let has_more = rows.len() as i64 > max;
+        let messages_to_process: Vec<Message> = rows.into_iter().take(max as usize).collect();
+        let prev_cursor = has_more.then(|| messages_to_process.last().map(|m| m.id)).flatten();
+
+        let messages_vec = attach_replies(conn, messages_to_process);
+
+        return Ok(Json(ListMessagesResponse {
+            messages: messages_vec,
+            next_cursor: None,
+            prev_cursor,
+        }));
+    }
+
+    // Default: before cursor, descending (newest first in response, reversed by client)
     let rows: Vec<Message> = match q.before {
         None => messages::table
             .filter(dsl::chat_id.eq(chat_id))
@@ -149,64 +289,17 @@ pub async fn get_messages(
 
     let has_more = rows.len() as i64 > max;
     let messages_to_process: Vec<Message> = rows.into_iter().take(max as usize).collect();
+    let next_cursor = has_more.then(|| messages_to_process.last().map(|m| m.id)).flatten();
 
-    // Collect all reply_to_ids
-    let reply_ids: Vec<i64> = messages_to_process
-        .iter()
-        .filter_map(|m| m.reply_to_id)
-        .collect();
+    // Reverse to return ASC (oldest first)
+    let messages_to_process: Vec<Message> = messages_to_process.into_iter().rev().collect();
 
-    // Fetch all referenced messages in one query
-    let mut reply_messages_map = std::collections::HashMap::new();
-    if !reply_ids.is_empty() {
-        let reply_messages: Vec<Message> = messages::table
-            .filter(dsl::id.eq_any(&reply_ids))
-            .select(Message::as_select())
-            .load(conn)
-            .unwrap_or_default();
-
-        for msg in reply_messages {
-            reply_messages_map.insert(msg.id, msg);
-        }
-    }
-
-    // Build MessageResponse with reply_to_message
-    let messages_vec: Vec<MessageResponse> = messages_to_process
-        .into_iter()
-        .map(|m| {
-            let reply_to_message = m.reply_to_id.and_then(|reply_id| {
-                reply_messages_map.get(&reply_id).map(|reply_msg| {
-                    Box::new(ReplyToMessage {
-                        id: reply_msg.id,
-                        message: reply_msg.message.clone(),
-                        sender_uid: reply_msg.sender_uid,
-                        deleted_at: reply_msg.deleted_at,
-                    })
-                })
-            });
-
-            MessageResponse {
-                id: m.id,
-                message: m.message,
-                message_type: m.message_type,
-                reply_to_id: m.reply_to_id,
-                reply_root_id: m.reply_root_id,
-                client_generated_id: m.client_generated_id,
-                sender_uid: m.sender_uid,
-                chat_id: m.chat_id,
-                created_at: m.created_at,
-                updated_at: m.updated_at,
-                deleted_at: m.deleted_at,
-                has_attachments: m.has_attachments,
-                reply_to_message,
-            }
-        })
-        .collect();
-    let next_cursor = has_more.then(|| messages_vec.last().map(|m| m.id)).flatten();
+    let messages_vec = attach_replies(conn, messages_to_process);
 
     Ok(Json(ListMessagesResponse {
         messages: messages_vec,
         next_cursor,
+        prev_cursor: None,
     }))
 }
 

@@ -24,11 +24,17 @@ import { getCurrentUserId } from '@/js/current-user';
 import {
   selectMessagesForChat,
   selectNextCursorForChat,
+  selectPrevCursorForChat,
+  resetChat,
   setMessagesForChat,
   setNextCursorForChat,
+  setPrevCursorForChat,
+  pushWindow,
   addMessage,
+  appendMessages,
   prependMessages,
   confirmPendingMessage,
+  selectChatGeneration,
 } from '@/store/messagesSlice';
 import store from '@/store/index';
 import type { RootState } from '@/store/index';
@@ -61,9 +67,13 @@ export default function ChatThread() {
   const messages = useSelector((state: RootState) => selectMessagesForChat(state, chatId));
 
   const scrollToBottomRef = useRef<(() => void) | null>(null);
+  const scrollToIndexRef = useRef<((index: number, behavior?: ScrollBehavior) => void) | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const loadingMoreRef = useRef(false);
+  const loadingNewerRef = useRef(false);
   const [prependedCount, setPrependedCount] = useState(0);
+  const [windowKey, setWindowKey] = useState(0);
+  const [initialScrollIndex, setInitialScrollIndex] = useState<number | undefined>(undefined);
 
   const [replyingTo, setReplyingTo] = useState<MessageResponse | null>(null);
 
@@ -76,32 +86,34 @@ export default function ChatThread() {
   // Initial load
   useEffect(() => {
     if (!chatId) return;
+    setInitialScrollIndex(undefined);
     getMessages(chatId)
       .then((res) => {
         const list = res.data.messages ?? [];
-        const ordered = [...list].reverse();
-        dispatch(setMessagesForChat({ chatId, messages: ordered }));
-        dispatch(setNextCursorForChat({ chatId, cursor: res.data.next_cursor ?? null }));
+        dispatch(resetChat({ chatId, messages: list, nextCursor: res.data.next_cursor ?? null, prevCursor: null }));
+        setPrependedCount(0);
+        setWindowKey(k => k + 1);
+        setInitialScrollIndex(undefined);
       })
       .catch((err: Error) => {
-        dispatch(setMessagesForChat({ chatId, messages: [] }));
-        dispatch(setNextCursorForChat({ chatId, cursor: null }));
+        dispatch(resetChat({ chatId, messages: [], nextCursor: null, prevCursor: null }));
         showToast(err.message || 'Failed to load messages');
       });
   }, [chatId, dispatch, showToast]);
 
   const loadMore = useCallback(() => {
-    const cursor = selectNextCursorForChat(store.getState(), chatId);
+    const st = store.getState();
+    const cursor = selectNextCursorForChat(st, chatId);
     if (!chatId || cursor == null || loadingMoreRef.current) return;
+    const gen = selectChatGeneration(st, chatId);
     loadingMoreRef.current = true;
     setLoadingMore(true);
     getMessages(chatId, { before: cursor, max: 50 })
       .then((res) => {
+        if (selectChatGeneration(store.getState(), chatId) !== gen) return;
         const list = res.data.messages ?? [];
-        const older = [...list].reverse();
-        dispatch(prependMessages({ chatId, messages: older }));
-        dispatch(setNextCursorForChat({ chatId, cursor: res.data.next_cursor ?? null }));
-        setPrependedCount(c => c + older.length);
+        dispatch(prependMessages({ chatId, messages: list, nextCursor: res.data.next_cursor ?? null }));
+        setPrependedCount(c => c + list.length);
       })
       .catch((err: Error) => {
         showToast(err.message || 'Failed to load more');
@@ -111,6 +123,51 @@ export default function ChatThread() {
         setLoadingMore(false);
       });
   }, [chatId, dispatch, showToast]);
+
+  const loadNewer = useCallback(() => {
+    const st = store.getState();
+    const prevCursor = selectPrevCursorForChat(st, chatId);
+    if (!chatId || prevCursor == null || loadingNewerRef.current) return;
+    const gen = selectChatGeneration(st, chatId);
+    loadingNewerRef.current = true;
+    getMessages(chatId, { after: prevCursor, max: 50 })
+      .then((res) => {
+        if (selectChatGeneration(store.getState(), chatId) !== gen) return;
+        const list = res.data.messages ?? [];
+        dispatch(appendMessages({ chatId, messages: list, prevCursor: res.data.prev_cursor ?? null }));
+      })
+      .catch((err: Error) => {
+        showToast(err.message || 'Failed to load newer messages');
+      })
+      .finally(() => {
+        loadingNewerRef.current = false;
+      });
+  }, [chatId, dispatch, showToast]);
+
+  const jumpToMessage = useCallback((messageId: string) => {
+    const state = store.getState();
+    const currentMessages = selectMessagesForChat(state, chatId);
+    const idx = currentMessages.findIndex((m) => m.id === messageId);
+    if (idx !== -1) {
+      scrollToIndexRef.current?.(idx, 'smooth');
+      return;
+    }
+    // Message not in current window — fetch centered window
+    getMessages(chatId, { around: messageId, max: 50 })
+      .then((res) => {
+        const list = res.data.messages ?? [];
+        dispatch(pushWindow({ chatId, messages: list, nextCursor: res.data.next_cursor ?? null, prevCursor: res.data.prev_cursor ?? null }));
+        const idx = list.findIndex((m) => m.id === messageId);
+        setInitialScrollIndex(idx !== -1 ? idx : undefined);
+        setWindowKey(k => k + 1);
+        setPrependedCount(0);
+      })
+      .catch((err: Error) => {
+        showToast(err.message || 'Failed to jump to message');
+      });
+  }, [chatId, dispatch, showToast]);
+
+  const prevCursor = useSelector((state: RootState) => selectPrevCursorForChat(state, chatId));
 
   const handleSend = useCallback((text: string) => {
     if (!chatId) return;
@@ -193,10 +250,14 @@ export default function ChatThread() {
           overscan={10}
           loading={loadingMore}
           onLoadMore={loadMore}
+          onLoadMoreNewer={prevCursor != null ? loadNewer : undefined}
           loadMoreThreshold={200}
           prependedCount={prependedCount}
           scrollToBottomRef={scrollToBottomRef}
+          scrollToIndexRef={scrollToIndexRef}
           bottomPadding={16}
+          windowKey={windowKey}
+          initialScrollIndex={initialScrollIndex}
           renderItem={(index) => {
             const msg = messages[index];
             const prevSender = index > 0 ? messages[index - 1].sender_uid : null;
@@ -208,6 +269,7 @@ export default function ChatThread() {
                 isSent={msg.sender_uid === getCurrentUserId()}
                 avatarColor={colorForUser(msg.sender_uid)}
                 onReply={() => setReplyingTo(msg)}
+                onReplyTap={msg.reply_to_id ? () => jumpToMessage(msg.reply_to_id!) : undefined}
                 onLongPress={() => {
                   console.log('long press', msg.id);
                 }}

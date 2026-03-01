@@ -5,7 +5,7 @@
 
 import { getCurrentUserId } from '@/js/current-user';
 import store from '@/store/index';
-import { selectMessagesForChat, addMessage, confirmPendingMessage } from '@/store/messagesSlice';
+import { addMessage, confirmPendingMessage } from '@/store/messagesSlice';
 import { setWsConnected } from '@/store/connectionSlice';
 import type { MessageResponse } from '@/api/messages';
 
@@ -76,13 +76,18 @@ function normalizePayload(p: unknown): MessageResponse | null {
   };
 }
 
+function allMessagesForChat(chatId: string): MessageResponse[] {
+  const chat = store.getState().messages.chats[chatId];
+  if (!chat) return [];
+  return chat.windows.flatMap(w => w.messages);
+}
+
 function handleWsMessage(payload: unknown): void {
   const message = normalizePayload(payload);
   if (!message) return;
   const chatId = message.chat_id;
-  const state = store.getState();
-  const list = selectMessagesForChat(state, chatId);
-  const pending = list.find((m: MessageResponse) => m.client_generated_id === message.client_generated_id && m.id === '0');
+  const all = allMessagesForChat(chatId);
+  const pending = all.find((m: MessageResponse) => m.client_generated_id === message.client_generated_id && m.id === '0');
   if (pending) {
     store.dispatch(confirmPendingMessage({
       chatId,
@@ -90,7 +95,7 @@ function handleWsMessage(payload: unknown): void {
       message,
     }));
   } else {
-    const exists = list.some((m: MessageResponse) => m.id === message.id || m.client_generated_id === message.client_generated_id);
+    const exists = all.some((m: MessageResponse) => m.id === message.id || m.client_generated_id === message.client_generated_id);
     if (!exists) {
       store.dispatch(addMessage({ chatId, message }));
     }
