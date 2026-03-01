@@ -13,7 +13,7 @@ import {
   useIonToast,
 } from '@ionic/react';
 import { useParams, useHistory, useLocation } from 'react-router-dom';
-import { paperPlane, people, settings } from 'ionicons/icons';
+import { people, settings } from 'ionicons/icons';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   getMessages,
@@ -34,6 +34,7 @@ import store from '@/store/index';
 import type { RootState } from '@/store/index';
 import { VirtualScroll } from '@/components/chat/VirtualScroll';
 import { ChatBubble } from '@/components/chat/ChatBubble';
+import { MessageComposeBar } from '@/components/chat/MessageComposeBar';
 import './chat-thread.scss';
 
 interface LocationState {
@@ -59,11 +60,10 @@ export default function ChatThread() {
   const dispatch = useDispatch();
   const messages = useSelector((state: RootState) => selectMessagesForChat(state, chatId));
 
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollToBottomRef = useRef<(() => void) | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const loadingMoreRef = useRef(false);
-  const [messageText, setMessageText] = useState('');
+  const [prependedCount, setPrependedCount] = useState(0);
 
   const [presentToast] = useIonToast();
 
@@ -99,6 +99,7 @@ export default function ChatThread() {
         const older = [...list].reverse();
         dispatch(prependMessages({ chatId, messages: older }));
         dispatch(setNextCursorForChat({ chatId, cursor: res.data.next_cursor ?? null }));
+        setPrependedCount(c => c + older.length);
       })
       .catch((err: Error) => {
         showToast(err.message || 'Failed to load more');
@@ -109,12 +110,10 @@ export default function ChatThread() {
       });
   }, [chatId, dispatch, showToast]);
 
-  const handleSend = useCallback(() => {
-    const text = messageText.trim();
-    if (!text || !chatId) return;
+  const handleSend = useCallback((text: string) => {
+    if (!chatId) return;
 
     const clientGeneratedId = generateClientId();
-    setMessageText('');
 
     const optimistic: MessageResponse = {
       id: '0',
@@ -165,29 +164,8 @@ export default function ChatThread() {
           (m) => m.client_generated_id !== clientGeneratedId
         );
         dispatch(setMessagesForChat({ chatId, messages: without }));
-        setMessageText(text);
       });
-  }, [chatId, dispatch, messageText, showToast]);
-
-  const handleSendRef = useRef(handleSend);
-  useEffect(() => {
-    handleSendRef.current = handleSend;
-  }, [handleSend]);
-
-  // Configure textarea: Enter sends
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    textarea.setAttribute('enterkeyhint', 'send');
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        handleSendRef.current();
-      }
-    };
-    textarea.addEventListener('keydown', onKeyDown);
-    return () => textarea.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [chatId, dispatch, showToast]);
 
   return (
     <IonPage className="chat-thread-page">
@@ -216,7 +194,9 @@ export default function ChatThread() {
           loading={loadingMore}
           onLoadMore={loadMore}
           loadMoreThreshold={200}
+          prependedCount={prependedCount}
           scrollToBottomRef={scrollToBottomRef}
+          bottomPadding={16}
           renderItem={(index) => {
             const msg = messages[index];
             const prevSender = index > 0 ? messages[index - 1].sender_uid : null;
@@ -236,30 +216,7 @@ export default function ChatThread() {
       </IonContent>
 
       <IonFooter>
-        <IonToolbar className="messagebar-toolbar">
-          <div className="messagebar">
-            <textarea
-              ref={textareaRef}
-              className="messagebar-textarea"
-              placeholder="Message"
-              value={messageText}
-              rows={1}
-              onChange={(e) => {
-                setMessageText(e.target.value);
-                e.target.style.height = 'auto';
-                e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
-              }}
-            />
-            <button
-              type="button"
-              className={`messagebar-send-btn${messageText.trim().length === 0 ? ' messagebar-send-btn--disabled' : ''}`}
-              onClick={handleSend}
-              aria-label="Send message"
-            >
-              <IonIcon icon={paperPlane} />
-            </button>
-          </div>
-        </IonToolbar>
+        <MessageComposeBar onSend={handleSend} />
       </IonFooter>
     </IonPage>
   );
