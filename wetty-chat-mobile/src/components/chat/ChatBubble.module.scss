@@ -31,7 +31,7 @@
 }
 
 .received .bubble {
-  background: #e8e8ec;
+  background: #f0f0f0;
   color: #1a1a1a;
   border-radius: 18px 18px 18px 4px;
 }
@@ -48,6 +48,11 @@
   margin-bottom: 2px;
   color: inherit;
   opacity: 0.85;
+}
+
+.avatarSpacer {
+  width: 36px;
+  flex-shrink: 0;
 }
 
 .messageText {
