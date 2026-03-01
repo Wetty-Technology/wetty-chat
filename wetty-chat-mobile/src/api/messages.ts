@@ -27,6 +27,7 @@ export interface MessageResponse {
 export interface ListMessagesResponse {
   messages: MessageResponse[];
   next_cursor: string | null;
+  prev_cursor?: string | null;
 }
 
 export interface CreateMessageBody {
@@ -39,10 +40,12 @@ export interface CreateMessageBody {
 
 export function getMessages(
   chatId: string | number,
-  params?: { before?: string; max?: number }
+  params?: { before?: string; around?: string; after?: string; max?: number }
 ): Promise<AxiosResponse<ListMessagesResponse>> {
   const query: Record<string, string | number> = {};
   if (params?.before != null) query.before = params.before;
+  if (params?.around != null) query.around = params.around;
+  if (params?.after != null) query.after = params.after;
   if (params?.max != null) query.max = params.max;
   return apiClient.get(`/chats/${chatId}/messages`, { params: query });
 }

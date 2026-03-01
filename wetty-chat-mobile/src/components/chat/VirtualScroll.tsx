@@ -7,11 +7,15 @@ interface VirtualScrollProps {
   renderItem: (index: number) => ReactNode;
   overscan?: number;
   onLoadMore?: () => void;
+  onLoadMoreNewer?: () => void;
   loadMoreThreshold?: number;
   loading?: boolean;
   prependedCount?: number;
   scrollToBottomRef?: React.MutableRefObject<(() => void) | null>;
+  scrollToIndexRef?: React.MutableRefObject<((index: number, behavior?: ScrollBehavior) => void) | null>;
   bottomPadding?: number;
+  windowKey?: number | string;
+  initialScrollIndex?: number;
 }
 
 function MeasuredItem({
@@ -55,11 +59,15 @@ export function VirtualScroll({
   renderItem,
   overscan = 5,
   onLoadMore,
+  onLoadMoreNewer,
   loadMoreThreshold = 500,
   loading = false,
   prependedCount = 0,
   scrollToBottomRef,
+  scrollToIndexRef,
   bottomPadding = 0,
+  windowKey,
+  initialScrollIndex,
 }: VirtualScrollProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -69,6 +77,8 @@ export function VirtualScroll({
   const hasInitialScrolled = useRef(false);
   const heightCache = useRef(new Map<number, number>());
   const isAtBottomRef = useRef(true);
+  const pendingBottomScrollRef = useRef(false);
+  const initialScrollIndexRef = useRef<number | undefined>(undefined);
   const [, forceUpdate] = useState(0);
 
   const getHeight = useCallback((i: number) => {
@@ -104,12 +114,19 @@ export function VirtualScroll({
 
   const totalHeight = getTotalHeight();
 
-  // Scroll to bottom on initial mount
+  // Scroll to bottom on initial mount, or to target index on jump
   useLayoutEffect(() => {
     if (hasInitialScrolled.current) return;
     const el = containerRef.current;
     if (!el) return;
-    el.scrollTop = totalHeight - el.clientHeight;
+    const targetIdx = initialScrollIndexRef.current;
+    if (targetIdx != null) {
+      const offset = targetIdx * estimatedItemHeight;
+      el.scrollTop = Math.max(0, offset - el.clientHeight / 2);
+    } else {
+      el.scrollTop = el.scrollHeight;
+      pendingBottomScrollRef.current = true;
+    }
     setScrollTop(el.scrollTop);
     setContainerHeight(el.clientHeight);
     hasInitialScrolled.current = true;
@@ -145,6 +162,26 @@ export function VirtualScroll({
     prevTotalRef.current = totalItems;
   }, [totalItems]);
 
+  // Reset state when windowKey changes (new message window loaded)
+  useEffect(() => {
+    if (windowKey == null) return;
+    heightCache.current = new Map();
+    prevTotalRef.current = 0;
+    prevPrependedCountRef.current = 0;
+    if (initialScrollIndex != null) {
+      // Jump to target: let the useLayoutEffect handle scrolling
+      hasInitialScrolled.current = false;
+      isAtBottomRef.current = false;
+      initialScrollIndexRef.current = initialScrollIndex;
+    } else {
+      // Normal window reset: scroll to bottom
+      hasInitialScrolled.current = false;
+      isAtBottomRef.current = true;
+    }
+    forceUpdate(c => c + 1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [windowKey]);
+
   // Expose scrollToBottom for imperative use
   useEffect(() => {
     if (scrollToBottomRef) {
@@ -157,19 +194,51 @@ export function VirtualScroll({
     }
   }, [scrollToBottomRef]);
 
+  // Expose scrollToIndex for imperative use
+  useEffect(() => {
+    if (scrollToIndexRef) {
+      scrollToIndexRef.current = (index: number, behavior: ScrollBehavior = 'auto') => {
+        const el = containerRef.current;
+        if (!el) return;
+        const loadingRowH = loading ? 36 : 0;
+        const offset = getItemOffset(index) + loadingRowH;
+        el.scrollTo({ top: offset, behavior });
+      };
+    }
+  }, [scrollToIndexRef, getItemOffset, loading]);
+
   const handleResize = useCallback((index: number, height: number) => {
     const prev = heightCache.current.get(index);
     if (prev !== height) {
       heightCache.current.set(index, height);
       forceUpdate(c => c + 1);
-      if (isAtBottomRef.current) {
+
+      // Re-adjust scroll for jump target after items are measured
+      const targetIdx = initialScrollIndexRef.current;
+      if (targetIdx != null) {
         requestAnimationFrame(() => {
           const el = containerRef.current;
-          if (el) el.scrollTop = el.scrollHeight - el.clientHeight;
+          if (!el) return;
+          const offset = getItemOffset(targetIdx);
+          el.scrollTop = Math.max(0, offset - el.clientHeight / 2);
+          // Clear after the target item itself is measured
+          if (heightCache.current.has(targetIdx)) {
+            initialScrollIndexRef.current = undefined;
+          }
+        });
+      } else if (isAtBottomRef.current || pendingBottomScrollRef.current) {
+        requestAnimationFrame(() => {
+          const el = containerRef.current;
+          if (!el) return;
+          el.scrollTop = el.scrollHeight - el.clientHeight;
+          // Once we've scrolled to true bottom, isAtBottomRef will stay true
+          // via handleScroll, so we can stop forcing it
+          pendingBottomScrollRef.current = false;
+          isAtBottomRef.current = true;
         });
       }
     }
-  }, []);
+  }, [getItemOffset]);
 
   const handleScroll = useCallback(() => {
     const el = containerRef.current;
@@ -182,7 +251,11 @@ export function VirtualScroll({
     if (onLoadMore && el.scrollTop < loadMoreThreshold) {
       onLoadMore();
     }
-  }, [onLoadMore, loadMoreThreshold]);
+
+    if (onLoadMoreNewer && el.scrollHeight - el.scrollTop - el.clientHeight < loadMoreThreshold) {
+      onLoadMoreNewer();
+    }
+  }, [onLoadMore, onLoadMoreNewer, loadMoreThreshold]);
 
   // Observe container resize
   useEffect(() => {
