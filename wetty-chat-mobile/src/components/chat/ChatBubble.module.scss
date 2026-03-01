@@ -1,4 +1,29 @@
-.row {
+.swipeContainer {
+  position: relative;
+  overflow: hidden;
+}
+
+.swipeContent {
+  will-change: transform;
+
+  &.snapBack {
+    transition: transform 0.2s ease-out;
+  }
+}
+
+.replyIcon {
+  position: absolute;
+  left: 16px;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  font-size: 22px;
+  color: #3b82f6;
+  pointer-events: none;
+}
+
+.chatRow {
   display: flex;
   align-items: flex-end;
   gap: 8px;
@@ -57,4 +82,38 @@
 
 .messageText {
   word-break: break-word;
+}
+
+.timestamp {
+  font-size: 10px;
+  opacity: 0.6;
+  text-align: right;
+  margin-top: 2px;
+}
+
+.replyPreview {
+  border-left: 3px solid rgba(255, 255, 255, 0.5);
+  background: rgba(0, 0, 0, 0.1);
+  padding: 4px 8px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+
+.received .bubble .replyPreview {
+  border-left-color: #3b82f6;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.replyPreviewName {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.replyPreviewText {
+  font-size: 12px;
+  opacity: 0.7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
