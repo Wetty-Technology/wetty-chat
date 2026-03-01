@@ -65,6 +65,8 @@ export default function ChatThread() {
   const loadingMoreRef = useRef(false);
   const [prependedCount, setPrependedCount] = useState(0);
 
+  const [replyingTo, setReplyingTo] = useState<MessageResponse | null>(null);
+
   const [presentToast] = useIonToast();
 
   const showToast = useCallback((text: string, duration = 3000) => {
@@ -119,8 +121,14 @@ export default function ChatThread() {
       id: '0',
       message: text,
       message_type: 'text',
-      reply_to_id: null,
-      reply_root_id: null,
+      reply_to_id: replyingTo?.id ?? null,
+      reply_root_id: replyingTo?.reply_root_id ?? replyingTo?.id ?? null,
+      reply_to_message: replyingTo ? {
+        id: replyingTo.id,
+        message: replyingTo.message,
+        sender_uid: replyingTo.sender_uid,
+        deleted_at: replyingTo.deleted_at,
+      } : undefined,
       client_generated_id: clientGeneratedId,
       sender_uid: getCurrentUserId(),
       chat_id: chatId,
@@ -130,31 +138,23 @@ export default function ChatThread() {
       has_attachments: false,
     };
     dispatch(addMessage({ chatId, message: optimistic }));
+    setReplyingTo(null);
     setTimeout(() => scrollToBottomRef.current?.(), 50);
 
     sendMessage(chatId, {
       message: text,
       message_type: 'text',
       client_generated_id: clientGeneratedId,
+      reply_to_id: replyingTo?.id,
+      reply_root_id: replyingTo?.reply_root_id ?? replyingTo?.id,
     })
       .then((res) => {
         const postResponse = res.data;
-        setTimeout(() => {
-          const state = store.getState();
-          const current = selectMessagesForChat(state, chatId);
-          const stillPending = current.find(
-            (m) => m.client_generated_id === clientGeneratedId && m.id === '0'
-          );
-          if (stillPending) {
-            dispatch(
-              confirmPendingMessage({
-                chatId,
-                clientGeneratedId,
-                message: postResponse,
-              })
-            );
-          }
-        }, 15000);
+        const confirmed: MessageResponse = {
+          ...postResponse,
+          reply_to_message: postResponse.reply_to_message ?? optimistic.reply_to_message,
+        };
+        dispatch(confirmPendingMessage({ chatId, clientGeneratedId, message: confirmed }));
       })
       .catch((err: Error) => {
         showToast(err.message || 'Failed to send');
@@ -165,7 +165,7 @@ export default function ChatThread() {
         );
         dispatch(setMessagesForChat({ chatId, messages: without }));
       });
-  }, [chatId, dispatch, showToast]);
+  }, [chatId, dispatch, showToast, replyingTo]);
 
   return (
     <IonPage className="chat-thread-page">
@@ -207,8 +207,18 @@ export default function ChatThread() {
                 message={msg.deleted_at ? '[Deleted]' : (msg.message ?? '')}
                 isSent={msg.sender_uid === getCurrentUserId()}
                 avatarColor={colorForUser(msg.sender_uid)}
+                onReply={() => setReplyingTo(msg)}
+                onLongPress={() => {
+                  console.log('long press', msg.id);
+                }}
                 showName={prevSender !== msg.sender_uid}
                 showAvatar={nextSender !== msg.sender_uid}
+                timestamp={msg.created_at}
+                replyTo={msg.reply_to_message ? {
+                  senderName: `User ${msg.reply_to_message.sender_uid}`,
+                  message: msg.reply_to_message.deleted_at ? '[Deleted]' : (msg.reply_to_message.message ?? ''),
+                  avatarColor: colorForUser(msg.reply_to_message.sender_uid),
+                } : undefined}
               />
             );
           }}
@@ -216,7 +226,15 @@ export default function ChatThread() {
       </IonContent>
 
       <IonFooter>
-        <MessageComposeBar onSend={handleSend} />
+        <MessageComposeBar
+          onSend={handleSend}
+          replyTo={replyingTo ? {
+            messageId: replyingTo.id,
+            username: `User ${replyingTo.sender_uid}`,
+            text: replyingTo.message ?? '',
+          } : undefined}
+          onCancelReply={() => setReplyingTo(null)}
+        />
       </IonFooter>
     </IonPage>
   );
