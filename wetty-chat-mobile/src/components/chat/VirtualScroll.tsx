@@ -9,6 +9,7 @@ interface VirtualScrollProps {
   onLoadMore?: () => void;
   loadMoreThreshold?: number;
   loading?: boolean;
+  scrollToBottomRef?: React.MutableRefObject<(() => void) | null>;
 }
 
 function MeasuredItem({
@@ -54,6 +55,7 @@ export function VirtualScroll({
   onLoadMore,
   loadMoreThreshold = 500,
   loading = false,
+  scrollToBottomRef,
 }: VirtualScrollProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -61,6 +63,7 @@ export function VirtualScroll({
   const prevTotalRef = useRef(totalItems);
   const hasInitialScrolled = useRef(false);
   const heightCache = useRef(new Map<number, number>());
+  const isAtBottomRef = useRef(true);
   const [, forceUpdate] = useState(0);
 
   const getHeight = useCallback((i: number) => {
@@ -122,8 +125,29 @@ export function VirtualScroll({
         el.scrollTop += addedHeight;
       }
     }
+    // Auto-scroll to bottom when new messages appended and user was at bottom
+    if (isAtBottomRef.current && totalItems > prev) {
+      const el = containerRef.current;
+      if (el) {
+        requestAnimationFrame(() => {
+          el.scrollTop = el.scrollHeight - el.clientHeight;
+        });
+      }
+    }
     prevTotalRef.current = totalItems;
   }, [totalItems, estimatedItemHeight]);
+
+  // Expose scrollToBottom for imperative use
+  useEffect(() => {
+    if (scrollToBottomRef) {
+      scrollToBottomRef.current = () => {
+        const el = containerRef.current;
+        if (el) {
+          el.scrollTop = el.scrollHeight;
+        }
+      };
+    }
+  }, [scrollToBottomRef]);
 
   const handleResize = useCallback((index: number, height: number) => {
     const prev = heightCache.current.get(index);
@@ -138,6 +162,8 @@ export function VirtualScroll({
     if (!el) return;
     setScrollTop(el.scrollTop);
     setContainerHeight(el.clientHeight);
+
+    isAtBottomRef.current = el.scrollTop + el.clientHeight >= el.scrollHeight - 30;
 
     if (onLoadMore && el.scrollTop < loadMoreThreshold) {
       onLoadMore();

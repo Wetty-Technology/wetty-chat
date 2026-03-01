@@ -52,15 +52,10 @@ export default function Settings() {
                 onIonInput={(e) => setUidInput(e.detail.value ?? '')}
               />
             </IonItem>
-          </IonList>
-          <div style={{ marginTop: '16px' }}>
-            <IonButton expand="block" onClick={handleSave}>
-              Save
-            </IonButton>
-          </div>
-          <IonList style={{ marginTop: '24px' }}>
-            <IonItem button detail href="/demo/infinite-scroll">
-              <IonLabel>Infinite Scroll + Virtuoso demo</IonLabel>
+            <IonItem>
+              <IonButton onClick={handleSave}>
+                Save
+              </IonButton>
             </IonItem>
           </IonList>
         </div>

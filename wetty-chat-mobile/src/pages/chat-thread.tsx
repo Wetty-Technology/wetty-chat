@@ -32,8 +32,8 @@ import {
 } from '@/store/messagesSlice';
 import store from '@/store/index';
 import type { RootState } from '@/store/index';
-import { VirtualScroll } from '@/components/VirtualScroll';
-import { ChatBubble } from '@/components/ChatBubble';
+import { VirtualScroll } from '@/components/chat/VirtualScroll';
+import { ChatBubble } from '@/components/chat/ChatBubble';
 import './chat-thread.scss';
 
 interface LocationState {
@@ -60,6 +60,7 @@ export default function ChatThread() {
   const messages = useSelector((state: RootState) => selectMessagesForChat(state, chatId));
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const scrollToBottomRef = useRef<(() => void) | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const loadingMoreRef = useRef(false);
   const [messageText, setMessageText] = useState('');
@@ -130,6 +131,7 @@ export default function ChatThread() {
       has_attachments: false,
     };
     dispatch(addMessage({ chatId, message: optimistic }));
+    setTimeout(() => scrollToBottomRef.current?.(), 50);
 
     sendMessage(chatId, {
       message: text,
@@ -214,14 +216,19 @@ export default function ChatThread() {
           loading={loadingMore}
           onLoadMore={loadMore}
           loadMoreThreshold={200}
+          scrollToBottomRef={scrollToBottomRef}
           renderItem={(index) => {
             const msg = messages[index];
+            const prevSender = index > 0 ? messages[index - 1].sender_uid : null;
+            const nextSender = index < messages.length - 1 ? messages[index + 1].sender_uid : null;
             return (
               <ChatBubble
                 senderName={`User ${msg.sender_uid}`}
                 message={msg.deleted_at ? '[Deleted]' : (msg.message ?? '')}
                 isSent={msg.sender_uid === getCurrentUserId()}
                 avatarColor={colorForUser(msg.sender_uid)}
+                showName={prevSender !== msg.sender_uid}
+                showAvatar={nextSender !== msg.sender_uid}
               />
             );
           }}
