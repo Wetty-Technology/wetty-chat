@@ -79,15 +79,25 @@
   flex-shrink: 0;
 }
 
+.messageWrapper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
 .messageText {
   word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.timestampSpacer {
+  flex-grow: 1;
 }
 
 .timestamp {
-  font-size: 10px;
-  opacity: 0.6;
-  text-align: right;
-  margin-top: 2px;
+  font-size: 12px;
+  opacity: 0.7;
+  margin-left: 1.5ch;
 }
 
 .replyPreview {

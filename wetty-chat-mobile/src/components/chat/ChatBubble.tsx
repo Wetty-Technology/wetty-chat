@@ -168,10 +168,13 @@ export function ChatBubble({
                 <div className={styles.replyPreviewText}>{replyTo.message}</div>
               </div>
             )}
-            <div className={styles.messageText}>{message}</div>
-            {timestamp && (
-              <div className={styles.timestamp}>{formatTime(timestamp)}{edited && ' (Edited)'}</div>
-            )}
+            <div className={styles.messageWrapper}>
+              <span className={styles.messageText}>{message}</span>
+              <span className={styles.timestampSpacer} />
+              {timestamp && (
+                <span className={styles.timestamp}>{formatTime(timestamp)}{edited && ' (Edited)'}</span>
+              )}
+            </div>
           </div>
           {onReply && (
             <button className={styles.hoverReplyBtn} onClick={onReply} aria-label="Reply">
