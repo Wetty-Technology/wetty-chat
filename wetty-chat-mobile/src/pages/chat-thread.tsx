@@ -27,8 +27,6 @@ import {
   selectPrevCursorForChat,
   resetChat,
   setMessagesForChat,
-  setNextCursorForChat,
-  setPrevCursorForChat,
   pushWindow,
   addMessage,
   appendMessages,
