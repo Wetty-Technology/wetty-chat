@@ -9,15 +9,37 @@ interface ReplyTo {
   text: string;
 }
 
+export interface EditingMessage {
+  messageId: string;
+  text: string;
+}
+
 interface MessageComposeBarProps {
   onSend: (text: string) => void;
   replyTo?: ReplyTo;
   onCancelReply?: () => void;
+  editing?: EditingMessage;
+  onCancelEdit?: () => void;
 }
 
-export function MessageComposeBar({ onSend, replyTo, onCancelReply }: MessageComposeBarProps) {
+export function MessageComposeBar({ onSend, replyTo, onCancelReply, editing, onCancelEdit }: MessageComposeBarProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [text, setText] = useState('');
+
+  useEffect(() => {
+    if (editing) {
+      setText(editing.text);
+      const ta = textareaRef.current;
+      if (ta) {
+        ta.style.height = 'auto';
+        ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`;
+      }
+    } else {
+      setText('');
+      const ta = textareaRef.current;
+      if (ta) ta.style.height = 'auto';
+    }
+  }, [editing]);
 
   const handleSend = useCallback(() => {
     const trimmed = text.trim();
@@ -53,7 +75,17 @@ export function MessageComposeBar({ onSend, replyTo, onCancelReply }: MessageCom
         <IonIcon icon={addCircleOutline} />
       </button>
       <div className={styles.inputWrapper}>
-        {replyTo && (
+        {editing ? (
+          <div className={styles.replyPreview}>
+            <div className={styles.replyText}>
+              <span className={styles.replyUsername}>Edit message</span>
+              <span className={styles.replySnippet}>{editing.text}</span>
+            </div>
+            <button type="button" className={styles.replyClose} aria-label="Cancel edit" onClick={onCancelEdit}>
+              <IonIcon icon={closeCircle} />
+            </button>
+          </div>
+        ) : replyTo ? (
           <div className={styles.replyPreview}>
             <div className={styles.replyText}>
               <span className={styles.replyUsername}>Replying to {replyTo.username}</span>
@@ -63,7 +95,7 @@ export function MessageComposeBar({ onSend, replyTo, onCancelReply }: MessageCom
               <IonIcon icon={closeCircle} />
             </button>
           </div>
-        )}
+        ) : null}
         <div className={styles.inputRow}>
           <textarea
             ref={textareaRef}

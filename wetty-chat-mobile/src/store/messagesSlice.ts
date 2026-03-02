@@ -141,6 +141,22 @@ const messagesSlice = createSlice({
       }
     },
 
+    updateMessageInStore(
+      state,
+      action: { payload: { chatId: string; messageId: string; message: MessageResponse } }
+    ) {
+      const { chatId, messageId, message } = action.payload;
+      const chat = state.chats[chatId];
+      if (!chat) return;
+      for (const win of chat.windows) {
+        const idx = win.messages.findIndex(m => m.id === messageId);
+        if (idx !== -1) {
+          win.messages[idx] = message;
+          return;
+        }
+      }
+    },
+
     // Backwards compat aliases
     setMessagesForChat(state, action: { payload: { chatId: string; messages: MessageResponse[] } }) {
       const { chatId, messages } = action.payload;
@@ -186,6 +202,7 @@ export const {
   appendMessages,
   prependMessages,
   confirmPendingMessage,
+  updateMessageInStore,
 } = messagesSlice.actions;
 
 /** Selectors */
