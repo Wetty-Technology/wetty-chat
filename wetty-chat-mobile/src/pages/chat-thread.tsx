@@ -248,9 +248,9 @@ export default function ChatThread() {
           totalItems={messages.length}
           estimatedItemHeight={60}
           overscan={10}
-          loading={loadingMore}
-          onLoadMore={loadMore}
-          onLoadMoreNewer={prevCursor != null ? loadNewer : undefined}
+          loadingOlder={loadingMore}
+          onLoadOlder={loadMore}
+          onLoadNewer={prevCursor != null ? loadNewer : undefined}
           loadMoreThreshold={200}
           prependedCount={prependedCount}
           scrollToBottomRef={scrollToBottomRef}

@@ -6,10 +6,10 @@ interface VirtualScrollProps {
   estimatedItemHeight: number;
   renderItem: (index: number) => ReactNode;
   overscan?: number;
-  onLoadMore?: () => void;
-  onLoadMoreNewer?: () => void;
+  onLoadOlder?: () => void;
+  onLoadNewer?: () => void;
   loadMoreThreshold?: number;
-  loading?: boolean;
+  loadingOlder?: boolean;
   prependedCount?: number;
   scrollToBottomRef?: React.MutableRefObject<(() => void) | null>;
   scrollToIndexRef?: React.MutableRefObject<((index: number, behavior?: ScrollBehavior) => void) | null>;
@@ -58,10 +58,10 @@ export function VirtualScroll({
   estimatedItemHeight,
   renderItem,
   overscan = 5,
-  onLoadMore,
-  onLoadMoreNewer,
+  onLoadOlder,
+  onLoadNewer,
   loadMoreThreshold = 500,
-  loading = false,
+  loadingOlder = false,
   prependedCount = 0,
   scrollToBottomRef,
   scrollToIndexRef,
@@ -200,12 +200,12 @@ export function VirtualScroll({
       scrollToIndexRef.current = (index: number, behavior: ScrollBehavior = 'auto') => {
         const el = containerRef.current;
         if (!el) return;
-        const loadingRowH = loading ? 36 : 0;
+        const loadingRowH = loadingOlder ? 36 : 0;
         const offset = getItemOffset(index) + loadingRowH;
         el.scrollTo({ top: offset, behavior });
       };
     }
-  }, [scrollToIndexRef, getItemOffset, loading]);
+  }, [scrollToIndexRef, getItemOffset, loadingOlder]);
 
   const handleResize = useCallback((index: number, height: number) => {
     const prev = heightCache.current.get(index);
@@ -248,14 +248,14 @@ export function VirtualScroll({
 
     isAtBottomRef.current = el.scrollTop + el.clientHeight >= el.scrollHeight - 30;
 
-    if (onLoadMore && el.scrollTop < loadMoreThreshold) {
-      onLoadMore();
+    if (onLoadOlder && el.scrollTop < loadMoreThreshold) {
+      onLoadOlder();
     }
 
-    if (onLoadMoreNewer && el.scrollHeight - el.scrollTop - el.clientHeight < loadMoreThreshold) {
-      onLoadMoreNewer();
+    if (onLoadNewer && el.scrollHeight - el.scrollTop - el.clientHeight < loadMoreThreshold) {
+      onLoadNewer();
     }
-  }, [onLoadMore, onLoadMoreNewer, loadMoreThreshold]);
+  }, [onLoadOlder, onLoadNewer, loadMoreThreshold]);
 
   // Observe container resize
   useEffect(() => {
@@ -288,7 +288,7 @@ export function VirtualScroll({
   }
 
   const loadingRowHeight = 36;
-  const topPadding = loading ? loadingRowHeight : 0;
+  const topPadding = loadingOlder ? loadingRowHeight : 0;
 
   const visibleItems: ReactNode[] = [];
   for (let i = startIndex; i <= endIndex; i++) {
@@ -303,7 +303,7 @@ export function VirtualScroll({
   return (
     <div ref={containerRef} className={styles.container} onScroll={handleScroll}>
       <div className={styles.spacer} style={{ height: totalHeight + topPadding + bottomPadding }}>
-        {loading && (
+        {loadingOlder && (
           <div className={styles.loadingRow} style={{ height: loadingRowHeight }}>
             Loading…
           </div>
