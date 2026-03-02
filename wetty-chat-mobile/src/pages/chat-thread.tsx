@@ -21,6 +21,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import {
   getMessages,
   sendMessage,
+  updateMessage,
   type MessageResponse,
 } from '@/api/messages';
 import { getCurrentUserId } from '@/js/current-user';
@@ -35,6 +36,7 @@ import {
   appendMessages,
   prependMessages,
   confirmPendingMessage,
+  updateMessageInStore,
   selectChatGeneration,
 } from '@/store/messagesSlice';
 import store from '@/store/index';
@@ -78,6 +80,7 @@ export default function ChatThread() {
 
   const [atBottom, setAtBottom] = useState(true);
   const [replyingTo, setReplyingTo] = useState<MessageResponse | null>(null);
+  const [editingMessage, setEditingMessage] = useState<MessageResponse | null>(null);
 
   const [presentToast] = useIonToast();
   const [presentActionSheet] = useIonActionSheet();
@@ -175,6 +178,25 @@ export default function ChatThread() {
   const handleSend = useCallback((text: string) => {
     if (!chatId) return;
 
+    // Edit flow
+    if (editingMessage) {
+      const messageId = editingMessage.id;
+      // Optimistic update
+      dispatch(updateMessageInStore({ chatId, messageId, message: { ...editingMessage, message: text, updated_at: new Date().toISOString() } }));
+      setEditingMessage(null);
+
+      updateMessage(chatId, messageId, { message: text })
+        .then((res) => {
+          dispatch(updateMessageInStore({ chatId, messageId, message: { ...res.data, reply_to_message: res.data.reply_to_message ?? editingMessage.reply_to_message } }));
+        })
+        .catch((err: Error) => {
+          // Revert optimistic update
+          dispatch(updateMessageInStore({ chatId, messageId, message: editingMessage }));
+          showToast(err.message || 'Failed to edit message');
+        });
+      return;
+    }
+
     const clientGeneratedId = generateClientId();
 
     const optimistic: MessageResponse = {
@@ -225,10 +247,11 @@ export default function ChatThread() {
         );
         dispatch(setMessagesForChat({ chatId, messages: without }));
       });
-  }, [chatId, dispatch, showToast, replyingTo]);
+  }, [chatId, dispatch, showToast, replyingTo, editingMessage]);
 
   const onClickChatItem = useCallback((messageIndex: number) => {
     const msg = messages[messageIndex];
+    const isOwn = msg.sender_uid === getCurrentUserId();
     presentActionSheet({
       buttons: [
         {
@@ -237,9 +260,14 @@ export default function ChatThread() {
           }
         },
         { text: 'Start Thread', handler: () => { } },
-        { text: 'Edit', handler: () => { } },
-        { text: 'Delete', role: 'destructive', handler: () => { } },
-        { text: 'Cancel', role: 'cancel', handler: () => { } },
+        ...(isOwn ? [{
+          text: 'Edit', handler: () => {
+            setReplyingTo(null);
+            setEditingMessage(msg);
+          }
+        }] : []),
+        { text: 'Delete', role: 'destructive' as const, handler: () => { } },
+        { text: 'Cancel', role: 'cancel' as const, handler: () => { } },
       ],
     });
   }, [messages]);
@@ -295,6 +323,7 @@ export default function ChatThread() {
                 showName={prevSender !== msg.sender_uid}
                 showAvatar={nextSender !== msg.sender_uid}
                 timestamp={msg.created_at}
+                edited={msg.updated_at != null}
                 replyTo={msg.reply_to_message ? {
                   senderName: `User ${msg.reply_to_message.sender_uid}`,
                   message: msg.reply_to_message.deleted_at ? '[Deleted]' : (msg.reply_to_message.message ?? ''),
@@ -324,6 +353,11 @@ export default function ChatThread() {
             text: replyingTo.message ?? '',
           } : undefined}
           onCancelReply={() => setReplyingTo(null)}
+          editing={editingMessage ? {
+            messageId: editingMessage.id,
+            text: editingMessage.message ?? '',
+          } : undefined}
+          onCancelEdit={() => setEditingMessage(null)}
         />
       </IonFooter>
     </IonPage>

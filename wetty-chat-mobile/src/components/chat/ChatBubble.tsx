@@ -21,6 +21,7 @@ interface ChatBubbleProps {
     avatarColor?: string;
   };
   timestamp?: string;
+  edited?: boolean;
 }
 
 function formatTime(iso: string): string {
@@ -35,7 +36,22 @@ function getInitials(name: string): string {
 const SWIPE_THRESHOLD = 60;
 const SWIPE_MAX = 80;
 
-export function ChatBubble({ senderName, message, isSent, avatarColor, showName = true, showAvatar = true, swipeDirection = 'left', onReply, onReplyTap, onLongPress, onAvatarClick, replyTo, timestamp }: ChatBubbleProps) {
+export function ChatBubble({
+  senderName,
+  message,
+  isSent,
+  avatarColor,
+  showName = true,
+  showAvatar = true,
+  swipeDirection = 'left',
+  onReply,
+  onReplyTap,
+  onLongPress,
+  onAvatarClick,
+  replyTo,
+  timestamp,
+  edited
+}: ChatBubbleProps) {
   const swipeSign = swipeDirection === 'left' ? -1 : 1;
   const [offset, setOffset] = useState(0);
   const [animating, setAnimating] = useState(false);
@@ -154,7 +170,7 @@ export function ChatBubble({ senderName, message, isSent, avatarColor, showName 
             )}
             <div className={styles.messageText}>{message}</div>
             {timestamp && (
-              <div className={styles.timestamp}>{formatTime(timestamp)}</div>
+              <div className={styles.timestamp}>{formatTime(timestamp)}{edited && ' (Edited)'}</div>
             )}
           </div>
           {onReply && (
