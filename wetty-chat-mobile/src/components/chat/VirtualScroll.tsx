@@ -16,6 +16,7 @@ interface VirtualScrollProps {
   bottomPadding?: number;
   windowKey?: number | string;
   initialScrollIndex?: number;
+  onAtBottomChange?: (atBottom: boolean) => void;
 }
 
 function MeasuredItem({
@@ -68,6 +69,7 @@ export function VirtualScroll({
   bottomPadding = 0,
   windowKey,
   initialScrollIndex,
+  onAtBottomChange,
 }: VirtualScrollProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -246,7 +248,11 @@ export function VirtualScroll({
     setScrollTop(el.scrollTop);
     setContainerHeight(el.clientHeight);
 
+    const wasAtBottom = isAtBottomRef.current;
     isAtBottomRef.current = el.scrollTop + el.clientHeight >= el.scrollHeight - 30;
+    if (wasAtBottom !== isAtBottomRef.current) {
+      onAtBottomChange?.(isAtBottomRef.current);
+    }
 
     if (onLoadOlder && el.scrollTop < loadMoreThreshold) {
       onLoadOlder();
@@ -255,7 +261,7 @@ export function VirtualScroll({
     if (onLoadNewer && el.scrollHeight - el.scrollTop - el.clientHeight < loadMoreThreshold) {
       onLoadNewer();
     }
-  }, [onLoadOlder, onLoadNewer, loadMoreThreshold]);
+  }, [onLoadOlder, onLoadNewer, loadMoreThreshold, onAtBottomChange]);
 
   // Observe container resize
   useEffect(() => {

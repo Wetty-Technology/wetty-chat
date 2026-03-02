@@ -10,11 +10,13 @@ import {
   IonButton,
   IonIcon,
   IonBackButton,
+  IonFab,
+  IonFabButton,
   useIonToast,
   useIonActionSheet,
 } from '@ionic/react';
 import { useParams, useHistory, useLocation } from 'react-router-dom';
-import { people, settings } from 'ionicons/icons';
+import { people, settings, chevronDown } from 'ionicons/icons';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   getMessages,
@@ -74,6 +76,7 @@ export default function ChatThread() {
   const [windowKey, setWindowKey] = useState(0);
   const [initialScrollIndex, setInitialScrollIndex] = useState<number | undefined>(undefined);
 
+  const [atBottom, setAtBottom] = useState(true);
   const [replyingTo, setReplyingTo] = useState<MessageResponse | null>(null);
 
   const [presentToast] = useIonToast();
@@ -275,6 +278,7 @@ export default function ChatThread() {
           bottomPadding={16}
           windowKey={windowKey}
           initialScrollIndex={initialScrollIndex}
+          onAtBottomChange={setAtBottom}
           renderItem={(index: number) => {
             const msg = messages[index];
             const prevSender = index > 0 ? messages[index - 1].sender_uid : null;
@@ -300,6 +304,15 @@ export default function ChatThread() {
             );
           }}
         />
+        <IonFab
+          vertical="bottom"
+          horizontal="end"
+          className={`scroll-to-bottom-fab ${atBottom ? 'scroll-to-bottom-fab--hidden' : ''}`}
+        >
+          <IonFabButton size="small" onClick={() => scrollToBottomRef.current?.()}>
+            <IonIcon icon={chevronDown} />
+          </IonFabButton>
+        </IonFab>
       </IonContent>
 
       <IonFooter>
