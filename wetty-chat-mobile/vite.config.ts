@@ -1,5 +1,6 @@
 import path from 'path';
 import react from '@vitejs/plugin-react';
+import { lingui } from '@lingui/vite-plugin';
 import dotenv from 'dotenv';
 import { defineConfig } from 'vite';
 
@@ -12,7 +13,14 @@ const API_PROXY_TARGET = process.env.API_PROXY_TARGET ?? 'http://localhost:3000'
 console.log('API_PROXY_TARGET', API_PROXY_TARGET);
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react({
+      babel: {
+        plugins: ["@lingui/babel-plugin-lingui-macro"],
+      },
+    }),
+    lingui(),
+  ],
   resolve: {
     alias: {
       '@': SRC_DIR,

@@ -20,6 +20,7 @@ import { useHistory } from 'react-router-dom';
 import { createOutline } from 'ionicons/icons';
 import { getChats, type ChatListItem } from '@/api/chats';
 import './chats.scss';
+import { Trans } from '@lingui/react/macro';
 
 function formatLastActivity(isoString: string | null): string {
   if (!isoString) return '';
@@ -73,7 +74,7 @@ export default function Chats() {
           <IonButtons slot="start">
             <IonButton>Edit</IonButton>
           </IonButtons>
-          <IonTitle>Chats</IonTitle>
+          <IonTitle><Trans>Chats</Trans></IonTitle>
           <IonButtons slot="end">
             <IonButton routerLink="/chats/new">
               <IonIcon slot="icon-only" icon={createOutline} />
@@ -95,7 +96,7 @@ export default function Chats() {
         {loading && !error && (
           <IonList>
             <IonItem>
-              <IonLabel>Loading…</IonLabel>
+              <IonLabel><Trans>Loading…</Trans></IonLabel>
             </IonItem>
           </IonList>
         )}

@@ -20,11 +20,13 @@ import ChatThreadPage from '@/pages/chat-thread';
 import ChatSettingsPage from '@/pages/chat-settings';
 import ChatMembersPage from '@/pages/chat-members';
 import SettingsPage from '@/pages/settings';
+import LanguagePage from '@/pages/settings/language';
 import GroupDetailPage from '@/pages/group-detail';
 import NotFoundPage from '@/pages/not-found';
 import ComponentDemoPage from '@/pages/component-demo';
 
 import './app.scss';
+import { Trans } from '@lingui/react/macro';
 
 setupIonicReact();
 
@@ -48,6 +50,7 @@ const App: React.FC = () => {
             <Route path="/chats/members/:id" exact component={ChatMembersPage} />
             <Route path="/chats/detail/:id" exact component={GroupDetailPage} />
             <Route path="/demo" exact component={ComponentDemoPage} />
+            <Route path="/settings/language" exact component={LanguagePage} />
             <Route path="/settings" exact component={SettingsPage} />
             <Redirect exact from="/" to="/chats" />
             <Route component={NotFoundPage} />
@@ -55,7 +58,7 @@ const App: React.FC = () => {
           <IonTabBar slot="bottom">
             <IonTabButton tab="chats" href="/chats">
               <IonIcon icon={chatbubbles} />
-              <IonLabel>Chats</IonLabel>
+              <IonLabel><Trans>Chats</Trans></IonLabel>
             </IonTabButton>
             <IonTabButton tab="demo" href="/demo">
               <IonIcon icon={flask} />
@@ -63,7 +66,7 @@ const App: React.FC = () => {
             </IonTabButton>
             <IonTabButton tab="settings" href="/settings">
               <IonIcon icon={settings} />
-              <IonLabel>Settings</IonLabel>
+              <IonLabel><Trans>Settings</Trans></IonLabel>
             </IonTabButton>
           </IonTabBar>
         </IonTabs>

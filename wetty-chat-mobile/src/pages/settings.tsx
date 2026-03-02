@@ -12,11 +12,17 @@ import {
   IonButton,
   useIonToast,
 } from '@ionic/react';
+import { useHistory } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { selectLocale } from '@/store/settingsSlice';
 import { getCurrentUserId, setCurrentUserId } from '@/js/current-user';
+import { Trans } from '@lingui/react/macro';
 
 export default function Settings() {
   const [uidInput, setUidInput] = useState(String(getCurrentUserId()));
   const [presentToast] = useIonToast();
+  const history = useHistory();
+  const locale = useSelector(selectLocale);
 
   useEffect(() => {
     setUidInput(String(getCurrentUserId()));
@@ -37,12 +43,16 @@ export default function Settings() {
     <IonPage>
       <IonHeader>
         <IonToolbar>
-          <IonTitle>Settings</IonTitle>
+          <IonTitle><Trans>Settings</Trans></IonTitle>
         </IonToolbar>
       </IonHeader>
       <IonContent>
         <div style={{ padding: '16px' }}>
           <IonList>
+            <IonItem button onClick={() => history.push('/settings/language')}>
+              <IonLabel>Language</IonLabel>
+              <span slot="end">{{ 'en': 'English', 'zh-CN': '简体中文' }[locale!] ?? 'Auto'}</span>
+            </IonItem>
             <IonItem>
               <IonLabel position="stacked">User ID</IonLabel>
               <IonInput

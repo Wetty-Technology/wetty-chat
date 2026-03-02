@@ -19,6 +19,8 @@ import {
   useIonToast,
 } from '@ionic/react';
 import { useParams, useHistory } from 'react-router-dom';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { getChatDetails, updateChat } from '@/api/chats';
 
 export default function ChatSettingsPage() {
@@ -45,7 +47,7 @@ export default function ChatSettingsPage() {
         setVisibility(res.data.visibility as 'public' | 'private');
       })
       .catch((err: Error) => {
-        presentToast({ message: err.message || 'Failed to load chat details', duration: 3000 });
+        presentToast({ message: err.message || t`Failed to load chat details`, duration: 3000 });
       })
       .finally(() => setLoading(false));
   }, [chatId, presentToast]);
@@ -60,11 +62,11 @@ export default function ChatSettingsPage() {
       visibility,
     })
       .then(() => {
-        presentToast({ message: 'Settings saved', duration: 2000 });
+        presentToast({ message: t`Settings saved`, duration: 2000 });
         history.goBack();
       })
       .catch((err: Error) => {
-        presentToast({ message: err.message || 'Failed to save settings', duration: 3000 });
+        presentToast({ message: err.message || t`Failed to save settings`, duration: 3000 });
       })
       .finally(() => setSaving(false));
   };
@@ -76,7 +78,7 @@ export default function ChatSettingsPage() {
           <IonButtons slot="start">
             <IonBackButton defaultHref={`/chats/${chatId}`} text="" />
           </IonButtons>
-          <IonTitle>Group Settings</IonTitle>
+          <IonTitle><Trans>Group Settings</Trans></IonTitle>
         </IonToolbar>
       </IonHeader>
       <IonContent>
@@ -88,45 +90,45 @@ export default function ChatSettingsPage() {
           <>
             <IonList>
               <IonItem>
-                <IonLabel position="stacked">Group Name</IonLabel>
+                <IonLabel position="stacked"><Trans>Group Name</Trans></IonLabel>
                 <IonInput
                   value={name}
-                  placeholder="Enter group name"
+                  placeholder={t`Enter group name`}
                   onIonInput={(e) => setName(e.detail.value ?? '')}
                 />
               </IonItem>
               <IonItem>
-                <IonLabel position="stacked">Description</IonLabel>
+                <IonLabel position="stacked"><Trans>Description</Trans></IonLabel>
                 <IonTextarea
                   value={description}
-                  placeholder="Enter group description"
+                  placeholder={t`Enter group description`}
                   onIonInput={(e) => setDescription(e.detail.value ?? '')}
                   rows={3}
                 />
               </IonItem>
               <IonItem>
-                <IonLabel position="stacked">Avatar URL</IonLabel>
+                <IonLabel position="stacked"><Trans>Avatar URL</Trans></IonLabel>
                 <IonInput
                   type="url"
                   value={avatar}
-                  placeholder="Enter avatar URL"
+                  placeholder={t`Enter avatar URL`}
                   onIonInput={(e) => setAvatar(e.detail.value ?? '')}
                 />
               </IonItem>
               <IonItem>
-                <IonLabel>Visibility</IonLabel>
+                <IonLabel><Trans>Visibility</Trans></IonLabel>
                 <IonSelect
                   value={visibility}
                   onIonChange={(e) => setVisibility(e.detail.value as 'public' | 'private')}
                 >
-                  <IonSelectOption value="public">Public</IonSelectOption>
-                  <IonSelectOption value="private">Private</IonSelectOption>
+                  <IonSelectOption value="public"><Trans>Public</Trans></IonSelectOption>
+                  <IonSelectOption value="private"><Trans>Private</Trans></IonSelectOption>
                 </IonSelect>
               </IonItem>
             </IonList>
             <div style={{ padding: '16px' }}>
               <IonButton expand="block" disabled={saving} onClick={handleSave}>
-                {saving ? 'Saving...' : 'Save Settings'}
+                {saving ? <Trans>Saving...</Trans> : <Trans>Save Settings</Trans>}
               </IonButton>
             </div>
           </>
