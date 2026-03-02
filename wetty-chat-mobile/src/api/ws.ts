@@ -7,7 +7,7 @@ import { getCurrentUserId } from '@/js/current-user';
 import store from '@/store/index';
 import { addMessage, confirmPendingMessage } from '@/store/messagesSlice';
 import { setWsConnected } from '@/store/connectionSlice';
-import type { MessageResponse } from '@/api/messages';
+import type { MessageResponse, ReplyToMessage } from '@/api/messages';
 
 const WS_PATH = '/_api/ws';
 const PING_INTERVAL_MS = 10_000;
@@ -60,12 +60,24 @@ function normalizePayload(p: unknown): MessageResponse | null {
   const message_type = typeof o.message_type === 'string' ? o.message_type : 'text';
   const created_at = typeof o.created_at === 'string' ? o.created_at : new Date().toISOString();
   if (chat_id == null) return null;
+  const reply_to_message_raw = o.reply_to_message;
+  let reply_to_message: ReplyToMessage | undefined;
+  if (reply_to_message_raw != null && typeof reply_to_message_raw === 'object') {
+    const r = reply_to_message_raw as Record<string, unknown>;
+    reply_to_message = {
+      id: r.id != null ? String(r.id) : '0',
+      message: r.message != null ? String(r.message) : null,
+      sender_uid: typeof r.sender_uid === 'number' ? r.sender_uid : 0,
+      deleted_at: r.deleted_at != null ? String(r.deleted_at) : null,
+    };
+  }
   return {
     id: id ?? '0',
     message,
     message_type,
     reply_to_id: o.reply_to_id != null ? String(o.reply_to_id) : null,
     reply_root_id: o.reply_root_id != null ? String(o.reply_root_id) : null,
+    reply_to_message,
     client_generated_id,
     sender_uid,
     chat_id,
