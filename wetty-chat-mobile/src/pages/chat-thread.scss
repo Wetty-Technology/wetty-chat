@@ -2,6 +2,19 @@
 
 .chat-thread-content {
   --background: #ece5dd;
+  position: relative;
+}
+
+/* Scroll-to-bottom FAB */
+.scroll-to-bottom-fab {
+  opacity: 1;
+  transition: opacity 0.2s ease;
+  margin-right: 16px;
+
+  &--hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
 }
 
 .messages-scroll-container {
@@ -257,4 +270,3 @@
   cursor: pointer;
   color: #666;
 }
-
