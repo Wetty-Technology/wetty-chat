@@ -11,6 +11,7 @@ import {
   IonIcon,
   IonBackButton,
   useIonToast,
+  useIonActionSheet,
 } from '@ionic/react';
 import { useParams, useHistory, useLocation } from 'react-router-dom';
 import { people, settings } from 'ionicons/icons';
@@ -76,6 +77,7 @@ export default function ChatThread() {
   const [replyingTo, setReplyingTo] = useState<MessageResponse | null>(null);
 
   const [presentToast] = useIonToast();
+  const [presentActionSheet] = useIonActionSheet();
 
   const showToast = useCallback((text: string, duration = 3000) => {
     presentToast({ message: text, duration, position: 'bottom' });
@@ -222,6 +224,23 @@ export default function ChatThread() {
       });
   }, [chatId, dispatch, showToast, replyingTo]);
 
+  const onClickChatItem = useCallback((messageIndex: number) => {
+    const msg = messages[messageIndex];
+    presentActionSheet({
+      buttons: [
+        {
+          text: 'Reply', handler: () => {
+            setReplyingTo(msg);
+          }
+        },
+        { text: 'Start Thread', handler: () => { } },
+        { text: 'Edit', handler: () => { } },
+        { text: 'Delete', role: 'destructive', handler: () => { } },
+        { text: 'Cancel', role: 'cancel', handler: () => { } },
+      ],
+    });
+  }, [messages]);
+
   return (
     <IonPage className="chat-thread-page">
       <IonHeader>
@@ -256,7 +275,7 @@ export default function ChatThread() {
           bottomPadding={16}
           windowKey={windowKey}
           initialScrollIndex={initialScrollIndex}
-          renderItem={(index) => {
+          renderItem={(index: number) => {
             const msg = messages[index];
             const prevSender = index > 0 ? messages[index - 1].sender_uid : null;
             const nextSender = index < messages.length - 1 ? messages[index + 1].sender_uid : null;
@@ -268,9 +287,7 @@ export default function ChatThread() {
                 avatarColor={colorForUser(msg.sender_uid)}
                 onReply={() => setReplyingTo(msg)}
                 onReplyTap={msg.reply_to_id ? () => jumpToMessage(msg.reply_to_id!) : undefined}
-                onLongPress={() => {
-                  console.log('long press', msg.id);
-                }}
+                onLongPress={() => onClickChatItem(index)}
                 showName={prevSender !== msg.sender_uid}
                 showAvatar={nextSender !== msg.sender_uid}
                 timestamp={msg.created_at}

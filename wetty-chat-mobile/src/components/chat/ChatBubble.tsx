@@ -10,6 +10,7 @@ interface ChatBubbleProps {
   avatarColor: string;
   showName?: boolean;
   showAvatar?: boolean;
+  swipeDirection?: 'left' | 'right';
   onReply?: () => void;
   onReplyTap?: () => void;
   onLongPress?: () => void;
@@ -34,7 +35,8 @@ function getInitials(name: string): string {
 const SWIPE_THRESHOLD = 60;
 const SWIPE_MAX = 80;
 
-export function ChatBubble({ senderName, message, isSent, avatarColor, showName = true, showAvatar = true, onReply, onReplyTap, onLongPress, onAvatarClick, replyTo, timestamp }: ChatBubbleProps) {
+export function ChatBubble({ senderName, message, isSent, avatarColor, showName = true, showAvatar = true, swipeDirection = 'left', onReply, onReplyTap, onLongPress, onAvatarClick, replyTo, timestamp }: ChatBubbleProps) {
+  const swipeSign = swipeDirection === 'left' ? -1 : 1;
   const [offset, setOffset] = useState(0);
   const [animating, setAnimating] = useState(false);
   const startX = useRef(0);
@@ -42,7 +44,6 @@ export function ChatBubble({ senderName, message, isSent, avatarColor, showName 
   const swiping = useRef(false);
   const directionLocked = useRef<'horizontal' | 'vertical' | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const longPressFired = useRef(false);
 
   function clearLongPress() {
     if (longPressTimer.current) {
@@ -57,12 +58,10 @@ export function ChatBubble({ senderName, message, isSent, avatarColor, showName 
     startY.current = touch.clientY;
     swiping.current = false;
     directionLocked.current = null;
-    longPressFired.current = false;
     setAnimating(false);
 
     if (onLongPress && /iPad|iPhone|iPod/.test(navigator.userAgent)) {
       longPressTimer.current = setTimeout(() => {
-        longPressFired.current = true;
         onLongPress();
       }, 500);
     }
@@ -87,7 +86,7 @@ export function ChatBubble({ senderName, message, isSent, avatarColor, showName 
 
     if (directionLocked.current !== 'horizontal') return;
 
-    const clamped = Math.min(Math.max(dx, 0), SWIPE_MAX);
+    const clamped = Math.min(Math.max(dx * swipeSign, 0), SWIPE_MAX);
     if (clamped > 0) {
       swiping.current = true;
       setOffset(clamped);
@@ -96,7 +95,6 @@ export function ChatBubble({ senderName, message, isSent, avatarColor, showName 
 
   function onTouchEnd() {
     clearLongPress();
-    if (longPressFired.current) return;
     if (!onReply || !swiping.current) return;
     if (offset >= SWIPE_THRESHOLD) {
       onReply();
@@ -108,10 +106,7 @@ export function ChatBubble({ senderName, message, isSent, avatarColor, showName 
   function handleContextMenu(e: React.MouseEvent) {
     if (onLongPress) {
       e.preventDefault();
-      if (!longPressFired.current) {
-        longPressFired.current = true;
-        onLongPress();
-      }
+      onLongPress();
     }
   }
 
@@ -121,13 +116,13 @@ export function ChatBubble({ senderName, message, isSent, avatarColor, showName 
     <div className={styles.swipeContainer}>
       <div
         className={styles.replyIcon}
-        style={{ opacity: progress, transform: `scale(${0.5 + progress * 0.5})` }}
+        style={{ opacity: progress, transform: `scale(${0.5 + progress * 0.5})`, [swipeDirection === 'left' ? 'right' : 'left']: 16 }}
       >
         <IonIcon icon={arrowUndo} />
       </div>
       <div
         className={`${styles.swipeContent} ${animating ? styles.snapBack : ''}`}
-        style={{ transform: `translateX(${offset}px)` }}
+        style={{ transform: `translateX(${offset * swipeSign}px)` }}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
@@ -162,6 +157,11 @@ export function ChatBubble({ senderName, message, isSent, avatarColor, showName 
               <div className={styles.timestamp}>{formatTime(timestamp)}</div>
             )}
           </div>
+          {onReply && (
+            <button className={styles.hoverReplyBtn} onClick={onReply} aria-label="Reply">
+              <IonIcon icon={arrowUndo} />
+            </button>
+          )}
         </div>
       </div>
     </div>
