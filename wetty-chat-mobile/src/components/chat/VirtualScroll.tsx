@@ -294,7 +294,7 @@ export function VirtualScroll({
   for (let i = startIndex; i <= endIndex; i++) {
     const offset = getItemOffset(i) + topPadding;
     visibleItems.push(
-      <MeasuredItem key={i} index={i} offset={offset} onResize={handleResize}>
+      <MeasuredItem key={`${windowKey}-${i}`} index={i} offset={offset} onResize={handleResize}>
         {renderItem(i)}
       </MeasuredItem>,
     );
