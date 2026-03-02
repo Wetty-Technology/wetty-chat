@@ -16,14 +16,19 @@ import '@ionic/react/css/display.css';
 
 import { createRoot } from 'react-dom/client';
 import { Provider } from 'react-redux';
+import { I18nProvider } from '@lingui/react';
+import { i18n, activateDetectedLocale } from '@/i18n';
 import store from '@/store/index';
 import App from './App';
 import { initWebSocket } from '@/api/ws';
 
 initWebSocket();
+activateDetectedLocale();
 
 createRoot(document.getElementById('root')!).render(
   <Provider store={store}>
-    <App />
+    <I18nProvider i18n={i18n}>
+      <App />
+    </I18nProvider>
   </Provider>
 );

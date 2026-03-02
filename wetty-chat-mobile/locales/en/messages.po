@@ -1,0 +1,240 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-03-01 20:25-0800\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: en\n"
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Plural-Forms: \n"
+
+#: src/pages/chat-members.tsx:71
+msgid "Add"
+msgstr "Add"
+
+#: src/pages/chat-members.tsx:65
+#: src/pages/chat-members.tsx:207
+msgid "Add Member"
+msgstr "Add Member"
+
+#: src/pages/chat-members.tsx:148
+msgid "Are you sure you want to leave this group?"
+msgstr "Are you sure you want to leave this group?"
+
+#: src/pages/settings/language.tsx:56
+msgid "Auto"
+msgstr "Auto"
+
+#: src/pages/chat-settings.tsx:110
+msgid "Avatar URL"
+msgstr "Avatar URL"
+
+#: src/pages/chat-members.tsx:69
+#: src/pages/chat-members.tsx:98
+#: src/pages/chat-members.tsx:127
+#: src/pages/chat-members.tsx:150
+#: src/pages/chat-members.tsx:182
+msgid "Cancel"
+msgstr "Cancel"
+
+#: src/App.tsx:61
+#: src/pages/chats.tsx:77
+msgid "Chats"
+msgstr "Chats"
+
+#: src/pages/chat-members.tsx:129
+msgid "Demote"
+msgstr "Demote"
+
+#: src/pages/chat-members.tsx:125
+msgid "Demote {displayName} to member?"
+msgstr "Demote {displayName} to member?"
+
+#: src/pages/chat-members.tsx:122
+msgid "Demote Member"
+msgstr "Demote Member"
+
+#: src/pages/chat-members.tsx:174
+msgid "Demote to Member"
+msgstr "Demote to Member"
+
+#: src/pages/chat-settings.tsx:101
+msgid "Description"
+msgstr "Description"
+
+#: src/components/chat/ChatBubble.tsx:176
+msgid "Edited"
+msgstr "Edited"
+
+#: src/pages/chat-settings.tsx:114
+msgid "Enter avatar URL"
+msgstr "Enter avatar URL"
+
+#: src/pages/chat-settings.tsx:104
+msgid "Enter group description"
+msgstr "Enter group description"
+
+#: src/pages/chat-settings.tsx:96
+msgid "Enter group name"
+msgstr "Enter group name"
+
+#: src/pages/chat-members.tsx:66
+msgid "Enter user ID to add:"
+msgstr "Enter user ID to add:"
+
+#: src/pages/chat-members.tsx:84
+msgid "Failed to add member"
+msgstr "Failed to add member"
+
+#: src/pages/chat-members.tsx:161
+msgid "Failed to leave group"
+msgstr "Failed to leave group"
+
+#: src/pages/chat-settings.tsx:50
+msgid "Failed to load chat details"
+msgstr "Failed to load chat details"
+
+#: src/pages/chat-members.tsx:54
+msgid "Failed to load members"
+msgstr "Failed to load members"
+
+#: src/pages/chat-members.tsx:109
+msgid "Failed to remove member"
+msgstr "Failed to remove member"
+
+#: src/pages/chat-settings.tsx:69
+msgid "Failed to save settings"
+msgstr "Failed to save settings"
+
+#: src/pages/chat-members.tsx:137
+msgid "Failed to update role"
+msgstr "Failed to update role"
+
+#: src/pages/chat-members.tsx:194
+msgid "Group Members"
+msgstr "Group Members"
+
+#: src/pages/chat-settings.tsx:93
+msgid "Group Name"
+msgstr "Group Name"
+
+#: src/pages/chat-settings.tsx:81
+msgid "Group Settings"
+msgstr "Group Settings"
+
+#: src/pages/chat-members.tsx:75
+msgid "Invalid user ID"
+msgstr "Invalid user ID"
+
+#: src/pages/chat-members.tsx:152
+msgid "Leave"
+msgstr "Leave"
+
+#: src/pages/chat-members.tsx:147
+#: src/pages/chat-members.tsx:233
+msgid "Leave Group"
+msgstr "Leave Group"
+
+#: src/pages/chat-members.tsx:157
+msgid "Left group"
+msgstr "Left group"
+
+#: src/pages/chats.tsx:99
+msgid "Loading…"
+msgstr "Loading…"
+
+#: src/pages/chat-members.tsx:80
+msgid "Member added"
+msgstr "Member added"
+
+#: src/pages/chat-members.tsx:133
+msgid "Member demoted"
+msgstr "Member demoted"
+
+#: src/pages/chat-members.tsx:133
+msgid "Member promoted"
+msgstr "Member promoted"
+
+#: src/pages/chat-members.tsx:105
+msgid "Member removed"
+msgstr "Member removed"
+
+#: src/pages/chat-settings.tsx:125
+msgid "Private"
+msgstr "Private"
+
+#: src/pages/chat-members.tsx:129
+msgid "Promote"
+msgstr "Promote"
+
+#: src/pages/chat-members.tsx:124
+msgid "Promote {displayName} to admin?"
+msgstr "Promote {displayName} to admin?"
+
+#: src/pages/chat-members.tsx:122
+msgid "Promote Member"
+msgstr "Promote Member"
+
+#: src/pages/chat-members.tsx:174
+msgid "Promote to Admin"
+msgstr "Promote to Admin"
+
+#: src/pages/chat-settings.tsx:124
+msgid "Public"
+msgstr "Public"
+
+#: src/pages/chat-members.tsx:100
+msgid "Remove"
+msgstr "Remove"
+
+#: src/pages/chat-members.tsx:96
+msgid "Remove {displayName} from this group?"
+msgstr "Remove {displayName} from this group?"
+
+#: src/pages/chat-members.tsx:178
+msgid "Remove from Group"
+msgstr "Remove from Group"
+
+#: src/pages/chat-members.tsx:95
+msgid "Remove Member"
+msgstr "Remove Member"
+
+#: src/components/chat/ChatBubble.tsx:181
+msgid "Reply"
+msgstr "Reply"
+
+#: src/pages/chat-settings.tsx:131
+msgid "Save Settings"
+msgstr "Save Settings"
+
+#: src/pages/chat-settings.tsx:131
+msgid "Saving..."
+msgstr "Saving..."
+
+#: src/App.tsx:69
+msgid "Settings"
+msgstr "Settings"
+
+#: src/pages/chat-settings.tsx:65
+msgid "Settings saved"
+msgstr "Settings saved"
+
+#. placeholder {0}: member.uid
+#: src/pages/chat-members.tsx:93
+#: src/pages/chat-members.tsx:120
+#: src/pages/chat-members.tsx:220
+msgid "User {0}"
+msgstr "User {0}"
+
+#: src/pages/chat-members.tsx:67
+msgid "User ID"
+msgstr "User ID"
+
+#: src/pages/chat-settings.tsx:119
+msgid "Visibility"
+msgstr "Visibility"

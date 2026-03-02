@@ -1,0 +1,240 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-03-01 20:28-0800\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: zh-CN\n"
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Plural-Forms: \n"
+
+#: src/pages/chat-members.tsx:71
+msgid "Add"
+msgstr "添加"
+
+#: src/pages/chat-members.tsx:65
+#: src/pages/chat-members.tsx:207
+msgid "Add Member"
+msgstr "添加成员"
+
+#: src/pages/chat-members.tsx:148
+msgid "Are you sure you want to leave this group?"
+msgstr "确定要退出该群组吗？"
+
+#: src/pages/settings/language.tsx:56
+msgid "Auto"
+msgstr "自动"
+
+#: src/pages/chat-settings.tsx:110
+msgid "Avatar URL"
+msgstr "头像链接"
+
+#: src/pages/chat-members.tsx:69
+#: src/pages/chat-members.tsx:98
+#: src/pages/chat-members.tsx:127
+#: src/pages/chat-members.tsx:150
+#: src/pages/chat-members.tsx:182
+msgid "Cancel"
+msgstr "取消"
+
+#: src/App.tsx:61
+#: src/pages/chats.tsx:77
+msgid "Chats"
+msgstr "消息"
+
+#: src/pages/chat-members.tsx:129
+msgid "Demote"
+msgstr "降级"
+
+#: src/pages/chat-members.tsx:125
+msgid "Demote {displayName} to member?"
+msgstr "将 {displayName} 降级为普通成员？"
+
+#: src/pages/chat-members.tsx:122
+msgid "Demote Member"
+msgstr "降级成员"
+
+#: src/pages/chat-members.tsx:174
+msgid "Demote to Member"
+msgstr "降级为成员"
+
+#: src/pages/chat-settings.tsx:101
+msgid "Description"
+msgstr "描述"
+
+#: src/components/chat/ChatBubble.tsx:176
+msgid "Edited"
+msgstr "已编辑"
+
+#: src/pages/chat-settings.tsx:114
+msgid "Enter avatar URL"
+msgstr "输入头像链接"
+
+#: src/pages/chat-settings.tsx:104
+msgid "Enter group description"
+msgstr "输入群组描述"
+
+#: src/pages/chat-settings.tsx:96
+msgid "Enter group name"
+msgstr "输入群组名称"
+
+#: src/pages/chat-members.tsx:66
+msgid "Enter user ID to add:"
+msgstr "输入要添加的用户 ID："
+
+#: src/pages/chat-members.tsx:84
+msgid "Failed to add member"
+msgstr "添加成员失败"
+
+#: src/pages/chat-members.tsx:161
+msgid "Failed to leave group"
+msgstr "退出群组失败"
+
+#: src/pages/chat-settings.tsx:50
+msgid "Failed to load chat details"
+msgstr "加载聊天详情失败"
+
+#: src/pages/chat-members.tsx:54
+msgid "Failed to load members"
+msgstr "加载成员列表失败"
+
+#: src/pages/chat-members.tsx:109
+msgid "Failed to remove member"
+msgstr "移除成员失败"
+
+#: src/pages/chat-settings.tsx:69
+msgid "Failed to save settings"
+msgstr "保存设置失败"
+
+#: src/pages/chat-members.tsx:137
+msgid "Failed to update role"
+msgstr "更新角色失败"
+
+#: src/pages/chat-members.tsx:194
+msgid "Group Members"
+msgstr "群组成员"
+
+#: src/pages/chat-settings.tsx:93
+msgid "Group Name"
+msgstr "群组名称"
+
+#: src/pages/chat-settings.tsx:81
+msgid "Group Settings"
+msgstr "群组设置"
+
+#: src/pages/chat-members.tsx:75
+msgid "Invalid user ID"
+msgstr "无效的用户 ID"
+
+#: src/pages/chat-members.tsx:152
+msgid "Leave"
+msgstr "退出"
+
+#: src/pages/chat-members.tsx:147
+#: src/pages/chat-members.tsx:233
+msgid "Leave Group"
+msgstr "退出群组"
+
+#: src/pages/chat-members.tsx:157
+msgid "Left group"
+msgstr "已退出群组"
+
+#: src/pages/chats.tsx:99
+msgid "Loading…"
+msgstr ""
+
+#: src/pages/chat-members.tsx:80
+msgid "Member added"
+msgstr "成员已添加"
+
+#: src/pages/chat-members.tsx:133
+msgid "Member demoted"
+msgstr "成员已降级"
+
+#: src/pages/chat-members.tsx:133
+msgid "Member promoted"
+msgstr "成员已升级"
+
+#: src/pages/chat-members.tsx:105
+msgid "Member removed"
+msgstr "成员已移除"
+
+#: src/pages/chat-settings.tsx:125
+msgid "Private"
+msgstr "私密"
+
+#: src/pages/chat-members.tsx:129
+msgid "Promote"
+msgstr "升级"
+
+#: src/pages/chat-members.tsx:124
+msgid "Promote {displayName} to admin?"
+msgstr "将 {displayName} 升级为管理员？"
+
+#: src/pages/chat-members.tsx:122
+msgid "Promote Member"
+msgstr "升级成员"
+
+#: src/pages/chat-members.tsx:174
+msgid "Promote to Admin"
+msgstr "升级为管理员"
+
+#: src/pages/chat-settings.tsx:124
+msgid "Public"
+msgstr "公开"
+
+#: src/pages/chat-members.tsx:100
+msgid "Remove"
+msgstr "移除"
+
+#: src/pages/chat-members.tsx:96
+msgid "Remove {displayName} from this group?"
+msgstr "将 {displayName} 从该群组中移除？"
+
+#: src/pages/chat-members.tsx:178
+msgid "Remove from Group"
+msgstr "从群组中移除"
+
+#: src/pages/chat-members.tsx:95
+msgid "Remove Member"
+msgstr "移除成员"
+
+#: src/components/chat/ChatBubble.tsx:181
+msgid "Reply"
+msgstr "回复"
+
+#: src/pages/chat-settings.tsx:131
+msgid "Save Settings"
+msgstr "保存设置"
+
+#: src/pages/chat-settings.tsx:131
+msgid "Saving..."
+msgstr "保存中..."
+
+#: src/App.tsx:69
+msgid "Settings"
+msgstr "设置"
+
+#: src/pages/chat-settings.tsx:65
+msgid "Settings saved"
+msgstr "设置已保存"
+
+#. placeholder {0}: member.uid
+#: src/pages/chat-members.tsx:93
+#: src/pages/chat-members.tsx:120
+#: src/pages/chat-members.tsx:220
+msgid "User {0}"
+msgstr "用户 {0}"
+
+#: src/pages/chat-members.tsx:67
+msgid "User ID"
+msgstr "用户 ID"
+
+#: src/pages/chat-settings.tsx:119
+msgid "Visibility"
+msgstr "可见性"

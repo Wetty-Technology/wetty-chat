@@ -18,6 +18,8 @@ import {
   useIonActionSheet,
 } from '@ionic/react';
 import { useParams, useHistory } from 'react-router-dom';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { getMembers, addMember, removeMember, updateMemberRole, type MemberResponse } from '@/api/chats';
 import { getCurrentUserId } from '@/js/current-user';
 
@@ -49,7 +51,7 @@ export default function ChatMembersPage() {
         setIsAdmin(currentMember?.role === 'admin');
       })
       .catch((err: Error) => {
-        showToast(err.message || 'Failed to load members');
+        showToast(err.message || t`Failed to load members`);
       })
       .finally(() => setLoading(false));
   }, [chatId, currentUserId, showToast]);
@@ -60,26 +62,26 @@ export default function ChatMembersPage() {
 
   const handleAddMember = () => {
     presentAlert({
-      header: 'Add Member',
-      message: 'Enter user ID to add:',
-      inputs: [{ type: 'number', placeholder: 'User ID' }],
+      header: t`Add Member`,
+      message: t`Enter user ID to add:`,
+      inputs: [{ type: 'number', placeholder: t`User ID` }],
       buttons: [
-        { text: 'Cancel', role: 'cancel' },
+        { text: t`Cancel`, role: 'cancel' },
         {
-          text: 'Add',
+          text: t`Add`,
           handler: (data: { 0: string }) => {
             const userId = parseInt(data[0], 10);
             if (isNaN(userId)) {
-              showToast('Invalid user ID', 2000);
+              showToast(t`Invalid user ID`, 2000);
               return;
             }
             addMember(chatId, { uid: userId })
               .then(() => {
-                showToast('Member added', 2000);
+                showToast(t`Member added`, 2000);
                 loadMembers();
               })
               .catch((err: Error) => {
-                showToast(err.message || 'Failed to add member');
+                showToast(err.message || t`Failed to add member`);
               });
           },
         },
@@ -88,22 +90,23 @@ export default function ChatMembersPage() {
   };
 
   const handleRemoveMember = (member: MemberResponse) => {
+    const displayName = member.username || t`User ${member.uid}`;
     presentAlert({
-      header: 'Remove Member',
-      message: `Remove ${member.username || `User ${member.uid}`} from this group?`,
+      header: t`Remove Member`,
+      message: t`Remove ${displayName} from this group?`,
       buttons: [
-        { text: 'Cancel', role: 'cancel' },
+        { text: t`Cancel`, role: 'cancel' },
         {
-          text: 'Remove',
+          text: t`Remove`,
           role: 'destructive',
           handler: () => {
             removeMember(chatId, member.uid)
               .then(() => {
-                showToast('Member removed', 2000);
+                showToast(t`Member removed`, 2000);
                 loadMembers();
               })
               .catch((err: Error) => {
-                showToast(err.message || 'Failed to remove member');
+                showToast(err.message || t`Failed to remove member`);
               });
           },
         },
@@ -113,22 +116,25 @@ export default function ChatMembersPage() {
 
   const handleToggleRole = (member: MemberResponse) => {
     const newRole = member.role === 'admin' ? 'member' : 'admin';
-    const action = newRole === 'admin' ? 'Promote' : 'Demote';
+    const isPromoting = newRole === 'admin';
+    const displayName = member.username || t`User ${member.uid}`;
     presentAlert({
-      header: `${action} Member`,
-      message: `${action} ${member.username || `User ${member.uid}`} to ${newRole}?`,
+      header: isPromoting ? t`Promote Member` : t`Demote Member`,
+      message: isPromoting
+        ? t`Promote ${displayName} to admin?`
+        : t`Demote ${displayName} to member?`,
       buttons: [
-        { text: 'Cancel', role: 'cancel' },
+        { text: t`Cancel`, role: 'cancel' },
         {
-          text: action,
+          text: isPromoting ? t`Promote` : t`Demote`,
           handler: () => {
             updateMemberRole(chatId, member.uid, { role: newRole })
               .then(() => {
-                showToast(`Member ${action.toLowerCase()}d`, 2000);
+                showToast(isPromoting ? t`Member promoted` : t`Member demoted`, 2000);
                 loadMembers();
               })
               .catch((err: Error) => {
-                showToast(err.message || 'Failed to update role');
+                showToast(err.message || t`Failed to update role`);
               });
           },
         },
@@ -138,21 +144,21 @@ export default function ChatMembersPage() {
 
   const handleLeaveGroup = () => {
     presentAlert({
-      header: 'Leave Group',
-      message: 'Are you sure you want to leave this group?',
+      header: t`Leave Group`,
+      message: t`Are you sure you want to leave this group?`,
       buttons: [
-        { text: 'Cancel', role: 'cancel' },
+        { text: t`Cancel`, role: 'cancel' },
         {
-          text: 'Leave',
+          text: t`Leave`,
           role: 'destructive',
           handler: () => {
             removeMember(chatId, currentUserId)
               .then(() => {
-                showToast('Left group', 2000);
+                showToast(t`Left group`, 2000);
                 history.replace('/chats');
               })
               .catch((err: Error) => {
-                showToast(err.message || 'Failed to leave group');
+                showToast(err.message || t`Failed to leave group`);
               });
           },
         },
@@ -165,15 +171,15 @@ export default function ChatMembersPage() {
     presentActionSheet({
       buttons: [
         {
-          text: member.role === 'admin' ? 'Demote to Member' : 'Promote to Admin',
+          text: member.role === 'admin' ? t`Demote to Member` : t`Promote to Admin`,
           handler: () => handleToggleRole(member),
         },
         {
-          text: 'Remove from Group',
+          text: t`Remove from Group`,
           role: 'destructive',
           handler: () => handleRemoveMember(member),
         },
-        { text: 'Cancel', role: 'cancel' },
+        { text: t`Cancel`, role: 'cancel' },
       ],
     });
   };
@@ -185,7 +191,7 @@ export default function ChatMembersPage() {
           <IonButtons slot="start">
             <IonBackButton defaultHref={`/chats/${chatId}`} text="" />
           </IonButtons>
-          <IonTitle>Group Members</IonTitle>
+          <IonTitle><Trans>Group Members</Trans></IonTitle>
         </IonToolbar>
       </IonHeader>
       <IonContent>
@@ -198,7 +204,7 @@ export default function ChatMembersPage() {
             {isAdmin && (
               <div style={{ padding: '16px' }}>
                 <IonButton expand="block" onClick={handleAddMember}>
-                  Add Member
+                  <Trans>Add Member</Trans>
                 </IonButton>
               </div>
             )}
@@ -211,7 +217,7 @@ export default function ChatMembersPage() {
                   onClick={() => handleMemberTap(member)}
                 >
                   <IonLabel>
-                    {member.username || `User ${member.uid}`}
+                    {member.username || t`User ${member.uid}`}
                   </IonLabel>
                   <IonChip
                     color={member.role === 'admin' ? 'primary' : 'medium'}
@@ -224,7 +230,7 @@ export default function ChatMembersPage() {
             </IonList>
             <div style={{ padding: '16px' }}>
               <IonButton expand="block" color="danger" onClick={handleLeaveGroup}>
-                Leave Group
+                <Trans>Leave Group</Trans>
               </IonButton>
             </div>
           </>

@@ -7,11 +7,15 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "extract": "lingui extract",
+    "compile": "lingui compile --typescript"
   },
   "dependencies": {
     "@ionic/react": "^8.7.18",
     "@ionic/react-router": "^8.7.18",
+    "@lingui/core": "^5.9.2",
+    "@lingui/react": "^5.9.2",
     "@reduxjs/toolkit": "^2.11.2",
     "@tanstack/react-virtual": "^3.13.19",
     "axios": "^1.13.6",
@@ -24,6 +28,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@lingui/babel-plugin-lingui-macro": "^5.9.2",
+    "@lingui/cli": "^5.9.2",
+    "@lingui/vite-plugin": "^5.9.2",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",

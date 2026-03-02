@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { IonIcon } from '@ionic/react';
 import { arrowUndo } from 'ionicons/icons';
+import { t } from '@lingui/core/macro';
 import styles from './ChatBubble.module.scss';
 
 interface ChatBubbleProps {
@@ -172,12 +173,12 @@ export function ChatBubble({
               <span className={styles.messageText}>{message}</span>
               <span className={styles.timestampSpacer} />
               {timestamp && (
-                <span className={styles.timestamp}>{formatTime(timestamp)}{edited && ' (Edited)'}</span>
+                <span className={styles.timestamp}>{formatTime(timestamp)}{edited && ` (${t`Edited`})`}</span>
               )}
             </div>
           </div>
           {onReply && (
-            <button className={styles.hoverReplyBtn} onClick={onReply} aria-label="Reply">
+            <button className={styles.hoverReplyBtn} onClick={onReply} aria-label={t`Reply`}>
               <IonIcon icon={arrowUndo} />
             </button>
           )}
