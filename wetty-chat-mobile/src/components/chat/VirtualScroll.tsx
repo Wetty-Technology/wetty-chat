@@ -174,11 +174,13 @@ export function VirtualScroll({
       // Jump to target: let the useLayoutEffect handle scrolling
       hasInitialScrolled.current = false;
       isAtBottomRef.current = false;
+      onAtBottomChange?.(false);
       initialScrollIndexRef.current = initialScrollIndex;
     } else {
       // Normal window reset: scroll to bottom
       hasInitialScrolled.current = false;
       isAtBottomRef.current = true;
+      onAtBottomChange?.(true);
     }
     forceUpdate(c => c + 1);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -191,9 +193,14 @@ export function VirtualScroll({
         const el = containerRef.current;
         if (el) {
           el.scrollTop = el.scrollHeight;
+          if (!isAtBottomRef.current) {
+            isAtBottomRef.current = true;
+            onAtBottomChange?.(true);
+          }
         }
       };
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scrollToBottomRef]);
 
   // Expose scrollToIndex for imperative use
@@ -204,9 +211,17 @@ export function VirtualScroll({
         if (!el) return;
         const loadingRowH = loadingOlder ? 36 : 0;
         const offset = getItemOffset(index) + loadingRowH;
+
+        const targetAtBottom = offset + el.clientHeight >= el.scrollHeight - 30;
+        if (isAtBottomRef.current !== targetAtBottom) {
+          isAtBottomRef.current = targetAtBottom;
+          onAtBottomChange?.(targetAtBottom);
+        }
+
         el.scrollTo({ top: offset, behavior });
       };
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scrollToIndexRef, getItemOffset, loadingOlder]);
 
   const handleResize = useCallback((index: number, height: number) => {
@@ -236,7 +251,10 @@ export function VirtualScroll({
           // Once we've scrolled to true bottom, isAtBottomRef will stay true
           // via handleScroll, so we can stop forcing it
           pendingBottomScrollRef.current = false;
-          isAtBottomRef.current = true;
+          if (!isAtBottomRef.current) {
+            isAtBottomRef.current = true;
+            onAtBottomChange?.(true);
+          }
         });
       }
     }
