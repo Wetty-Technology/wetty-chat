@@ -111,7 +111,7 @@ export default function GroupDetail() {
         <IonHeader>
           <IonToolbar>
             <IonButtons slot="start">
-              <IonBackButton defaultHref="/chats" text="" />
+              <IonBackButton defaultHref={`/chats/chat/${id}`} text="" />
             </IonButtons>
             <IonTitle>Group</IonTitle>
           </IonToolbar>
@@ -131,7 +131,7 @@ export default function GroupDetail() {
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            <IonBackButton defaultHref="/chats" text="" />
+            <IonBackButton defaultHref={`/chats/chat/${id}`} text="" />
           </IonButtons>
           <IonTitle>Group</IonTitle>
         </IonToolbar>

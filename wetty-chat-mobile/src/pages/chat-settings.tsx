@@ -81,12 +81,14 @@ export default function ChatSettingsPage() {
       visibility,
     })
       .then(() => {
-        dispatch(setChatMeta({ chatId, meta: {
-          name: name.trim() || null,
-          description: description.trim() || null,
-          avatar: avatar.trim() || null,
-          visibility,
-        } }));
+        dispatch(setChatMeta({
+          chatId, meta: {
+            name: name.trim() || null,
+            description: description.trim() || null,
+            avatar: avatar.trim() || null,
+            visibility,
+          }
+        }));
         presentToast({ message: t`Settings saved`, duration: 2000 });
         history.goBack();
       })
@@ -101,7 +103,7 @@ export default function ChatSettingsPage() {
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            <IonBackButton defaultHref={`/chats/${chatId}`} text="" />
+            <IonBackButton defaultHref={`/chats/chat/${chatId}`} text="" />
           </IonButtons>
           <IonTitle><Trans>Group Settings</Trans></IonTitle>
         </IonToolbar>
