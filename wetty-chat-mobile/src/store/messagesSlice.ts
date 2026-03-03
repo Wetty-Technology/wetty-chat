@@ -149,10 +149,19 @@ const messagesSlice = createSlice({
       const chat = state.chats[chatId];
       if (!chat) return;
       for (const win of chat.windows) {
-        const idx = win.messages.findIndex(m => m.id === messageId);
-        if (idx !== -1) {
-          win.messages[idx] = message;
-          return;
+        if (message.is_deleted) {
+          // If the message is deleted, remove it from the list of messages
+          win.messages = win.messages.filter(m => m.id !== messageId);
+        }
+
+        for (let i = 0; i < win.messages.length; i++) {
+          const m = win.messages[i];
+          if (!message.is_deleted && m.id === messageId) {
+            win.messages[i] = message;
+          } else if (m.reply_to_message?.id === messageId) {
+            m.reply_to_message.message = message.message;
+            m.reply_to_message.is_deleted = message.is_deleted;
+          }
         }
       }
     },

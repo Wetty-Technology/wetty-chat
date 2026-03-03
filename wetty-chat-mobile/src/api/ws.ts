@@ -5,7 +5,7 @@
 
 import { getCurrentUserId } from '@/js/current-user';
 import store from '@/store/index';
-import { addMessage, confirmPendingMessage } from '@/store/messagesSlice';
+import { addMessage, confirmPendingMessage, updateMessageInStore } from '@/store/messagesSlice';
 import { setWsConnected } from '@/store/connectionSlice';
 import type { MessageResponse, ReplyToMessage } from '@/api/messages';
 
@@ -68,7 +68,7 @@ function normalizePayload(p: unknown): MessageResponse | null {
       id: r.id != null ? String(r.id) : '0',
       message: r.message != null ? String(r.message) : null,
       sender_uid: typeof r.sender_uid === 'number' ? r.sender_uid : 0,
-      deleted_at: r.deleted_at != null ? String(r.deleted_at) : null,
+      is_deleted: Boolean(r.is_deleted),
     };
   }
   return {
@@ -82,8 +82,8 @@ function normalizePayload(p: unknown): MessageResponse | null {
     sender_uid,
     chat_id,
     created_at,
-    updated_at: o.updated_at != null ? String(o.updated_at) : null,
-    deleted_at: o.deleted_at != null ? String(o.deleted_at) : null,
+    is_edited: Boolean(o.is_edited),
+    is_deleted: Boolean(o.is_deleted),
     has_attachments: Boolean(o.has_attachments),
   };
 }
@@ -151,6 +151,15 @@ export function initWebSocket(): void {
         // Keepalive acknowledged
       } else if (msg.type === 'message' && msg.payload != null) {
         handleWsMessage(msg.payload);
+      } else if ((msg.type === 'message_deleted' || msg.type === 'message_updated') && msg.payload != null) {
+        const message = normalizePayload(msg.payload);
+        if (message) {
+          store.dispatch(updateMessageInStore({
+            chatId: message.chat_id,
+            messageId: message.id,
+            message,
+          }));
+        }
       }
     } catch {
       // ignore non-JSON or invalid messages

@@ -51,7 +51,7 @@ _Covers group lifecycle and membership._
 - **POST** `/group`  *(implemented)*
   - **Desc:** Create a group.
   - **Req:** `{"name": "xx"}`
-  - **Res:** `{"id": "xxx", "name": "xx", "created_at": "..."}`  
+  - **Res:** `{"id": "xxx", "name": "xx", "created_at": "..."}`
 - **GET** `/group/{group_id}`  *(implemented)*
   - **Desc:** Get group profile.
 - **DELETE** `/group/{group_id}`
@@ -82,9 +82,9 @@ _Sending actions use HTTP for durability; receiving uses WS. Message types cover
 - **POST** `/chats/{chat_id}/messages`  *(implemented)*
   - **Desc:** Send a message (text, emoji, file, reminder, etc.).
   - **Req:** `{"message": "...", "message_type": "text|image|file|emote|...", "client_generated_id": "idempotency_key", "reply_to_id": "xx", "reply_root_id": "xx"}`
-- **POST** `/chats/message/recall`
-  - **Desc:** Recall a message.
-  - **Req:** `{"msg_id": "xx"}`
+- **DELETE** `/chats/{chat_id}/messages/{message_id}`
+  - **Desc:** Recall (soft delete) a message.
+  - **Res:** `204 No Content` on success.
 
 ### 5. File Module (Key: `fserv`)
 

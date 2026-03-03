@@ -23,11 +23,20 @@ pub struct ChatIdPath {
 
 #[derive(serde::Deserialize)]
 pub struct ListMessagesQuery {
-    #[serde(default, deserialize_with = "crate::serde_i64_string::opt::deserialize")]
+    #[serde(
+        default,
+        deserialize_with = "crate::serde_i64_string::opt::deserialize"
+    )]
     before: Option<i64>,
-    #[serde(default, deserialize_with = "crate::serde_i64_string::opt::deserialize")]
+    #[serde(
+        default,
+        deserialize_with = "crate::serde_i64_string::opt::deserialize"
+    )]
     around: Option<i64>,
-    #[serde(default, deserialize_with = "crate::serde_i64_string::opt::deserialize")]
+    #[serde(
+        default,
+        deserialize_with = "crate::serde_i64_string::opt::deserialize"
+    )]
     after: Option<i64>,
     #[serde(default)]
     max: Option<i64>,
@@ -57,8 +66,8 @@ pub struct MessageResponse {
     #[serde(with = "crate::serde_i64_string")]
     chat_id: i64,
     created_at: DateTime<Utc>,
-    updated_at: Option<DateTime<Utc>>,
-    deleted_at: Option<DateTime<Utc>>,
+    is_edited: bool,
+    is_deleted: bool,
     has_attachments: bool,
     reply_to_message: Option<Box<ReplyToMessage>>,
 }
@@ -69,14 +78,18 @@ pub struct ReplyToMessage {
     id: i64,
     message: Option<String>,
     sender_uid: i32,
-    deleted_at: Option<DateTime<Utc>>,
+    is_deleted: bool,
 }
 
 impl From<Message> for MessageResponse {
     fn from(m: Message) -> Self {
         MessageResponse {
             id: m.id,
-            message: m.message,
+            message: if m.deleted_at.is_some() {
+                None
+            } else {
+                m.message
+            },
             message_type: m.message_type,
             reply_to_id: m.reply_to_id,
             reply_root_id: m.reply_root_id,
@@ -84,8 +97,8 @@ impl From<Message> for MessageResponse {
             sender_uid: m.sender_uid,
             chat_id: m.chat_id,
             created_at: m.created_at,
-            updated_at: m.updated_at,
-            deleted_at: m.deleted_at,
+            is_edited: m.updated_at.is_some(),
+            is_deleted: m.deleted_at.is_some(),
             has_attachments: m.has_attachments,
             reply_to_message: None,
         }
@@ -94,7 +107,9 @@ impl From<Message> for MessageResponse {
 
 /// Check if user is a member of the chat; return 403 if not.
 fn check_membership(
-    conn: &mut diesel::r2d2::PooledConnection<diesel::r2d2::ConnectionManager<diesel::PgConnection>>,
+    conn: &mut diesel::r2d2::PooledConnection<
+        diesel::r2d2::ConnectionManager<diesel::PgConnection>,
+    >,
     chat_id: i64,
     uid: i32,
 ) -> Result<(), (StatusCode, &'static str)> {
@@ -115,7 +130,9 @@ fn check_membership(
 
 /// Attach reply_to_message to a list of messages by fetching referenced messages in one query.
 fn attach_replies(
-    conn: &mut diesel::r2d2::PooledConnection<diesel::r2d2::ConnectionManager<diesel::PgConnection>>,
+    conn: &mut diesel::r2d2::PooledConnection<
+        diesel::r2d2::ConnectionManager<diesel::PgConnection>,
+    >,
     messages_to_process: Vec<Message>,
 ) -> Vec<MessageResponse> {
     use crate::schema::messages::dsl;
@@ -143,15 +160,23 @@ fn attach_replies(
                 reply_messages_map.get(&reply_id).map(|reply_msg| {
                     Box::new(ReplyToMessage {
                         id: reply_msg.id,
-                        message: reply_msg.message.clone(),
+                        message: if reply_msg.deleted_at.is_some() {
+                            None
+                        } else {
+                            reply_msg.message.clone()
+                        },
                         sender_uid: reply_msg.sender_uid,
-                        deleted_at: reply_msg.deleted_at,
+                        is_deleted: reply_msg.deleted_at.is_some(),
                     })
                 })
             });
             MessageResponse {
                 id: m.id,
-                message: m.message,
+                message: if m.deleted_at.is_some() {
+                    None
+                } else {
+                    m.message
+                },
                 message_type: m.message_type,
                 reply_to_id: m.reply_to_id,
                 reply_root_id: m.reply_root_id,
@@ -159,8 +184,8 @@ fn attach_replies(
                 sender_uid: m.sender_uid,
                 chat_id: m.chat_id,
                 created_at: m.created_at,
-                updated_at: m.updated_at,
-                deleted_at: m.deleted_at,
+                is_edited: m.updated_at.is_some(),
+                is_deleted: m.deleted_at.is_some(),
                 has_attachments: m.has_attachments,
                 reply_to_message,
             }
@@ -175,10 +200,12 @@ pub async fn get_messages(
     Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
     Query(q): Query<ListMessagesQuery>,
 ) -> Result<Json<ListMessagesResponse>, (StatusCode, &'static str)> {
-    let conn = &mut state
-        .db
-        .get()
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database connection failed"))?;
+    let conn = &mut state.db.get().map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Database connection failed",
+        )
+    })?;
 
     check_membership(conn, chat_id, uid)?;
 
@@ -196,8 +223,13 @@ pub async fn get_messages(
 
         // Messages with id >= target, ordered ASC (target first, then newer)
         let newer_rows: Vec<Message> = messages::table
-            .filter(dsl::chat_id.eq(chat_id).and(dsl::id.ge(target)))
-            .order(dsl::id.asc())
+            .filter(
+                dsl::chat_id
+                    .eq(chat_id)
+                    .and(dsl::id.ge(target))
+                    .and(dsl::deleted_at.is_null()),
+            )
+            .order(dsl::created_at.asc())
             .limit(half + 2)
             .select(Message::as_select())
             .load(conn)
@@ -208,8 +240,13 @@ pub async fn get_messages(
 
         // Messages with id < target, ordered DESC (closest to target first)
         let older_rows: Vec<Message> = messages::table
-            .filter(dsl::chat_id.eq(chat_id).and(dsl::id.lt(target)))
-            .order(dsl::id.desc())
+            .filter(
+                dsl::chat_id
+                    .eq(chat_id)
+                    .and(dsl::id.lt(target))
+                    .and(dsl::deleted_at.is_null()),
+            )
+            .order(dsl::created_at.desc())
             .limit(half + 1)
             .select(Message::as_select())
             .load(conn)
@@ -225,8 +262,12 @@ pub async fn get_messages(
         let newer_to_use: Vec<Message> = newer_rows.into_iter().take((half + 1) as usize).collect();
 
         // next_cursor = oldest id (for loading older), prev_cursor = newest id (for loading newer)
-        let next_cursor = has_older.then(|| older_to_use.last().map(|m| m.id)).flatten();
-        let prev_cursor = has_newer.then(|| newer_to_use.last().map(|m| m.id)).flatten();
+        let next_cursor = has_older
+            .then(|| older_to_use.last().map(|m| m.id))
+            .flatten();
+        let prev_cursor = has_newer
+            .then(|| newer_to_use.last().map(|m| m.id))
+            .flatten();
 
         // Combine: older reversed (oldest first) + newer (target first, ascending)
         let mut combined: Vec<Message> = older_to_use.into_iter().rev().collect();
@@ -244,8 +285,13 @@ pub async fn get_messages(
     // after=<id>: fetch messages newer than `after`, ascending order
     if let Some(after) = q.after {
         let rows: Vec<Message> = messages::table
-            .filter(dsl::chat_id.eq(chat_id).and(dsl::id.gt(after)))
-            .order(dsl::id.asc())
+            .filter(
+                dsl::chat_id
+                    .eq(chat_id)
+                    .and(dsl::id.gt(after))
+                    .and(dsl::deleted_at.is_null()),
+            )
+            .order(dsl::created_at.asc())
             .limit(max + 1)
             .select(Message::as_select())
             .load(conn)
@@ -256,7 +302,9 @@ pub async fn get_messages(
 
         let has_more = rows.len() as i64 > max;
         let messages_to_process: Vec<Message> = rows.into_iter().take(max as usize).collect();
-        let prev_cursor = has_more.then(|| messages_to_process.last().map(|m| m.id)).flatten();
+        let prev_cursor = has_more
+            .then(|| messages_to_process.last().map(|m| m.id))
+            .flatten();
 
         let messages_vec = attach_replies(conn, messages_to_process);
 
@@ -270,14 +318,19 @@ pub async fn get_messages(
     // Default: before cursor, descending (newest first in response, reversed by client)
     let rows: Vec<Message> = match q.before {
         None => messages::table
-            .filter(dsl::chat_id.eq(chat_id))
-            .order(dsl::id.desc())
+            .filter(dsl::chat_id.eq(chat_id).and(dsl::deleted_at.is_null()))
+            .order(dsl::created_at.desc())
             .limit(max + 1)
             .select(Message::as_select())
             .load(conn),
         Some(before) => messages::table
-            .filter(dsl::chat_id.eq(chat_id).and(dsl::id.lt(before)))
-            .order(dsl::id.desc())
+            .filter(
+                dsl::chat_id
+                    .eq(chat_id)
+                    .and(dsl::id.lt(before))
+                    .and(dsl::deleted_at.is_null()),
+            )
+            .order(dsl::created_at.desc())
             .limit(max + 1)
             .select(Message::as_select())
             .load(conn),
@@ -289,7 +342,9 @@ pub async fn get_messages(
 
     let has_more = rows.len() as i64 > max;
     let messages_to_process: Vec<Message> = rows.into_iter().take(max as usize).collect();
-    let next_cursor = has_more.then(|| messages_to_process.last().map(|m| m.id)).flatten();
+    let next_cursor = has_more
+        .then(|| messages_to_process.last().map(|m| m.id))
+        .flatten();
 
     // Reverse to return ASC (oldest first)
     let messages_to_process: Vec<Message> = messages_to_process.into_iter().rev().collect();
@@ -308,9 +363,15 @@ pub struct CreateMessageBody {
     message: Option<String>,
     message_type: String,
     client_generated_id: String,
-    #[serde(default, deserialize_with = "crate::serde_i64_string::opt::deserialize")]
+    #[serde(
+        default,
+        deserialize_with = "crate::serde_i64_string::opt::deserialize"
+    )]
     reply_to_id: Option<i64>,
-    #[serde(default, deserialize_with = "crate::serde_i64_string::opt::deserialize")]
+    #[serde(
+        default,
+        deserialize_with = "crate::serde_i64_string::opt::deserialize"
+    )]
     reply_root_id: Option<i64>,
 }
 
@@ -321,10 +382,12 @@ pub async fn post_message(
     Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
     Json(body): Json<CreateMessageBody>,
 ) -> Result<impl IntoResponse, (StatusCode, &'static str)> {
-    let conn = &mut state
-        .db
-        .get()
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database connection failed"))?;
+    let conn = &mut state.db.get().map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Database connection failed",
+        )
+    })?;
 
     check_membership(conn, chat_id, uid)?;
 
@@ -371,9 +434,13 @@ pub async fn post_message(
             .map(|reply_msg: Message| {
                 Box::new(ReplyToMessage {
                     id: reply_msg.id,
-                    message: reply_msg.message,
+                    message: if reply_msg.deleted_at.is_some() {
+                        None
+                    } else {
+                        reply_msg.message
+                    },
                     sender_uid: reply_msg.sender_uid,
-                    deleted_at: reply_msg.deleted_at,
+                    is_deleted: reply_msg.deleted_at.is_some(),
                 })
             })
     } else {
@@ -382,7 +449,11 @@ pub async fn post_message(
 
     let response = MessageResponse {
         id: new_msg.id,
-        message: new_msg.message,
+        message: if new_msg.deleted_at.is_some() {
+            None
+        } else {
+            new_msg.message
+        },
         message_type: new_msg.message_type,
         reply_to_id: new_msg.reply_to_id,
         reply_root_id: new_msg.reply_root_id,
@@ -390,8 +461,8 @@ pub async fn post_message(
         sender_uid: new_msg.sender_uid,
         chat_id: new_msg.chat_id,
         created_at: new_msg.created_at,
-        updated_at: new_msg.updated_at,
-        deleted_at: new_msg.deleted_at,
+        is_edited: new_msg.updated_at.is_some(),
+        is_deleted: new_msg.deleted_at.is_some(),
         has_attachments: new_msg.has_attachments,
         reply_to_message,
     };
@@ -430,13 +501,18 @@ pub struct UpdateMessageBody {
 pub async fn patch_message(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
-    Path(MessageIdPath { chat_id, message_id }): Path<MessageIdPath>,
+    Path(MessageIdPath {
+        chat_id,
+        message_id,
+    }): Path<MessageIdPath>,
     Json(body): Json<UpdateMessageBody>,
 ) -> Result<Json<MessageResponse>, (StatusCode, &'static str)> {
-    let conn = &mut state
-        .db
-        .get()
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database connection failed"))?;
+    let conn = &mut state.db.get().map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Database connection failed",
+        )
+    })?;
 
     check_membership(conn, chat_id, uid)?;
 
@@ -463,11 +539,17 @@ pub async fn patch_message(
     // Update message
     let now = Utc::now();
     diesel::update(messages::table.filter(dsl::id.eq(message_id)))
-        .set((dsl::message.eq(&body.message), dsl::updated_at.eq(Some(now))))
+        .set((
+            dsl::message.eq(&body.message),
+            dsl::updated_at.eq(Some(now)),
+        ))
         .execute(conn)
         .map_err(|e| {
             tracing::error!("update message: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update message")
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to update message",
+            )
         })?;
 
     let updated_message: Message = messages::table
@@ -476,7 +558,10 @@ pub async fn patch_message(
         .first(conn)
         .map_err(|e| {
             tracing::error!("fetch updated message: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to fetch updated message")
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to fetch updated message",
+            )
         })?;
 
     let response = MessageResponse::from(updated_message);
@@ -504,12 +589,17 @@ pub async fn patch_message(
 pub async fn delete_message(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
-    Path(MessageIdPath { chat_id, message_id }): Path<MessageIdPath>,
+    Path(MessageIdPath {
+        chat_id,
+        message_id,
+    }): Path<MessageIdPath>,
 ) -> Result<StatusCode, (StatusCode, &'static str)> {
-    let conn = &mut state
-        .db
-        .get()
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database connection failed"))?;
+    let conn = &mut state.db.get().map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Database connection failed",
+        )
+    })?;
 
     check_membership(conn, chat_id, uid)?;
 
@@ -522,7 +612,10 @@ pub async fn delete_message(
         .map_err(|_| (StatusCode::NOT_FOUND, "Message not found"))?;
 
     if message.sender_uid != uid {
-        return Err((StatusCode::FORBIDDEN, "You can only delete your own messages"));
+        return Err((
+            StatusCode::FORBIDDEN,
+            "You can only delete your own messages",
+        ));
     }
 
     if message.deleted_at.is_some() {
@@ -536,7 +629,10 @@ pub async fn delete_message(
         .execute(conn)
         .map_err(|e| {
             tracing::error!("delete message: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to delete message")
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to delete message",
+            )
         })?;
 
     let deleted_message: Message = messages::table
@@ -545,7 +641,10 @@ pub async fn delete_message(
         .first(conn)
         .map_err(|e| {
             tracing::error!("fetch deleted message: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to fetch deleted message")
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to fetch deleted message",
+            )
         })?;
 
     let response = MessageResponse::from(deleted_message);

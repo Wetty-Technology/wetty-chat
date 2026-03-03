@@ -51,7 +51,7 @@ _此模块负责群组生命周期和成员管理。_
 - **POST** `/group`
     - **说明:** 建群。**(已实现)**
     - **Req:** `{"name": "xx"}`
-    - **Res:** `{"id": "xxx", "name": "xx", "created_at": "..."}`  
+    - **Res:** `{"id": "xxx", "name": "xx", "created_at": "..."}`
 - **GET** `/group/{group_id}`
     - **说明:** 获取群资料。**(已实现)**
 - **DELETE** `/group/{group_id}`
@@ -82,9 +82,9 @@ _发送动作通过 HTTP 保证到达率，接收动作通过 WS 推送。具体
 - **POST** `/chats/{chat_id}/messages`
     - **说明:** 发送消息（支持文本、动作表情、文件转发、@提醒等）。**(已实现)**
     - **Req:** `{"message": "...", "message_type": "text|image|file|emote|...", "client_generated_id": "idempotency_key", "reply_to_id": "xx", "reply_root_id": "xx"}`
-- **POST** `/chats/message/recall`
-    - **说明:** 撤回消息。
-    - **Req:** `{"msg_id": "xx"}`
+- **DELETE** `/chats/{chat_id}/messages/{message_id}`
+  - **描述:** 撤回 (软删除) 一条消息。
+  - **响应:** 成功时返回 `204 No Content`。
 
 ### 5. 文件模块 (模块 Key: `fserv`)
 

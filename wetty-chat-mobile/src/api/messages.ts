@@ -5,7 +5,7 @@ export interface ReplyToMessage {
   id: string;
   message: string | null;
   sender_uid: number;
-  deleted_at: string | null;
+  is_deleted: boolean;
 }
 
 export interface MessageResponse {
@@ -18,8 +18,8 @@ export interface MessageResponse {
   sender_uid: number;
   chat_id: string;
   created_at: string;
-  updated_at: string | null;
-  deleted_at: string | null;
+  is_edited: boolean;
+  is_deleted: boolean;
   has_attachments: boolean;
   reply_to_message?: ReplyToMessage;
 }

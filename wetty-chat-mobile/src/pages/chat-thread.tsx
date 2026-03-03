@@ -22,6 +22,7 @@ import {
   getMessages,
   sendMessage,
   updateMessage,
+  deleteMessage,
   type MessageResponse,
 } from '@/api/messages';
 import { getChatDetails } from '@/api/chats';
@@ -190,7 +191,7 @@ export default function ChatThread() {
     if (editingMessage) {
       const messageId = editingMessage.id;
       // Optimistic update
-      dispatch(updateMessageInStore({ chatId, messageId, message: { ...editingMessage, message: text, updated_at: new Date().toISOString() } }));
+      dispatch(updateMessageInStore({ chatId, messageId, message: { ...editingMessage, message: text, is_edited: true } }));
       setEditingMessage(null);
 
       updateMessage(chatId, messageId, { message: text })
@@ -217,14 +218,14 @@ export default function ChatThread() {
         id: replyingTo.id,
         message: replyingTo.message,
         sender_uid: replyingTo.sender_uid,
-        deleted_at: replyingTo.deleted_at,
+        is_deleted: replyingTo.is_deleted,
       } : undefined,
       client_generated_id: clientGeneratedId,
       sender_uid: getCurrentUserId(),
       chat_id: chatId,
       created_at: new Date().toISOString(),
-      updated_at: null,
-      deleted_at: null,
+      is_edited: false,
+      is_deleted: false,
       has_attachments: false,
     };
     dispatch(addMessage({ chatId, message: optimistic }));
@@ -268,17 +269,25 @@ export default function ChatThread() {
           }
         },
         { text: 'Start Thread', handler: () => { } },
-        ...(isOwn ? [{
-          text: 'Edit', handler: () => {
-            setReplyingTo(null);
-            setEditingMessage(msg);
+        ...(isOwn ? [
+          {
+            text: 'Edit', handler: () => {
+              setReplyingTo(null);
+              setEditingMessage(msg);
+            }
+          },
+          {
+            text: 'Delete', role: 'destructive' as const, handler: () => {
+              deleteMessage(chatId, msg.id).catch((e: any) => {
+                showToast(e.message || 'Failed to delete message');
+              });
+            }
           }
-        }] : []),
-        { text: 'Delete', role: 'destructive' as const, handler: () => { } },
+        ] : []),
         { text: 'Cancel', role: 'cancel' as const, handler: () => { } },
       ],
     });
-  }, [messages]);
+  }, [messages, chatId, showToast, presentActionSheet, setReplyingTo, setEditingMessage]);
 
   return (
     <IonPage className="chat-thread-page">
@@ -322,19 +331,19 @@ export default function ChatThread() {
             return (
               <ChatBubble
                 senderName={`User ${msg.sender_uid}`}
-                message={msg.deleted_at ? '[Deleted]' : (msg.message ?? '')}
+                message={msg.is_deleted ? '[Deleted]' : (msg.message ?? '')}
                 isSent={msg.sender_uid === getCurrentUserId()}
                 avatarColor={colorForUser(msg.sender_uid)}
                 onReply={() => setReplyingTo(msg)}
-                onReplyTap={msg.reply_to_id ? () => jumpToMessage(msg.reply_to_id!) : undefined}
+                onReplyTap={msg.reply_to_id && !msg.reply_to_message?.is_deleted ? () => jumpToMessage(msg.reply_to_id!) : undefined}
                 onLongPress={() => onClickChatItem(index)}
                 showName={prevSender !== msg.sender_uid}
                 showAvatar={nextSender !== msg.sender_uid}
                 timestamp={msg.created_at}
-                edited={msg.updated_at != null}
+                edited={msg.is_edited}
                 replyTo={msg.reply_to_message ? {
                   senderName: `User ${msg.reply_to_message.sender_uid}`,
-                  message: msg.reply_to_message.deleted_at ? '[Deleted]' : (msg.reply_to_message.message ?? ''),
+                  message: msg.reply_to_message.is_deleted ? '[Deleted]' : (msg.reply_to_message.message ?? ''),
                   avatarColor: colorForUser(msg.reply_to_message.sender_uid),
                 } : undefined}
               />
