@@ -51,6 +51,7 @@ diesel::table! {
         updated_at -> Nullable<Timestamptz>,
         deleted_at -> Nullable<Timestamptz>,
         has_attachments -> Bool,
+        has_thread -> Bool,
     }
 }
 

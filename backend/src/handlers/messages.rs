@@ -40,6 +40,11 @@ pub struct ListMessagesQuery {
     after: Option<i64>,
     #[serde(default)]
     max: Option<i64>,
+    #[serde(
+        default,
+        deserialize_with = "crate::serde_i64_string::opt::deserialize"
+    )]
+    thread_id: Option<i64>,
 }
 
 #[derive(Serialize)]
@@ -69,6 +74,7 @@ pub struct MessageResponse {
     is_edited: bool,
     is_deleted: bool,
     has_attachments: bool,
+    pub has_thread: bool,
     reply_to_message: Option<Box<ReplyToMessage>>,
 }
 
@@ -100,6 +106,7 @@ impl From<Message> for MessageResponse {
             is_edited: m.updated_at.is_some(),
             is_deleted: m.deleted_at.is_some(),
             has_attachments: m.has_attachments,
+            has_thread: m.has_thread,
             reply_to_message: None,
         }
     }
@@ -187,6 +194,7 @@ fn attach_replies(
                 is_edited: m.updated_at.is_some(),
                 is_deleted: m.deleted_at.is_some(),
                 has_attachments: m.has_attachments,
+                has_thread: m.has_thread,
                 reply_to_message,
             }
         })
@@ -217,18 +225,28 @@ pub async fn get_messages(
 
     use crate::schema::messages::dsl;
 
+    let q_thread_id = q.thread_id;
+    macro_rules! base_query {
+        () => {{
+            let mut b = messages::table
+                .into_boxed()
+                .filter(dsl::chat_id.eq(chat_id).and(dsl::deleted_at.is_null()));
+            if let Some(tid) = q_thread_id {
+                b = b.filter(dsl::reply_root_id.eq(tid));
+            } else {
+                b = b.filter(dsl::reply_root_id.is_null());
+            }
+            b
+        }};
+    }
+
     // around=<id>: fetch a window centered on the target message
     if let Some(target) = q.around {
         let half = max / 2;
 
         // Messages with id >= target, ordered ASC (target first, then newer)
-        let newer_rows: Vec<Message> = messages::table
-            .filter(
-                dsl::chat_id
-                    .eq(chat_id)
-                    .and(dsl::id.ge(target))
-                    .and(dsl::deleted_at.is_null()),
-            )
+        let newer_rows: Vec<Message> = base_query!()
+            .filter(dsl::id.ge(target))
             .order(dsl::created_at.asc())
             .limit(half + 2)
             .select(Message::as_select())
@@ -239,13 +257,8 @@ pub async fn get_messages(
             })?;
 
         // Messages with id < target, ordered DESC (closest to target first)
-        let older_rows: Vec<Message> = messages::table
-            .filter(
-                dsl::chat_id
-                    .eq(chat_id)
-                    .and(dsl::id.lt(target))
-                    .and(dsl::deleted_at.is_null()),
-            )
+        let older_rows: Vec<Message> = base_query!()
+            .filter(dsl::id.lt(target))
             .order(dsl::created_at.desc())
             .limit(half + 1)
             .select(Message::as_select())
@@ -284,13 +297,8 @@ pub async fn get_messages(
 
     // after=<id>: fetch messages newer than `after`, ascending order
     if let Some(after) = q.after {
-        let rows: Vec<Message> = messages::table
-            .filter(
-                dsl::chat_id
-                    .eq(chat_id)
-                    .and(dsl::id.gt(after))
-                    .and(dsl::deleted_at.is_null()),
-            )
+        let rows: Vec<Message> = base_query!()
+            .filter(dsl::id.gt(after))
             .order(dsl::created_at.asc())
             .limit(max + 1)
             .select(Message::as_select())
@@ -317,19 +325,13 @@ pub async fn get_messages(
 
     // Default: before cursor, descending (newest first in response, reversed by client)
     let rows: Vec<Message> = match q.before {
-        None => messages::table
-            .filter(dsl::chat_id.eq(chat_id).and(dsl::deleted_at.is_null()))
+        None => base_query!()
             .order(dsl::created_at.desc())
             .limit(max + 1)
             .select(Message::as_select())
             .load(conn),
-        Some(before) => messages::table
-            .filter(
-                dsl::chat_id
-                    .eq(chat_id)
-                    .and(dsl::id.lt(before))
-                    .and(dsl::deleted_at.is_null()),
-            )
+        Some(before) => base_query!()
+            .filter(dsl::id.lt(before))
             .order(dsl::created_at.desc())
             .limit(max + 1)
             .select(Message::as_select())
@@ -413,6 +415,7 @@ pub async fn post_message(
         updated_at: None,
         deleted_at: None,
         has_attachments: false,
+        has_thread: false,
     };
 
     diesel::insert_into(messages::table)
@@ -464,6 +467,7 @@ pub async fn post_message(
         is_edited: new_msg.updated_at.is_some(),
         is_deleted: new_msg.deleted_at.is_some(),
         has_attachments: new_msg.has_attachments,
+        has_thread: new_msg.has_thread,
         reply_to_message,
     };
 
@@ -480,6 +484,26 @@ pub async fn post_message(
         "payload": &response
     })) {
         state.ws_registry.broadcast_to_uids(&member_uids, &ws_json);
+    }
+
+    // If this is a thread message, mark the root message as having a thread
+    if let Some(root_id) = new_msg.reply_root_id {
+        use crate::schema::messages::dsl;
+        let root_msg_updated: Option<Message> =
+            diesel::update(messages::table.filter(dsl::id.eq(root_id)))
+                .set(dsl::has_thread.eq(true))
+                .get_result(conn)
+                .ok();
+
+        if let Some(root_msg) = root_msg_updated {
+            let root_response = MessageResponse::from(root_msg);
+            if let Ok(ws_json) = serde_json::to_string(&serde_json::json!({
+                "type": "message_updated",
+                "payload": &root_response
+            })) {
+                state.ws_registry.broadcast_to_uids(&member_uids, &ws_json);
+            }
+        }
     }
 
     Ok((StatusCode::CREATED, Json(response)))
@@ -666,4 +690,35 @@ pub async fn delete_message(
     }
 
     Ok(StatusCode::NO_CONTENT)
+}
+
+/// GET /chats/:chat_id/messages/:message_id — Get a single message.
+pub async fn get_message(
+    CurrentUid(uid): CurrentUid,
+    State(state): State<AppState>,
+    Path(MessageIdPath {
+        chat_id,
+        message_id,
+    }): Path<MessageIdPath>,
+) -> Result<Json<MessageResponse>, (StatusCode, &'static str)> {
+    let conn = &mut state.db.get().map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Database connection failed",
+        )
+    })?;
+
+    check_membership(conn, chat_id, uid)?;
+
+    use crate::schema::messages::dsl;
+    let message: Message = messages::table
+        .filter(dsl::id.eq(message_id).and(dsl::chat_id.eq(chat_id)))
+        .select(Message::as_select())
+        .first(conn)
+        .map_err(|_| (StatusCode::NOT_FOUND, "Message not found"))?;
+
+    let messages_vec = attach_replies(conn, vec![message]);
+    let response = messages_vec.into_iter().next().unwrap();
+
+    Ok(Json(response))
 }

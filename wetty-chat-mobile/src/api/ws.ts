@@ -85,6 +85,7 @@ function normalizePayload(p: unknown): MessageResponse | null {
     is_edited: Boolean(o.is_edited),
     is_deleted: Boolean(o.is_deleted),
     has_attachments: Boolean(o.has_attachments),
+    has_thread: Boolean(o.has_thread),
   };
 }
 
@@ -97,19 +98,21 @@ function allMessagesForChat(chatId: string): MessageResponse[] {
 function handleWsMessage(payload: unknown): void {
   const message = normalizePayload(payload);
   if (!message) return;
-  const chatId = message.chat_id;
-  const all = allMessagesForChat(chatId);
+  const targetChatId = message.reply_root_id
+    ? `${message.chat_id}_thread_${message.reply_root_id}`
+    : message.chat_id;
+  const all = allMessagesForChat(targetChatId);
   const pending = all.find((m: MessageResponse) => m.client_generated_id === message.client_generated_id && m.id === '0');
   if (pending) {
     store.dispatch(confirmPendingMessage({
-      chatId,
+      chatId: targetChatId,
       clientGeneratedId: message.client_generated_id,
       message,
     }));
   } else {
     const exists = all.some((m: MessageResponse) => m.id === message.id || m.client_generated_id === message.client_generated_id);
     if (!exists) {
-      store.dispatch(addMessage({ chatId, message }));
+      store.dispatch(addMessage({ chatId: targetChatId, message }));
     }
   }
 }
@@ -154,11 +157,18 @@ export function initWebSocket(): void {
       } else if ((msg.type === 'message_deleted' || msg.type === 'message_updated') && msg.payload != null) {
         const message = normalizePayload(msg.payload);
         if (message) {
-          store.dispatch(updateMessageInStore({
-            chatId: message.chat_id,
-            messageId: message.id,
-            message,
-          }));
+          // Update in all chat states that start with this chat's ID (main chat and threads)
+          const state = store.getState();
+          const chatPrefix = `${message.chat_id}`;
+          for (const key of Object.keys(state.messages.chats)) {
+            if (key === chatPrefix || key.startsWith(`${chatPrefix}_thread_`)) {
+              store.dispatch(updateMessageInStore({
+                chatId: key,
+                messageId: message.id,
+                message,
+              }));
+            }
+          }
         }
       }
     } catch {

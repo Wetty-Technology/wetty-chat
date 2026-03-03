@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { IonIcon } from '@ionic/react';
-import { arrowUndo } from 'ionicons/icons';
+import { arrowUndo, chatbubbles } from 'ionicons/icons';
 import { t } from '@lingui/core/macro';
 import styles from './ChatBubble.module.scss';
 
@@ -23,6 +23,8 @@ interface ChatBubbleProps {
   };
   timestamp?: string;
   edited?: boolean;
+  hasThread?: boolean;
+  onThreadClick?: () => void;
 }
 
 function formatTime(iso: string): string {
@@ -51,7 +53,9 @@ export function ChatBubble({
   onAvatarClick,
   replyTo,
   timestamp,
-  edited
+  edited,
+  hasThread,
+  onThreadClick
 }: ChatBubbleProps) {
   const swipeSign = swipeDirection === 'left' ? -1 : 1;
   const [offset, setOffset] = useState(0);
@@ -176,6 +180,12 @@ export function ChatBubble({
                 <span className={styles.timestamp}>{formatTime(timestamp)}{edited && ` (${t`Edited`})`}</span>
               )}
             </div>
+            {hasThread && (
+              <div className={styles.threadIndicator} onClick={onThreadClick}>
+                <IonIcon icon={chatbubbles} />
+                <span>{t`View Thread`}</span>
+              </div>
+            )}
           </div>
           {onReply && (
             <button className={styles.hoverReplyBtn} onClick={onReply} aria-label={t`Reply`}>

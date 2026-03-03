@@ -17,6 +17,7 @@ interface VirtualScrollProps {
   windowKey?: number | string;
   initialScrollIndex?: number;
   onAtBottomChange?: (atBottom: boolean) => void;
+  header?: ReactNode;
 }
 
 function MeasuredItem({
@@ -70,8 +71,25 @@ export function VirtualScroll({
   windowKey,
   initialScrollIndex,
   onAtBottomChange,
+  header,
 }: VirtualScrollProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const [headerHeight, setHeaderHeight] = useState(0);
+
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) {
+      setHeaderHeight(0);
+      return;
+    }
+    const ro = new ResizeObserver(() => {
+      const h = el.getBoundingClientRect().height;
+      if (h > 0) setHeaderHeight(h);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [header]);
   const [scrollTop, setScrollTop] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
   const prevTotalRef = useRef(totalItems);
@@ -312,7 +330,7 @@ export function VirtualScroll({
   }
 
   const loadingRowHeight = 36;
-  const topPadding = loadingOlder ? loadingRowHeight : 0;
+  const topPadding = (loadingOlder ? loadingRowHeight : 0) + headerHeight;
 
   const visibleItems: ReactNode[] = [];
   for (let i = startIndex; i <= endIndex; i++) {
@@ -330,6 +348,11 @@ export function VirtualScroll({
         {loadingOlder && (
           <div className={styles.loadingRow} style={{ height: loadingRowHeight }}>
             Loading…
+          </div>
+        )}
+        {header && (
+          <div ref={headerRef} style={{ position: 'absolute', top: loadingOlder ? loadingRowHeight : 0, left: 0, right: 0 }}>
+            {header}
           </div>
         )}
         {visibleItems}

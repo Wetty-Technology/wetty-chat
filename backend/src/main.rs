@@ -2,7 +2,7 @@ use axum::body::Body;
 use axum::http::Request;
 use axum::{
     extract::State,
-    routing::{delete, get, patch, post},
+    routing::{delete, get, post},
     Router,
 };
 use diesel::r2d2::{ConnectionManager, Pool};
@@ -108,9 +108,10 @@ async fn main() {
         )
         .route(
             "/{chat_id}/messages/{message_id}",
-            patch(handlers::messages::patch_message).delete(handlers::messages::delete_message),
-        )
-        ;
+            get(handlers::messages::get_message)
+                .patch(handlers::messages::patch_message)
+                .delete(handlers::messages::delete_message),
+        );
 
     // /group — group lifecycle (create, get info)
     let group_routes = Router::new()
@@ -122,8 +123,7 @@ async fn main() {
         )
         .route(
             "/{chat_id}/members/{uid}",
-            delete(handlers::members::delete_remove_member)
-                .patch(handlers::members::patch_member),
+            delete(handlers::members::delete_remove_member).patch(handlers::members::patch_member),
         );
 
     let trace_layer = TraceLayer::new_for_http()

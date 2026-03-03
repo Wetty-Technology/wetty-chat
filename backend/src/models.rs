@@ -67,6 +67,7 @@ pub struct Message {
     pub updated_at: Option<DateTime<Utc>>,
     pub deleted_at: Option<DateTime<Utc>>,
     pub has_attachments: bool,
+    pub has_thread: bool,
 }
 
 #[derive(Debug, Clone, Insertable)]
@@ -84,4 +85,5 @@ pub struct NewMessage {
     pub updated_at: Option<DateTime<Utc>>,
     pub deleted_at: Option<DateTime<Utc>>,
     pub has_attachments: bool,
+    pub has_thread: bool,
 }

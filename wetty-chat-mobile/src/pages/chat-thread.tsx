@@ -23,6 +23,7 @@ import {
   sendMessage,
   updateMessage,
   deleteMessage,
+  getMessage,
   type MessageResponse,
 } from '@/api/messages';
 import { getChatDetails } from '@/api/chats';
@@ -59,24 +60,25 @@ function colorForUser(uid: number): string {
 }
 
 export default function ChatThread() {
-  const { id } = useParams<{ id: string }>();
-  const chatId = id ? String(id) : '';
+  const { id, threadId } = useParams<{ id: string; threadId?: string }>();
+  const apiChatId = id ? String(id) : '';
+  const storeChatId = threadId ? `${apiChatId}_thread_${threadId}` : apiChatId;
   const history = useHistory();
 
   const dispatch = useDispatch();
-  const storedName = useSelector((state: RootState) => selectChatName(state, chatId));
-  const chatName = storedName ?? (id ? `Chat ${id}` : 'Chat');
+  const storedName = useSelector((state: RootState) => selectChatName(state, apiChatId));
+  const chatName = threadId ? `Thread` : (storedName ?? (id ? `Chat ${id}` : 'Chat'));
 
   useEffect(() => {
-    if (!chatId || storedName != null) return;
-    getChatDetails(chatId)
+    if (!apiChatId || storedName != null) return;
+    getChatDetails(apiChatId)
       .then((res) => {
         const { id: _, ...meta } = res.data;
-        dispatch(setChatMeta({ chatId, meta }));
+        dispatch(setChatMeta({ chatId: apiChatId, meta }));
       })
-      .catch(() => {});
-  }, [chatId, storedName, dispatch]);
-  const messages = useSelector((state: RootState) => selectMessagesForChat(state, chatId));
+      .catch(() => { });
+  }, [apiChatId, storedName, dispatch]);
+  const messages = useSelector((state: RootState) => selectMessagesForChat(state, storeChatId));
 
   const scrollToBottomRef = useRef<(() => void) | null>(null);
   const scrollToIndexRef = useRef<((index: number, behavior?: ScrollBehavior) => void) | null>(null);
@@ -90,6 +92,17 @@ export default function ChatThread() {
   const [atBottom, setAtBottom] = useState(true);
   const [replyingTo, setReplyingTo] = useState<MessageResponse | null>(null);
   const [editingMessage, setEditingMessage] = useState<MessageResponse | null>(null);
+  const [rootMessage, setRootMessage] = useState<MessageResponse | null>(null);
+
+  useEffect(() => {
+    if (threadId) {
+      getMessage(apiChatId, threadId)
+        .then((res) => setRootMessage(res.data))
+        .catch(() => setRootMessage(null));
+    } else {
+      setRootMessage(null);
+    }
+  }, [apiChatId, threadId]);
 
   const [presentToast] = useIonToast();
   const [presentActionSheet] = useIonActionSheet();
@@ -100,34 +113,34 @@ export default function ChatThread() {
 
   // Initial load
   useEffect(() => {
-    if (!chatId) return;
+    if (!apiChatId) return;
     setInitialScrollIndex(undefined);
-    getMessages(chatId)
+    getMessages(apiChatId, threadId ? { thread_id: threadId } : undefined)
       .then((res) => {
         const list = res.data.messages ?? [];
-        dispatch(resetChat({ chatId, messages: list, nextCursor: res.data.next_cursor ?? null, prevCursor: null }));
+        dispatch(resetChat({ chatId: storeChatId, messages: list, nextCursor: res.data.next_cursor ?? null, prevCursor: null }));
         setPrependedCount(0);
         setWindowKey(k => k + 1);
         setInitialScrollIndex(undefined);
       })
       .catch((err: Error) => {
-        dispatch(resetChat({ chatId, messages: [], nextCursor: null, prevCursor: null }));
+        dispatch(resetChat({ chatId: storeChatId, messages: [], nextCursor: null, prevCursor: null }));
         showToast(err.message || 'Failed to load messages');
       });
-  }, [chatId, dispatch, showToast]);
+  }, [apiChatId, storeChatId, threadId, dispatch, showToast]);
 
   const loadMore = useCallback(() => {
     const st = store.getState();
-    const cursor = selectNextCursorForChat(st, chatId);
-    if (!chatId || cursor == null || loadingMoreRef.current) return;
-    const gen = selectChatGeneration(st, chatId);
+    const cursor = selectNextCursorForChat(st, storeChatId);
+    if (!apiChatId || cursor == null || loadingMoreRef.current) return;
+    const gen = selectChatGeneration(st, storeChatId);
     loadingMoreRef.current = true;
     setLoadingMore(true);
-    getMessages(chatId, { before: cursor, max: 50 })
+    getMessages(apiChatId, { before: cursor, max: 50, thread_id: threadId })
       .then((res) => {
-        if (selectChatGeneration(store.getState(), chatId) !== gen) return;
+        if (selectChatGeneration(store.getState(), storeChatId) !== gen) return;
         const list = res.data.messages ?? [];
-        dispatch(prependMessages({ chatId, messages: list, nextCursor: res.data.next_cursor ?? null }));
+        dispatch(prependMessages({ chatId: storeChatId, messages: list, nextCursor: res.data.next_cursor ?? null }));
         setPrependedCount(c => c + list.length);
       })
       .catch((err: Error) => {
@@ -137,19 +150,19 @@ export default function ChatThread() {
         loadingMoreRef.current = false;
         setLoadingMore(false);
       });
-  }, [chatId, dispatch, showToast]);
+  }, [apiChatId, storeChatId, threadId, dispatch, showToast]);
 
   const loadNewer = useCallback(() => {
     const st = store.getState();
-    const prevCursor = selectPrevCursorForChat(st, chatId);
-    if (!chatId || prevCursor == null || loadingNewerRef.current) return;
-    const gen = selectChatGeneration(st, chatId);
+    const prevCursor = selectPrevCursorForChat(st, storeChatId);
+    if (!apiChatId || prevCursor == null || loadingNewerRef.current) return;
+    const gen = selectChatGeneration(st, storeChatId);
     loadingNewerRef.current = true;
-    getMessages(chatId, { after: prevCursor, max: 50 })
+    getMessages(apiChatId, { after: prevCursor, max: 50, thread_id: threadId })
       .then((res) => {
-        if (selectChatGeneration(store.getState(), chatId) !== gen) return;
+        if (selectChatGeneration(store.getState(), storeChatId) !== gen) return;
         const list = res.data.messages ?? [];
-        dispatch(appendMessages({ chatId, messages: list, prevCursor: res.data.prev_cursor ?? null }));
+        dispatch(appendMessages({ chatId: storeChatId, messages: list, prevCursor: res.data.prev_cursor ?? null }));
       })
       .catch((err: Error) => {
         showToast(err.message || 'Failed to load newer messages');
@@ -157,21 +170,21 @@ export default function ChatThread() {
       .finally(() => {
         loadingNewerRef.current = false;
       });
-  }, [chatId, dispatch, showToast]);
+  }, [apiChatId, storeChatId, threadId, dispatch, showToast]);
 
   const jumpToMessage = useCallback((messageId: string) => {
     const state = store.getState();
-    const currentMessages = selectMessagesForChat(state, chatId);
+    const currentMessages = selectMessagesForChat(state, storeChatId);
     const idx = currentMessages.findIndex((m) => m.id === messageId);
     if (idx !== -1) {
       scrollToIndexRef.current?.(idx, 'smooth');
       return;
     }
     // Message not in current window — fetch centered window
-    getMessages(chatId, { around: messageId, max: 50 })
+    getMessages(apiChatId, { around: messageId, max: 50, thread_id: threadId })
       .then((res) => {
         const list = res.data.messages ?? [];
-        dispatch(pushWindow({ chatId, messages: list, nextCursor: res.data.next_cursor ?? null, prevCursor: res.data.prev_cursor ?? null }));
+        dispatch(pushWindow({ chatId: storeChatId, messages: list, nextCursor: res.data.next_cursor ?? null, prevCursor: res.data.prev_cursor ?? null }));
         const idx = list.findIndex((m) => m.id === messageId);
         setInitialScrollIndex(idx !== -1 ? idx : undefined);
         setWindowKey(k => k + 1);
@@ -180,27 +193,27 @@ export default function ChatThread() {
       .catch((err: Error) => {
         showToast(err.message || 'Failed to jump to message');
       });
-  }, [chatId, dispatch, showToast]);
+  }, [apiChatId, storeChatId, threadId, dispatch, showToast]);
 
-  const prevCursor = useSelector((state: RootState) => selectPrevCursorForChat(state, chatId));
+  const prevCursor = useSelector((state: RootState) => selectPrevCursorForChat(state, storeChatId));
 
   const handleSend = useCallback((text: string) => {
-    if (!chatId) return;
+    if (!apiChatId) return;
 
     // Edit flow
     if (editingMessage) {
       const messageId = editingMessage.id;
       // Optimistic update
-      dispatch(updateMessageInStore({ chatId, messageId, message: { ...editingMessage, message: text, is_edited: true } }));
+      dispatch(updateMessageInStore({ chatId: storeChatId, messageId, message: { ...editingMessage, message: text, is_edited: true } }));
       setEditingMessage(null);
 
-      updateMessage(chatId, messageId, { message: text })
+      updateMessage(apiChatId, messageId, { message: text })
         .then((res) => {
-          dispatch(updateMessageInStore({ chatId, messageId, message: { ...res.data, reply_to_message: res.data.reply_to_message ?? editingMessage.reply_to_message } }));
+          dispatch(updateMessageInStore({ chatId: storeChatId, messageId, message: { ...res.data, reply_to_message: res.data.reply_to_message ?? editingMessage.reply_to_message } }));
         })
         .catch((err: Error) => {
           // Revert optimistic update
-          dispatch(updateMessageInStore({ chatId, messageId, message: editingMessage }));
+          dispatch(updateMessageInStore({ chatId: storeChatId, messageId, message: editingMessage }));
           showToast(err.message || 'Failed to edit message');
         });
       return;
@@ -213,7 +226,7 @@ export default function ChatThread() {
       message: text,
       message_type: 'text',
       reply_to_id: replyingTo?.id ?? null,
-      reply_root_id: replyingTo?.reply_root_id ?? replyingTo?.id ?? null,
+      reply_root_id: threadId ?? replyingTo?.reply_root_id ?? replyingTo?.id ?? null,
       reply_to_message: replyingTo ? {
         id: replyingTo.id,
         message: replyingTo.message,
@@ -222,22 +235,23 @@ export default function ChatThread() {
       } : undefined,
       client_generated_id: clientGeneratedId,
       sender_uid: getCurrentUserId(),
-      chat_id: chatId,
+      chat_id: apiChatId,
       created_at: new Date().toISOString(),
       is_edited: false,
       is_deleted: false,
       has_attachments: false,
+      has_thread: false,
     };
-    dispatch(addMessage({ chatId, message: optimistic }));
+    dispatch(addMessage({ chatId: storeChatId, message: optimistic }));
     setReplyingTo(null);
     setTimeout(() => scrollToBottomRef.current?.(), 50);
 
-    sendMessage(chatId, {
+    sendMessage(apiChatId, {
       message: text,
       message_type: 'text',
       client_generated_id: clientGeneratedId,
       reply_to_id: replyingTo?.id,
-      reply_root_id: replyingTo?.reply_root_id ?? replyingTo?.id,
+      reply_root_id: threadId ?? replyingTo?.reply_root_id ?? replyingTo?.id,
     })
       .then((res) => {
         const postResponse = res.data;
@@ -245,18 +259,18 @@ export default function ChatThread() {
           ...postResponse,
           reply_to_message: postResponse.reply_to_message ?? optimistic.reply_to_message,
         };
-        dispatch(confirmPendingMessage({ chatId, clientGeneratedId, message: confirmed }));
+        dispatch(confirmPendingMessage({ chatId: storeChatId, clientGeneratedId, message: confirmed }));
       })
       .catch((err: Error) => {
         showToast(err.message || 'Failed to send');
         const state = store.getState();
-        const currentMessages = selectMessagesForChat(state, chatId);
+        const currentMessages = selectMessagesForChat(state, storeChatId);
         const without = currentMessages.filter(
           (m) => m.client_generated_id !== clientGeneratedId
         );
-        dispatch(setMessagesForChat({ chatId, messages: without }));
+        dispatch(setMessagesForChat({ chatId: storeChatId, messages: without }));
       });
-  }, [chatId, dispatch, showToast, replyingTo, editingMessage]);
+  }, [apiChatId, storeChatId, threadId, dispatch, showToast, replyingTo, editingMessage]);
 
   const onClickChatItem = useCallback((messageIndex: number) => {
     const msg = messages[messageIndex];
@@ -268,7 +282,7 @@ export default function ChatThread() {
             setReplyingTo(msg);
           }
         },
-        { text: 'Start Thread', handler: () => { } },
+        ...(!threadId ? [{ text: 'Start Thread', handler: () => { history.push(`/chats/chat/${apiChatId}/thread/${msg.id}`); } }] : []),
         ...(isOwn ? [
           {
             text: 'Edit', handler: () => {
@@ -278,7 +292,7 @@ export default function ChatThread() {
           },
           {
             text: 'Delete', role: 'destructive' as const, handler: () => {
-              deleteMessage(chatId, msg.id).catch((e: any) => {
+              deleteMessage(apiChatId, msg.id).catch((e: any) => {
                 showToast(e.message || 'Failed to delete message');
               });
             }
@@ -287,7 +301,37 @@ export default function ChatThread() {
         { text: 'Cancel', role: 'cancel' as const, handler: () => { } },
       ],
     });
-  }, [messages, chatId, showToast, presentActionSheet, setReplyingTo, setEditingMessage]);
+  }, [messages, apiChatId, threadId, history, showToast, presentActionSheet, setReplyingTo, setEditingMessage]);
+
+  const onClickRootMessage = useCallback(() => {
+    if (!rootMessage) return;
+    const isOwn = rootMessage.sender_uid === getCurrentUserId();
+    presentActionSheet({
+      buttons: [
+        {
+          text: 'Reply', handler: () => {
+            setReplyingTo(rootMessage);
+          }
+        },
+        ...(isOwn ? [
+          {
+            text: 'Edit', handler: () => {
+              setReplyingTo(null);
+              setEditingMessage(rootMessage);
+            }
+          },
+          {
+            text: 'Delete', role: 'destructive' as const, handler: () => {
+              deleteMessage(apiChatId, rootMessage.id).catch((e: any) => {
+                showToast(e.message || 'Failed to delete message');
+              });
+            }
+          }
+        ] : []),
+        { text: 'Cancel', role: 'cancel' as const, handler: () => { } },
+      ],
+    });
+  }, [rootMessage, apiChatId, showToast, presentActionSheet, setReplyingTo, setEditingMessage]);
 
   return (
     <IonPage className="chat-thread-page">
@@ -298,10 +342,10 @@ export default function ChatThread() {
           </IonButtons>
           <IonTitle>{chatName}</IonTitle>
           <IonButtons slot="end">
-            <IonButton onClick={() => history.push(`/chats/members/${chatId}`)}>
+            <IonButton onClick={() => history.push(`/chats/members/${apiChatId}`)}>
               <IonIcon slot="icon-only" icon={people} />
             </IonButton>
-            <IonButton onClick={() => history.push(`/chats/settings/${chatId}`)}>
+            <IonButton onClick={() => history.push(`/chats/settings/${apiChatId}`)}>
               <IonIcon slot="icon-only" icon={settings} />
             </IonButton>
           </IonButtons>
@@ -324,6 +368,26 @@ export default function ChatThread() {
           windowKey={windowKey}
           initialScrollIndex={initialScrollIndex}
           onAtBottomChange={setAtBottom}
+          header={rootMessage ? (
+            <ChatBubble
+              senderName={`User ${rootMessage.sender_uid}`}
+              message={rootMessage.is_deleted ? '[Deleted]' : (rootMessage.message ?? '')}
+              isSent={rootMessage.sender_uid === getCurrentUserId()}
+              avatarColor={colorForUser(rootMessage.sender_uid)}
+              onReply={() => setReplyingTo(rootMessage)}
+              onReplyTap={rootMessage.reply_to_id && !rootMessage.reply_to_message?.is_deleted ? () => jumpToMessage(rootMessage.reply_to_id!) : undefined}
+              onLongPress={onClickRootMessage}
+              showName={true}
+              showAvatar={true}
+              timestamp={rootMessage.created_at}
+              edited={rootMessage.is_edited}
+              replyTo={rootMessage.reply_to_message ? {
+                senderName: `User ${rootMessage.reply_to_message.sender_uid}`,
+                message: rootMessage.reply_to_message.is_deleted ? '[Deleted]' : (rootMessage.reply_to_message.message ?? ''),
+                avatarColor: colorForUser(rootMessage.reply_to_message.sender_uid),
+              } : undefined}
+            />
+          ) : undefined}
           renderItem={(index: number) => {
             const msg = messages[index];
             const prevSender = index > 0 ? messages[index - 1].sender_uid : null;
@@ -341,6 +405,8 @@ export default function ChatThread() {
                 showAvatar={nextSender !== msg.sender_uid}
                 timestamp={msg.created_at}
                 edited={msg.is_edited}
+                hasThread={msg.has_thread && !threadId}
+                onThreadClick={() => history.push(`/chats/chat/${apiChatId}/thread/${msg.id}`)}
                 replyTo={msg.reply_to_message ? {
                   senderName: `User ${msg.reply_to_message.sender_uid}`,
                   message: msg.reply_to_message.is_deleted ? '[Deleted]' : (msg.reply_to_message.message ?? ''),

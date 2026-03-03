@@ -21,6 +21,7 @@ export interface MessageResponse {
   is_edited: boolean;
   is_deleted: boolean;
   has_attachments: boolean;
+  has_thread: boolean;
   reply_to_message?: ReplyToMessage;
 }
 
@@ -40,13 +41,14 @@ export interface CreateMessageBody {
 
 export function getMessages(
   chatId: string | number,
-  params?: { before?: string; around?: string; after?: string; max?: number }
+  params?: { before?: string; around?: string; after?: string; max?: number; thread_id?: string }
 ): Promise<AxiosResponse<ListMessagesResponse>> {
   const query: Record<string, string | number> = {};
   if (params?.before != null) query.before = params.before;
   if (params?.around != null) query.around = params.around;
   if (params?.after != null) query.after = params.after;
   if (params?.max != null) query.max = params.max;
+  if (params?.thread_id != null) query.thread_id = params.thread_id;
   return apiClient.get(`/chats/${chatId}/messages`, { params: query });
 }
 
@@ -74,4 +76,11 @@ export function deleteMessage(
   messageId: string
 ): Promise<AxiosResponse<void>> {
   return apiClient.delete(`/chats/${chatId}/messages/${messageId}`);
+}
+
+export function getMessage(
+  chatId: string | number,
+  messageId: string
+): Promise<AxiosResponse<MessageResponse>> {
+  return apiClient.get(`/chats/${chatId}/messages/${messageId}`);
 }

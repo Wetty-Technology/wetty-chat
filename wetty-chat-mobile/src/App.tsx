@@ -46,6 +46,7 @@ const App: React.FC = () => {
             <Route path="/chats" exact component={ChatsPage} />
             <Route path="/chats/new" exact component={CreateChatPage} />
             <Route path="/chats/chat/:id" exact component={ChatThreadPage} />
+            <Route path="/chats/chat/:id/thread/:threadId" exact component={ChatThreadPage} />
             <Route path="/chats/settings/:id" exact component={ChatSettingsPage} />
             <Route path="/chats/members/:id" exact component={ChatMembersPage} />
             <Route path="/chats/detail/:id" exact component={GroupDetailPage} />
