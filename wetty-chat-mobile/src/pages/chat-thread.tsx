@@ -205,17 +205,29 @@ export default function ChatThread() {
     // Edit flow
     if (editingMessage) {
       const messageId = editingMessage.id;
+      const optimisticMsg = { ...editingMessage, message: text, is_edited: true };
+
       // Optimistic update
-      dispatch(updateMessageInStore({ chatId: storeChatId, messageId, message: { ...editingMessage, message: text, is_edited: true } }));
+      dispatch(updateMessageInStore({ chatId: storeChatId, messageId, message: optimisticMsg }));
+      if (rootMessage?.id === messageId) {
+        setRootMessage(optimisticMsg);
+      }
       setEditingMessage(null);
 
       updateMessage(apiChatId, messageId, { message: text })
         .then((res) => {
-          dispatch(updateMessageInStore({ chatId: storeChatId, messageId, message: { ...res.data, reply_to_message: res.data.reply_to_message ?? editingMessage.reply_to_message } }));
+          const updatedMsg = { ...res.data, reply_to_message: res.data.reply_to_message ?? editingMessage.reply_to_message };
+          dispatch(updateMessageInStore({ chatId: storeChatId, messageId, message: updatedMsg }));
+          if (rootMessage?.id === messageId) {
+            setRootMessage(updatedMsg);
+          }
         })
         .catch((err: Error) => {
           // Revert optimistic update
           dispatch(updateMessageInStore({ chatId: storeChatId, messageId, message: editingMessage }));
+          if (rootMessage?.id === messageId) {
+            setRootMessage(editingMessage);
+          }
           showToast(err.message || t`Failed to edit message`);
         });
       return;
@@ -289,7 +301,7 @@ export default function ChatThread() {
             setReplyingTo(msg);
           }
         },
-        ...(!threadId ? [{ text: t`Start Thread`, handler: () => { history.push(`/chats/chat/${apiChatId}/thread/${msg.id}`); } }] : []),
+        ...(!threadId && !msg.has_thread ? [{ text: t`Start Thread`, handler: () => { history.push(`/chats/chat/${apiChatId}/thread/${msg.id}`); } }] : []),
         ...(isOwn ? [
           {
             text: t`Edit`, handler: () => {
