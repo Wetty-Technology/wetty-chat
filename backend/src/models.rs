@@ -88,11 +88,20 @@ pub struct NewMessage {
     pub has_thread: bool,
 }
 
+#[derive(Debug, Clone, AsChangeset)]
+#[diesel(table_name = schema::groups)]
+pub struct UpdateGroup {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub avatar: Option<String>,
+    pub visibility: Option<String>,
+}
+
 #[derive(Debug, Clone, Queryable, Selectable, Serialize, Insertable)]
 #[diesel(table_name = schema::push_subscriptions)]
 pub struct PushSubscription {
     pub id: i64,
-    pub user_id: i64,
+    pub user_id: i32,
     pub endpoint: String,
     pub p256dh: String,
     pub auth: String,
@@ -103,7 +112,7 @@ pub struct PushSubscription {
 #[diesel(table_name = schema::push_subscriptions)]
 pub struct NewPushSubscription {
     pub id: i64,
-    pub user_id: i64,
+    pub user_id: i32,
     pub endpoint: String,
     pub p256dh: String,
     pub auth: String,

@@ -44,7 +44,7 @@ impl ConnectionRegistry {
     /// and the receiver for the send task. Caller must call `remove_connection(uid, conn_id)` when the socket closes.
     pub fn register(&self, uid: i32) -> (Arc<ConnectionEntry>, mpsc::Receiver<String>) {
         let conn_id = next_conn_id();
-        let (tx, rx) = mpsc::channel(64);
+        let (tx, rx) = mpsc::channel(256);
         let now = now_secs();
         let entry = Arc::new(ConnectionEntry {
             conn_id,
@@ -77,7 +77,7 @@ impl ConnectionRegistry {
             if let Some(vec) = self.inner.get(&uid) {
                 for entry in vec.iter() {
                     if entry.tx.try_send(message.to_string()).is_err() {
-                        tracing::debug!(uid, conn_id = entry.conn_id, "ws broadcast try_send full");
+                        tracing::warn!(uid, conn_id = entry.conn_id, "ws broadcast try_send full, message dropped");
                     }
                 }
             }

@@ -8,6 +8,7 @@ use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use serde::Serialize;
 
+use crate::handlers::members::check_membership;
 use crate::models::{Message, NewMessage};
 use crate::schema::{group_membership, messages};
 use crate::utils::auth::CurrentUid;
@@ -110,29 +111,6 @@ impl From<Message> for MessageResponse {
             reply_to_message: None,
         }
     }
-}
-
-/// Check if user is a member of the chat; return 403 if not.
-fn check_membership(
-    conn: &mut diesel::r2d2::PooledConnection<
-        diesel::r2d2::ConnectionManager<diesel::PgConnection>,
-    >,
-    chat_id: i64,
-    uid: i32,
-) -> Result<(), (StatusCode, &'static str)> {
-    use crate::schema::group_membership::dsl;
-    let exists = group_membership::table
-        .filter(dsl::chat_id.eq(chat_id).and(dsl::uid.eq(uid)))
-        .count()
-        .get_result::<i64>(conn)
-        .map_err(|e| {
-            tracing::error!("check membership: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
-        })?;
-    if exists == 0 {
-        return Err((StatusCode::FORBIDDEN, "Not a member of this chat"));
-    }
-    Ok(())
 }
 
 /// Attach reply_to_message to a list of messages by fetching referenced messages in one query.
@@ -488,26 +466,6 @@ pub async fn post_message(
         state.ws_registry.broadcast_to_uids(&member_uids, &ws_json);
     }
 
-    // If this is a thread message, mark the root message as having a thread
-    if let Some(root_id) = new_msg.reply_root_id {
-        use crate::schema::messages::dsl;
-        let root_msg_updated: Option<Message> =
-            diesel::update(messages::table.filter(dsl::id.eq(root_id)))
-                .set(dsl::has_thread.eq(true))
-                .get_result(conn)
-                .ok();
-
-        if let Some(root_msg) = root_msg_updated {
-            let root_response = MessageResponse::from(root_msg);
-            if let Ok(ws_json) = serde_json::to_string(&serde_json::json!({
-                "type": "message_updated",
-                "payload": &root_response
-            })) {
-                state.ws_registry.broadcast_to_uids(&member_uids, &ws_json);
-            }
-        }
-    }
-
     Ok((StatusCode::CREATED, Json(response)))
 }
 
@@ -708,29 +666,18 @@ pub async fn patch_message(
 
     // Update message
     let now = Utc::now();
-    diesel::update(messages::table.filter(dsl::id.eq(message_id)))
+    let updated_message: Message = diesel::update(messages::table.filter(dsl::id.eq(message_id)))
         .set((
             dsl::message.eq(&body.message),
             dsl::updated_at.eq(Some(now)),
         ))
-        .execute(conn)
+        .returning(Message::as_returning())
+        .get_result(conn)
         .map_err(|e| {
             tracing::error!("update message: {:?}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to update message",
-            )
-        })?;
-
-    let updated_message: Message = messages::table
-        .filter(dsl::id.eq(message_id))
-        .select(Message::as_select())
-        .first(conn)
-        .map_err(|e| {
-            tracing::error!("fetch updated message: {:?}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to fetch updated message",
             )
         })?;
 
@@ -794,26 +741,15 @@ pub async fn delete_message(
 
     // Soft delete message
     let now = Utc::now();
-    diesel::update(messages::table.filter(dsl::id.eq(message_id)))
+    let deleted_message: Message = diesel::update(messages::table.filter(dsl::id.eq(message_id)))
         .set(dsl::deleted_at.eq(Some(now)))
-        .execute(conn)
+        .returning(Message::as_returning())
+        .get_result(conn)
         .map_err(|e| {
             tracing::error!("delete message: {:?}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to delete message",
-            )
-        })?;
-
-    let deleted_message: Message = messages::table
-        .filter(dsl::id.eq(message_id))
-        .select(Message::as_select())
-        .first(conn)
-        .map_err(|e| {
-            tracing::error!("fetch deleted message: {:?}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to fetch deleted message",
             )
         })?;
 

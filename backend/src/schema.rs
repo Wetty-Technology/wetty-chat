@@ -58,7 +58,7 @@ diesel::table! {
 diesel::table! {
     push_subscriptions (id) {
         id -> Int8,
-        user_id -> Int8,
+        user_id -> Int4,
         endpoint -> Text,
         p256dh -> Text,
         auth -> Text,
