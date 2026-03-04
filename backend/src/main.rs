@@ -23,6 +23,7 @@ mod handlers;
 mod models;
 mod schema;
 mod serde_i64_string;
+mod services;
 mod utils;
 mod ws_registry;
 
@@ -49,6 +50,7 @@ pub(crate) struct AppState {
     db: Pool<ConnectionManager<PgConnection>>,
     id_gen: Arc<utils::ids::IdGen>,
     ws_registry: Arc<ws_registry::ConnectionRegistry>,
+    push_service: Arc<services::push::PushService>,
 }
 
 #[tokio::main]
@@ -82,6 +84,7 @@ async fn main() {
         db: pool,
         id_gen: Arc::new(utils::ids::new_generator()),
         ws_registry: Arc::new(ws_registry::ConnectionRegistry::new()),
+        push_service: Arc::new(services::push::PushService::new()),
     };
 
     let registry = state.ws_registry.clone();
@@ -130,6 +133,16 @@ async fn main() {
             delete(handlers::members::delete_remove_member).patch(handlers::members::patch_member),
         );
 
+    // /api/push — push notifications
+    let push_routes = Router::new()
+        .route(
+            "/vapid-public-key",
+            get(handlers::push::get_vapid_public_key),
+        )
+        .route("/subscribe", post(handlers::push::post_subscribe))
+        .route("/unsubscribe", post(handlers::push::post_unsubscribe))
+        .route("/test", post(handlers::push::post_test));
+
     let trace_layer = TraceLayer::new_for_http()
         .make_span_with(|request: &Request<Body>| {
             let request_id = request
@@ -156,6 +169,7 @@ async fn main() {
         .route("/ws", get(handlers::ws::ws_handler))
         .nest("/chats", chats_routes)
         .nest("/group", group_routes)
+        .nest("/api/push", push_routes)
         .layer(
             ServiceBuilder::new()
                 .layer(trace_layer)

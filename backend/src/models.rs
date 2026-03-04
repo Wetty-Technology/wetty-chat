@@ -87,3 +87,25 @@ pub struct NewMessage {
     pub has_attachments: bool,
     pub has_thread: bool,
 }
+
+#[derive(Debug, Clone, Queryable, Selectable, Serialize, Insertable)]
+#[diesel(table_name = schema::push_subscriptions)]
+pub struct PushSubscription {
+    pub id: i64,
+    pub user_id: i64,
+    pub endpoint: String,
+    pub p256dh: String,
+    pub auth: String,
+    pub created_at: chrono::NaiveDateTime,
+}
+
+#[derive(Debug, Clone, Insertable)]
+#[diesel(table_name = schema::push_subscriptions)]
+pub struct NewPushSubscription {
+    pub id: i64,
+    pub user_id: i64,
+    pub endpoint: String,
+    pub p256dh: String,
+    pub auth: String,
+    pub created_at: chrono::NaiveDateTime,
+}

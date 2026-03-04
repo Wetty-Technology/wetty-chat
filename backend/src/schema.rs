@@ -56,6 +56,17 @@ diesel::table! {
 }
 
 diesel::table! {
+    push_subscriptions (id) {
+        id -> Int8,
+        user_id -> Int8,
+        endpoint -> Text,
+        p256dh -> Text,
+        auth -> Text,
+        created_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     users (uid) {
         uid -> Int4,
         #[max_length = 15]
@@ -72,5 +83,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     group_membership,
     groups,
     messages,
+    push_subscriptions,
     users,
 );

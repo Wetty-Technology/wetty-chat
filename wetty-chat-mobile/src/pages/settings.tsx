@@ -18,11 +18,14 @@ import { selectLocale } from '@/store/settingsSlice';
 import { getCurrentUserId, setCurrentUserId } from '@/js/current-user';
 import { Trans } from '@lingui/react/macro';
 
+import { usePushNotifications } from '@/hooks/usePushNotifications';
+
 export default function Settings() {
   const [uidInput, setUidInput] = useState(String(getCurrentUserId()));
   const [presentToast] = useIonToast();
   const history = useHistory();
   const locale = useSelector(selectLocale);
+  const { permission, isSubscribed, loading, subscribeToPush, unsubscribeFromPush, sendTestNotification } = usePushNotifications();
 
   useEffect(() => {
     setUidInput(String(getCurrentUserId()));
@@ -67,6 +70,28 @@ export default function Settings() {
                 Save
               </IonButton>
             </IonItem>
+
+            <IonItem lines="none" style={{ marginTop: '16px' }}>
+              <IonLabel color="medium"><h2>Push Notifications Prototype</h2></IonLabel>
+            </IonItem>
+            <IonItem>
+              <IonLabel>
+                <p>Permission: {permission}</p>
+                <p>Status: {isSubscribed ? 'Subscribed' : 'Not Subscribed'}</p>
+              </IonLabel>
+            </IonItem>
+            <IonItem lines="none">
+              <IonButton onClick={subscribeToPush} disabled={loading || isSubscribed}>
+                Subscribe
+              </IonButton>
+              <IonButton onClick={unsubscribeFromPush} disabled={loading || !isSubscribed} color="danger">
+                Unsubscribe
+              </IonButton>
+              <IonButton onClick={() => sendTestNotification()} disabled={loading || !isSubscribed} color="secondary">
+                Send Test Push
+              </IonButton>
+            </IonItem>
+
           </IonList>
         </div>
       </IonContent>
