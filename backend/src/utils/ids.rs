@@ -9,10 +9,19 @@ pub type IdGen = LockSnowflakeGenerator<SnowflakeMastodonId, MonotonicClock>;
 
 /// Create a shared snowflake ID generator. Node id from `FERROID_NODE_ID` env or 0.
 pub fn new_generator() -> IdGen {
-    let node_id: u64 = std::env::var("FERROID_NODE_ID")
-        .ok()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(0);
+    let node_id: u64 = match std::env::var("FERROID_NODE_ID") {
+        Ok(val) => match val.parse() {
+            Ok(id) => id,
+            Err(e) => {
+                tracing::warn!("FERROID_NODE_ID '{}' is not a valid u64: {}; defaulting to 0", val, e);
+                0
+            }
+        },
+        Err(_) => {
+            tracing::warn!("FERROID_NODE_ID not set; defaulting to node_id=0. Set this in multi-instance deployments.");
+            0
+        }
+    };
     LockSnowflakeGenerator::new(node_id, MonotonicClock::with_epoch(MASTODON_EPOCH))
 }
 

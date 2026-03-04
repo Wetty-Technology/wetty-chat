@@ -10,7 +10,7 @@ use diesel::sql_query;
 use diesel::sql_types::{BigInt, Nullable, Timestamptz};
 use serde::Serialize;
 
-use crate::models::{NewGroup, NewGroupMembership};
+use crate::models::{NewGroup, NewGroupMembership, UpdateGroup};
 use crate::schema::{group_membership, groups};
 use crate::utils::auth::CurrentUid;
 use crate::utils::ids;
@@ -355,56 +355,23 @@ pub async fn patch_chat(
         }
     }
 
-    // Update group
+    // Update group in a single query
     use crate::schema::groups::dsl as groups_dsl;
 
-    if body.name.is_some() {
-        diesel::update(groups::table.filter(groups_dsl::id.eq(chat_id)))
-            .set(groups_dsl::name.eq(body.name.as_ref().unwrap()))
-            .execute(conn)
-            .map_err(|e| {
-                tracing::error!("update group name: {:?}", e);
-                (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update chat")
-            })?;
-    }
+    let changeset = UpdateGroup {
+        name: body.name,
+        description: body.description,
+        avatar: body.avatar,
+        visibility: body.visibility,
+    };
 
-    if body.description.is_some() {
-        diesel::update(groups::table.filter(groups_dsl::id.eq(chat_id)))
-            .set(groups_dsl::description.eq(&body.description))
-            .execute(conn)
-            .map_err(|e| {
-                tracing::error!("update group description: {:?}", e);
-                (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update chat")
-            })?;
-    }
-
-    if body.avatar.is_some() {
-        diesel::update(groups::table.filter(groups_dsl::id.eq(chat_id)))
-            .set(groups_dsl::avatar.eq(&body.avatar))
-            .execute(conn)
-            .map_err(|e| {
-                tracing::error!("update group avatar: {:?}", e);
-                (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update chat")
-            })?;
-    }
-
-    if body.visibility.is_some() {
-        diesel::update(groups::table.filter(groups_dsl::id.eq(chat_id)))
-            .set(groups_dsl::visibility.eq(body.visibility.as_ref().unwrap()))
-            .execute(conn)
-            .map_err(|e| {
-                tracing::error!("update group visibility: {:?}", e);
-                (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update chat")
-            })?;
-    }
-
-    // Get updated group
-    let group: crate::models::Group = groups::table
-        .filter(groups_dsl::id.eq(chat_id))
-        .first(conn)
+    let group: crate::models::Group = diesel::update(groups::table.filter(groups_dsl::id.eq(chat_id)))
+        .set(&changeset)
+        .returning(crate::models::Group::as_returning())
+        .get_result(conn)
         .map_err(|e| {
-            tracing::error!("get updated group: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to get updated chat")
+            tracing::error!("update group: {:?}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update chat")
         })?;
 
     Ok(Json(ChatDetailResponse {

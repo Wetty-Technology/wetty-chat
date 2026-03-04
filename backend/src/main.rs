@@ -13,6 +13,7 @@ use std::sync::Arc;
 use tower::ServiceBuilder;
 use tower_http::request_id::{MakeRequestId, RequestId};
 use tower_http::trace::{DefaultOnRequest, DefaultOnResponse, TraceLayer};
+use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::LatencyUnit;
 use tower_http::ServiceBuilderExt;
 use tracing::{info, Level};
@@ -170,6 +171,7 @@ async fn main() {
         .nest("/chats", chats_routes)
         .nest("/group", group_routes)
         .nest("/api/push", push_routes)
+        .layer(RequestBodyLimitLayer::new(256 * 1024))
         .layer(
             ServiceBuilder::new()
                 .layer(trace_layer)

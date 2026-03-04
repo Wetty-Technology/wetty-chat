@@ -51,7 +51,7 @@ pub async fn post_subscribe(
 
     let new_sub = NewPushSubscription {
         id: sub_id,
-        user_id: uid as i64,
+        user_id: uid,
         endpoint: body.endpoint,
         p256dh: body.keys.p256dh,
         auth: body.keys.auth,
@@ -60,9 +60,16 @@ pub async fn post_subscribe(
 
     diesel::insert_into(push_subscriptions::table)
         .values(&new_sub)
+        .on_conflict((push_subscriptions::user_id, push_subscriptions::endpoint))
+        .do_update()
+        .set((
+            push_subscriptions::p256dh.eq(&new_sub.p256dh),
+            push_subscriptions::auth.eq(&new_sub.auth),
+            push_subscriptions::created_at.eq(&new_sub.created_at),
+        ))
         .execute(conn)
         .map_err(|e| {
-            tracing::error!("insert subscription: {:?}", e);
+            tracing::error!("upsert subscription: {:?}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to save subscription",
@@ -91,7 +98,7 @@ pub async fn post_unsubscribe(
 
     diesel::delete(
         push_subscriptions::table
-            .filter(push_subscriptions::dsl::user_id.eq(uid as i64))
+            .filter(push_subscriptions::dsl::user_id.eq(uid))
             .filter(push_subscriptions::dsl::endpoint.eq(&body.endpoint)),
     )
     .execute(conn)
@@ -125,7 +132,7 @@ pub async fn post_test(
     })?;
 
     let subs: Vec<PushSubscription> = push_subscriptions::table
-        .filter(push_subscriptions::dsl::user_id.eq(uid as i64))
+        .filter(push_subscriptions::dsl::user_id.eq(uid))
         .select(PushSubscription::as_select())
         .load(conn)
         .map_err(|_| {
@@ -136,6 +143,7 @@ pub async fn post_test(
         })?;
 
     let mut success_count = 0;
+    let mut stale_endpoints: Vec<String> = Vec::new();
 
     let payload = serde_json::to_vec(&serde_json::json!({
         "title": payload_body.title,
@@ -180,13 +188,35 @@ pub async fn post_test(
                     success_count += 1;
                 }
                 Err(e) => {
-                    tracing::error!("Failed to send push: {:?}", e);
+                    if matches!(
+                        e,
+                        web_push::WebPushError::EndpointNotValid(_)
+                            | web_push::WebPushError::EndpointNotFound(_)
+                    ) {
+                        tracing::warn!("Stale push subscription for endpoint {}, removing", sub.endpoint);
+                        stale_endpoints.push(sub.endpoint);
+                    } else {
+                        tracing::error!("Failed to send push: {:?}", e);
+                    }
                 }
             },
             Err(e) => {
                 tracing::error!("Failed to build push message: {:?}", e);
             }
         }
+    }
+
+    // Clean up stale subscriptions
+    if !stale_endpoints.is_empty() {
+        let _ = diesel::delete(
+            push_subscriptions::table
+                .filter(push_subscriptions::dsl::user_id.eq(uid))
+                .filter(push_subscriptions::dsl::endpoint.eq_any(&stale_endpoints)),
+        )
+        .execute(conn)
+        .map_err(|e| {
+            tracing::error!("Failed to clean up stale subscriptions: {:?}", e);
+        });
     }
 
     Ok(Json(serde_json::json!({
