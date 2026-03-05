@@ -8,7 +8,7 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tracing::trace;
 
-use crate::ws_registry;
+use crate::services::ws_registry;
 use crate::AppState;
 
 #[derive(Deserialize)]
@@ -33,12 +33,19 @@ pub async fn ws_handler(
 ) -> Response {
     let uid: i32 = match q.uid.as_deref() {
         None => {
-            return (axum::http::StatusCode::UNAUTHORIZED, "Missing uid query param").into_response();
+            return (
+                axum::http::StatusCode::UNAUTHORIZED,
+                "Missing uid query param",
+            )
+                .into_response();
         }
         Some(s) => match s.trim().parse() {
             Ok(n) => n,
             Err(_) => {
-                return (axum::http::StatusCode::UNAUTHORIZED, "uid must be a valid i32")
+                return (
+                    axum::http::StatusCode::UNAUTHORIZED,
+                    "uid must be a valid i32",
+                )
                     .into_response();
             }
         },
@@ -94,4 +101,3 @@ async fn handle_socket(
     }
     registry.remove_connection(uid, conn_id);
 }
-
