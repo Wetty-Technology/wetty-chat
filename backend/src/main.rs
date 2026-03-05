@@ -175,9 +175,9 @@ async fn main() {
         .layer(RequestBodyLimitLayer::new(256 * 1024))
         .layer(
             ServiceBuilder::new()
-                .layer(trace_layer)
                 .set_x_request_id(RequestIdMaker)
-                .propagate_x_request_id(),
+                .propagate_x_request_id()
+                .layer(trace_layer),
         )
         .with_state(state);
 
