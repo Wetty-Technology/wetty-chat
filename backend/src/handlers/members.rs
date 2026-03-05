@@ -96,7 +96,6 @@ fn check_admin_role(
     }
 }
 
-
 // TODO: deal with pagination later. I think we just return a list of member IDs for now
 /// GET /group/:chat_id/members — List members of a chat.
 pub async fn get_members(
@@ -181,9 +180,9 @@ pub async fn post_add_member(
 
     // Check if already a member
     let already_member = {
-        use crate::schema::group_membership::dsl::*;
+        use crate::schema::group_membership::dsl as gm_dsl;
         schema::group_membership::table
-            .filter(chat_id.eq(chat_id).and(uid.eq(body.uid)))
+            .filter(gm_dsl::chat_id.eq(chat_id).and(gm_dsl::uid.eq(body.uid)))
             .count()
             .get_result::<i64>(conn)
             .map_err(|e| {
