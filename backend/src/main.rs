@@ -11,9 +11,9 @@ use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tower::ServiceBuilder;
+use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::request_id::{MakeRequestId, RequestId};
 use tower_http::trace::{DefaultOnRequest, DefaultOnResponse, TraceLayer};
-use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::LatencyUnit;
 use tower_http::ServiceBuilderExt;
 use tracing::{info, Level};
@@ -26,7 +26,6 @@ mod schema;
 mod serde_i64_string;
 mod services;
 mod utils;
-mod ws_registry;
 
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
@@ -50,7 +49,7 @@ pub(crate) const MAX_MESSAGES_LIMIT: i64 = 100;
 pub(crate) struct AppState {
     db: Pool<ConnectionManager<PgConnection>>,
     id_gen: Arc<utils::ids::IdGen>,
-    ws_registry: Arc<ws_registry::ConnectionRegistry>,
+    ws_registry: Arc<services::ws_registry::ConnectionRegistry>,
     push_service: Arc<services::push::PushService>,
 }
 
@@ -84,7 +83,7 @@ async fn main() {
     let state = AppState {
         db: pool,
         id_gen: Arc::new(utils::ids::new_generator()),
-        ws_registry: Arc::new(ws_registry::ConnectionRegistry::new()),
+        ws_registry: Arc::new(services::ws_registry::ConnectionRegistry::new()),
         push_service: Arc::new(services::push::PushService::new()),
     };
 
