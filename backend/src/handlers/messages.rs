@@ -10,7 +10,8 @@ use serde::Serialize;
 
 use crate::handlers::members::check_membership;
 use crate::models::{Message, NewMessage};
-use crate::schema::{group_membership, messages};
+use crate::schema::{group_membership, groups, messages, users};
+use crate::services::push::PushJob;
 use crate::utils::auth::CurrentUid;
 use crate::utils::ids;
 use crate::{AppState, MAX_MESSAGES_LIMIT};
@@ -466,6 +467,26 @@ pub async fn post_message(
         state.ws_registry.broadcast_to_uids(&member_uids, &ws_json);
     }
 
+    // Enqueue push notification job (non-blocking; runs in background).
+    let sender_username = users::table
+        .filter(users::dsl::uid.eq(uid))
+        .select(users::dsl::username)
+        .first::<String>(conn)
+        .unwrap_or_else(|_| "Someone".to_string());
+    let chat_name = groups::table
+        .filter(groups::dsl::id.eq(chat_id))
+        .select(groups::dsl::name)
+        .first::<String>(conn)
+        .unwrap_or_else(|_| "Chat".to_string());
+    state.push_service.enqueue(PushJob {
+        chat_id,
+        sender_uid: uid,
+        sender_username,
+        chat_name,
+        message_preview: response.message.clone(),
+        message_id: response.id,
+    });
+
     Ok((StatusCode::CREATED, Json(response)))
 }
 
@@ -592,6 +613,26 @@ pub async fn post_thread_message(
     })) {
         state.ws_registry.broadcast_to_uids(&member_uids, &ws_json);
     }
+
+    // Enqueue push notification job (non-blocking; runs in background).
+    let sender_username = users::table
+        .filter(users::dsl::uid.eq(uid))
+        .select(users::dsl::username)
+        .first::<String>(conn)
+        .unwrap_or_else(|_| "Someone".to_string());
+    let chat_name = groups::table
+        .filter(groups::dsl::id.eq(chat_id))
+        .select(groups::dsl::name)
+        .first::<String>(conn)
+        .unwrap_or_else(|_| "Chat".to_string());
+    state.push_service.enqueue(PushJob {
+        chat_id,
+        sender_uid: uid,
+        sender_username,
+        chat_name,
+        message_preview: response.message.clone(),
+        message_id: response.id,
+    });
 
     // Mark the root message as having a thread
     let root_msg_updated: Option<Message> =

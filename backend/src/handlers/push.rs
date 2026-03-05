@@ -8,7 +8,6 @@ use crate::schema::push_subscriptions;
 use crate::utils::auth::CurrentUid;
 use crate::utils::ids;
 use crate::AppState;
-use web_push::WebPushClient;
 
 #[derive(Serialize)]
 pub struct VapidPublicKeyResponse {
@@ -142,67 +141,20 @@ pub async fn post_test(
             )
         })?;
 
-    let mut success_count = 0;
-    let mut stale_endpoints: Vec<String> = Vec::new();
-
     let payload = serde_json::to_vec(&serde_json::json!({
         "title": payload_body.title,
         "body": payload_body.body
     }))
     .unwrap();
 
-    for sub in subs {
-        let subscription_info = web_push::SubscriptionInfo::new(
-            sub.endpoint.clone(),
-            sub.p256dh.clone(),
-            sub.auth.clone(),
-        );
+    let mut success_count = 0;
+    let mut stale_endpoints: Vec<String> = Vec::new();
 
-        let sig_builder = match web_push::VapidSignatureBuilder::from_base64_no_sub(
-            &state.push_service.vapid_private_key,
-        ) {
-            Ok(b) => b,
-            Err(_) => {
-                tracing::error!("Vapid config error, should have been caught on startup");
-                continue;
-            }
-        };
-
-        let mut b = sig_builder.add_sub_info(&subscription_info);
-        b.add_claim("sub", state.push_service.vapid_subject.clone());
-        let signature = match b.build() {
-            Ok(sig) => sig,
-            Err(e) => {
-                tracing::error!("Failed to build signature for sub: {:?}", e);
-                continue;
-            }
-        };
-
-        let mut builder = web_push::WebPushMessageBuilder::new(&subscription_info);
-        builder.set_payload(web_push::ContentEncoding::Aes128Gcm, &payload);
-        builder.set_vapid_signature(signature);
-
-        match builder.build() {
-            Ok(message) => match state.push_service.client.send(message).await {
-                Ok(_) => {
-                    success_count += 1;
-                }
-                Err(e) => {
-                    if matches!(
-                        e,
-                        web_push::WebPushError::EndpointNotValid(_)
-                            | web_push::WebPushError::EndpointNotFound(_)
-                    ) {
-                        tracing::warn!("Stale push subscription for endpoint {}, removing", sub.endpoint);
-                        stale_endpoints.push(sub.endpoint);
-                    } else {
-                        tracing::error!("Failed to send push: {:?}", e);
-                    }
-                }
-            },
-            Err(e) => {
-                tracing::error!("Failed to build push message: {:?}", e);
-            }
+    for sub in &subs {
+        match state.push_service.send_to_subscription(sub, &payload).await {
+            Ok(()) => success_count += 1,
+            Err(Some(endpoint)) => stale_endpoints.push(endpoint),
+            Err(None) => {}
         }
     }
 

@@ -51,10 +51,7 @@ impl ConnectionRegistry {
             tx,
             last_ping_at: AtomicU64::new(now),
         });
-        self.inner
-            .entry(uid)
-            .or_default()
-            .push(entry.clone());
+        self.inner.entry(uid).or_default().push(entry.clone());
         (entry, rx)
     }
 
@@ -77,11 +74,23 @@ impl ConnectionRegistry {
             if let Some(vec) = self.inner.get(&uid) {
                 for entry in vec.iter() {
                     if entry.tx.try_send(message.to_string()).is_err() {
-                        tracing::warn!(uid, conn_id = entry.conn_id, "ws broadcast try_send full, message dropped");
+                        tracing::warn!(
+                            uid,
+                            conn_id = entry.conn_id,
+                            "ws broadcast try_send full, message dropped"
+                        );
                     }
                 }
             }
         }
+    }
+
+    /// Check if a user has at least one active WebSocket connection.
+    pub fn has_active_connections(&self, uid: i32) -> bool {
+        self.inner
+            .get(&uid)
+            .map(|vec| !vec.is_empty())
+            .unwrap_or(false)
     }
 
     /// Remove connections that have not sent a ping in more than `max_age` seconds.
@@ -93,7 +102,9 @@ impl ConnectionRegistry {
             let uid = *ref_entry.key();
             let stale: Vec<u64> = ref_entry
                 .iter()
-                .filter(|e| now.saturating_sub(e.last_ping_at.load(Ordering::Relaxed)) > max_age_secs)
+                .filter(|e| {
+                    now.saturating_sub(e.last_ping_at.load(Ordering::Relaxed)) > max_age_secs
+                })
                 .map(|e| e.conn_id)
                 .collect();
             if !stale.is_empty() {

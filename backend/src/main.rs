@@ -80,11 +80,13 @@ async fn main() {
             .expect("Failed to run database migrations");
     }
 
+    let ws_registry = Arc::new(services::ws_registry::ConnectionRegistry::new());
+
     let state = AppState {
-        db: pool,
+        db: pool.clone(),
         id_gen: Arc::new(utils::ids::new_generator()),
-        ws_registry: Arc::new(services::ws_registry::ConnectionRegistry::new()),
-        push_service: Arc::new(services::push::PushService::new()),
+        ws_registry: ws_registry.clone(),
+        push_service: services::push::PushService::start(pool, ws_registry.clone()),
     };
 
     let registry = state.ws_registry.clone();
