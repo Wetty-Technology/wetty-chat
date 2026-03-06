@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import 'api_config.dart';
+import 'messages.dart';
 import 'models.dart';
-import 'main.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -109,6 +110,7 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
+  // body of chats page
   Widget _buildBody() {
     if (isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -133,7 +135,7 @@ class _ChatPageState extends State<ChatPage> {
     }
     return ListView.separated(
       itemCount: chats.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
+      separatorBuilder: (_, _) => const Divider(height: 1),
       itemBuilder: (context, index) {
         final chat = chats[index];
         if (chat.name == null || chat.name!.isEmpty) {
@@ -145,6 +147,7 @@ class _ChatPageState extends State<ChatPage> {
         String? subtitle;
         if (chat.lastMessageAt != null) {
           try {
+            // print("chat.lastMessageAt: ${chat.lastMessageAt}");
             final dt = DateTime.parse(chat.lastMessageAt!);
             final now = DateTime.now();
             if (dt.day == now.day &&
@@ -161,6 +164,15 @@ class _ChatPageState extends State<ChatPage> {
         return ListTile(
           title: Text(name),
           subtitle: subtitle != null ? Text(subtitle) : null,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ChatDetailPage(
+                chatId: chat.id,
+                chatName: chat.name ?? 'Chat ${chat.id}',
+              ),
+            ),
+          ),
         );
       },
     );

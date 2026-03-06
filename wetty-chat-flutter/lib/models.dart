@@ -19,6 +19,7 @@ class ChatListItem {
       id: json['id']?.toString() ?? '',
       name: json['name'] as String?,
       lastMessageAt: json['last_message_at'] as String?,
+      // TODO: add lastMessagePreview and lastMessageSenderName
       lastMessagePreview: json['last_message_preview'] as String?,
       lastMessageSenderName: json['last_message_sender_name'] as String?,
     );
@@ -38,6 +39,68 @@ class ListChatsResponse {
           .map((e) => ChatListItem.fromJson(e as Map<String, dynamic>))
           .toList(),
       nextCursor: json['next_cursor']?.toString(),
+    );
+  }
+}
+
+// Message list API response models
+class MessageItem {
+  final String id;
+  final String? message;
+  final String messageType;
+  final int senderUid;
+  final String chatId;
+  final String createdAt;
+  final bool isEdited;
+  final bool isDeleted;
+  final String clientGeneratedId;
+
+  MessageItem({
+    required this.id,
+    this.message,
+    required this.messageType,
+    required this.senderUid,
+    required this.chatId,
+    required this.createdAt,
+    required this.isEdited,
+    required this.isDeleted,
+    required this.clientGeneratedId,
+  });
+
+  factory MessageItem.fromJson(Map<String, dynamic> json) {
+    return MessageItem(
+      id: json['id']?.toString() ?? '',
+      message: json['message'] as String?,
+      messageType: json['message_type'] as String? ?? 'text',
+      senderUid: json['sender_uid'] as int? ?? 0,
+      chatId: json['chat_id']?.toString() ?? '',
+      createdAt: json['created_at'] as String? ?? '',
+      isEdited: json['is_edited'] as bool? ?? false,
+      isDeleted: json['is_deleted'] as bool? ?? false,
+      clientGeneratedId: json['client_generated_id'] as String? ?? '',
+    );
+  }
+}
+
+class ListMessagesResponse {
+  final List<MessageItem> messages;
+  final String? nextCursor;
+  final String? prevCursor;
+
+  ListMessagesResponse({
+    required this.messages,
+    this.nextCursor,
+    this.prevCursor,
+  });
+
+  factory ListMessagesResponse.fromJson(Map<String, dynamic> json) {
+    final list = json['messages'] as List<dynamic>? ?? [];
+    return ListMessagesResponse(
+      messages: list
+          .map((e) => MessageItem.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      nextCursor: json['next_cursor']?.toString(),
+      prevCursor: json['prev_cursor']?.toString(),
     );
   }
 }
