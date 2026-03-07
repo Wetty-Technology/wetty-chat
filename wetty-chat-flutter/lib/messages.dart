@@ -97,7 +97,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   void _onScroll() {
     if (!_hasMore || _isLoadingMore || _isLoading || _messages.isEmpty) return;
     final pos = _scrollController.position;
-    if (pos.pixels <= 200) {
+    // In a reversed list, maxScrollExtent is the TOP (oldest messages).
+    if (pos.pixels >= pos.maxScrollExtent - 200) {
       _loadMoreMessages();
     }
   }
@@ -114,19 +115,12 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       if (!mounted) return;
       setState(() {
         _messages.clear();
-        _messages.addAll(res.messages);
+        _messages.addAll(res.messages.reversed);
         _nextCursor = res.nextCursor;
         _isLoading = false;
         _errorMessage = null;
       });
-      // Scroll to bottom once the list has built enough items (ListView.builder is lazy)
-      Future.delayed(const Duration(milliseconds: 200), () {
-        if (!mounted) return;
-        if (_scrollController.hasClients) {
-          final pos = _scrollController.position;
-          _scrollController.jumpTo(pos.maxScrollExtent);
-        }
-      });
+      // No manual scroll needed — reverse: true starts at the bottom automatically.
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -138,7 +132,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
   Future<void> _loadMoreMessages() async {
     if (!_hasMore || _isLoadingMore || _messages.isEmpty) return;
-    final oldestId = _messages.first.id;
+    final oldestId = _messages.last.id;
     setState(() => _isLoadingMore = true);
     try {
       final res = await fetchMessages(
@@ -152,7 +146,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           .where((m) => !existingIds.contains(m.id))
           .toList();
       setState(() {
-        _messages.insertAll(0, newMessages);
+        // Append older messages to the end (they appear at the top in reverse mode).
+        _messages.addAll(newMessages.reversed);
         _nextCursor = res.nextCursor;
         _isLoadingMore = false;
       });
@@ -169,7 +164,15 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     try {
       final msg = await sendMessage(widget.chatId, text);
       if (!mounted) return;
-      setState(() => _messages.add(msg));
+      setState(() => _messages.insert(0, msg));
+      // Scroll to newest message (offset 0 in reversed list).
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -220,29 +223,28 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       );
     }
     if (_messages.isEmpty) {
-      return const Center(child: Text(
-        'No messages yet',
-        style: TextStyle(fontSize: 20),
-      ));
+      return const Center(
+        child: Text('No messages yet', style: TextStyle(fontSize: 20)),
+      );
     }
     final showTopLoader = _hasMore && _isLoadingMore;
-    return RefreshIndicator(
-      onRefresh: () => _hasMore ? _loadMoreMessages() : Future.value(),
-      child: ListView.builder(
-        controller: _scrollController,
-        itemCount: _messages.length + (showTopLoader ? 1 : 0),
-        itemBuilder: (context, index) {
-          if (showTopLoader && index == 0) {
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Center(child: CircularProgressIndicator()),
-            );
-          }
-          final msgIndex = showTopLoader ? index - 1 : index;
-          final msg = _messages[msgIndex];
-          return _MessageRow(message: msg);
-        },
-      ),
+    final itemCount = _messages.length + (showTopLoader ? 1 : 0);
+    return ListView.builder(
+      controller: _scrollController,
+      reverse: true,
+      itemCount: itemCount,
+      itemBuilder: (context, index) {
+        // _messages is ordered newest-first (index 0 = newest).
+        // In reverse mode, index 0 is at the visual bottom.
+        if (showTopLoader && index == itemCount - 1) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        final msg = _messages[index];
+        return _MessageRow(message: msg);
+      },
     );
   }
 
