@@ -20,7 +20,7 @@ class _ChatPageState extends State<ChatPage> {
   bool isLoadingMore = false;
   String? errorMessage;
   String? nextCursor;
-  static const int _pageSize = 11;
+  static const int _chatsSize = 11;
   late ScrollController _scrollController;
   late TextEditingController _nameController;
 
@@ -59,7 +59,7 @@ class _ChatPageState extends State<ChatPage> {
       nextCursor = null;
     });
     try {
-      final res = await fetchChats(limit: _pageSize);
+      final res = await fetchChats(limit: _chatsSize);
       if (!mounted) return;
       setState(() {
         chats = res.chats;
@@ -82,7 +82,7 @@ class _ChatPageState extends State<ChatPage> {
     final lastId = chats.last.id;
     setState(() => isLoadingMore = true);
     try {
-      final res = await fetchChats(limit: _pageSize, after: lastId);
+      final res = await fetchChats(limit: _chatsSize, after: lastId);
       if (!mounted) return;
       final existingIds = chats.map((c) => c.id).toSet();
       final newChats = res.chats
