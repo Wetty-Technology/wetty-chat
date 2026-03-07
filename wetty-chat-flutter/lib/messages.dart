@@ -75,7 +75,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   String? _errorMessage;
   late ScrollController _scrollController;
   final TextEditingController _textController = TextEditingController();
-  static const int _pageSize = 5;
+  static const int _messagesSize = 11;
 
   bool get _hasMore => _nextCursor != null && _nextCursor!.isNotEmpty;
 
@@ -97,8 +97,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   void _onScroll() {
     if (!_hasMore || _isLoadingMore || _isLoading || _messages.isEmpty) return;
     final pos = _scrollController.position;
-    print("position: ${pos}");
-    print("pos.pixels: ${pos.pixels}");
     if (pos.pixels <= 200) {
       _loadMoreMessages();
     }
@@ -112,7 +110,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       _nextCursor = null;
     });
     try {
-      final res = await fetchMessages(widget.chatId, max: _pageSize);
+      final res = await fetchMessages(widget.chatId, max: _messagesSize);
       if (!mounted) return;
       setState(() {
         _messages.clear();
@@ -120,6 +118,14 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         _nextCursor = res.nextCursor;
         _isLoading = false;
         _errorMessage = null;
+      });
+      // Scroll to bottom once the list has built enough items (ListView.builder is lazy)
+      Future.delayed(const Duration(milliseconds: 200), () {
+        if (!mounted) return;
+        if (_scrollController.hasClients) {
+          final pos = _scrollController.position;
+          _scrollController.jumpTo(pos.maxScrollExtent);
+        }
       });
     } catch (e) {
       if (!mounted) return;
@@ -137,7 +143,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     try {
       final res = await fetchMessages(
         widget.chatId,
-        max: _pageSize,
+        max: _messagesSize,
         before: oldestId,
       );
       if (!mounted) return;
@@ -175,8 +181,12 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    // let the chat name be either chat name or chat id
+    final chatName = widget.chatName.isEmpty
+        ? 'Chat ${widget.chatId}'
+        : widget.chatName;
     return Scaffold(
-      appBar: AppBar(title: Text(widget.chatName)),
+      appBar: AppBar(title: Text(chatName)),
       body: Column(
         // messages part and send message part
         children: [
@@ -210,23 +220,29 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       );
     }
     if (_messages.isEmpty) {
-      return const Center(child: Text('No messages yet'));
+      return const Center(child: Text(
+        'No messages yet',
+        style: TextStyle(fontSize: 20),
+      ));
     }
     final showTopLoader = _hasMore && _isLoadingMore;
-    return ListView.builder(
-      controller: _scrollController,
-      itemCount: _messages.length + (showTopLoader ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (showTopLoader && index == 0) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
-        final msgIndex = showTopLoader ? index - 1 : index;
-        final msg = _messages[msgIndex];
-        return _MessageRow(message: msg);
-      },
+    return RefreshIndicator(
+      onRefresh: () => _hasMore ? _loadMoreMessages() : Future.value(),
+      child: ListView.builder(
+        controller: _scrollController,
+        itemCount: _messages.length + (showTopLoader ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (showTopLoader && index == 0) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+          final msgIndex = showTopLoader ? index - 1 : index;
+          final msg = _messages[msgIndex];
+          return _MessageRow(message: msg);
+        },
+      ),
     );
   }
 
@@ -263,12 +279,6 @@ class _MessageRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final text = message.message ?? '';
-    // return const Card(
-    //   child: Padding(
-    //     padding: EdgeInsets.all(16.0),
-    //     child: Text('Hello World!'),
-    //   ),
-    // );
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
