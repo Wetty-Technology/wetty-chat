@@ -12,6 +12,7 @@ tokio = { version = "1", features = ["full"] }
 axum = { version = "0.8", features = ["ws"] }
 diesel = { version = "2", features = [
     "postgres",
+    "mysql",
     "r2d2",
     "uuid",
     "chrono",

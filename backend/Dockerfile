@@ -1,5 +1,5 @@
 # Build stage
-FROM rust:1-bookworm AS builder
+FROM rust:1.94.0-trixie AS builder
 
 WORKDIR /app
 
@@ -12,10 +12,11 @@ COPY migrations ./migrations
 RUN cargo build --release
 
 # Runtime stage
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
+    libmariadb-dev \
     libpq5 \
     libssl3 \
     && rm -rf /var/lib/apt/lists/*
