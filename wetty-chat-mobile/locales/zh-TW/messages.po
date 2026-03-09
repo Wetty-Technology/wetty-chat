@@ -35,7 +35,7 @@ msgstr "確定要刪除這則訊息嗎？"
 msgid "Are you sure you want to leave this group?"
 msgstr "確定要退出該群組嗎？"
 
-#: src/pages/settings.tsx:58
+#: src/pages/settings.tsx:60
 #: src/pages/settings/language.tsx:57
 msgid "Auto"
 msgstr "自動"
@@ -54,8 +54,8 @@ msgstr "頭像連結"
 msgid "Cancel"
 msgstr "取消"
 
-#: src/App.tsx:62
-#: src/pages/chats.tsx:86
+#: src/App.tsx:64
+#: src/pages/chats.tsx:114
 msgid "Chats"
 msgstr "聊天"
 
@@ -184,6 +184,10 @@ msgstr "群組設定"
 msgid "Invalid user ID"
 msgstr "無效的使用者 ID"
 
+#: src/pages/settings.tsx:59
+msgid "Language"
+msgstr "語言"
+
 #: src/pages/chat-members.tsx:152
 msgid "Leave"
 msgstr "退出"
@@ -201,7 +205,7 @@ msgstr "已退出群組"
 msgid "Loading..."
 msgstr "正在載入..."
 
-#: src/pages/chats.tsx:108
+#: src/pages/chats.tsx:139
 msgid "Loading…"
 msgstr "正在載入…"
 
@@ -286,8 +290,8 @@ msgstr "儲存設定"
 msgid "Saving..."
 msgstr "儲存中..."
 
-#: src/App.tsx:70
-#: src/pages/settings.tsx:50
+#: src/App.tsx:72
+#: src/pages/settings.tsx:52
 msgid "Settings"
 msgstr "設定"
 
