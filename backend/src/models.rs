@@ -36,6 +36,12 @@ pub struct User {
     pub username: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Sender {
+    pub uid: i32,
+    pub name: Option<String>,
+}
+
 #[derive(Debug, Clone, Queryable, Selectable, Serialize, Insertable)]
 #[diesel(table_name = schema::groups)]
 pub struct Group {
