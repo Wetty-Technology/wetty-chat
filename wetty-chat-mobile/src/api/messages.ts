@@ -1,10 +1,15 @@
 import type { AxiosResponse } from 'axios';
 import apiClient from './client';
 
+export interface Sender {
+  uid: number;
+  name: string | null;
+}
+
 export interface ReplyToMessage {
   id: string;
   message: string | null;
-  sender_uid: number;
+  sender: Sender;
   is_deleted: boolean;
 }
 
@@ -26,7 +31,7 @@ export interface MessageResponse {
   message_type: string;
   reply_root_id: string | null;
   client_generated_id: string;
-  sender_uid: number;
+  sender: Sender;
   chat_id: string;
   created_at: string;
   is_edited: boolean;

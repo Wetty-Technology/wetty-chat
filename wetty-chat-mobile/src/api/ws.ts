@@ -55,7 +55,13 @@ function normalizePayload(p: unknown): MessageResponse | null {
   // Server sends group/chat id as 'gid'; map to chat_id used in MessageResponse
   const chat_id = o.gid != null ? String(o.gid) : (o.chat_id != null ? String(o.chat_id) : undefined);
   const client_generated_id = typeof o.client_generated_id === 'string' ? o.client_generated_id : '';
-  const sender_uid = typeof o.sender_uid === 'number' ? o.sender_uid : 0;
+
+  // Extract sender
+  const senderObj = o.sender as Record<string, unknown> | undefined;
+  const sender_uid = senderObj != null && typeof senderObj.uid === 'number' ? senderObj.uid : 0;
+  const sender_name = senderObj != null && typeof senderObj.name === 'string' ? senderObj.name : null;
+  const sender = { uid: sender_uid, name: sender_name };
+
   const message = o.message != null ? String(o.message) : null;
   const message_type = typeof o.message_type === 'string' ? o.message_type : 'text';
   const created_at = typeof o.created_at === 'string' ? o.created_at : new Date().toISOString();
@@ -64,10 +70,14 @@ function normalizePayload(p: unknown): MessageResponse | null {
   let reply_to_message: ReplyToMessage | undefined;
   if (reply_to_message_raw != null && typeof reply_to_message_raw === 'object') {
     const r = reply_to_message_raw as Record<string, unknown>;
+    const repSenderObj = r.sender as Record<string, unknown> | undefined;
     reply_to_message = {
       id: r.id != null ? String(r.id) : '0',
       message: r.message != null ? String(r.message) : null,
-      sender_uid: typeof r.sender_uid === 'number' ? r.sender_uid : 0,
+      sender: {
+        uid: repSenderObj != null && typeof repSenderObj.uid === 'number' ? repSenderObj.uid : 0,
+        name: repSenderObj != null && typeof repSenderObj.name === 'string' ? repSenderObj.name : null,
+      },
       is_deleted: Boolean(r.is_deleted),
     };
   }
@@ -95,7 +105,7 @@ function normalizePayload(p: unknown): MessageResponse | null {
     reply_root_id: o.reply_root_id != null ? String(o.reply_root_id) : null,
     reply_to_message,
     client_generated_id,
-    sender_uid,
+    sender,
     chat_id,
     created_at,
     is_edited: Boolean(o.is_edited),

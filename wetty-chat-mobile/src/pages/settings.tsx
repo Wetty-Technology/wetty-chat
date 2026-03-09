@@ -21,6 +21,8 @@ import { Trans } from '@lingui/react/macro';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { t } from '@lingui/core/macro';
 
+const isDev = import.meta.env.DEV;
+
 export default function Settings() {
   const [uidInput, setUidInput] = useState(String(getCurrentUserId()));
   const [presentToast] = useIonToast();
@@ -54,26 +56,28 @@ export default function Settings() {
         <div style={{ padding: '16px' }}>
           <IonList>
             <IonItem button onClick={() => history.push('/settings/language')}>
-              <IonLabel>Language</IonLabel>
+              <IonLabel><Trans>Language</Trans></IonLabel>
               <span slot="end">{{ 'en': 'English', 'zh-CN': '简体中文', 'zh-TW': '繁體中文' }[locale!] ?? t`Auto`}</span>
             </IonItem>
-            <IonItem>
-              <IonLabel position="stacked">User ID</IonLabel>
-              <IonInput
-                type="number"
-                placeholder="e.g. 1"
-                value={uidInput}
-                onIonInput={(e) => setUidInput(e.detail.value ?? '')}
-              />
-            </IonItem>
-            <IonItem>
-              <IonButton onClick={handleSave}>
-                Save
-              </IonButton>
-            </IonItem>
+            {isDev && <>
+              <IonItem>
+                <IonLabel position="stacked">User ID</IonLabel>
+                <IonInput
+                  type="number"
+                  placeholder="e.g. 1"
+                  value={uidInput}
+                  onIonInput={(e) => setUidInput(e.detail.value ?? '')}
+                />
+              </IonItem>
+              <IonItem>
+                <IonButton onClick={handleSave}>
+                  Save
+                </IonButton>
+              </IonItem>
+            </>}
 
             <IonItem lines="none" style={{ marginTop: '16px' }}>
-              <IonLabel color="medium"><h2>Push Notifications Prototype</h2></IonLabel>
+              <IonLabel color="medium"><h2>Push Notifications</h2></IonLabel>
             </IonItem>
             <IonItem>
               <IonLabel>
@@ -93,6 +97,6 @@ export default function Settings() {
           </IonList>
         </div>
       </IonContent>
-    </IonPage>
+    </IonPage >
   );
 }

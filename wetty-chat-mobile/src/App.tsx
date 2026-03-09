@@ -30,6 +30,8 @@ import { Trans } from '@lingui/react/macro';
 
 setupIonicReact();
 
+const isDevMode = import.meta.env.DEV;
+
 const App: React.FC = () => {
   const wsConnected = useSelector((state: RootState) => state.connection.wsConnected);
 
@@ -50,7 +52,7 @@ const App: React.FC = () => {
             <Route path="/chats/chat/:id/settings" exact component={ChatSettingsPage} />
             <Route path="/chats/chat/:id/members" exact component={ChatMembersPage} />
             <Route path="/chats/chat/:id/details" exact component={GroupDetailPage} />
-            <Route path="/demo" exact component={ComponentDemoPage} />
+            {isDevMode && <Route path="/demo" exact component={ComponentDemoPage} />}
             <Route path="/settings/language" exact component={LanguagePage} />
             <Route path="/settings" exact component={SettingsPage} />
             <Redirect exact from="/" to="/chats" />

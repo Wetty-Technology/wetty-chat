@@ -259,11 +259,11 @@ export default function ChatThread() {
       reply_to_message: replyingTo ? {
         id: replyingTo.id,
         message: replyingTo.message,
-        sender_uid: replyingTo.sender_uid,
+        sender: replyingTo.sender,
         is_deleted: replyingTo.is_deleted,
       } : undefined,
       client_generated_id: clientGeneratedId,
-      sender_uid: getCurrentUserId(),
+      sender: { uid: getCurrentUserId(), name: null },
       chat_id: apiChatId,
       created_at: new Date().toISOString(),
       is_edited: false,
@@ -308,7 +308,7 @@ export default function ChatThread() {
 
   const onClickChatItem = useCallback((messageIndex: number) => {
     const msg = messages[messageIndex];
-    const isOwn = msg.sender_uid === getCurrentUserId();
+    const isOwn = msg.sender.uid === getCurrentUserId();
     presentActionSheet({
       buttons: [
         {
@@ -394,8 +394,8 @@ export default function ChatThread() {
             const prevMsg = index > 0 ? messages[index - 1] : null;
             const nextMsg = index < messages.length - 1 ? messages[index + 1] : null;
 
-            const prevSender = prevMsg ? prevMsg.sender_uid : null;
-            const nextSender = nextMsg ? nextMsg.sender_uid : null;
+            const prevSender = prevMsg ? prevMsg.sender.uid : null;
+            const nextSender = nextMsg ? nextMsg.sender.uid : null;
 
             let showDateSeparator = false;
             if (index === 0) {
@@ -408,7 +408,7 @@ export default function ChatThread() {
               }
             }
 
-            let isLastInGroup = nextSender !== msg.sender_uid;
+            let isLastInGroup = nextSender !== msg.sender.uid;
             if (!isLastInGroup && nextMsg) {
               const d1 = new Date(msg.created_at);
               const d2 = new Date(nextMsg.created_at);
@@ -425,14 +425,14 @@ export default function ChatThread() {
                   </div>
                 )}
                 <ChatBubble
-                  senderName={`User ${msg.sender_uid}`}
+                  senderName={msg.sender.name ?? `User ${msg.sender.uid}`}
                   message={msg.is_deleted ? t`[Deleted]` : (msg.message ?? '')}
-                  isSent={msg.sender_uid === getCurrentUserId()}
-                  avatarColor={colorForUser(msg.sender_uid)}
+                  isSent={msg.sender.uid === getCurrentUserId()}
+                  avatarColor={colorForUser(msg.sender.uid)}
                   onReply={() => setReplyingTo(msg)}
                   onReplyTap={msg.reply_to_message && !msg.reply_to_message?.is_deleted ? () => jumpToMessage(msg.reply_to_message!.id) : undefined}
                   onLongPress={() => onClickChatItem(index)}
-                  showName={prevSender !== msg.sender_uid || showDateSeparator}
+                  showName={prevSender !== msg.sender.uid || showDateSeparator}
                   showAvatar={isLastInGroup}
                   timestamp={msg.created_at}
                   edited={msg.is_edited}
@@ -441,9 +441,9 @@ export default function ChatThread() {
                   attachments={msg.attachments}
                   isConfirmed={!msg.id.startsWith('cg_')}
                   replyTo={msg.reply_to_message ? {
-                    senderName: `User ${msg.reply_to_message.sender_uid}`,
+                    senderName: msg.reply_to_message.sender.name ?? `User ${msg.reply_to_message.sender.uid}`,
                     message: msg.reply_to_message.is_deleted ? t`[Deleted]` : (msg.reply_to_message.message ?? ''),
-                    avatarColor: colorForUser(msg.reply_to_message.sender_uid),
+                    avatarColor: colorForUser(msg.reply_to_message.sender.uid),
                   } : undefined}
                 />
               </>
@@ -466,7 +466,7 @@ export default function ChatThread() {
           onSend={handleSend}
           replyTo={replyingTo ? {
             messageId: replyingTo.id,
-            username: `User ${replyingTo.sender_uid}`,
+            username: replyingTo.sender.name ?? `User ${replyingTo.sender.uid}`,
             text: replyingTo.message ?? '',
           } : undefined}
           onCancelReply={() => setReplyingTo(null)}
