@@ -7,7 +7,7 @@ use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use serde::Serialize;
 
-use crate::models::NewGroupMembership;
+use crate::models::{GroupRole, NewGroupMembership};
 use crate::schema::{self, group_membership, users};
 use crate::utils::auth::CurrentUid;
 use crate::AppState;
@@ -27,18 +27,18 @@ pub struct MemberPath {
 pub struct AddMemberBody {
     uid: i32,
     #[serde(default)]
-    role: Option<String>,
+    role: Option<GroupRole>,
 }
 
 #[derive(serde::Deserialize)]
 pub struct UpdateMemberBody {
-    role: String,
+    role: GroupRole,
 }
 
 #[derive(Serialize)]
 pub struct MemberResponse {
     uid: i32,
-    role: String,
+    role: GroupRole,
     joined_at: DateTime<Utc>,
     username: Option<String>,
 }
@@ -79,7 +79,7 @@ fn check_admin_role(
 ) -> Result<(), (StatusCode, &'static str)> {
     use crate::schema::group_membership::dsl;
 
-    let role: Option<String> = group_membership::table
+    let role: Option<GroupRole> = group_membership::table
         .filter(dsl::chat_id.eq(chat_id).and(dsl::uid.eq(uid)))
         .select(dsl::role)
         .first(conn)
@@ -89,8 +89,8 @@ fn check_admin_role(
             (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
         })?;
 
-    match role.as_deref() {
-        Some("admin") => Ok(()),
+    match role {
+        Some(GroupRole::Admin) => Ok(()),
         Some(_) => Err((StatusCode::FORBIDDEN, "Admin role required")),
         None => Err((StatusCode::FORBIDDEN, "Not a member of this chat")),
     }
@@ -116,7 +116,7 @@ pub async fn get_members(
     use crate::schema::group_membership::dsl as gm_dsl;
     use crate::schema::users::dsl as users_dsl;
 
-    let rows: Vec<(i32, String, DateTime<Utc>, String)> = group_membership::table
+    let rows: Vec<(i32, GroupRole, DateTime<Utc>, String)> = group_membership::table
         .filter(gm_dsl::chat_id.eq(chat_id))
         .inner_join(users::table.on(users::uid.eq(group_membership::uid)))
         .select((
@@ -195,10 +195,7 @@ pub async fn post_add_member(
         return Err((StatusCode::CONFLICT, "User is already a member"));
     }
 
-    let role = body.role.unwrap_or_else(|| "member".to_string());
-    if role != "admin" && role != "member" {
-        return Err((StatusCode::BAD_REQUEST, "Invalid role"));
-    }
+    let role = body.role.unwrap_or(GroupRole::Member);
 
     let now = Utc::now();
     let new_membership = NewGroupMembership {
@@ -311,11 +308,6 @@ pub async fn patch_member(
     // Check if requester is admin
     check_admin_role(conn, chat_id, requester_uid)?;
 
-    // Validate role
-    if body.role != "admin" && body.role != "member" {
-        return Err((StatusCode::BAD_REQUEST, "Invalid role"));
-    }
-
     // Check if target is a member
     use crate::schema::group_membership::dsl as gm_dsl;
     let is_member = group_membership::table
@@ -347,7 +339,7 @@ pub async fn patch_member(
 
     // Get updated member info
     use crate::schema::users::dsl as users_dsl;
-    let (role, joined_at, username): (String, DateTime<Utc>, String) = group_membership::table
+    let (role, joined_at, username): (GroupRole, DateTime<Utc>, String) = group_membership::table
         .filter(gm_dsl::chat_id.eq(chat_id).and(gm_dsl::uid.eq(target_uid)))
         .inner_join(users::table.on(users::uid.eq(group_membership::uid)))
         .select((gm_dsl::role, gm_dsl::joined_at, users_dsl::username))

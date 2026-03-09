@@ -1,1 +1,0 @@
-ALTER TABLE groups ADD COLUMN visibility VARCHAR(20) NOT NULL DEFAULT 'public';
