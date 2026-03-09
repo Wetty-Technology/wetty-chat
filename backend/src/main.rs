@@ -6,8 +6,9 @@ use axum::{
     Router,
 };
 use diesel::r2d2::{ConnectionManager, Pool};
-use diesel::PgConnection;
+use diesel::{MysqlConnection, PgConnection};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+use serde::Deserialize;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tower::ServiceBuilder;
@@ -45,6 +46,13 @@ impl MakeRequestId for RequestIdMaker {
 pub(crate) const MAX_CHATS_LIMIT: i64 = 100;
 pub(crate) const MAX_MESSAGES_LIMIT: i64 = 100;
 
+#[derive(Clone, Deserialize, Default)]
+pub(crate) enum AuthMethod {
+    #[default]
+    UIDHeader,
+    Discuz,
+}
+
 #[derive(Clone)]
 pub(crate) struct AppState {
     db: Pool<ConnectionManager<PgConnection>>,
@@ -55,6 +63,10 @@ pub(crate) struct AppState {
     s3_bucket_name: String,
     s3_attachment_prefix: String,
     s3_base_url: Option<String>,
+    pub auth_method: AuthMethod,
+    pub discuz_db: Option<Pool<ConnectionManager<MysqlConnection>>>,
+    pub discuz_cookie_prefix: String,
+    pub discuz_authkey: String,
 }
 
 #[tokio::main]
@@ -93,6 +105,29 @@ async fn main() {
         std::env::var("ATTACHMENTS_PREFIX").unwrap_or_else(|_| "attachments".to_string());
     let s3_base_url = std::env::var("S3_BASE_URL").ok();
 
+    let auth_method_str = std::env::var("AUTH_METHOD").unwrap_or_else(|_| "UIDHeader".to_string());
+    let auth_method = match auth_method_str.as_str() {
+        "Discuz" => AuthMethod::Discuz,
+        _ => AuthMethod::UIDHeader,
+    };
+
+    let mut discuz_db = None;
+    let mut discuz_cookie_prefix = String::new();
+    let mut discuz_authkey = String::new();
+
+    if let AuthMethod::Discuz = auth_method {
+        let discuz_db_url = std::env::var("DISCUZ_DB_URL").expect("DISCUZ_DB_URL must be set");
+        let mysql_manager = ConnectionManager::<MysqlConnection>::new(&discuz_db_url);
+        discuz_db = Some(
+            Pool::builder()
+                .build(mysql_manager)
+                .expect("Failed to create Discuz pool"),
+        );
+        discuz_cookie_prefix =
+            std::env::var("DISCUZ_COOKIE_PREFIX").expect("DISCUZ_COOKIE_PREFIX must be set");
+        discuz_authkey = std::env::var("DISCUZ_AUTHKEY").expect("DISCUZ_AUTHKEY must be set");
+    }
+
     let state = AppState {
         db: pool.clone(),
         id_gen: Arc::new(utils::ids::new_generator()),
@@ -102,6 +137,10 @@ async fn main() {
         s3_bucket_name,
         s3_attachment_prefix,
         s3_base_url,
+        auth_method,
+        discuz_db,
+        discuz_cookie_prefix,
+        discuz_authkey,
     };
 
     let registry = state.ws_registry.clone();
