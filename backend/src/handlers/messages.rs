@@ -9,7 +9,7 @@ use diesel::prelude::*;
 use serde::Serialize;
 
 use crate::handlers::members::check_membership;
-use crate::models::{Attachment, AttachmentResponse, Message, NewMessage, ThreadInfo};
+use crate::models::{Attachment, AttachmentResponse, Message, MessageType, NewMessage, ThreadInfo};
 use crate::schema::{attachments, group_membership, groups, messages, users};
 use crate::services::push::PushJob;
 use crate::utils::auth::CurrentUid;
@@ -63,7 +63,7 @@ pub struct MessageResponse {
     #[serde(with = "crate::serde_i64_string")]
     id: i64,
     message: Option<String>,
-    message_type: String,
+    message_type: MessageType,
     #[serde(with = "crate::serde_i64_string::opt")]
     reply_root_id: Option<i64>,
     client_generated_id: String,
@@ -406,7 +406,7 @@ pub async fn get_messages(
 #[derive(serde::Deserialize)]
 pub struct CreateMessageBody {
     message: Option<String>,
-    message_type: String,
+    message_type: MessageType,
     client_generated_id: String,
     #[serde(
         default,

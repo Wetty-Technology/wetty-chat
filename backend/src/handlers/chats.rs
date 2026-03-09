@@ -10,7 +10,7 @@ use diesel::sql_query;
 use diesel::sql_types::{BigInt, Nullable, Timestamptz};
 use serde::Serialize;
 
-use crate::models::{NewGroup, NewGroupMembership, UpdateGroup};
+use crate::models::{GroupRole, GroupVisibility, NewGroup, NewGroupMembership, UpdateGroup};
 use crate::schema::{group_membership, groups};
 use crate::utils::auth::CurrentUid;
 use crate::utils::ids;
@@ -45,7 +45,10 @@ struct CursorRow {
 pub struct ListChatsQuery {
     #[serde(default)]
     limit: Option<i64>,
-    #[serde(default, deserialize_with = "crate::serde_i64_string::opt::deserialize")]
+    #[serde(
+        default,
+        deserialize_with = "crate::serde_i64_string::opt::deserialize"
+    )]
     after: Option<i64>,
 }
 
@@ -76,10 +79,12 @@ pub async fn get_chats(
         .unwrap_or(MAX_CHATS_LIMIT)
         .max(1);
 
-    let conn = &mut state
-        .db
-        .get()
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database connection failed"))?;
+    let conn = &mut state.db.get().map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Database connection failed",
+        )
+    })?;
 
     // Query chats the user is a member of, with last_message_at from messages.
     // Cursor: when `after` (chat id) is set, we return chats that sort before that chat.
@@ -170,10 +175,7 @@ pub async fn get_chats(
         .collect();
     let next_cursor = has_more.then(|| chats.last().map(|c| c.id)).flatten();
 
-    Ok(Json(ListChatsResponse {
-        chats,
-        next_cursor,
-    }))
+    Ok(Json(ListChatsResponse { chats, next_cursor }))
 }
 
 #[derive(serde::Deserialize)]
@@ -195,12 +197,10 @@ pub async fn post_chats(
     State(state): State<AppState>,
     Json(body): Json<CreateChatBody>,
 ) -> Result<impl IntoResponse, (StatusCode, &'static str)> {
-    let id = ids::next_gid(state.id_gen.as_ref())
-        .await
-        .map_err(|e| {
-            tracing::error!("ferroid next_gid: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "ID generation failed")
-        })?;
+    let id = ids::next_gid(state.id_gen.as_ref()).await.map_err(|e| {
+        tracing::error!("ferroid next_gid: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, "ID generation failed")
+    })?;
 
     let now = Utc::now();
     let name = body
@@ -208,10 +208,12 @@ pub async fn post_chats(
         .filter(|s| !s.trim().is_empty())
         .unwrap_or_else(|| String::new());
 
-    let conn = &mut state
-        .db
-        .get()
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database connection failed"))?;
+    let conn = &mut state.db.get().map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Database connection failed",
+        )
+    })?;
 
     diesel::insert_into(groups::table)
         .values(&NewGroup {
@@ -220,7 +222,7 @@ pub async fn post_chats(
             description: None,
             avatar: None,
             created_at: now,
-            visibility: "public".to_string(),
+            visibility: GroupVisibility::Public,
         })
         .execute(conn)
         .map_err(|e| {
@@ -232,7 +234,7 @@ pub async fn post_chats(
         .values(&NewGroupMembership {
             chat_id: id,
             uid,
-            role: "admin".to_string(),
+            role: GroupRole::Admin,
             joined_at: now,
         })
         .execute(conn)
@@ -263,7 +265,7 @@ pub struct ChatDetailResponse {
     name: String,
     description: Option<String>,
     avatar: Option<String>,
-    visibility: String,
+    visibility: GroupVisibility,
     created_at: DateTime<Utc>,
 }
 
@@ -273,10 +275,12 @@ pub async fn get_chat(
     State(state): State<AppState>,
     Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
 ) -> Result<Json<ChatDetailResponse>, (StatusCode, &'static str)> {
-    let conn = &mut state
-        .db
-        .get()
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database connection failed"))?;
+    let conn = &mut state.db.get().map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Database connection failed",
+        )
+    })?;
 
     // Check membership
     use crate::schema::group_membership::dsl as gm_dsl;
@@ -315,7 +319,7 @@ pub struct UpdateChatBody {
     name: Option<String>,
     description: Option<String>,
     avatar: Option<String>,
-    visibility: Option<String>,
+    visibility: Option<GroupVisibility>,
 }
 
 /// PATCH /chats/:chat_id — Update chat metadata (admin only).
@@ -325,14 +329,16 @@ pub async fn patch_chat(
     Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
     Json(body): Json<UpdateChatBody>,
 ) -> Result<Json<ChatDetailResponse>, (StatusCode, &'static str)> {
-    let conn = &mut state
-        .db
-        .get()
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database connection failed"))?;
+    let conn = &mut state.db.get().map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Database connection failed",
+        )
+    })?;
 
     // Check if user is admin
     use crate::schema::group_membership::dsl as gm_dsl;
-    let role: Option<String> = group_membership::table
+    let role: Option<GroupRole> = group_membership::table
         .filter(gm_dsl::chat_id.eq(chat_id).and(gm_dsl::uid.eq(uid)))
         .select(gm_dsl::role)
         .first(conn)
@@ -343,16 +349,9 @@ pub async fn patch_chat(
         })?;
 
     match role {
-        Some(r) if r == "admin" => {},
+        Some(r) if r == GroupRole::Admin => {}
         Some(_) => return Err((StatusCode::FORBIDDEN, "Admin role required")),
         None => return Err((StatusCode::FORBIDDEN, "Not a member of this chat")),
-    }
-
-    // Validate visibility if provided
-    if let Some(ref vis) = body.visibility {
-        if vis != "public" && vis != "private" {
-            return Err((StatusCode::BAD_REQUEST, "Invalid visibility value"));
-        }
     }
 
     // Update group in a single query
@@ -365,14 +364,15 @@ pub async fn patch_chat(
         visibility: body.visibility,
     };
 
-    let group: crate::models::Group = diesel::update(groups::table.filter(groups_dsl::id.eq(chat_id)))
-        .set(&changeset)
-        .returning(crate::models::Group::as_returning())
-        .get_result(conn)
-        .map_err(|e| {
-            tracing::error!("update group: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update chat")
-        })?;
+    let group: crate::models::Group =
+        diesel::update(groups::table.filter(groups_dsl::id.eq(chat_id)))
+            .set(&changeset)
+            .returning(crate::models::Group::as_returning())
+            .get_result(conn)
+            .map_err(|e| {
+                tracing::error!("update group: {:?}", e);
+                (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update chat")
+            })?;
 
     Ok(Json(ChatDetailResponse {
         id: group.id,

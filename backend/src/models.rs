@@ -1,7 +1,30 @@
 use crate::schema;
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+
+#[derive(diesel_derive_enum::DbEnum, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[ExistingTypePath = "crate::schema::sql_types::GroupVisibility"]
+pub enum GroupVisibility {
+    Public,
+    SemiPublic,
+    Private,
+}
+
+#[derive(diesel_derive_enum::DbEnum, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[ExistingTypePath = "crate::schema::sql_types::GroupRole"]
+pub enum GroupRole {
+    Member,
+    Admin,
+}
+
+#[derive(diesel_derive_enum::DbEnum, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[ExistingTypePath = "crate::schema::sql_types::MessageType"]
+pub enum MessageType {
+    Text,
+    Audio,
+    File,
+}
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize, Insertable)]
 #[diesel(table_name = schema::users)]
@@ -18,7 +41,7 @@ pub struct Group {
     pub description: Option<String>,
     pub avatar: Option<String>,
     pub created_at: DateTime<Utc>,
-    pub visibility: String,
+    pub visibility: GroupVisibility,
 }
 
 /// For inserting a group. Set `id` and `created_at` (e.g. `Utc::now()`) when not relying on DB defaults.
@@ -30,7 +53,7 @@ pub struct NewGroup {
     pub description: Option<String>,
     pub avatar: Option<String>,
     pub created_at: DateTime<Utc>,
-    pub visibility: String,
+    pub visibility: GroupVisibility,
 }
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize, Insertable)]
@@ -38,7 +61,7 @@ pub struct NewGroup {
 pub struct GroupMembership {
     pub chat_id: i64,
     pub uid: i32,
-    pub role: String,
+    pub role: GroupRole,
     pub joined_at: DateTime<Utc>,
 }
 
@@ -48,7 +71,7 @@ pub struct GroupMembership {
 pub struct NewGroupMembership {
     pub chat_id: i64,
     pub uid: i32,
-    pub role: String,
+    pub role: GroupRole,
     pub joined_at: DateTime<Utc>,
 }
 
@@ -57,7 +80,7 @@ pub struct NewGroupMembership {
 pub struct Message {
     pub id: i64,
     pub message: Option<String>,
-    pub message_type: String,
+    pub message_type: MessageType,
     pub reply_to_id: Option<i64>,
     pub reply_root_id: Option<i64>,
     pub client_generated_id: String,
@@ -80,7 +103,7 @@ pub struct ThreadInfo {
 pub struct NewMessage {
     pub id: i64,
     pub message: Option<String>,
-    pub message_type: String,
+    pub message_type: MessageType,
     pub reply_to_id: Option<i64>,
     pub reply_root_id: Option<i64>,
     pub client_generated_id: String,
@@ -135,7 +158,7 @@ pub struct UpdateGroup {
     pub name: Option<String>,
     pub description: Option<String>,
     pub avatar: Option<String>,
-    pub visibility: Option<String>,
+    pub visibility: Option<GroupVisibility>,
 }
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize, Insertable)]

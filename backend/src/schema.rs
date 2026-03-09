@@ -1,31 +1,50 @@
 // @generated automatically by Diesel CLI.
 
+pub mod sql_types {
+    #[derive(diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "group_role"))]
+    pub struct GroupRole;
+
+    #[derive(diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "group_visibility"))]
+    pub struct GroupVisibility;
+
+    #[derive(diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "message_type"))]
+    pub struct MessageType;
+}
+
 diesel::table! {
     attachments (id) {
         id -> Int8,
         message_id -> Nullable<Int8>,
-        #[max_length = 255]
-        file_name -> Varchar,
         #[max_length = 20]
         kind -> Varchar,
         external_reference -> Text,
         size -> Int8,
         created_at -> Timestamptz,
         deleted_at -> Nullable<Timestamptz>,
+        #[max_length = 255]
+        file_name -> Varchar,
     }
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::GroupRole;
+
     group_membership (chat_id, uid) {
         chat_id -> Int8,
         uid -> Int4,
-        #[max_length = 20]
-        role -> Varchar,
+        role -> GroupRole,
         joined_at -> Timestamptz,
     }
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::GroupVisibility;
+
     groups (id) {
         id -> Int8,
         #[max_length = 255]
@@ -33,17 +52,18 @@ diesel::table! {
         description -> Nullable<Text>,
         avatar -> Nullable<Text>,
         created_at -> Timestamptz,
-        #[max_length = 20]
-        visibility -> Varchar,
+        visibility -> GroupVisibility,
     }
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::MessageType;
+
     messages (id) {
         id -> Int8,
         message -> Nullable<Text>,
-        #[max_length = 20]
-        message_type -> Varchar,
+        message_type -> MessageType,
         reply_to_id -> Nullable<Int8>,
         reply_root_id -> Nullable<Int8>,
         client_generated_id -> Varchar,
