@@ -26,7 +26,7 @@ export default function Settings() {
   const [presentToast] = useIonToast();
   const history = useHistory();
   const locale = useSelector(selectLocale);
-  const { permission, isSubscribed, loading, subscribeToPush, unsubscribeFromPush, sendTestNotification } = usePushNotifications();
+  const { permission, isSubscribed, loading, subscribeToPush, unsubscribeFromPush } = usePushNotifications();
 
   useEffect(() => {
     setUidInput(String(getCurrentUserId()));
@@ -87,9 +87,6 @@ export default function Settings() {
               </IonButton>
               <IonButton onClick={unsubscribeFromPush} disabled={loading || !isSubscribed} color="danger">
                 Unsubscribe
-              </IonButton>
-              <IonButton onClick={() => sendTestNotification()} disabled={loading || !isSubscribed} color="secondary">
-                Send Test Push
               </IonButton>
             </IonItem>
 

@@ -196,8 +196,7 @@ async fn main() {
             get(handlers::push::get_vapid_public_key),
         )
         .route("/subscribe", post(handlers::push::post_subscribe))
-        .route("/unsubscribe", post(handlers::push::post_unsubscribe))
-        .route("/test", post(handlers::push::post_test));
+        .route("/unsubscribe", post(handlers::push::post_unsubscribe));
 
     let attachments_routes =
         Router::new().route("/upload-url", post(handlers::attachments::post_upload_url));

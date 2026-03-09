@@ -15,6 +15,9 @@ import {
   IonButton,
   IonIcon,
   useIonAlert,
+  IonRefresher,
+  IonRefresherContent,
+  type RefresherEventDetail,
 } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
@@ -76,6 +79,31 @@ export default function Chats() {
   const handleMore = () => presentAlert({ header: 'More', buttons: ['OK'] });
   const handleArchive = () => presentAlert({ header: 'Archive', buttons: ['OK'] });
 
+  const handleRefresh = (event: CustomEvent<RefresherEventDetail>) => {
+    const startTime = Date.now();
+    getChats()
+      .then((res) => {
+        const chatList = res.data.chats || [];
+        setChats(chatList);
+        setError(null);
+        const meta: Record<string, { name: string | null }> = {};
+        for (const c of chatList) {
+          meta[c.id] = { name: c.name };
+        }
+        dispatch(setChatsMeta(meta));
+      })
+      .catch((err: Error) => {
+        setError(err.message || 'Failed to refresh chats');
+      })
+      .finally(() => {
+        const elapsed = Date.now() - startTime;
+        const delay = Math.max(0, 500 - elapsed);
+        setTimeout(() => {
+          event.detail.complete();
+        }, delay);
+      });
+  };
+
   return (
     <IonPage className="chats-page">
       <IonHeader>
@@ -92,6 +120,9 @@ export default function Chats() {
         </IonToolbar>
       </IonHeader>
       <IonContent fullscreen>
+        <IonRefresher slot="fixed" onIonRefresh={handleRefresh}>
+          <IonRefresherContent />
+        </IonRefresher>
         {error && (
           <IonList>
             <IonItem>

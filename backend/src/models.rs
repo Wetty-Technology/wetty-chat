@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(diesel_derive_enum::DbEnum, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[ExistingTypePath = "crate::schema::sql_types::GroupVisibility"]
+#[serde(rename_all = "snake_case")]
 pub enum GroupVisibility {
     Public,
     SemiPublic,
@@ -13,6 +14,7 @@ pub enum GroupVisibility {
 
 #[derive(diesel_derive_enum::DbEnum, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[ExistingTypePath = "crate::schema::sql_types::GroupRole"]
+#[serde(rename_all = "snake_case")]
 pub enum GroupRole {
     Member,
     Admin,
@@ -20,6 +22,7 @@ pub enum GroupRole {
 
 #[derive(diesel_derive_enum::DbEnum, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[ExistingTypePath = "crate::schema::sql_types::MessageType"]
+#[serde(rename_all = "snake_case")]
 pub enum MessageType {
     Text,
     Audio,

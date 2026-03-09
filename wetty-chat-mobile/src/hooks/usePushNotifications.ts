@@ -106,22 +106,6 @@ export function usePushNotifications() {
         }
     }, [permission, requestPermission]);
 
-    const sendTestNotification = useCallback(async (title = 'Test Push', body = 'This is a prototype push notification') => {
-        setLoading(true);
-        try {
-            await apiClient.post('/api/push/test', {
-                title,
-                body
-            });
-            alert('Test push sent! Check your notifications.');
-        } catch (e) {
-            console.error('Failed to send test push', e);
-            alert('Failed to send test push');
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
     const unsubscribeFromPush = useCallback(async () => {
         setLoading(true);
         try {
@@ -161,6 +145,5 @@ export function usePushNotifications() {
         requestPermission,
         subscribeToPush,
         unsubscribeFromPush,
-        sendTestNotification
     };
 }
