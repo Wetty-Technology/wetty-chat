@@ -103,7 +103,9 @@ async fn main() {
     let mut s3_config_builder = aws_sdk_s3::config::Builder::from(&aws_config);
 
     if let Ok(endpoint) = std::env::var("S3_ENDPOINT_URL") {
-        s3_config_builder = s3_config_builder.endpoint_url(endpoint);
+        s3_config_builder = s3_config_builder
+            .endpoint_url(endpoint)
+            .force_path_style(true);
     }
 
     let s3_client = aws_sdk_s3::Client::from_conf(s3_config_builder.build());
