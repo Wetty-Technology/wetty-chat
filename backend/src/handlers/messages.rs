@@ -12,7 +12,7 @@ use crate::handlers::members::check_membership;
 use crate::models::{
     Attachment, AttachmentResponse, Message, MessageType, NewMessage, Sender, ThreadInfo,
 };
-use crate::schema::{attachments, group_membership, groups, messages, users};
+use crate::schema::{attachments, group_membership, groups, messages};
 use crate::services::push::PushJob;
 use crate::services::user::lookup_users;
 use crate::utils::auth::CurrentUid;
@@ -508,11 +508,12 @@ pub async fn post_message(
     }
 
     // Enqueue push notification job (non-blocking; runs in background).
-    let sender_username = users::table
-        .filter(users::dsl::uid.eq(uid))
-        .select(users::dsl::username)
-        .first::<String>(conn)
-        .unwrap_or_else(|_| "Someone".to_string());
+    let sender_username = lookup_users(&state, &[uid])
+        .await
+        .get(&uid)
+        .cloned()
+        .flatten()
+        .unwrap_or_else(|| "Someone".to_string());
     let chat_name = groups::table
         .filter(groups::dsl::id.eq(chat_id))
         .select(groups::dsl::name)
@@ -637,11 +638,12 @@ pub async fn post_thread_message(
     }
 
     // Enqueue push notification job (non-blocking; runs in background).
-    let sender_username = users::table
-        .filter(users::dsl::uid.eq(uid))
-        .select(users::dsl::username)
-        .first::<String>(conn)
-        .unwrap_or_else(|_| "Someone".to_string());
+    let sender_username = lookup_users(&state, &[uid])
+        .await
+        .get(&uid)
+        .cloned()
+        .flatten()
+        .unwrap_or_else(|| "Someone".to_string());
     let chat_name = groups::table
         .filter(groups::dsl::id.eq(chat_id))
         .select(groups::dsl::name)
