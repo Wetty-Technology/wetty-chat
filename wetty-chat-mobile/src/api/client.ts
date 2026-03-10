@@ -7,7 +7,7 @@ import { getCurrentUserId } from '@/js/current-user';
  * - Production: VITE_API_BASE_URL (must be set in build env).
  */
 
-const apiClient = axios.create({ baseURL: '/_api' });
+const apiClient = axios.create({ baseURL: import.meta.env.BASE_URL + '_api' });
 
 apiClient.interceptors.request.use((config) => {
   if (import.meta.env.DEV) {

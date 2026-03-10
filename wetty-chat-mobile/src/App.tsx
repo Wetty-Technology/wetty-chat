@@ -79,7 +79,7 @@ const App: React.FC = () => {
           Disconnected. Retrying…
         </div>
       )}
-      <IonReactRouter>
+      <IonReactRouter basename={import.meta.env.BASE_URL}>
         <IonTabs>
           <IonRouterOutlet>
             <Route path="/chats" exact component={ChatsPage} />
