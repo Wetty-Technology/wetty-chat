@@ -75,13 +75,15 @@ pub async fn post_upload_url(
             (StatusCode::INTERNAL_SERVER_ERROR, "Failed to generate ID")
         })?;
 
+    let s3_item_id = uuid::Uuid::new_v4().to_string();
+
     // Format: <prefix>/<snowflake_id>.<extension>
     let extension = std::path::Path::new(&payload.filename)
         .extension()
         .and_then(|e| e.to_str())
         .unwrap_or("bin");
 
-    let key = format!("{}/{}.{}", prefix, id, extension);
+    let key = format!("{}/{}.{}", prefix, s3_item_id, extension);
     let expires_in = Duration::minutes(15);
     let presigning_config =
         PresigningConfig::expires_in(expires_in.to_std().unwrap()).map_err(|e| {

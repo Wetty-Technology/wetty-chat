@@ -8,13 +8,9 @@ import {
   IonList,
   IonItem,
   IonLabel,
-  IonItemSliding,
-  IonItemOptions,
-  IonItemOption,
   IonButtons,
   IonButton,
   IonIcon,
-  useIonAlert,
   IonRefresher,
   IonRefresherContent,
   type RefresherEventDetail,
@@ -46,7 +42,6 @@ function chatDisplayName(chat: ChatListItem): string {
 export default function Chats() {
   const history = useHistory();
   const dispatch = useDispatch();
-  const [presentAlert] = useIonAlert();
   const [chats, setChats] = useState<ChatListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -74,11 +69,6 @@ export default function Chats() {
   useEffect(() => {
     loadChats();
   }, []);
-
-  const handleUnread = () => presentAlert({ header: 'Unread', buttons: ['OK'] });
-  const handlePin = () => presentAlert({ header: 'Pin', buttons: ['OK'] });
-  const handleMore = () => presentAlert({ header: 'More', buttons: ['OK'] });
-  const handleArchive = () => presentAlert({ header: 'Archive', buttons: ['OK'] });
 
   const handleRefresh = (event: CustomEvent<RefresherEventDetail>) => {
     const startTime = Date.now();
@@ -150,42 +140,23 @@ export default function Chats() {
               </IonItem>
             )}
             {chats.map((chat) => (
-              <IonItemSliding key={chat.id}>
-                <IonItemOptions side="start">
-                  <IonItemOption color="primary" onClick={handleUnread}>
-                    Unread
-                  </IonItemOption>
-                  <IonItemOption color="medium" onClick={handlePin}>
-                    Pin
-                  </IonItemOption>
-                </IonItemOptions>
-
-                <IonItem
-                  button
-                  detail={false}
-                  onClick={() => history.push(`/chats/chat/${chat.id}`)}
-                >
-                  <div slot="start" className="chats-list-avatar">
-                    {chat.name && chat.name.trim() ? chat.name.trim().charAt(0).toUpperCase() : '?'}
-                  </div>
-                  <IonLabel>
-                    <h2>{chatDisplayName(chat)}</h2>
-                    <p>Last activity</p>
-                  </IonLabel>
-                  <IonLabel slot="end" className="chats-list-time">
-                    {formatLastActivity(chat.last_message_at)}
-                  </IonLabel>
-                </IonItem>
-
-                <IonItemOptions side="end">
-                  <IonItemOption color="medium" onClick={handleMore}>
-                    More
-                  </IonItemOption>
-                  <IonItemOption color="tertiary" onClick={handleArchive}>
-                    Archive
-                  </IonItemOption>
-                </IonItemOptions>
-              </IonItemSliding>
+              <IonItem
+                id={chat.id}
+                button
+                detail={false}
+                onClick={() => history.push(`/chats/chat/${chat.id}`)}
+              >
+                <div slot="start" className="chats-list-avatar">
+                  {chat.name && chat.name.trim() ? chat.name.trim().charAt(0).toUpperCase() : '?'}
+                </div>
+                <IonLabel>
+                  <h2>{chatDisplayName(chat)}</h2>
+                  <p>Last activity</p>
+                </IonLabel>
+                <IonLabel slot="end" className="chats-list-time">
+                  {formatLastActivity(chat.last_message_at)}
+                </IonLabel>
+              </IonItem>
             ))}
           </IonList>
         )}

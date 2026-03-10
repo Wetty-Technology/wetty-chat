@@ -100,7 +100,13 @@ async fn main() {
     let ws_registry = Arc::new(services::ws_registry::ConnectionRegistry::new());
 
     let aws_config = aws_config::load_defaults(aws_config::BehaviorVersion::latest()).await;
-    let s3_client = aws_sdk_s3::Client::new(&aws_config);
+    let mut s3_config_builder = aws_sdk_s3::config::Builder::from(&aws_config);
+
+    if let Ok(endpoint) = std::env::var("S3_ENDPOINT_URL") {
+        s3_config_builder = s3_config_builder.endpoint_url(endpoint);
+    }
+
+    let s3_client = aws_sdk_s3::Client::from_conf(s3_config_builder.build());
     let s3_bucket_name = std::env::var("S3_BUCKET_NAME").expect("S3_BUCKET_NAME must be set");
     let s3_attachment_prefix =
         std::env::var("ATTACHMENTS_PREFIX").unwrap_or_else(|_| "attachments".to_string());
