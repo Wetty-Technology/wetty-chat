@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build --base=/chat/",
+    "build": "tsc -b && vite build",
+    "build-prod": "tsc -b && vite build --base=/chat/ --outDir prod-dist",
     "lint": "eslint .",
     "extract": "lingui extract",
     "preview": "vite preview"

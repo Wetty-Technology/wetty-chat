@@ -9,7 +9,7 @@ import { addMessage, confirmPendingMessage, updateMessageInStore } from '@/store
 import { setWsConnected } from '@/store/connectionSlice';
 import type { MessageResponse, ReplyToMessage, ThreadInfo } from '@/api/messages';
 
-const WS_PATH = '/_api/ws';
+const WS_PATH = import.meta.env.BASE_URL + '_api/ws';
 const PING_INTERVAL_MS = 10_000;
 const RECONNECT_DELAY_MS = 5_000;
 
