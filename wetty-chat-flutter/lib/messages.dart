@@ -261,6 +261,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     return ListView.builder(
       controller: _scrollController,
       reverse: true,
+      padding: EdgeInsets.zero,
       itemCount: itemCount,
       itemBuilder: (context, index) {
         // loading more messages indicator
@@ -311,6 +312,7 @@ class _MessageRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final text = message.message ?? '';
+    final senderName = message.sender.name ?? 'User ${message.sender.uid}';
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
@@ -321,8 +323,7 @@ class _MessageRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  // TODO: change to username?
-                  'User ${message.senderUid}',
+                  senderName,
                   style: theme.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),

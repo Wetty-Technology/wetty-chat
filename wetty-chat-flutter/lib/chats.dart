@@ -139,7 +139,7 @@ class _ChatPageState extends State<ChatPage> {
       separatorBuilder: (_, _) => const Divider(height: 1),
       itemBuilder: (context, index) {
         final chat = chats[index];
-        final name = chat.name?.isNotEmpty == true
+        final chatName = chat.name?.isNotEmpty == true
             ? chat.name!
             : 'Chat ${chat.id}';
         // Format date
@@ -162,10 +162,12 @@ class _ChatPageState extends State<ChatPage> {
         }
         final senderName = chat.lastMessageSenderName;
         final lastMsg = chat.lastMessagePreview;
-        final hasMessage = (senderName != null && senderName.isNotEmpty) ||
+        final hasMessage =
+            (senderName != null && senderName.isNotEmpty) &&
             (lastMsg != null && lastMsg.isNotEmpty);
 
         return InkWell(
+          splashColor: Colors.transparent,
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(
@@ -177,14 +179,19 @@ class _ChatPageState extends State<ChatPage> {
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            // each chat item
             child: Row(
               children: [
+                // TODO: change avatar to group avatar
                 // Avatar
                 CircleAvatar(
                   radius: 24,
                   child: Text(
-                    name.isNotEmpty ? name[0].toUpperCase() : '?',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                    chatName.isNotEmpty ? chatName[0].toUpperCase() : '?',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -198,7 +205,7 @@ class _ChatPageState extends State<ChatPage> {
                         children: [
                           Expanded(
                             child: Text(
-                              name,
+                              chatName,
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -212,31 +219,18 @@ class _ChatPageState extends State<ChatPage> {
                               dateText,
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.color,
+                                color: Theme.of(
+                                  context,
+                                ).textTheme.bodySmall?.color,
                               ),
                             ),
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      // Bottom row: sender + last message
-                      if (hasMessage)
-                        Text(
-                          senderName != null && senderName.isNotEmpty
-                              ? '$senderName: ${lastMsg ?? ''}'
-                              : lastMsg ?? '',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.color,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                      // sender
+                      hasMessage ? Text(senderName) : Text(''),
+                      const SizedBox(width: 4),
+                      // last message
+                      hasMessage ? Text(lastMsg) : Text(''),
                     ],
                   ),
                 ),
