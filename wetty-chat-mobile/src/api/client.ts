@@ -10,7 +10,9 @@ import { getCurrentUserId } from '@/js/current-user';
 const apiClient = axios.create({ baseURL: '/_api' });
 
 apiClient.interceptors.request.use((config) => {
-  config.headers['X-User-Id'] = String(getCurrentUserId());
+  if (import.meta.env.DEV) {
+    config.headers['X-User-Id'] = String(getCurrentUserId());
+  }
   return config;
 });
 

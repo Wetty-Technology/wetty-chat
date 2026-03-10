@@ -198,6 +198,9 @@ async fn main() {
         .route("/subscribe", post(handlers::push::post_subscribe))
         .route("/unsubscribe", post(handlers::push::post_unsubscribe));
 
+    // /api/users — user info
+    let users_routes = Router::new().route("/me", get(handlers::users::get_me));
+
     let attachments_routes =
         Router::new().route("/upload-url", post(handlers::attachments::post_upload_url));
 
@@ -228,6 +231,7 @@ async fn main() {
         .nest("/chats", chats_routes)
         .nest("/group", group_routes)
         .nest("/api/push", push_routes)
+        .nest("/api/users", users_routes)
         .nest("/attachments", attachments_routes)
         .layer(RequestBodyLimitLayer::new(256 * 1024))
         .layer(
