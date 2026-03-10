@@ -15,7 +15,8 @@ import {
 import { useHistory } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { selectLocale } from '@/store/settingsSlice';
-import { getCurrentUserId, setCurrentUserId } from '@/js/current-user';
+import { setCurrentUserId } from '@/js/current-user';
+import type { RootState } from '@/store/index';
 import { Trans } from '@lingui/react/macro';
 import { FeatureGate } from '@/components/FeatureGate';
 
@@ -23,15 +24,16 @@ import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { t } from '@lingui/core/macro';
 
 export default function Settings() {
-  const [uidInput, setUidInput] = useState(String(getCurrentUserId()));
+  const currentUid = useSelector((state: RootState) => state.user.uid);
+  const [uidInput, setUidInput] = useState(String(currentUid || '1'));
   const [presentToast] = useIonToast();
   const history = useHistory();
   const locale = useSelector(selectLocale);
   const { permission, isSubscribed, loading, subscribeToPush, unsubscribeFromPush } = usePushNotifications();
 
   useEffect(() => {
-    setUidInput(String(getCurrentUserId()));
-  }, []);
+    setUidInput(String(currentUid || '1'));
+  }, [currentUid]);
 
   const handleSave = () => {
     const trimmed = uidInput.trim();

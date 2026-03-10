@@ -8,7 +8,7 @@ use diesel::prelude::*;
 use serde::Serialize;
 
 use crate::models::{GroupRole, NewGroupMembership};
-use crate::schema::{self, group_membership, users};
+use crate::schema::{self, group_membership};
 use crate::utils::auth::CurrentUid;
 use crate::AppState;
 
@@ -114,30 +114,26 @@ pub async fn get_members(
     check_membership(conn, chat_id, uid)?;
 
     use crate::schema::group_membership::dsl as gm_dsl;
-    use crate::schema::users::dsl as users_dsl;
 
-    let rows: Vec<(i32, GroupRole, DateTime<Utc>, String)> = group_membership::table
+    let rows: Vec<(i32, GroupRole, DateTime<Utc>)> = group_membership::table
         .filter(gm_dsl::chat_id.eq(chat_id))
-        .inner_join(users::table.on(users::uid.eq(group_membership::uid)))
-        .select((
-            gm_dsl::uid,
-            gm_dsl::role,
-            gm_dsl::joined_at,
-            users_dsl::username,
-        ))
+        .select((gm_dsl::uid, gm_dsl::role, gm_dsl::joined_at))
         .load(conn)
         .map_err(|e| {
             tracing::error!("list members: {:?}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, "Failed to list members")
         })?;
 
+    let uids: Vec<i32> = rows.iter().map(|(uid, _, _)| *uid).collect();
+    let mut names = crate::services::user::lookup_users(&state, &uids).await;
+
     let members = rows
         .into_iter()
-        .map(|(uid, role, joined_at, username)| MemberResponse {
+        .map(|(uid, role, joined_at)| MemberResponse {
             uid,
             role,
             joined_at,
-            username: Some(username),
+            username: names.remove(&uid).flatten(),
         })
         .collect();
 
@@ -161,20 +157,11 @@ pub async fn post_add_member(
     // Check if requester is admin
     check_admin_role(conn, chat_id, uid)?;
 
-    // Check if target user exists
-    let user_exists = {
-        use crate::schema::users::dsl::*;
-        schema::users::table
-            .filter(uid.eq(body.uid))
-            .count()
-            .get_result::<i64>(conn)
-            .map_err(|e| {
-                tracing::error!("check user exists: {:?}", e);
-                (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
-            })?
-    };
+    // Check if target user exists via lookup_users service
+    let mut names = crate::services::user::lookup_users(&state, &[body.uid]).await;
+    let username = names.remove(&body.uid).flatten();
 
-    if user_exists == 0 {
+    if username.is_none() {
         return Err((StatusCode::NOT_FOUND, "User not found"));
     }
 
@@ -212,20 +199,6 @@ pub async fn post_add_member(
             tracing::error!("insert membership: {:?}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, "Failed to add member")
         })?;
-
-    // Get username
-    let username: Option<String> = {
-        use crate::schema::users::dsl::*;
-        schema::users::table
-            .filter(uid.eq(body.uid))
-            .select(username)
-            .first(conn)
-            .optional()
-            .map_err(|e| {
-                tracing::error!("get username: {:?}", e);
-                (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
-            })?
-    };
 
     Ok((
         StatusCode::CREATED,
@@ -338,11 +311,9 @@ pub async fn patch_member(
     })?;
 
     // Get updated member info
-    use crate::schema::users::dsl as users_dsl;
-    let (role, joined_at, username): (GroupRole, DateTime<Utc>, String) = group_membership::table
+    let (role, joined_at): (GroupRole, DateTime<Utc>) = group_membership::table
         .filter(gm_dsl::chat_id.eq(chat_id).and(gm_dsl::uid.eq(target_uid)))
-        .inner_join(users::table.on(users::uid.eq(group_membership::uid)))
-        .select((gm_dsl::role, gm_dsl::joined_at, users_dsl::username))
+        .select((gm_dsl::role, gm_dsl::joined_at))
         .first(conn)
         .map_err(|e| {
             tracing::error!("get updated member: {:?}", e);
@@ -352,10 +323,12 @@ pub async fn patch_member(
             )
         })?;
 
+    let mut names = crate::services::user::lookup_users(&state, &[target_uid]).await;
+
     Ok(Json(MemberResponse {
         uid: target_uid,
         role,
         joined_at,
-        username: Some(username),
+        username: names.remove(&target_uid).flatten(),
     }))
 }

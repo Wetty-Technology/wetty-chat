@@ -28,7 +28,6 @@ import {
   type MessageResponse,
 } from '@/api/messages';
 import { getChatDetails } from '@/api/chats';
-import { getCurrentUserId } from '@/js/current-user';
 import { selectChatName, setChatMeta } from '@/store/chatsSlice';
 import {
   selectMessagesForChat,
@@ -68,6 +67,7 @@ export default function ChatThread() {
   const history = useHistory();
 
   const dispatch = useDispatch();
+  const currentUserId = useSelector((state: RootState) => state.user.uid);
   const storedName = useSelector((state: RootState) => selectChatName(state, apiChatId));
   const chatName = threadId ? t`Thread` : (storedName ?? t`Loading...`);
 
@@ -264,7 +264,7 @@ export default function ChatThread() {
         is_deleted: replyingTo.is_deleted,
       } : undefined,
       client_generated_id: clientGeneratedId,
-      sender: { uid: getCurrentUserId(), name: null },
+      sender: { uid: currentUserId || 0, name: null },
       chat_id: apiChatId,
       created_at: new Date().toISOString(),
       is_edited: false,
@@ -305,11 +305,11 @@ export default function ChatThread() {
           message: { ...optimistic, is_deleted: true }
         }));
       });
-  }, [apiChatId, storeChatId, threadId, dispatch, showToast, replyingTo, editingMessage]);
+  }, [apiChatId, storeChatId, threadId, dispatch, showToast, replyingTo, editingMessage, currentUserId]);
 
   const onClickChatItem = useCallback((messageIndex: number) => {
     const msg = messages[messageIndex];
-    const isOwn = msg.sender.uid === getCurrentUserId();
+    const isOwn = msg.sender.uid === currentUserId;
     presentActionSheet({
       buttons: [
         {
@@ -430,7 +430,7 @@ export default function ChatThread() {
                 <ChatBubble
                   senderName={msg.sender.name ?? `User ${msg.sender.uid}`}
                   message={msg.is_deleted ? t`[Deleted]` : (msg.message ?? '')}
-                  isSent={msg.sender.uid === getCurrentUserId()}
+                  isSent={msg.sender.uid === currentUserId}
                   avatarColor={colorForUser(msg.sender.uid)}
                   onReply={() => setReplyingTo(msg)}
                   onReplyTap={msg.reply_to_message && !msg.reply_to_message?.is_deleted ? () => jumpToMessage(msg.reply_to_message!.id) : undefined}

@@ -3,7 +3,7 @@
  * Dispatches incoming messages to the Redux store (add or confirm pending). Same host as REST so Vite proxy works in dev.
  */
 
-import { getCurrentUserId } from '@/js/current-user';
+import apiClient from '@/api/client';
 import store from '@/store/index';
 import { addMessage, confirmPendingMessage, updateMessageInStore } from '@/store/messagesSlice';
 import { setWsConnected } from '@/store/connectionSlice';
@@ -18,10 +18,9 @@ const PING_JSON = JSON.stringify({ type: 'ping' });
 let ws: WebSocket | null = null;
 let reconnectTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
-function getWsUrl(uid: number): string {
-  const protocol = typeof location !== 'undefined' && location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const host = typeof location !== 'undefined' ? location.host : 'localhost';
-  return `${protocol}//${host}${WS_PATH}?uid=${uid}`;
+export async function requestWsTicket(): Promise<string> {
+  const res = await apiClient.get<{ ticket: string }>('/ws/ticket');
+  return res.data.ticket;
 }
 
 let pingIntervalId: ReturnType<typeof setInterval> | null = null;
@@ -157,65 +156,78 @@ export function initWebSocket(): void {
     ws = null;
   }
 
-  const uid = getCurrentUserId();
-  const url = getWsUrl(uid);
-  const socket = new WebSocket(url);
-  ws = socket;
+  requestWsTicket().then(ticket => {
+    // If we've already scheduled a reconnect while waiting for the ticket, abort
+    if (reconnectTimeoutId != null) return;
 
-  socket.onopen = () => {
-    clearReconnectTimeout();
-    store.dispatch(setWsConnected(true));
-    console.log('ws opened');
-    pingIntervalId = setInterval(() => {
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.send(PING_JSON);
-      }
-    }, PING_INTERVAL_MS);
-  };
+    const protocol = typeof location !== 'undefined' && location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = typeof location !== 'undefined' ? location.host : 'localhost';
+    const url = `${protocol}//${host}${WS_PATH}`;
 
-  socket.onmessage = (event) => {
-    if (typeof event.data !== 'string') return;
-    try {
-      const msg = JSON.parse(event.data) as { type?: string; payload?: unknown };
-      if (msg.type === 'pong') {
-        // Keepalive acknowledged
-      } else if (msg.type === 'message' && msg.payload != null) {
-        handleWsMessage(msg.payload);
-      } else if ((msg.type === 'message_deleted' || msg.type === 'message_updated') && msg.payload != null) {
-        const message = normalizePayload(msg.payload);
-        if (message) {
-          // Update in all chat states that start with this chat's ID (main chat and threads)
-          const state = store.getState();
-          const chatPrefix = `${message.chat_id}`;
-          for (const key of Object.keys(state.messages.chats)) {
-            if (key === chatPrefix || key.startsWith(`${chatPrefix}_thread_`)) {
-              store.dispatch(updateMessageInStore({
-                chatId: key,
-                messageId: message.id,
-                message,
-              }));
+    const socket = new WebSocket(url);
+    ws = socket;
+
+    socket.onopen = () => {
+      // Send the auth ticket immediately upon connection
+      socket.send(JSON.stringify({ type: 'auth', ticket }));
+
+      clearReconnectTimeout();
+      store.dispatch(setWsConnected(true));
+      console.log('ws opened');
+      pingIntervalId = setInterval(() => {
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.send(PING_JSON);
+        }
+      }, PING_INTERVAL_MS);
+    };
+
+    socket.onmessage = (event) => {
+      if (typeof event.data !== 'string') return;
+      try {
+        const msg = JSON.parse(event.data) as { type?: string; payload?: unknown };
+        if (msg.type === 'pong') {
+          // Keepalive acknowledged
+        } else if (msg.type === 'message' && msg.payload != null) {
+          handleWsMessage(msg.payload);
+        } else if ((msg.type === 'message_deleted' || msg.type === 'message_updated') && msg.payload != null) {
+          const message = normalizePayload(msg.payload);
+          if (message) {
+            // Update in all chat states that start with this chat's ID (main chat and threads)
+            const state = store.getState();
+            const chatPrefix = `${message.chat_id}`;
+            for (const key of Object.keys(state.messages.chats)) {
+              if (key === chatPrefix || key.startsWith(`${chatPrefix}_thread_`)) {
+                store.dispatch(updateMessageInStore({
+                  chatId: key,
+                  messageId: message.id,
+                  message,
+                }));
+              }
             }
           }
         }
+      } catch {
+        // ignore non-JSON or invalid messages
       }
-    } catch {
-      // ignore non-JSON or invalid messages
+    };
+
+    function markDisconnected(): void {
+      if (ws !== socket) return;
+      clearPingInterval();
+      store.dispatch(setWsConnected(false));
+      ws = null;
+      scheduleReconnect();
     }
-  };
 
-  function markDisconnected(): void {
-    if (ws !== socket) return;
-    clearPingInterval();
-    store.dispatch(setWsConnected(false));
-    ws = null;
+    socket.onerror = () => {
+      markDisconnected();
+    };
+
+    socket.onclose = () => {
+      markDisconnected();
+    };
+  }).catch(err => {
+    console.error('Failed to get ws ticket:', err);
     scheduleReconnect();
-  }
-
-  socket.onerror = () => {
-    markDisconnected();
-  };
-
-  socket.onclose = () => {
-    markDisconnected();
-  };
+  });
 }

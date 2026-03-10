@@ -67,6 +67,7 @@ pub(crate) struct AppState {
     pub discuz_db: Option<Pool<ConnectionManager<MysqlConnection>>>,
     pub discuz_cookie_prefix: String,
     pub discuz_authkey: String,
+    pub ws_secret: [u8; 32],
 }
 
 #[tokio::main]
@@ -128,6 +129,12 @@ async fn main() {
         discuz_authkey = std::env::var("DISCUZ_AUTHKEY").expect("DISCUZ_AUTHKEY must be set");
     }
 
+    let mut ws_secret = [0u8; 32];
+    let u1 = uuid::Uuid::new_v4();
+    let u2 = uuid::Uuid::new_v4();
+    ws_secret[0..16].copy_from_slice(u1.as_bytes());
+    ws_secret[16..32].copy_from_slice(u2.as_bytes());
+
     let state = AppState {
         db: pool.clone(),
         id_gen: Arc::new(utils::ids::new_generator()),
@@ -141,6 +148,7 @@ async fn main() {
         discuz_db,
         discuz_cookie_prefix,
         discuz_authkey,
+        ws_secret,
     };
 
     let registry = state.ws_registry.clone();
@@ -225,13 +233,17 @@ async fn main() {
                 .latency_unit(LatencyUnit::Micros),
         );
 
+    let ws_routes = Router::new()
+        .route("/", get(handlers::ws::ws_handler))
+        .route("/ticket", get(handlers::ws::get_ws_ticket));
+
     let app = Router::new()
         .route("/health", get(health))
-        .route("/ws", get(handlers::ws::ws_handler))
+        .nest("/ws", ws_routes)
         .nest("/chats", chats_routes)
         .nest("/group", group_routes)
-        .nest("/api/push", push_routes)
-        .nest("/api/users", users_routes)
+        .nest("/push", push_routes)
+        .nest("/users", users_routes)
         .nest("/attachments", attachments_routes)
         .layer(RequestBodyLimitLayer::new(256 * 1024))
         .layer(

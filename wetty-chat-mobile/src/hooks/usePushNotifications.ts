@@ -64,7 +64,7 @@ export function usePushNotifications() {
             console.log('Service Worker ready');
 
             // Get VAPID public key
-            const vapidRes = await apiClient.get('/api/push/vapid-public-key');
+            const vapidRes = await apiClient.get('/push/vapid-public-key');
             const publicKey = urlBase64ToUint8Array(vapidRes.data.public_key);
 
             // Subscribe to PushManager
@@ -82,7 +82,7 @@ export function usePushNotifications() {
 
             // Send to backend
             try {
-                await apiClient.post('/api/push/subscribe', {
+                await apiClient.post('/push/subscribe', {
                     endpoint: subscription.endpoint,
                     keys: {
                         p256dh: p256dhUrlSafe,
@@ -118,7 +118,7 @@ export function usePushNotifications() {
             if (subscription) {
                 // Attempt to notify backend
                 try {
-                    await apiClient.post('/api/push/unsubscribe', {
+                    await apiClient.post('/push/unsubscribe', {
                         endpoint: subscription.endpoint
                     });
                 } catch (err) {

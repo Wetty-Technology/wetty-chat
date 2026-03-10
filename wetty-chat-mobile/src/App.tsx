@@ -40,7 +40,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (import.meta.env.DEV) {
-      setUser({ uid: getCurrentUserId(), username: 'Development User' });
+      dispatch(setUser({ uid: getCurrentUserId(), username: 'Development User' }));
     }
     dispatch(fetchCurrentUser());
   }, [dispatch]);
