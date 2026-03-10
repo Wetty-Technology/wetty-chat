@@ -17,16 +17,16 @@ import {
   useIonAlert,
   useIonActionSheet,
 } from '@ionic/react';
-import { useParams, useHistory } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import { getMembers, addMember, removeMember, updateMemberRole, type MemberResponse } from '@/api/chats';
 import { getCurrentUserId } from '@/js/current-user';
+import { FeatureGate } from '@/components/FeatureGate';
 
 export default function ChatMembersPage() {
   const { id } = useParams<{ id: string }>();
   const chatId = id ? String(id) : '';
-  const history = useHistory();
   const currentUserId = getCurrentUserId();
 
   const [presentToast] = useIonToast();
@@ -142,6 +142,7 @@ export default function ChatMembersPage() {
     });
   };
 
+  /*
   const handleLeaveGroup = () => {
     presentAlert({
       header: t`Leave Group`,
@@ -165,6 +166,7 @@ export default function ChatMembersPage() {
       ],
     });
   };
+  */
 
   const handleMemberTap = (member: MemberResponse) => {
     if (!isAdmin || member.uid === currentUserId) return;
@@ -201,20 +203,20 @@ export default function ChatMembersPage() {
           </div>
         ) : (
           <>
-            {isAdmin && (
+            <FeatureGate>
               <div style={{ padding: '16px' }}>
                 <IonButton expand="block" onClick={handleAddMember}>
                   <Trans>Add Member</Trans>
                 </IonButton>
               </div>
-            )}
+            </FeatureGate>
             <IonList>
               {members.map((member) => (
                 <IonItem
                   key={member.uid}
                   button={isAdmin && member.uid !== currentUserId}
                   detail={false}
-                  onClick={() => handleMemberTap(member)}
+                  onClick={() => import.meta.env.DEV && handleMemberTap(member)}
                 >
                   <IonLabel>
                     {member.username || t`User ${member.uid}`}
@@ -228,11 +230,11 @@ export default function ChatMembersPage() {
                 </IonItem>
               ))}
             </IonList>
-            <div style={{ padding: '16px' }}>
+            {/* <div style={{ padding: '16px' }}>
               <IonButton expand="block" color="danger" onClick={handleLeaveGroup}>
                 <Trans>Leave Group</Trans>
               </IonButton>
-            </div>
+            </div> */}
           </>
         )}
       </IonContent>

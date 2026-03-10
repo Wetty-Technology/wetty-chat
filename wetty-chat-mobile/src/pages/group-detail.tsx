@@ -16,6 +16,7 @@ import {
 } from '@ionic/react';
 import { useParams } from 'react-router-dom';
 import { getChatDetails, addMember, getMembers, type ChatDetailResponse, type MemberResponse } from '@/api/chats';
+import { FeatureGate } from '@/components/FeatureGate';
 
 function groupDisplayName(detail: ChatDetailResponse | null, id: string): string {
   if (detail?.name?.trim()) return detail.name.trim();
@@ -32,8 +33,6 @@ function initials(detail: ChatDetailResponse | null): string {
   if (name && name.length > 0) return name.charAt(0).toUpperCase();
   return '?';
 }
-
-const isDev = import.meta.env.DEV;
 
 export default function GroupDetail() {
   const { id } = useParams<{ id: string }>();
@@ -190,9 +189,11 @@ export default function GroupDetail() {
               <h3 style={{ margin: '0 0 8px' }}>Members</h3>
             </div>
             <IonList>
-              {isDev && <IonItem button onClick={handleAddMember}>
-                <IonLabel color="primary">Add Member</IonLabel>
-              </IonItem>}
+              <FeatureGate>
+                <IonItem button onClick={handleAddMember}>
+                  <IonLabel color="primary">Add Member</IonLabel>
+                </IonItem>
+              </FeatureGate>
               {members.map((m) => (
                 <IonItem key={m.uid}>
                   <IonLabel>

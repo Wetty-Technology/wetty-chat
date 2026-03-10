@@ -29,6 +29,8 @@ setupIonicReact({
   swipeBackEnabled: false
 })
 
+console.log(`Running in ${import.meta.env.MODE} mode, dev=${import.meta.env.DEV}`);
+
 createRoot(document.getElementById('root')!).render(
   <Provider store={store}>
     <I18nProvider i18n={i18n}>

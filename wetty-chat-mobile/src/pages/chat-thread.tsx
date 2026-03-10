@@ -50,6 +50,7 @@ import { ChatBubble } from '@/components/chat/ChatBubble';
 import { MessageComposeBar } from '@/components/chat/MessageComposeBar';
 import './chat-thread.scss';
 import { t } from '@lingui/core/macro';
+import { FeatureGate } from '@/components/FeatureGate';
 
 function generateClientId(): string {
   return `cg_${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -365,9 +366,11 @@ export default function ChatThread() {
             <IonButton onClick={() => history.push(`/chats/chat/${apiChatId}/members`)}>
               <IonIcon slot="icon-only" icon={people} />
             </IonButton>
-            <IonButton onClick={() => history.push(`/chats/chat/${apiChatId}/settings`)}>
-              <IonIcon slot="icon-only" icon={settings} />
-            </IonButton>
+            <FeatureGate>
+              <IonButton onClick={() => history.push(`/chats/chat/${apiChatId}/settings`)}>
+                <IonIcon slot="icon-only" icon={settings} />
+              </IonButton>
+            </FeatureGate>
           </IonButtons>
         </IonToolbar>
       </IonHeader>

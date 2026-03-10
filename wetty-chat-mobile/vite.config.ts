@@ -37,7 +37,6 @@ export default defineConfig({
         name: 'Wetty Chat',
         short_name: 'W Chat',
         description: 'Wetty Chat',
-        start_url: 'https://wchat.i386.mov',
         theme_color: '#ffffff',
         background_color: '#ffffff',
         display: 'standalone',

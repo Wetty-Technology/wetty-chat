@@ -26,6 +26,7 @@ import { getChats, type ChatListItem } from '@/api/chats';
 import { setChatsMeta } from '@/store/chatsSlice';
 import './chats.scss';
 import { Trans } from '@lingui/react/macro';
+import { FeatureGate } from '@/components/FeatureGate';
 
 function formatLastActivity(isoString: string | null): string {
   if (!isoString) return '';
@@ -109,13 +110,14 @@ export default function Chats() {
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            <IonButton>Edit</IonButton>
           </IonButtons>
           <IonTitle><Trans>Chats</Trans></IonTitle>
           <IonButtons slot="end">
-            <IonButton routerLink="/chats/new">
-              <IonIcon slot="icon-only" icon={createOutline} />
-            </IonButton>
+            <FeatureGate>
+              <IonButton routerLink="/chats/new">
+                <IonIcon slot="icon-only" icon={createOutline} />
+              </IonButton>
+            </FeatureGate>
           </IonButtons>
         </IonToolbar>
       </IonHeader>

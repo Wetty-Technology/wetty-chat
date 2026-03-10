@@ -24,13 +24,13 @@ import LanguagePage from '@/pages/settings/language';
 import GroupDetailPage from '@/pages/group-detail';
 import NotFoundPage from '@/pages/not-found';
 import ComponentDemoPage from '@/pages/component-demo';
+import { FeatureGate } from '@/components/FeatureGate';
 
 import './app.scss';
 import { Trans } from '@lingui/react/macro';
 
 setupIonicReact();
 
-const isDevMode = import.meta.env.DEV;
 
 const App: React.FC = () => {
   const wsConnected = useSelector((state: RootState) => state.connection.wsConnected);
@@ -52,7 +52,9 @@ const App: React.FC = () => {
             <Route path="/chats/chat/:id/settings" exact component={ChatSettingsPage} />
             <Route path="/chats/chat/:id/members" exact component={ChatMembersPage} />
             <Route path="/chats/chat/:id/details" exact component={GroupDetailPage} />
-            {isDevMode && <Route path="/demo" exact component={ComponentDemoPage} />}
+            <FeatureGate>
+              <Route path="/demo" exact component={ComponentDemoPage} />
+            </FeatureGate>
             <Route path="/settings/language" exact component={LanguagePage} />
             <Route path="/settings" exact component={SettingsPage} />
             <Redirect exact from="/" to="/chats" />
@@ -63,10 +65,12 @@ const App: React.FC = () => {
               <IonIcon icon={chatbubbles} />
               <IonLabel><Trans>Chats</Trans></IonLabel>
             </IonTabButton>
-            <IonTabButton tab="demo" href="/demo">
-              <IonIcon icon={flask} />
-              <IonLabel>Demo</IonLabel>
-            </IonTabButton>
+            <FeatureGate>
+              <IonTabButton tab="demo" href="/demo">
+                <IonIcon icon={flask} />
+                <IonLabel>Demo</IonLabel>
+              </IonTabButton>
+            </FeatureGate>
             <IonTabButton tab="settings" href="/settings">
               <IonIcon icon={settings} />
               <IonLabel><Trans>Settings</Trans></IonLabel>
