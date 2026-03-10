@@ -73,6 +73,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   bool _isLoading = true;
   bool _isLoadingMore = false;
   String? _errorMessage;
+  bool _showScrollToBottom = false;
   late ScrollController _scrollController;
   final TextEditingController _textController = TextEditingController();
   static const int _messagesSize = 11;
@@ -95,12 +96,26 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   }
 
   void _onScroll() {
-    if (!_hasMore || _isLoadingMore || _isLoading || _messages.isEmpty) return;
     final pos = _scrollController.position;
+    // Show jump-to-bottom button when scrolled away from newest messages.
+    final shouldShow = pos.pixels > 300;
+    if (shouldShow != _showScrollToBottom) {
+      setState(() => _showScrollToBottom = shouldShow);
+    }
+    if (!_hasMore || _isLoadingMore || _isLoading || _messages.isEmpty) return;
     // In a reversed list, maxScrollExtent is the TOP (oldest messages).
     if (pos.pixels >= pos.maxScrollExtent - 200) {
       _loadMoreMessages();
     }
+  }
+
+  void _scrollToBottom() {
+    if (!_scrollController.hasClients) return;
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
   }
 
   Future<void> _loadMessages() async {
@@ -191,9 +206,23 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     return Scaffold(
       appBar: AppBar(title: Text(chatName)),
       body: Column(
-        // messages part and send message part
         children: [
-          Expanded(child: _buildBody()),
+          Expanded(
+            child: Stack(
+              children: [
+                _buildBody(),
+                if (_showScrollToBottom)
+                  Positioned(
+                    right: 16,
+                    bottom: 16,
+                    child: FloatingActionButton.small(
+                      onPressed: _scrollToBottom,
+                      child: const Icon(Icons.arrow_downward),
+                    ),
+                  ),
+              ],
+            ),
+          ),
           _buildInput(),
         ],
       ),
@@ -234,14 +263,15 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       reverse: true,
       itemCount: itemCount,
       itemBuilder: (context, index) {
-        // _messages is ordered newest-first (index 0 = newest).
-        // In reverse mode, index 0 is at the visual bottom.
+        // loading more messages indicator
         if (showTopLoader && index == itemCount - 1) {
           return const Padding(
             padding: EdgeInsets.symmetric(vertical: 16),
             child: Center(child: CircularProgressIndicator()),
           );
         }
+        // _messages is ordered newest-first (index 0 = newest).
+        // In reverse mode, index 0 is at the visual bottom.
         final msg = _messages[index];
         return _MessageRow(message: msg);
       },
@@ -251,7 +281,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   // send message: input field and send button
   Widget _buildInput() {
     return Padding(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
       child: Row(
         children: [
           Expanded(
