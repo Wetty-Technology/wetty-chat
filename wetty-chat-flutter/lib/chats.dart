@@ -134,36 +134,38 @@ class _ChatPageState extends State<ChatPage> {
       return const Center(child: Text('No chats yet'));
     }
     return ListView.separated(
+      controller: _scrollController,
       itemCount: chats.length,
       separatorBuilder: (_, _) => const Divider(height: 1),
       itemBuilder: (context, index) {
         final chat = chats[index];
-        if (chat.name == null || chat.name!.isEmpty) {
-
-        }
         final name = chat.name?.isNotEmpty == true
             ? chat.name!
             : 'Chat ${chat.id}';
-        String? subtitle;
+        // Format date
+        String? dateText;
         if (chat.lastMessageAt != null) {
           try {
-            // print("chat.lastMessageAt: ${chat.lastMessageAt}");
             final dt = DateTime.parse(chat.lastMessageAt!);
             final now = DateTime.now();
             if (dt.day == now.day &&
                 dt.month == now.month &&
                 dt.year == now.year) {
-              subtitle = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+              dateText =
+                  '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
             } else {
-              subtitle = '${dt.month}/${dt.day}';
+              dateText = '${dt.month}/${dt.day}';
             }
           } catch (_) {
-            subtitle = chat.lastMessageAt;
+            dateText = chat.lastMessageAt;
           }
         }
-        return ListTile(
-          title: Text(name),
-          subtitle: subtitle != null ? Text(subtitle) : null,
+        final senderName = chat.lastMessageSenderName;
+        final lastMsg = chat.lastMessagePreview;
+        final hasMessage = (senderName != null && senderName.isNotEmpty) ||
+            (lastMsg != null && lastMsg.isNotEmpty);
+
+        return InkWell(
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(
@@ -171,6 +173,74 @@ class _ChatPageState extends State<ChatPage> {
                 chatId: chat.id,
                 chatName: chat.name ?? 'Chat ${chat.id}',
               ),
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                // Avatar
+                CircleAvatar(
+                  radius: 24,
+                  child: Text(
+                    name.isNotEmpty ? name[0].toUpperCase() : '?',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Chat info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Top row: chat name + date
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              name,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (dateText != null)
+                            Text(
+                              dateText,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.color,
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      // Bottom row: sender + last message
+                      if (hasMessage)
+                        Text(
+                          senderName != null && senderName.isNotEmpty
+                              ? '$senderName: ${lastMsg ?? ''}'
+                              : lastMsg ?? '',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.color,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         );
