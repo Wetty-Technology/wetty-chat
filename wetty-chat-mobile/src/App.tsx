@@ -6,6 +6,7 @@ import {
   IonTabButton,
   IonIcon,
   IonLabel,
+  IonToast,
   setupIonicReact,
 } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
@@ -30,13 +31,26 @@ import ComponentDemoPage from '@/pages/component-demo';
 import './app.scss';
 import { Trans } from '@lingui/react/macro';
 import { getCurrentUserId } from './js/current-user';
+import { useRegisterSW } from 'virtual:pwa-register/react';
+import { t } from '@lingui/core/macro';
 
 setupIonicReact();
-
 
 const App: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const wsConnected = useSelector((state: RootState) => state.connection.wsConnected);
+
+  const {
+    needRefresh: [needRefresh, setNeedRefresh],
+    updateServiceWorker,
+  } = useRegisterSW({
+    onRegistered(r: any) {
+      console.log('SW Registered: ', r);
+    },
+    onRegisterError(error: any) {
+      console.log('SW registration error', error);
+    },
+  });
 
   useEffect(() => {
     if (import.meta.env.DEV) {
@@ -74,9 +88,27 @@ const App: React.FC = () => {
 
   return (
     <IonApp>
+      <IonToast
+        isOpen={needRefresh}
+        message={t`A new version of the app is available!`}
+        position="bottom"
+        duration={0}
+        buttons={[
+          {
+            text: t`Update Now`,
+            role: 'info',
+            handler: () => updateServiceWorker(true)
+          },
+          {
+            text: t`Dismiss`,
+            role: 'cancel',
+            handler: () => setNeedRefresh(false)
+          }
+        ]}
+      />
       {!wsConnected && (
         <div className="ws-disconnected-banner">
-          Disconnected. Retrying…
+          <Trans>Disconnected. Retrying…</Trans>
         </div>
       )}
       <IonReactRouter basename={import.meta.env.BASE_URL}>

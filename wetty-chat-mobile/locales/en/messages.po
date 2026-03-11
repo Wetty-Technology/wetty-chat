@@ -19,6 +19,10 @@ msgstr ""
 msgid "[Deleted]"
 msgstr "[Deleted]"
 
+#: src/App.tsx:93
+msgid "A new version of the app is available!"
+msgstr "A new version of the app is available!"
+
 #: src/pages/chat-members.tsx:72
 msgid "Add"
 msgstr "Add"
@@ -36,7 +40,7 @@ msgstr "Are you sure you want to delete this message?"
 #~ msgid "Are you sure you want to leave this group?"
 #~ msgstr "Are you sure you want to leave this group?"
 
-#: src/pages/settings.tsx:61
+#: src/pages/settings.tsx:67
 #: src/pages/settings/language.tsx:57
 msgid "Auto"
 msgstr "Auto"
@@ -59,7 +63,7 @@ msgstr "Cancel"
 msgid "Chat {0}"
 msgstr "Chat {0}"
 
-#: src/App.tsx:52
+#: src/App.tsx:66
 #: src/pages/chats.tsx:148
 msgid "Chats"
 msgstr "Chats"
@@ -92,6 +96,14 @@ msgstr "Demote to Member"
 #: src/pages/chat-settings.tsx:128
 msgid "Description"
 msgstr "Description"
+
+#: src/App.tsx:111
+msgid "Disconnected. Retrying…"
+msgstr "Disconnected. Retrying…"
+
+#: src/App.tsx:103
+msgid "Dismiss"
+msgstr "Dismiss"
 
 #: src/pages/chat-thread.tsx:348
 msgid "Edit"
@@ -185,6 +197,10 @@ msgstr "Failed to send"
 msgid "Failed to update role"
 msgstr "Failed to update role"
 
+#: src/pages/settings.tsx:61
+msgid "General"
+msgstr "General"
+
 #: src/pages/chat-members.tsx:197
 msgid "Group Members"
 msgstr "Group Members"
@@ -201,7 +217,7 @@ msgstr "Group Settings"
 msgid "Invalid user ID"
 msgstr "Invalid user ID"
 
-#: src/pages/settings.tsx:60
+#: src/pages/settings.tsx:66
 msgid "Language"
 msgstr "Language"
 
@@ -319,8 +335,8 @@ msgstr "Save Settings"
 msgid "Saving..."
 msgstr "Saving..."
 
-#: src/App.tsx:59
-#: src/pages/settings.tsx:53
+#: src/App.tsx:73
+#: src/pages/settings.tsx:56
 msgid "Settings"
 msgstr "Settings"
 
@@ -343,6 +359,10 @@ msgstr "Thread"
 #: src/pages/chat-thread.tsx:96
 msgid "Today"
 msgstr "Today"
+
+#: src/App.tsx:98
+msgid "Update Now"
+msgstr "Update Now"
 
 #. placeholder {0}: member.uid
 #: src/pages/chat-members.tsx:94

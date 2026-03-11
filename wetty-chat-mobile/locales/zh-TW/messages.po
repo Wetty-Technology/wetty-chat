@@ -19,6 +19,10 @@ msgstr ""
 msgid "[Deleted]"
 msgstr "[已刪除]"
 
+#: src/App.tsx:93
+msgid "A new version of the app is available!"
+msgstr "發現新版本！"
+
 #: src/pages/chat-members.tsx:72
 msgid "Add"
 msgstr "新增"
@@ -36,7 +40,7 @@ msgstr "確定要刪除這則訊息嗎？"
 #~ msgid "Are you sure you want to leave this group?"
 #~ msgstr "確定要退出該群組嗎？"
 
-#: src/pages/settings.tsx:61
+#: src/pages/settings.tsx:67
 #: src/pages/settings/language.tsx:57
 msgid "Auto"
 msgstr "自動"
@@ -59,7 +63,7 @@ msgstr "取消"
 msgid "Chat {0}"
 msgstr "聊天 {0}"
 
-#: src/App.tsx:52
+#: src/App.tsx:66
 #: src/pages/chats.tsx:148
 msgid "Chats"
 msgstr "聊天"
@@ -92,6 +96,14 @@ msgstr "降級為成員"
 #: src/pages/chat-settings.tsx:128
 msgid "Description"
 msgstr "描述"
+
+#: src/App.tsx:111
+msgid "Disconnected. Retrying…"
+msgstr "已斷線。從新連線中…"
+
+#: src/App.tsx:103
+msgid "Dismiss"
+msgstr "忽略"
 
 #: src/pages/chat-thread.tsx:348
 msgid "Edit"
@@ -185,6 +197,10 @@ msgstr "傳送失敗"
 msgid "Failed to update role"
 msgstr "更新角色失敗"
 
+#: src/pages/settings.tsx:61
+msgid "General"
+msgstr "一般"
+
 #: src/pages/chat-members.tsx:197
 msgid "Group Members"
 msgstr "群組成員"
@@ -201,7 +217,7 @@ msgstr "群組設定"
 msgid "Invalid user ID"
 msgstr "無效的使用者 ID"
 
-#: src/pages/settings.tsx:60
+#: src/pages/settings.tsx:66
 msgid "Language"
 msgstr "語言"
 
@@ -319,8 +335,8 @@ msgstr "儲存設定"
 msgid "Saving..."
 msgstr "儲存中..."
 
-#: src/App.tsx:59
-#: src/pages/settings.tsx:53
+#: src/App.tsx:73
+#: src/pages/settings.tsx:56
 msgid "Settings"
 msgstr "設定"
 
@@ -343,6 +359,10 @@ msgstr "話題"
 #: src/pages/chat-thread.tsx:96
 msgid "Today"
 msgstr "今天"
+
+#: src/App.tsx:98
+msgid "Update Now"
+msgstr "立即更新"
 
 #. placeholder {0}: member.uid
 #: src/pages/chat-members.tsx:94
