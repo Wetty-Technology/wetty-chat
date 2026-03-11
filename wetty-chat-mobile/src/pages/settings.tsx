@@ -9,8 +9,10 @@ import {
   IonItem,
   IonLabel,
   IonInput,
-  IonButton,
   useIonToast,
+  IonListHeader,
+  IonIcon,
+  IonNote,
 } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
 import { useSelector } from 'react-redux';
@@ -22,6 +24,7 @@ import { FeatureGate } from '@/components/FeatureGate';
 
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { t } from '@lingui/core/macro';
+import { language, codeWorking, notifications, informationCircle, logIn, logOut } from 'ionicons/icons';
 
 export default function Settings() {
   const currentUid = useSelector((state: RootState) => state.user.uid);
@@ -53,51 +56,79 @@ export default function Settings() {
           <IonTitle><Trans>Settings</Trans></IonTitle>
         </IonToolbar>
       </IonHeader>
-      <IonContent>
-        <div style={{ padding: '16px' }}>
-          <IonList>
-            <IonItem button onClick={() => history.push('/settings/language')}>
-              <IonLabel><Trans>Language</Trans></IonLabel>
-              <span slot="end">{{ 'en': 'English', 'zh-CN': '简体中文', 'zh-TW': '繁體中文' }[locale!] ?? t`Auto`}</span>
-            </IonItem>
-            <FeatureGate>
-              <IonItem>
-                <IonLabel position="stacked">User ID</IonLabel>
-                <IonInput
-                  type="number"
-                  placeholder="e.g. 1"
-                  value={uidInput}
-                  onIonInput={(e) => setUidInput(e.detail.value ?? '')}
-                />
-              </IonItem>
-              <IonItem>
-                <IonButton onClick={handleSave}>
-                  Save
-                </IonButton>
-              </IonItem>
-            </FeatureGate>
+      <IonContent color="light" className="ion-no-padding">
+        <IonListHeader>
+          <IonLabel><Trans>General</Trans></IonLabel>
+        </IonListHeader>
+        <IonList inset>
+          <IonItem button detail={true} onClick={() => history.push('/settings/language')}>
+            <IonIcon aria-hidden="true" icon={language} slot="start" color="primary" />
+            <IonLabel><Trans>Language</Trans></IonLabel>
+            <IonNote slot="end" color="medium">{{ 'en': 'English', 'zh-CN': '简体中文', 'zh-TW': '繁體中文' }[locale!] ?? t`Auto`}</IonNote>
+          </IonItem>
+        </IonList>
 
-            <IonItem lines="none" style={{ marginTop: '16px' }}>
-              <IonLabel color="medium"><h2>Push Notifications</h2></IonLabel>
-            </IonItem>
+        <FeatureGate>
+          <IonListHeader>
+            <IonLabel>Developer</IonLabel>
+          </IonListHeader>
+          <IonList inset={true}>
             <IonItem>
-              <IonLabel>
-                <p>Permission: {permission}</p>
-                <p>Status: {isSubscribed ? 'Subscribed' : 'Not Subscribed'}</p>
-              </IonLabel>
+              <IonIcon aria-hidden="true" icon={codeWorking} slot="start" color="medium" />
+              <IonInput
+                label="User ID"
+                type="number"
+                placeholder="e.g. 1"
+                value={uidInput}
+                onIonInput={(e) => setUidInput(e.detail.value ?? '')}
+                className="ion-text-right"
+              />
             </IonItem>
-            <IonItem lines="none">
-              <IonButton onClick={subscribeToPush} disabled={loading || isSubscribed}>
-                Subscribe
-              </IonButton>
-              <IonButton onClick={unsubscribeFromPush} disabled={loading || !isSubscribed} color="danger">
-                Unsubscribe
-              </IonButton>
+            <IonItem button onClick={handleSave} detail={false}>
+              <IonLabel color="primary">Save</IonLabel>
             </IonItem>
-
           </IonList>
-        </div>
+        </FeatureGate>
+
+        <IonListHeader>
+          <IonLabel>Push Notifications</IonLabel>
+        </IonListHeader>
+        <IonList inset={true}>
+          <IonItem>
+            <IonIcon aria-hidden="true" icon={notifications} slot="start" color="tertiary" />
+            <IonLabel>Status</IonLabel>
+            <IonNote slot="end" color="medium">{isSubscribed ? 'Subscribed' : 'Not Subscribed'}</IonNote>
+          </IonItem>
+          {permission !== 'granted' && (
+            <IonItem>
+              <IonLabel>Permission</IonLabel>
+              <IonNote slot="end" color="medium">{permission}</IonNote>
+            </IonItem>
+          )}
+          {!isSubscribed ? (
+            <IonItem button detail={false} onClick={subscribeToPush} disabled={loading || isSubscribed}>
+              <IonIcon aria-hidden="true" icon={logIn} slot="start" color="primary" />
+              <IonLabel color="primary">Subscribe to Push</IonLabel>
+            </IonItem>
+          ) : (
+            <IonItem button detail={false} onClick={unsubscribeFromPush} disabled={loading || !isSubscribed}>
+              <IonIcon aria-hidden="true" icon={logOut} slot="start" color="danger" />
+              <IonLabel color="danger">Unsubscribe</IonLabel>
+            </IonItem>
+          )}
+        </IonList>
+
+        <IonListHeader>
+          <IonLabel>About</IonLabel>
+        </IonListHeader>
+        <IonList inset={true}>
+          <IonItem>
+            <IonIcon aria-hidden="true" icon={informationCircle} slot="start" color="secondary" />
+            <IonLabel>Version</IonLabel>
+            <IonNote slot="end" color="medium" style={{ fontFamily: 'monospace' }}>{__APP_VERSION__}</IonNote>
+          </IonItem>
+        </IonList>
       </IonContent>
-    </IonPage >
+    </IonPage>
   );
 }

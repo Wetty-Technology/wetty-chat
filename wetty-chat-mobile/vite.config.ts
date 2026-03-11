@@ -5,12 +5,27 @@ import { VitePWA } from 'vite-plugin-pwa';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import { defineConfig } from 'vite';
+import { execSync } from 'child_process';
 
 dotenv.config();
 
 const SRC_DIR = path.resolve(__dirname, './src');
 
 const API_PROXY_TARGET = process.env.API_PROXY_TARGET ?? 'http://localhost:3000';
+
+let commitHash = 'development';
+if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV !== 'development') {
+  try {
+    commitHash = execSync('git rev-parse --short HEAD').toString().trim();
+  } catch (e) {
+    commitHash = 'unknown';
+  }
+}
+// Force development if command is dev
+const isDevCommand = process.argv.includes('dev');
+if (isDevCommand) {
+  commitHash = 'development';
+}
 
 const keyPath = path.resolve(__dirname, './dev-certs/key.pem');
 const certPath = path.resolve(__dirname, './dev-certs/cert.pem');
@@ -20,6 +35,9 @@ const httpsConfig = fs.existsSync(keyPath) && fs.existsSync(certPath) ? {
 } : undefined;
 
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(commitHash),
+  },
   plugins: [
     react({
       babel: {
@@ -31,7 +49,7 @@ export default defineConfig({
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'serviceWorker.ts',
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
         name: 'Wetty Chat',
