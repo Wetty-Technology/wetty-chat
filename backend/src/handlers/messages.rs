@@ -238,7 +238,7 @@ async fn attach_replies(
 }
 
 /// GET /chats/:chat_id/messages — List messages in a chat (cursor-based).
-pub async fn get_messages(
+async fn get_messages(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
     Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
@@ -418,7 +418,7 @@ pub struct ThreadIdPath {
 }
 
 /// POST /chats/:chat_id/messages — Send a message.
-pub async fn post_message(
+async fn post_message(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
     Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
@@ -532,7 +532,7 @@ pub async fn post_message(
 }
 
 /// POST /chats/:chat_id/threads/:thread_id/messages — Send a message in a thread.
-pub async fn post_thread_message(
+async fn post_thread_message(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
     Path(ThreadIdPath { chat_id, thread_id }): Path<ThreadIdPath>,
@@ -695,7 +695,7 @@ pub struct UpdateMessageBody {
 }
 
 /// PATCH /chats/:chat_id/messages/:message_id — Edit a message.
-pub async fn patch_message(
+async fn patch_message(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
     Path(MessageIdPath {
@@ -776,7 +776,7 @@ pub async fn patch_message(
 }
 
 /// DELETE /chats/:chat_id/messages/:message_id — Delete a message (soft delete).
-pub async fn delete_message(
+async fn delete_message(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
     Path(MessageIdPath {
@@ -852,7 +852,7 @@ pub async fn delete_message(
 }
 
 /// GET /chats/:chat_id/messages/:message_id — Get a single message.
-pub async fn get_message(
+async fn get_message(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
     Path(MessageIdPath {
@@ -885,4 +885,19 @@ pub async fn get_message(
     let response = messages_vec.into_iter().next().unwrap();
 
     Ok(Json(response))
+}
+
+pub fn router() -> axum::Router<crate::AppState> {
+    axum::Router::new()
+        .route("/", axum::routing::get(get_messages).post(post_message))
+        .route(
+            "/{message_id}",
+            axum::routing::get(get_message)
+                .patch(patch_message)
+                .delete(delete_message),
+        )
+        .route(
+            "/threads/{thread_id}/messages",
+            axum::routing::post(post_thread_message),
+        )
 }

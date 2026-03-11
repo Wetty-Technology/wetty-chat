@@ -26,7 +26,7 @@ pub struct TicketResponse {
     pub ticket: String,
 }
 
-pub async fn get_ws_ticket(
+async fn get_ws_ticket(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
 ) -> Result<Json<TicketResponse>, (axum::http::StatusCode, &'static str)> {
@@ -70,7 +70,7 @@ struct WsMessage {
 const PONG_JSON: &str = r#"{"type":"pong"}"#;
 
 /// Upgrades the connection to WebSocket and initiates auth handshake.
-pub async fn ws_handler(State(state): State<AppState>, ws: WebSocketUpgrade) -> Response {
+async fn ws_handler(State(state): State<AppState>, ws: WebSocketUpgrade) -> Response {
     ws.on_upgrade(move |socket| handle_auth_and_socket(socket, state))
 }
 
@@ -152,4 +152,10 @@ async fn handle_socket(
         }
     }
     registry.remove_connection(uid, conn_id);
+}
+
+pub fn router() -> axum::Router<crate::AppState> {
+    axum::Router::new()
+        .route("/", axum::routing::get(ws_handler))
+        .route("/ticket", axum::routing::get(get_ws_ticket))
 }

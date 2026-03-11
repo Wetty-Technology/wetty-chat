@@ -6,7 +6,7 @@ use crate::utils::auth::CurrentUid;
 use crate::AppState;
 
 /// GET /users/me — Get the current logged in user's information
-pub async fn get_me(
+async fn get_me(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
 ) -> Result<Json<User>, (StatusCode, &'static str)> {
@@ -17,4 +17,8 @@ pub async fn get_me(
         .unwrap_or_else(|| "Unknown".to_string());
 
     Ok(Json(User { uid, username }))
+}
+
+pub fn router() -> axum::Router<crate::AppState> {
+    axum::Router::new().route("/me", axum::routing::get(get_me))
 }

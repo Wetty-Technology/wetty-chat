@@ -59,7 +59,7 @@ pub async fn get_presigned_url(
     Ok(presigned_request.uri().to_string())
 }
 
-pub async fn post_upload_url(
+async fn post_upload_url(
     CurrentUid(_uid): CurrentUid,
     State(state): State<AppState>,
     Json(payload): Json<UploadUrlRequest>,
@@ -145,4 +145,8 @@ pub async fn post_upload_url(
     };
 
     Ok((StatusCode::CREATED, Json(response)))
+}
+
+pub fn router() -> axum::Router<crate::AppState> {
+    axum::Router::new().route("/upload-url", axum::routing::post(post_upload_url))
 }

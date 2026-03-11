@@ -44,7 +44,7 @@ pub struct MemberResponse {
 }
 
 /// Check if user is a member of the chat; return 403 if not.
-pub(crate) fn check_membership(
+pub(super) fn check_membership(
     conn: &mut diesel::r2d2::PooledConnection<
         diesel::r2d2::ConnectionManager<diesel::PgConnection>,
     >,
@@ -98,7 +98,7 @@ fn check_admin_role(
 
 // TODO: deal with pagination later. I think we just return a list of member IDs for now
 /// GET /group/:chat_id/members — List members of a chat.
-pub async fn get_members(
+async fn get_members(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
     Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
@@ -141,7 +141,7 @@ pub async fn get_members(
 }
 
 /// POST /group/:chat_id/members — Add a member to the chat (caller must be admin).
-pub async fn post_add_member(
+async fn post_add_member(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
     Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
@@ -212,7 +212,7 @@ pub async fn post_add_member(
 }
 
 /// DELETE /group/:chat_id/members/:uid — Remove a member from the chat (caller must be admin).
-pub async fn delete_remove_member(
+async fn delete_remove_member(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
     Path(MemberPath {
@@ -262,7 +262,7 @@ pub async fn delete_remove_member(
 }
 
 /// PATCH /group/:chat_id/members/:uid — Update member role (admin only).
-pub async fn patch_member(
+async fn patch_member(
     CurrentUid(requester_uid): CurrentUid,
     State(state): State<AppState>,
     Path(MemberPath {
@@ -331,4 +331,13 @@ pub async fn patch_member(
         joined_at,
         username: names.remove(&target_uid).flatten(),
     }))
+}
+
+pub fn router() -> axum::Router<crate::AppState> {
+    axum::Router::new()
+        .route("/", axum::routing::get(get_members).post(post_add_member))
+        .route(
+            "/{uid}",
+            axum::routing::delete(delete_remove_member).patch(patch_member),
+        )
 }

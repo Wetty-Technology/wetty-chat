@@ -1,10 +1,6 @@
 use axum::body::Body;
 use axum::http::Request;
-use axum::{
-    extract::State,
-    routing::{delete, get, post},
-    Router,
-};
+use axum::{extract::State, routing::get, Router};
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::{MysqlConnection, PgConnection};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
@@ -169,56 +165,7 @@ async fn main() {
     });
 
     // --- Sub-routers ---
-
-    // /chats — chat listing, details, messages, and members
-    let chats_routes = Router::new()
-        .route("/", get(handlers::chats::get_chats))
-        .route(
-            "/{chat_id}",
-            get(handlers::chats::get_chat).patch(handlers::chats::patch_chat),
-        )
-        .route(
-            "/{chat_id}/messages",
-            get(handlers::messages::get_messages).post(handlers::messages::post_message),
-        )
-        .route(
-            "/{chat_id}/messages/{message_id}",
-            get(handlers::messages::get_message)
-                .patch(handlers::messages::patch_message)
-                .delete(handlers::messages::delete_message),
-        )
-        .route(
-            "/{chat_id}/threads/{thread_id}/messages",
-            post(handlers::messages::post_thread_message),
-        );
-
-    // /group — group lifecycle (create, get info)
-    let group_routes = Router::new()
-        .route("/", post(handlers::chats::post_chats))
-        .route("/{chat_id}", get(handlers::chats::get_chat))
-        .route(
-            "/{chat_id}/members",
-            get(handlers::members::get_members).post(handlers::members::post_add_member),
-        )
-        .route(
-            "/{chat_id}/members/{uid}",
-            delete(handlers::members::delete_remove_member).patch(handlers::members::patch_member),
-        );
-
-    // /api/push — push notifications
-    let push_routes = Router::new()
-        .route(
-            "/vapid-public-key",
-            get(handlers::push::get_vapid_public_key),
-        )
-        .route("/subscribe", post(handlers::push::post_subscribe))
-        .route("/unsubscribe", post(handlers::push::post_unsubscribe));
-
-    // /api/users — user info
-    let users_routes = Router::new().route("/me", get(handlers::users::get_me));
-
-    let attachments_routes =
-        Router::new().route("/upload-url", post(handlers::attachments::post_upload_url));
+    // Sub-routers are mounted via handlers::api_router()
 
     let trace_layer = TraceLayer::new_for_http()
         .make_span_with(|request: &Request<Body>| {
@@ -241,18 +188,9 @@ async fn main() {
                 .latency_unit(LatencyUnit::Micros),
         );
 
-    let ws_routes = Router::new()
-        .route("/", get(handlers::ws::ws_handler))
-        .route("/ticket", get(handlers::ws::get_ws_ticket));
-
     let app = Router::new()
         .route("/health", get(health))
-        .nest("/ws", ws_routes)
-        .nest("/chats", chats_routes)
-        .nest("/group", group_routes)
-        .nest("/push", push_routes)
-        .nest("/users", users_routes)
-        .nest("/attachments", attachments_routes)
+        .merge(handlers::api_router())
         .layer(RequestBodyLimitLayer::new(256 * 1024))
         .layer(
             ServiceBuilder::new()

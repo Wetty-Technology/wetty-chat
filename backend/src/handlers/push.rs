@@ -3,7 +3,7 @@ use chrono::Utc;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::models::{NewPushSubscription, PushSubscription};
+use crate::models::NewPushSubscription;
 use crate::schema::push_subscriptions;
 use crate::utils::auth::CurrentUid;
 use crate::utils::ids;
@@ -14,7 +14,7 @@ pub struct VapidPublicKeyResponse {
     pub public_key: String,
 }
 
-pub async fn get_vapid_public_key(State(state): State<AppState>) -> Json<VapidPublicKeyResponse> {
+async fn get_vapid_public_key(State(state): State<AppState>) -> Json<VapidPublicKeyResponse> {
     Json(VapidPublicKeyResponse {
         public_key: state.push_service.vapid_public_key.clone(),
     })
@@ -32,7 +32,7 @@ pub struct SubscribeKeys {
     pub auth: String,
 }
 
-pub async fn post_subscribe(
+async fn post_subscribe(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
     Json(body): Json<SubscribeBody>,
@@ -83,7 +83,7 @@ pub struct UnsubscribeBody {
     pub endpoint: String,
 }
 
-pub async fn post_unsubscribe(
+async fn post_unsubscribe(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
     Json(body): Json<UnsubscribeBody>,
@@ -110,4 +110,14 @@ pub async fn post_unsubscribe(
     })?;
 
     Ok(StatusCode::OK)
+}
+
+pub fn router() -> axum::Router<crate::AppState> {
+    axum::Router::new()
+        .route(
+            "/vapid-public-key",
+            axum::routing::get(get_vapid_public_key),
+        )
+        .route("/subscribe", axum::routing::post(post_subscribe))
+        .route("/unsubscribe", axum::routing::post(post_unsubscribe))
 }
