@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -189,10 +189,22 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         );
       }
     } catch (e) {
+      // Cupertino doesn't have SnackBar — show an alert instead.
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to send: $e')));
+        showCupertinoDialog(
+          context: context,
+          builder: (_) => CupertinoAlertDialog(
+            title: const Text('Error'),
+            content: Text('Failed to send: $e'),
+            actions: [
+              CupertinoDialogAction(
+                isDefaultAction: true,
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
       }
     }
   }
@@ -203,35 +215,60 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     final chatName = widget.chatName.isEmpty
         ? 'Chat ${widget.chatId}'
         : widget.chatName;
-    return Scaffold(
-      appBar: AppBar(title: Text(chatName)),
-      body: Column(
-        children: [
-          Expanded(
-            child: Stack(
-              children: [
-                _buildBody(),
-                if (_showScrollToBottom)
-                  Positioned(
-                    right: 16,
-                    bottom: 16,
-                    child: FloatingActionButton.small(
-                      onPressed: _scrollToBottom,
-                      child: const Icon(Icons.arrow_downward),
+    return CupertinoPageScaffold(
+      navigationBar: CupertinoNavigationBar(middle: Text(chatName)),
+      child: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: Stack(
+                children: [
+                  _buildBody(),
+                  // scroll to bottom button
+                  if (_showScrollToBottom)
+                    Positioned(
+                      right: 16,
+                      bottom: 16,
+                      child: CupertinoButton(
+                        padding: EdgeInsets.zero,
+                        onPressed: _scrollToBottom,
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: CupertinoColors.systemGrey5.resolveFrom(
+                              context,
+                            ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: CupertinoColors.systemGrey.withAlpha(80),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            CupertinoIcons.chevron_down,
+                            size: 20,
+                            color: CupertinoColors.label.resolveFrom(context),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
-          _buildInput(),
-        ],
+            _buildInput(),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: CupertinoActivityIndicator());
     }
     if (_errorMessage != null) {
       return Center(
@@ -242,7 +279,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
             children: [
               Text(_errorMessage!, textAlign: TextAlign.center),
               const SizedBox(height: 16),
-              FilledButton(
+              CupertinoButton.filled(
                 onPressed: _loadMessages,
                 child: const Text('Retry'),
               ),
@@ -268,7 +305,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         if (showTopLoader && index == itemCount - 1) {
           return const Padding(
             padding: EdgeInsets.symmetric(vertical: 16),
-            child: Center(child: CircularProgressIndicator()),
+            child: Center(child: CupertinoActivityIndicator()),
           );
         }
         // _messages is ordered newest-first (index 0 = newest).
@@ -282,21 +319,41 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   // send message: input field and send button
   Widget _buildInput() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _textController,
-              decoration: const InputDecoration(
-                hintText: 'Message',
-                border: OutlineInputBorder(),
-              ),
+      padding: const EdgeInsets.only(top: 10),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(
+              color: CupertinoColors.separator.resolveFrom(context),
+              width: 0.5,
             ),
           ),
-          const SizedBox(width: 8),
-          IconButton(icon: const Icon(Icons.send), onPressed: _sendMessage),
-        ],
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: CupertinoTextField(
+                controller: _textController,
+                placeholder: 'Message',
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: CupertinoColors.systemGrey6.resolveFrom(context),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              onPressed: _sendMessage,
+              child: const Icon(CupertinoIcons.paperplane_fill, size: 32),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -312,24 +369,24 @@ class _MessageRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    // get screen width
     final screenWidth = MediaQuery.of(context).size.width;
     final text = message.message ?? '';
     final senderName = message.sender.name ?? 'User ${message.sender.uid}';
 
+    final isDark = MediaQuery.platformBrightnessOf(context) == Brightness.dark;
+
     // select color based on theme and message sender
     final bubbleColor = _isMe
-        ? theme.colorScheme.primary
-        : (theme.brightness == Brightness.dark
-              ? Colors.grey.shade800
-              : Colors.grey.shade200);
+        ? CupertinoColors.activeBlue
+        : (isDark
+              ? CupertinoColors.systemGrey5.darkColor
+              : CupertinoColors.systemGrey5.color);
     final textColor = _isMe
-        ? theme.colorScheme.onPrimary
-        : theme.textTheme.bodyMedium?.color ?? Colors.black;
+        ? CupertinoColors.white
+        : CupertinoColors.label.resolveFrom(context);
     final metaColor = _isMe
-        ? theme.colorScheme.onPrimary.withAlpha(180)
-        : theme.textTheme.bodySmall?.color ?? Colors.grey;
+        ? CupertinoColors.white.withAlpha(180)
+        : CupertinoColors.secondaryLabel.resolveFrom(context);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
@@ -345,10 +402,10 @@ class _MessageRow extends StatelessWidget {
             decoration: BoxDecoration(
               color: bubbleColor,
               borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(16),
-                topRight: const Radius.circular(16),
-                bottomLeft: Radius.circular(_isMe ? 16 : 4),
-                bottomRight: Radius.circular(_isMe ? 4 : 16),
+                topLeft: const Radius.circular(18),
+                topRight: const Radius.circular(18),
+                bottomLeft: Radius.circular(_isMe ? 18 : 4),
+                bottomRight: Radius.circular(_isMe ? 4 : 18),
               ),
             ),
             child: Column(
@@ -361,9 +418,10 @@ class _MessageRow extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 2),
                     child: Text(
                       senderName,
-                      style: theme.textTheme.bodySmall?.copyWith(
+                      style: TextStyle(
                         fontWeight: FontWeight.w700,
-                        color: Colors.black,
+                        fontSize: 13,
+                        color: CupertinoColors.activeBlue.resolveFrom(context),
                       ),
                     ),
                   ),
@@ -400,20 +458,21 @@ class _MessageRow extends StatelessWidget {
   }
 
   Widget _buildReplyQuote(BuildContext context, ReplyToMessage reply) {
-    final theme = Theme.of(context);
     final replySender = reply.sender.name ?? 'User ${reply.sender.uid}';
     final replyText = reply.isDeleted
         ? 'Message deleted'
         : (reply.message ?? '');
 
+    final isDark = MediaQuery.platformBrightnessOf(context) == Brightness.dark;
+
     final quoteBackgroundColor = _isMe
-        ? theme.colorScheme.primary.withAlpha(50)
-        : (theme.brightness == Brightness.dark
-              ? Colors.grey.shade700
-              : Colors.grey.shade300);
+        ? Color.lerp(CupertinoColors.activeBlue, const Color(0xFF000000), 0.15)!
+        : (isDark
+              ? CupertinoColors.systemGrey4.darkColor
+              : CupertinoColors.systemGrey4.color);
     final quoteBorderColor = _isMe
-        ? theme.colorScheme.onPrimary.withAlpha(150)
-        : theme.colorScheme.primary;
+        ? CupertinoColors.white.withAlpha(150)
+        : CupertinoColors.activeBlue;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
@@ -445,8 +504,8 @@ class _MessageRow extends StatelessWidget {
             style: TextStyle(
               fontSize: 13,
               color: _isMe
-                  ? theme.colorScheme.onPrimary.withAlpha(200)
-                  : theme.textTheme.bodySmall?.color,
+                  ? CupertinoColors.white.withAlpha(200)
+                  : CupertinoColors.secondaryLabel.resolveFrom(context),
               fontStyle: reply.isDeleted ? FontStyle.italic : FontStyle.normal,
             ),
           ),
