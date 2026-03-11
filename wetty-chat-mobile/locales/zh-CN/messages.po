@@ -13,29 +13,30 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
-#: src/pages/chat-thread.tsx:429
-#: src/pages/chat-thread.tsx:445
+#: src/pages/chat-thread.tsx:457
+#: src/pages/chat-thread.tsx:473
+#: src/pages/chats.tsx:77
 msgid "[Deleted]"
 msgstr "[已删除]"
 
-#: src/pages/chat-members.tsx:71
+#: src/pages/chat-members.tsx:72
 msgid "Add"
 msgstr "添加"
 
-#: src/pages/chat-members.tsx:65
-#: src/pages/chat-members.tsx:207
+#: src/pages/chat-members.tsx:66
+#: src/pages/chat-members.tsx:210
 msgid "Add Member"
 msgstr "添加成员"
 
-#: src/pages/chat-thread.tsx:331
+#: src/pages/chat-thread.tsx:357
 msgid "Are you sure you want to delete this message?"
 msgstr "确定要删除这条消息吗？"
 
 #: src/pages/chat-members.tsx:148
-msgid "Are you sure you want to leave this group?"
-msgstr "确定要退出该群组吗？"
+#~ msgid "Are you sure you want to leave this group?"
+#~ msgstr "确定要退出该群组吗？"
 
-#: src/pages/settings.tsx:60
+#: src/pages/settings.tsx:61
 #: src/pages/settings/language.tsx:57
 msgid "Auto"
 msgstr "自动"
@@ -44,43 +45,47 @@ msgstr "自动"
 msgid "Avatar URL"
 msgstr "头像链接"
 
-#: src/pages/chat-members.tsx:69
-#: src/pages/chat-members.tsx:98
-#: src/pages/chat-members.tsx:127
-#: src/pages/chat-members.tsx:150
-#: src/pages/chat-members.tsx:182
-#: src/pages/chat-thread.tsx:333
-#: src/pages/chat-thread.tsx:349
+#: src/pages/chat-members.tsx:70
+#: src/pages/chat-members.tsx:99
+#: src/pages/chat-members.tsx:128
+#: src/pages/chat-members.tsx:185
+#: src/pages/chat-thread.tsx:359
+#: src/pages/chat-thread.tsx:375
 msgid "Cancel"
 msgstr "取消"
 
-#: src/App.tsx:64
-#: src/pages/chats.tsx:114
+#. placeholder {0}: chat.id
+#: src/pages/chats.tsx:72
+msgid "Chat {0}"
+msgstr "聊天 {0}"
+
+#: src/App.tsx:52
+#: src/pages/chats.tsx:148
 msgid "Chats"
 msgstr "消息"
 
-#: src/pages/chat-thread.tsx:328
-#: src/pages/chat-thread.tsx:335
+#: src/pages/chat-thread.tsx:354
+#: src/pages/chat-thread.tsx:361
 msgid "Delete"
 msgstr "删除"
 
-#: src/pages/chat-thread.tsx:330
+#: src/pages/chat-thread.tsx:356
 msgid "Delete Message"
 msgstr "删除消息"
 
-#: src/pages/chat-members.tsx:129
+#: src/pages/chat-members.tsx:130
 msgid "Demote"
 msgstr "降级"
 
-#: src/pages/chat-members.tsx:125
+#: src/pages/chat-members.tsx:126
 msgid "Demote {displayName} to member?"
 msgstr "将 {displayName} 降级为普通成员？"
 
-#: src/pages/chat-members.tsx:122
+#: src/pages/chat-members.tsx:123
 msgid "Demote Member"
 msgstr "降级成员"
 
-#: src/pages/chat-members.tsx:174
+#: src/pages/chat-members.tsx:177
 msgid "Demote to Member"
 msgstr "降级为成员"
 
@@ -88,7 +93,7 @@ msgstr "降级为成员"
 msgid "Description"
 msgstr "描述"
 
-#: src/pages/chat-thread.tsx:322
+#: src/pages/chat-thread.tsx:348
 msgid "Edit"
 msgstr "编辑"
 
@@ -108,51 +113,63 @@ msgstr "输入群组描述"
 msgid "Enter group name"
 msgstr "输入群组名称"
 
-#: src/pages/chat-members.tsx:66
+#: src/pages/chat-members.tsx:67
 msgid "Enter user ID to add:"
 msgstr "输入要添加的用户 ID："
 
-#: src/pages/chat-members.tsx:84
+#: src/pages/chats.tsx:167
+msgid "Error"
+msgstr "错误"
+
+#: src/pages/chat-members.tsx:85
 msgid "Failed to add member"
 msgstr "添加成员失败"
 
-#: src/pages/chat-thread.tsx:340
+#: src/pages/chat-thread.tsx:366
 msgid "Failed to delete message"
 msgstr "删除消息失败"
 
-#: src/pages/chat-thread.tsx:247
+#: src/pages/chat-thread.tsx:273
 msgid "Failed to edit message"
 msgstr "编辑消息失败"
 
-#: src/pages/chat-thread.tsx:209
+#: src/pages/chat-thread.tsx:235
 msgid "Failed to jump to message"
 msgstr "跳转到消息失败"
 
 #: src/pages/chat-members.tsx:161
-msgid "Failed to leave group"
-msgstr "退出群组失败"
+#~ msgid "Failed to leave group"
+#~ msgstr "退出群组失败"
 
 #: src/pages/chat-settings.tsx:69
 msgid "Failed to load chat details"
 msgstr "加载聊天详情失败"
 
-#: src/pages/chat-members.tsx:54
+#: src/pages/chats.tsx:113
+msgid "Failed to load chats"
+msgstr "加载聊天失败"
+
+#: src/pages/chat-members.tsx:55
 msgid "Failed to load members"
 msgstr "加载成员列表失败"
 
-#: src/pages/chat-thread.tsx:143
+#: src/pages/chat-thread.tsx:169
 msgid "Failed to load messages"
 msgstr "加载消息失败"
 
-#: src/pages/chat-thread.tsx:162
+#: src/pages/chat-thread.tsx:188
 msgid "Failed to load more"
 msgstr "加载更多失败"
 
-#: src/pages/chat-thread.tsx:183
+#: src/pages/chat-thread.tsx:209
 msgid "Failed to load newer messages"
 msgstr "加载新消息失败"
 
-#: src/pages/chat-members.tsx:109
+#: src/pages/chats.tsx:131
+msgid "Failed to refresh chats"
+msgstr "刷新聊天失败"
+
+#: src/pages/chat-members.tsx:110
 msgid "Failed to remove member"
 msgstr "移除成员失败"
 
@@ -160,15 +177,15 @@ msgstr "移除成员失败"
 msgid "Failed to save settings"
 msgstr "保存设置失败"
 
-#: src/pages/chat-thread.tsx:300
+#: src/pages/chat-thread.tsx:326
 msgid "Failed to send"
 msgstr "发送失败"
 
-#: src/pages/chat-members.tsx:137
+#: src/pages/chat-members.tsx:138
 msgid "Failed to update role"
 msgstr "更新角色失败"
 
-#: src/pages/chat-members.tsx:194
+#: src/pages/chat-members.tsx:197
 msgid "Group Members"
 msgstr "群组成员"
 
@@ -180,72 +197,84 @@ msgstr "群组名称"
 msgid "Group Settings"
 msgstr "群组设置"
 
-#: src/pages/chat-members.tsx:75
+#: src/pages/chat-members.tsx:76
 msgid "Invalid user ID"
 msgstr "无效的用户 ID"
 
-#: src/pages/settings.tsx:59
+#: src/pages/settings.tsx:60
 msgid "Language"
 msgstr "语言"
 
 #: src/pages/chat-members.tsx:152
-msgid "Leave"
-msgstr "退出"
+#~ msgid "Leave"
+#~ msgstr "退出"
 
 #: src/pages/chat-members.tsx:147
 #: src/pages/chat-members.tsx:233
-msgid "Leave Group"
-msgstr "退出群组"
+#~ msgid "Leave Group"
+#~ msgstr "退出群组"
 
 #: src/pages/chat-members.tsx:157
-msgid "Left group"
-msgstr "已退出群组"
+#~ msgid "Left group"
+#~ msgstr "已退出群组"
 
-#: src/pages/chat-thread.tsx:71
+#: src/pages/chat-thread.tsx:73
 msgid "Loading..."
 msgstr "正在加载..."
 
-#: src/pages/chats.tsx:139
+#: src/pages/chats.tsx:178
 msgid "Loading…"
 msgstr "正在加载…"
 
-#: src/pages/chat-members.tsx:80
+#: src/pages/chat-members.tsx:81
 msgid "Member added"
 msgstr "成员已添加"
 
-#: src/pages/chat-members.tsx:133
+#: src/pages/chat-members.tsx:134
 msgid "Member demoted"
 msgstr "成员已降级"
 
-#: src/pages/chat-members.tsx:133
+#: src/pages/chat-members.tsx:134
 msgid "Member promoted"
 msgstr "成员已升级"
 
-#: src/pages/chat-members.tsx:105
+#: src/pages/chat-members.tsx:106
 msgid "Member removed"
 msgstr "成员已移除"
 
-#: src/pages/chat-thread.tsx:225
+#: src/pages/chat-thread.tsx:251
 msgid "Message cannot be empty"
 msgstr "消息不能为空"
+
+#: src/pages/chats.tsx:80
+msgid "New message"
+msgstr "新消息"
+
+#: src/pages/chats.tsx:188
+msgid "No chats yet"
+msgstr "暂无聊天"
+
+#: src/pages/chats.tsx:76
+msgid "No messages yet"
+msgstr "暂无消息"
 
 #: src/pages/chat-settings.tsx:152
 msgid "Private"
 msgstr "私密"
 
-#: src/pages/chat-members.tsx:129
+#: src/pages/chat-members.tsx:130
 msgid "Promote"
 msgstr "升级"
 
-#: src/pages/chat-members.tsx:124
+#: src/pages/chat-members.tsx:125
 msgid "Promote {displayName} to admin?"
 msgstr "将 {displayName} 升级为管理员？"
 
-#: src/pages/chat-members.tsx:122
+#: src/pages/chat-members.tsx:123
 msgid "Promote Member"
 msgstr "升级成员"
 
-#: src/pages/chat-members.tsx:174
+#: src/pages/chat-members.tsx:177
 msgid "Promote to Admin"
 msgstr "升级为管理员"
 
@@ -253,19 +282,19 @@ msgstr "升级为管理员"
 msgid "Public"
 msgstr "公开"
 
-#: src/pages/chat-members.tsx:100
+#: src/pages/chat-members.tsx:101
 msgid "Remove"
 msgstr "移除"
 
-#: src/pages/chat-members.tsx:96
+#: src/pages/chat-members.tsx:97
 msgid "Remove {displayName} from this group?"
 msgstr "将 {displayName} 从该群组中移除？"
 
-#: src/pages/chat-members.tsx:178
+#: src/pages/chat-members.tsx:181
 msgid "Remove from Group"
 msgstr "从群组中移除"
 
-#: src/pages/chat-members.tsx:95
+#: src/pages/chat-members.tsx:96
 msgid "Remove Member"
 msgstr "移除成员"
 
@@ -278,7 +307,7 @@ msgid "reply"
 msgstr "条回复"
 
 #: src/components/chat/ChatBubble.tsx:216
-#: src/pages/chat-thread.tsx:315
+#: src/pages/chat-thread.tsx:341
 msgid "Reply"
 msgstr "回复"
 
@@ -290,8 +319,8 @@ msgstr "保存设置"
 msgid "Saving..."
 msgstr "保存中..."
 
-#: src/App.tsx:72
-#: src/pages/settings.tsx:52
+#: src/App.tsx:59
+#: src/pages/settings.tsx:53
 msgid "Settings"
 msgstr "设置"
 
@@ -299,26 +328,30 @@ msgstr "设置"
 msgid "Settings saved"
 msgstr "设置已保存"
 
-#: src/pages/chat-thread.tsx:319
+#: src/pages/chat-thread.tsx:345
 msgid "Start Thread"
 msgstr "发起话题"
 
-#: src/pages/chat-thread.tsx:71
+#: src/pages/chats.tsx:84
+msgid "Text message"
+msgstr "文本消息"
+
+#: src/pages/chat-thread.tsx:73
 msgid "Thread"
 msgstr "话题"
 
-#: src/pages/chat-thread.tsx:94
+#: src/pages/chat-thread.tsx:96
 msgid "Today"
 msgstr "今天"
 
 #. placeholder {0}: member.uid
-#: src/pages/chat-members.tsx:93
-#: src/pages/chat-members.tsx:120
-#: src/pages/chat-members.tsx:220
+#: src/pages/chat-members.tsx:94
+#: src/pages/chat-members.tsx:121
+#: src/pages/chat-members.tsx:223
 msgid "User {0}"
 msgstr "用户 {0}"
 
-#: src/pages/chat-members.tsx:67
+#: src/pages/chat-members.tsx:68
 msgid "User ID"
 msgstr "用户 ID"
 
@@ -330,6 +363,6 @@ msgstr "用户 ID"
 msgid "Visibility"
 msgstr "可见性"
 
-#: src/pages/chat-thread.tsx:98
+#: src/pages/chat-thread.tsx:100
 msgid "Yesterday"
 msgstr "昨天"

@@ -1,10 +1,13 @@
 import type { AxiosResponse } from 'axios';
 import apiClient from './client';
+import type { MessageResponse } from './messages';
 
 export interface ChatListItem {
   id: string;
   name: string | null;
   last_message_at: string | null;
+  unread_count: number;
+  last_message: MessageResponse | null;
 }
 
 interface ListChatsResponse {

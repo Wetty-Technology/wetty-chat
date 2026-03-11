@@ -110,3 +110,10 @@ export function getMessage(
 ): Promise<AxiosResponse<MessageResponse>> {
   return apiClient.get(`/chats/${chatId}/messages/${messageId}`);
 }
+
+export function markMessagesAsRead(
+  chatId: string | number,
+  messageId: string | number
+): Promise<AxiosResponse<void>> {
+  return apiClient.post(`/chats/${chatId}/messages/read`, { message_id: messageId.toString() });
+}

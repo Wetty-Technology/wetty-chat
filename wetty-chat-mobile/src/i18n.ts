@@ -1,19 +1,5 @@
 import { i18n } from "@lingui/core";
-
-const supportedLocales = ["en", "zh-CN", "zh-TW"];
-const defaultLocale = "en";
-
-function detectLocale(): string {
-  for (const lang of navigator.languages) {
-    // Exact match (e.g. "zh-CN")
-    if (supportedLocales.includes(lang)) return lang;
-    // Base language match (e.g. "zh" -> "zh-CN")
-    const base = lang.split("-")[0];
-    const match = supportedLocales.find((l) => l.split("-")[0] === base);
-    if (match) return match;
-  }
-  return defaultLocale;
-}
+import { detectLocale, supportedLocales } from "./store/settingsSlice";
 
 export async function dynamicActivate(locale: string) {
   const { messages } = await import(`../locales/${locale}/messages.po`);

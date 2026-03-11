@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import {
   IonPage,
   IonHeader,
@@ -13,36 +13,91 @@ import {
   IonIcon,
   IonRefresher,
   IonRefresherContent,
+  IonBadge,
   type RefresherEventDetail,
 } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { createOutline } from 'ionicons/icons';
 import { getChats, type ChatListItem } from '@/api/chats';
-import { setChatsMeta } from '@/store/chatsSlice';
+import { setChatsList, selectAllChats } from '@/store/chatsSlice';
+import { selectEffectiveLocale } from '@/store/settingsSlice';
 import './chats.scss';
 import { Trans } from '@lingui/react/macro';
 import { FeatureGate } from '@/components/FeatureGate';
+import type { MessageResponse } from '@/api/messages';
+import { t } from '@lingui/core/macro';
 
-function formatLastActivity(isoString: string | null): string {
+function formatLastActivity(isoString: string | null, locale: string): string {
   if (!isoString) return '';
   const date = new Date(isoString);
-  return Intl.DateTimeFormat('en', {
-    month: 'short',
-    year: 'numeric',
-    day: 'numeric',
-  }).format(date);
+  const now = new Date();
+
+  const isSameDay =
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear();
+
+  if (isSameDay) {
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'always' });
+
+    if (diffMins < 60) {
+      return rtf.format(-Math.max(1, diffMins), 'minute');
+    } else {
+      const diffHours = Math.floor(diffMins / 60);
+      return rtf.format(-diffHours, 'hour');
+    }
+  }
+
+  const isSameYear = date.getFullYear() === now.getFullYear();
+
+  if (isSameYear) {
+    return Intl.DateTimeFormat(locale, {
+      month: 'short',
+      day: 'numeric',
+    }).format(date);
+  } else {
+    return Intl.DateTimeFormat(locale, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    }).format(date);
+  }
 }
 
 function chatDisplayName(chat: ChatListItem): string {
   if (chat.name && chat.name.trim()) return chat.name;
-  return `Chat ${chat.id}`;
+  return t`Chat ${chat.id}`;
+}
+
+function getMessagePreview(message: MessageResponse | null): ReactNode {
+  if (!message) return t`No messages yet`;
+  if (message.is_deleted) return t`[Deleted]`;
+
+  const senderName = message.sender?.name || 'User';
+  let previewText = t`New message`;
+
+  switch (message.message_type) {
+    case 'text':
+      previewText = message.message || t`Text message`;
+      break;
+  }
+
+  return (
+    <>
+      <span className="chats-list-preview-sender">{senderName}: </span>
+      {previewText}
+    </>
+  );
 }
 
 export default function Chats() {
   const history = useHistory();
   const dispatch = useDispatch();
-  const [chats, setChats] = useState<ChatListItem[]>([]);
+  const locale = useSelector(selectEffectiveLocale);
+  const chats = useSelector(selectAllChats);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,17 +106,11 @@ export default function Chats() {
     getChats()
       .then((res) => {
         const chatList = res.data.chats || [];
-        setChats(chatList);
+        dispatch(setChatsList(chatList));
         setError(null);
-        const meta: Record<string, { name: string | null }> = {};
-        for (const c of chatList) {
-          meta[c.id] = { name: c.name };
-        }
-        dispatch(setChatsMeta(meta));
       })
       .catch((err: Error) => {
-        setError(err.message || 'Failed to load chats');
-        setChats([]);
+        setError(err.message || t`Failed to load chats`);
       })
       .finally(() => setLoading(false));
   };
@@ -75,16 +124,11 @@ export default function Chats() {
     getChats()
       .then((res) => {
         const chatList = res.data.chats || [];
-        setChats(chatList);
+        dispatch(setChatsList(chatList));
         setError(null);
-        const meta: Record<string, { name: string | null }> = {};
-        for (const c of chatList) {
-          meta[c.id] = { name: c.name };
-        }
-        dispatch(setChatsMeta(meta));
       })
       .catch((err: Error) => {
-        setError(err.message || 'Failed to refresh chats');
+        setError(err.message || t`Failed to refresh chats`);
       })
       .finally(() => {
         const elapsed = Date.now() - startTime;
@@ -119,7 +163,9 @@ export default function Chats() {
           <IonList>
             <IonItem>
               <IonLabel>
-                <h3>Error</h3>
+                <h3>
+                  <Trans>Error</Trans>
+                </h3>
                 <p>{error}</p>
               </IonLabel>
             </IonItem>
@@ -128,7 +174,9 @@ export default function Chats() {
         {loading && !error && (
           <IonList>
             <IonItem>
-              <IonLabel><Trans>Loading…</Trans></IonLabel>
+              <IonLabel>
+                <Trans>Loading…</Trans>
+              </IonLabel>
             </IonItem>
           </IonList>
         )}
@@ -136,11 +184,14 @@ export default function Chats() {
           <IonList className="chats-list">
             {chats.length === 0 && (
               <IonItem>
-                <IonLabel>No chats yet</IonLabel>
+                <IonLabel>
+                  <Trans>No chats yet</Trans>
+                </IonLabel>
               </IonItem>
             )}
             {chats.map((chat) => (
               <IonItem
+                key={chat.id}
                 id={chat.id}
                 button
                 detail={false}
@@ -151,11 +202,20 @@ export default function Chats() {
                 </div>
                 <IonLabel>
                   <h2>{chatDisplayName(chat)}</h2>
-                  <p>Last activity</p>
+                  <p className="chats-list-preview">{getMessagePreview(chat.last_message)}</p>
                 </IonLabel>
-                <IonLabel slot="end" className="chats-list-time">
-                  {formatLastActivity(chat.last_message_at)}
-                </IonLabel>
+                <div slot="end" className="chats-list-end-slot">
+                  <div className="chats-list-time">
+                    {formatLastActivity(chat.last_message_at, locale)}
+                  </div>
+                  <div className="chats-list-badge">
+                    {chat.unread_count > 0 && (
+                      <IonBadge mode="ios" color="primary">
+                        {chat.unread_count > 99 ? '99+' : chat.unread_count}
+                      </IonBadge>
+                    )}
+                  </div>
+                </div>
               </IonItem>
             ))}
           </IonList>

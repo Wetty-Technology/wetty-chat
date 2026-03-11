@@ -16,6 +16,36 @@
 .chats-list-time {
   font-size: 13px;
   color: var(--ion-color-medium);
-  flex-shrink: 0;
   text-align: right;
+  flex-grow: 0;
+}
+
+.chats-list-badge {
+  display: flex;
+  flex-direction: column;
+
+  flex-grow: 1;
+  font-size: 12px;
+}
+
+.chats-list-preview {
+  color: var(--ion-color-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 90%;
+}
+
+.chats-list-preview-sender {
+  font-weight: 600;
+}
+
+.chats-list-end-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 0;
+  height: 100%;
 }

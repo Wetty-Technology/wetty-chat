@@ -25,10 +25,11 @@ import {
   sendThreadMessage,
   updateMessage,
   deleteMessage,
+  markMessagesAsRead,
   type MessageResponse,
 } from '@/api/messages';
 import { getChatDetails } from '@/api/chats';
-import { selectChatName, setChatMeta } from '@/store/chatsSlice';
+import { selectChatName, setChatMeta, markChatAsRead } from '@/store/chatsSlice';
 import {
   selectMessagesForChat,
   selectNextCursorForChat,
@@ -126,6 +127,30 @@ export default function ChatThread() {
   const showToast = useCallback((text: string, duration = 3000) => {
     presentToast({ message: text, duration, position: 'bottom' });
   }, [presentToast]);
+
+  const lastReportedReadId = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!apiChatId || messages.length === 0 || !atBottom) return;
+
+    const latestMessage = messages[messages.length - 1];
+
+    // Ignore optimistic client-generated messages
+    if (latestMessage.id.startsWith('cg_')) return;
+
+    if (latestMessage.id !== lastReportedReadId.current) {
+      lastReportedReadId.current = latestMessage.id;
+
+      markMessagesAsRead(apiChatId, latestMessage.id)
+        .then(() => {
+          dispatch(markChatAsRead({ chatId: apiChatId }));
+        })
+        .catch((err) => {
+          console.error('Failed to mark as read', err);
+          lastReportedReadId.current = null;
+        });
+    }
+  }, [messages, atBottom, apiChatId, dispatch]);
 
   // Initial load
   useEffect(() => {

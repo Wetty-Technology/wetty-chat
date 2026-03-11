@@ -6,6 +6,7 @@
 import apiClient from '@/api/client';
 import store from '@/store/index';
 import { addMessage, confirmPendingMessage, updateMessageInStore } from '@/store/messagesSlice';
+import { updateChatFromMessage } from '@/store/chatsSlice';
 import { setWsConnected } from '@/store/connectionSlice';
 import type { MessageResponse, ReplyToMessage, ThreadInfo } from '@/api/messages';
 
@@ -140,6 +141,14 @@ function handleWsMessage(payload: unknown): void {
     if (!exists) {
       store.dispatch(addMessage({ chatId: targetChatId, message }));
     }
+  }
+
+  if (message.chat_id) {
+    store.dispatch(updateChatFromMessage({
+      chatId: message.chat_id,
+      message,
+      currentUserId: store.getState().user.uid || 0
+    }));
   }
 }
 

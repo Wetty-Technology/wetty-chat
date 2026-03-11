@@ -47,14 +47,14 @@ const App: React.FC = () => {
 
   const tabBarButtons = [
     (
-      <IonTabButton tab="chats" href="/chats">
+      <IonTabButton tab="chats" href="/chats" key="chats">
         <IonIcon icon={chatbubbles} />
         <IonLabel><Trans>Chats</Trans></IonLabel>
       </IonTabButton>
     ),
     (
 
-      <IonTabButton tab="settings" href="/settings">
+      <IonTabButton tab="settings" href="/settings" key="settings">
         <IonIcon icon={settings} />
         <IonLabel><Trans>Settings</Trans></IonLabel>
       </IonTabButton>
@@ -64,7 +64,7 @@ const App: React.FC = () => {
   if (import.meta.env.DEV) {
     tabBarButtons.push(
       (
-        <IonTabButton tab="demo" href="/demo">
+        <IonTabButton tab="demo" href="/demo" key="demo">
           <IonIcon icon={flask} />
           <IonLabel>Demo</IonLabel>
         </IonTabButton>
