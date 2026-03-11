@@ -6,6 +6,7 @@ class ChatListItem {
   final String? lastMessagePreview;
   final String? lastMessageSenderName;
 
+  // TODO: add lastMessagePreview and lastMessageSenderName
   ChatListItem({
     required this.id,
     this.name,
@@ -19,7 +20,6 @@ class ChatListItem {
       id: json['id']?.toString() ?? '',
       name: json['name'] as String?,
       lastMessageAt: json['last_message_at'] as String?,
-      // TODO: add lastMessagePreview and lastMessageSenderName
       lastMessagePreview: json['last_message_preview'] as String?,
       lastMessageSenderName: json['last_message_sender_name'] as String?,
     );
@@ -51,9 +51,30 @@ class Sender {
   Sender({required this.uid, this.name});
 
   factory Sender.fromJson(Map<String, dynamic> json) {
-    return Sender(
-      uid: json['uid'] as int? ?? 0,
-      name: json['name'] as String?,
+    return Sender(uid: json['uid'] as int? ?? 0, name: json['name'] as String?);
+  }
+}
+
+// Reply-to message (nested in message responses)
+class ReplyToMessage {
+  final String id;
+  final String? message;
+  final Sender sender;
+  final bool isDeleted;
+
+  ReplyToMessage({
+    required this.id,
+    this.message,
+    required this.sender,
+    required this.isDeleted,
+  });
+
+  factory ReplyToMessage.fromJson(Map<String, dynamic> json) {
+    return ReplyToMessage(
+      id: json['id']?.toString() ?? '',
+      message: json['message'] as String?,
+      sender: Sender.fromJson(json['sender'] as Map<String, dynamic>? ?? {}),
+      isDeleted: json['is_deleted'] as bool? ?? false,
     );
   }
 }
@@ -71,6 +92,7 @@ class MessageItem {
   final String clientGeneratedId;
   final String? replyRootId;
   final bool hasAttachments;
+  final ReplyToMessage? replyToMessage;
 
   MessageItem({
     required this.id,
@@ -84,9 +106,11 @@ class MessageItem {
     required this.clientGeneratedId,
     this.replyRootId,
     required this.hasAttachments,
+    this.replyToMessage,
   });
 
   factory MessageItem.fromJson(Map<String, dynamic> json) {
+    final replyJson = json['reply_to_message'] as Map<String, dynamic>?;
     return MessageItem(
       id: json['id']?.toString() ?? '',
       message: json['message'] as String?,
@@ -99,6 +123,9 @@ class MessageItem {
       clientGeneratedId: json['client_generated_id'] as String? ?? '',
       replyRootId: json['reply_root_id']?.toString(),
       hasAttachments: json['has_attachments'] as bool? ?? false,
+      replyToMessage: replyJson != null
+          ? ReplyToMessage.fromJson(replyJson)
+          : null,
     );
   }
 }
