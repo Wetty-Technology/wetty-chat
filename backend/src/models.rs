@@ -51,6 +51,8 @@ pub struct Group {
     pub avatar: Option<String>,
     pub created_at: DateTime<Utc>,
     pub visibility: GroupVisibility,
+    pub last_message_id: Option<i64>,
+    pub last_message_at: Option<DateTime<Utc>>,
 }
 
 /// For inserting a group. Set `id` and `created_at` (e.g. `Utc::now()`) when not relying on DB defaults.
@@ -72,6 +74,7 @@ pub struct GroupMembership {
     pub uid: i32,
     pub role: GroupRole,
     pub joined_at: DateTime<Utc>,
+    pub last_read_message_id: Option<i64>,
 }
 
 /// For inserting a membership. Use `"member"` and `Utc::now()` for `role` and `joined_at` to match DB defaults.
