@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -101,19 +101,25 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
-        actions: [IconButton(icon: const Icon(Icons.add), onPressed: addChat)],
+    return CupertinoPageScaffold(
+      navigationBar: CupertinoNavigationBar(
+        middle: Text(title),
+        trailing: CupertinoButton(
+          padding: EdgeInsets.zero,
+          onPressed: addChat,
+          child: const Icon(CupertinoIcons.add),
+        ),
       ),
-      body: _buildBody(),
+      child: SafeArea(
+        child: _buildBody(),
+      ),
     );
   }
 
   // body of chats page
   Widget _buildBody() {
     if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: CupertinoActivityIndicator());
     }
     if (errorMessage != null) {
       return Center(
@@ -124,7 +130,10 @@ class _ChatPageState extends State<ChatPage> {
             children: [
               Text(errorMessage!, textAlign: TextAlign.center),
               const SizedBox(height: 16),
-              FilledButton(onPressed: _loadChats, child: const Text('Retry')),
+              CupertinoButton.filled(
+                onPressed: _loadChats,
+                child: const Text('Retry'),
+              ),
             ],
           ),
         ),
@@ -136,7 +145,10 @@ class _ChatPageState extends State<ChatPage> {
     return ListView.separated(
       controller: _scrollController,
       itemCount: chats.length,
-      separatorBuilder: (_, _) => const Divider(height: 1),
+      separatorBuilder: (_, _) => const Padding(
+        padding: EdgeInsets.only(left: 72),
+        child: Divider(height: 0.5, color: CupertinoColors.separator),
+      ),
       itemBuilder: (context, index) {
         final chat = chats[index];
         final chatName = chat.name?.isNotEmpty == true
@@ -166,17 +178,17 @@ class _ChatPageState extends State<ChatPage> {
             (senderName != null && senderName.isNotEmpty) &&
             (lastMsg != null && lastMsg.isNotEmpty);
 
-        return InkWell(
-          splashColor: Colors.transparent,
+        return GestureDetector(
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(
+            CupertinoPageRoute(
               builder: (_) => ChatDetailPage(
                 chatId: chat.id,
                 chatName: chat.name ?? 'Chat ${chat.id}',
               ),
             ),
           ),
+          behavior: HitTestBehavior.opaque,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             // each chat item
@@ -184,13 +196,20 @@ class _ChatPageState extends State<ChatPage> {
               children: [
                 // TODO: change avatar to group avatar
                 // Avatar
-                CircleAvatar(
-                  radius: 24,
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: CupertinoColors.systemGrey4,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
                   child: Text(
                     chatName.isNotEmpty ? chatName[0].toUpperCase() : '?',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
+                      color: CupertinoColors.white,
                     ),
                   ),
                 ),
@@ -219,20 +238,25 @@ class _ChatPageState extends State<ChatPage> {
                               dateText,
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Theme.of(
-                                  context,
-                                ).textTheme.bodySmall?.color,
+                                color: CupertinoColors.secondaryLabel
+                                    .resolveFrom(context),
                               ),
                             ),
                         ],
                       ),
                       // sender
-                      hasMessage ? Text(senderName) : Text(''),
+                      hasMessage ? Text(senderName) : const Text(''),
                       const SizedBox(width: 4),
                       // last message
-                      hasMessage ? Text(lastMsg) : Text(''),
+                      hasMessage ? Text(lastMsg) : const Text(''),
                     ],
                   ),
+                ),
+                // Disclosure indicator
+                const Icon(
+                  CupertinoIcons.chevron_right,
+                  size: 16,
+                  color: CupertinoColors.systemGrey3,
                 ),
               ],
             ),
@@ -273,24 +297,26 @@ class _ChatPageState extends State<ChatPage> {
 
   Future<void> addChat() async {
     final nameController = TextEditingController();
-    final result = await showDialog<bool>(
+    final result = await showCupertinoDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => CupertinoAlertDialog(
         title: const Text('New chat'),
-        content: TextField(
-          controller: nameController,
-          decoration: const InputDecoration(
-            labelText: 'Chat name (optional)',
-            hintText: 'Enter a name',
+        content: Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: CupertinoTextField(
+            controller: nameController,
+            placeholder: 'Chat name (optional)',
+            autofocus: true,
           ),
-          autofocus: true,
         ),
         actions: [
-          TextButton(
+          CupertinoDialogAction(
+            isDefaultAction: false,
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Cancel'),
           ),
-          FilledButton(
+          CupertinoDialogAction(
+            isDefaultAction: true,
             onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Create'),
           ),
@@ -315,23 +341,96 @@ class _ChatPageState extends State<ChatPage> {
         );
         setState(() => chats.insert(0, newChat));
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Chat created')));
+          _showToast('Chat created');
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Server error: ${response.body}')),
-          );
+          _showToast('Server error: ${response.body}');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Network error: $e')));
+        _showToast('Network error: $e');
       }
     }
+  }
+
+  /// Shows a brief toast-style overlay since Cupertino has no SnackBar.
+  void _showToast(String message) {
+    final overlay = Navigator.of(context).overlay;
+    if (overlay == null) return;
+    late OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (_) => Positioned(
+        bottom: 80,
+        left: 24,
+        right: 24,
+        child: _ToastWidget(message: message, onDismiss: () => entry.remove()),
+      ),
+    );
+    overlay.insert(entry);
+  }
+}
+
+/// Simple animated toast widget for Cupertino context.
+class _ToastWidget extends StatefulWidget {
+  const _ToastWidget({required this.message, required this.onDismiss});
+  final String message;
+  final VoidCallback onDismiss;
+
+  @override
+  State<_ToastWidget> createState() => _ToastWidgetState();
+}
+
+class _ToastWidgetState extends State<_ToastWidget> {
+  double _opacity = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      if (mounted) setState(() => _opacity = 1);
+    });
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _opacity = 0);
+      Future.delayed(const Duration(milliseconds: 300), widget.onDismiss);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: AnimatedOpacity(
+        opacity: _opacity,
+        duration: const Duration(milliseconds: 300),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: CupertinoColors.systemGrey.withAlpha(230),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            widget.message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: CupertinoColors.white, fontSize: 14),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Cupertino-style thin separator line.
+class Divider extends StatelessWidget {
+  const Divider({super.key, this.height = 1, this.color});
+  final double height;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: height,
+      color: color ?? CupertinoColors.separator.resolveFrom(context),
+    );
   }
 }
