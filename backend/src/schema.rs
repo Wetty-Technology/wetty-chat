@@ -38,6 +38,7 @@ diesel::table! {
         uid -> Int4,
         role -> GroupRole,
         joined_at -> Timestamptz,
+        last_read_message_id -> Nullable<Int8>,
     }
 }
 
@@ -53,6 +54,8 @@ diesel::table! {
         avatar -> Nullable<Text>,
         created_at -> Timestamptz,
         visibility -> GroupVisibility,
+        last_message_id -> Nullable<Int8>,
+        last_message_at -> Nullable<Timestamptz>,
     }
 }
 
@@ -98,7 +101,7 @@ diesel::table! {
 
 diesel::joinable!(attachments -> messages (message_id));
 diesel::joinable!(group_membership -> groups (chat_id));
-diesel::joinable!(messages -> groups (chat_id));
+diesel::joinable!(group_membership -> messages (last_read_message_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     attachments,

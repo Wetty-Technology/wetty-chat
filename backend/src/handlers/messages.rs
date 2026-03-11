@@ -64,22 +64,22 @@ pub struct ListMessagesResponse {
 #[derive(Serialize)]
 pub struct MessageResponse {
     #[serde(with = "crate::serde_i64_string")]
-    id: i64,
-    message: Option<String>,
-    message_type: MessageType,
+    pub id: i64,
+    pub message: Option<String>,
+    pub message_type: MessageType,
     #[serde(with = "crate::serde_i64_string::opt")]
-    reply_root_id: Option<i64>,
-    client_generated_id: String,
-    sender: Sender,
+    pub reply_root_id: Option<i64>,
+    pub client_generated_id: String,
+    pub sender: Sender,
     #[serde(with = "crate::serde_i64_string")]
-    chat_id: i64,
-    created_at: DateTime<Utc>,
-    is_edited: bool,
-    is_deleted: bool,
-    has_attachments: bool,
-    thread_info: Option<ThreadInfo>,
-    reply_to_message: Option<Box<ReplyToMessage>>,
-    attachments: Vec<AttachmentResponse>,
+    pub chat_id: i64,
+    pub created_at: DateTime<Utc>,
+    pub is_edited: bool,
+    pub is_deleted: bool,
+    pub has_attachments: bool,
+    pub thread_info: Option<ThreadInfo>,
+    pub reply_to_message: Option<Box<ReplyToMessage>>,
+    pub attachments: Vec<AttachmentResponse>,
 }
 
 #[derive(Serialize)]
@@ -92,7 +92,7 @@ pub struct ReplyToMessage {
 }
 
 /// Attach reply_to_message to a list of messages by fetching referenced messages in one query.
-async fn attach_replies(
+pub async fn attach_replies(
     conn: &mut diesel::r2d2::PooledConnection<
         diesel::r2d2::ConnectionManager<diesel::PgConnection>,
     >,
@@ -467,6 +467,18 @@ async fn post_message(
             (StatusCode::INTERNAL_SERVER_ERROR, "Failed to send message")
         })?;
 
+    use crate::schema::groups::dsl as g_dsl;
+    diesel::update(groups::table.filter(g_dsl::id.eq(chat_id)))
+        .set((
+            g_dsl::last_message_id.eq(Some(id)),
+            g_dsl::last_message_at.eq(Some(now)),
+        ))
+        .execute(conn)
+        .map_err(|e| {
+            tracing::error!("update group last_message: {:?}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update group")
+        })?;
+
     if !body.attachment_ids.is_empty() {
         let attachment_ids: Vec<i64> = body
             .attachment_ids
@@ -594,6 +606,18 @@ async fn post_thread_message(
         .map_err(|e| {
             tracing::error!("insert threaded message: {:?}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, "Failed to send message")
+        })?;
+
+    use crate::schema::groups::dsl as g_dsl2;
+    diesel::update(groups::table.filter(g_dsl2::id.eq(chat_id)))
+        .set((
+            g_dsl2::last_message_id.eq(Some(id)),
+            g_dsl2::last_message_at.eq(Some(now)),
+        ))
+        .execute(conn)
+        .map_err(|e| {
+            tracing::error!("update group last_message: {:?}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update group")
         })?;
 
     if !body.attachment_ids.is_empty() {
@@ -887,9 +911,46 @@ async fn get_message(
     Ok(Json(response))
 }
 
+#[derive(serde::Deserialize)]
+pub struct MarkAsReadBody {
+    #[serde(deserialize_with = "crate::serde_i64_string::deserialize")]
+    message_id: i64,
+}
+
+/// POST /chats/:chat_id/messages/read — Mark messages as read up to a specific message ID.
+async fn mark_as_read(
+    CurrentUid(uid): CurrentUid,
+    State(state): State<AppState>,
+    Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
+    Json(body): Json<MarkAsReadBody>,
+) -> Result<StatusCode, (StatusCode, &'static str)> {
+    let conn = &mut state.db.get().map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Database connection failed",
+        )
+    })?;
+
+    check_membership(conn, chat_id, uid)?;
+
+    use crate::schema::group_membership::dsl as gm_dsl;
+    diesel::update(
+        group_membership::table.filter(gm_dsl::chat_id.eq(chat_id).and(gm_dsl::uid.eq(uid))),
+    )
+    .set(gm_dsl::last_read_message_id.eq(Some(body.message_id)))
+    .execute(conn)
+    .map_err(|e| {
+        tracing::error!("mark as read: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, "Failed to mark as read")
+    })?;
+
+    Ok(StatusCode::OK)
+}
+
 pub fn router() -> axum::Router<crate::AppState> {
     axum::Router::new()
         .route("/", axum::routing::get(get_messages).post(post_message))
+        .route("/read", axum::routing::post(mark_as_read))
         .route(
             "/{message_id}",
             axum::routing::get(get_message)
