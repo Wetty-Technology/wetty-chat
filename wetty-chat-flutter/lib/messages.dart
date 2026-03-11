@@ -302,39 +302,152 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   }
 }
 
-// each message row: user id, message, time
+// each message row: bubble with sender, message, time, and optional reply quote
 class _MessageRow extends StatelessWidget {
   const _MessageRow({required this.message});
 
   final MessageItem message;
 
+  bool get _isMe => message.sender.uid == curUserId;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // get screen width
+    final screenWidth = MediaQuery.of(context).size.width;
     final text = message.message ?? '';
     final senderName = message.sender.name ?? 'User ${message.sender.uid}';
+
+    // select color based on theme and message sender
+    final bubbleColor = _isMe
+        ? theme.colorScheme.primary
+        : (theme.brightness == Brightness.dark
+              ? Colors.grey.shade800
+              : Colors.grey.shade200);
+    final textColor = _isMe
+        ? theme.colorScheme.onPrimary
+        : theme.textTheme.bodyMedium?.color ?? Colors.black;
+    final metaColor = _isMe
+        ? theme.colorScheme.onPrimary.withAlpha(180)
+        : theme.textTheme.bodySmall?.color ?? Colors.grey;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        //decide whether the msg appears on the right side or the left side
+        mainAxisAlignment: _isMe
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         children: [
-          Expanded(
+          Container(
+            constraints: BoxConstraints(maxWidth: screenWidth * 0.75),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: bubbleColor,
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(16),
+                topRight: const Radius.circular(16),
+                bottomLeft: Radius.circular(_isMe ? 16 : 4),
+                bottomRight: Radius.circular(_isMe ? 4 : 16),
+              ),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  senderName,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w600,
+                // Sender name (only for others' messages)
+                if (!_isMe)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Text(
+                      senderName,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black,
+                      ),
+                    ),
                   ),
-                ),
+                // Reply-to quote
+                if (message.replyToMessage != null)
+                  _buildReplyQuote(context, message.replyToMessage!),
+                // Message text
+                Text(text, style: TextStyle(color: textColor, fontSize: 15)),
                 const SizedBox(height: 2),
-                Text(text, style: theme.textTheme.bodyMedium),
-                Text(
-                  _formatTime(message.createdAt),
-                  style: theme.textTheme.bodySmall,
+                // Time + edited indicator
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (message.isEdited)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 4),
+                        child: Text(
+                          'edited',
+                          style: TextStyle(color: metaColor, fontSize: 11),
+                        ),
+                      ),
+                    Text(
+                      _formatTime(message.createdAt),
+                      style: TextStyle(color: metaColor, fontSize: 11),
+                    ),
+                  ],
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReplyQuote(BuildContext context, ReplyToMessage reply) {
+    final theme = Theme.of(context);
+    final replySender = reply.sender.name ?? 'User ${reply.sender.uid}';
+    final replyText = reply.isDeleted
+        ? 'Message deleted'
+        : (reply.message ?? '');
+
+    final quoteBackgroundColor = _isMe
+        ? theme.colorScheme.primary.withAlpha(50)
+        : (theme.brightness == Brightness.dark
+              ? Colors.grey.shade700
+              : Colors.grey.shade300);
+    final quoteBorderColor = _isMe
+        ? theme.colorScheme.onPrimary.withAlpha(150)
+        : theme.colorScheme.primary;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: quoteBackgroundColor,
+        border: Border(left: BorderSide(color: quoteBorderColor, width: 3)),
+        borderRadius: const BorderRadius.only(
+          topRight: Radius.circular(4),
+          bottomRight: Radius.circular(4),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            replySender,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+              color: quoteBorderColor,
+            ),
+          ),
+          Text(
+            replyText,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 13,
+              color: _isMe
+                  ? theme.colorScheme.onPrimary.withAlpha(200)
+                  : theme.textTheme.bodySmall?.color,
+              fontStyle: reply.isDeleted ? FontStyle.italic : FontStyle.normal,
             ),
           ),
         ],
