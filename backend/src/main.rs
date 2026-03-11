@@ -13,7 +13,7 @@ use tower_http::request_id::{MakeRequestId, RequestId};
 use tower_http::trace::{DefaultOnRequest, DefaultOnResponse, TraceLayer};
 use tower_http::LatencyUnit;
 use tower_http::ServiceBuilderExt;
-use tracing::{info, Level};
+use tracing::{debug_span, info, Level};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 mod db_tracing;
@@ -174,17 +174,17 @@ async fn main() {
                 .get::<RequestId>()
                 .map(|id| id.header_value().to_str().unwrap_or("").to_string())
                 .unwrap_or_else(|| "".to_string());
-            tracing::info_span!(
+            debug_span!(
                 "request",
                 method = %request.method(),
                 uri = %request.uri(),
                 request_id = %request_id,
             )
         })
-        .on_request(DefaultOnRequest::new().level(Level::INFO))
+        .on_request(DefaultOnRequest::new().level(Level::DEBUG))
         .on_response(
             DefaultOnResponse::new()
-                .level(Level::INFO)
+                .level(Level::DEBUG)
                 .latency_unit(LatencyUnit::Micros),
         );
 
