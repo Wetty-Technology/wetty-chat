@@ -16,5 +16,5 @@
 }
 
 ion-tab-bar {
-  padding-bottom: calc(var(--ion-safe-area-bottom, 0px) + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
 }
