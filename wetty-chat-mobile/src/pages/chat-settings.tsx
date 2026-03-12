@@ -22,9 +22,9 @@ import { useParams, useHistory } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
-import { getChatDetails, updateChat } from '@/api/chats';
 import { selectChatMeta, setChatMeta } from '@/store/chatsSlice';
 import type { RootState } from '@/store/index';
+import { getGroupInfo, updateGroupInfo } from '@/api/group';
 
 export default function ChatSettingsPage() {
   const { id } = useParams<{ id: string }>();
@@ -59,7 +59,7 @@ export default function ChatSettingsPage() {
     }
 
     setLoading(true);
-    getChatDetails(chatId)
+    getGroupInfo(chatId)
       .then((res) => {
         const { id: _, ...meta } = res.data;
         dispatch(setChatMeta({ chatId, meta }));
@@ -74,7 +74,7 @@ export default function ChatSettingsPage() {
   const handleSave = () => {
     if (!chatId) return;
     setSaving(true);
-    updateChat(chatId, {
+    updateGroupInfo(chatId, {
       name: name.trim() || undefined,
       description: description.trim() || undefined,
       avatar: avatar.trim() || undefined,

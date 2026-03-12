@@ -28,7 +28,6 @@ import {
   markMessagesAsRead,
   type MessageResponse,
 } from '@/api/messages';
-import { getChatDetails } from '@/api/chats';
 import { selectChatName, setChatMeta, markChatAsRead } from '@/store/chatsSlice';
 import {
   selectMessagesForChat,
@@ -51,6 +50,7 @@ import { MessageComposeBar } from '@/components/chat/MessageComposeBar';
 import './chat-thread.scss';
 import { t } from '@lingui/core/macro';
 import { FeatureGate } from '@/components/FeatureGate';
+import { getGroupInfo } from '@/api/group';
 
 function generateClientId(): string {
   return `cg_${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -74,7 +74,7 @@ export default function ChatThread() {
 
   useEffect(() => {
     if (!apiChatId || storedName != null) return;
-    getChatDetails(apiChatId)
+    getGroupInfo(apiChatId)
       .then((res) => {
         const { id: _, ...meta } = res.data;
         dispatch(setChatMeta({ chatId: apiChatId, meta }));

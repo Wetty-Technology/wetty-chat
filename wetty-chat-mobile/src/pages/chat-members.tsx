@@ -20,7 +20,7 @@ import {
 import { useParams } from 'react-router-dom';
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
-import { getMembers, addMember, removeMember, updateMemberRole, type MemberResponse } from '@/api/chats';
+import { getMembers, addMember, removeMember, updateMemberRole, type MemberResponse } from '@/api/group';
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/store/index';
 import { FeatureGate } from '@/components/FeatureGate';

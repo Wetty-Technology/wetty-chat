@@ -15,20 +15,20 @@ import {
   useIonAlert,
 } from '@ionic/react';
 import { useParams } from 'react-router-dom';
-import { getChatDetails, addMember, getMembers, type ChatDetailResponse, type MemberResponse } from '@/api/chats';
+import { addMember, getGroupInfo, getMembers, type GroupInfoResponse, type MemberResponse } from '@/api/group';
 import { FeatureGate } from '@/components/FeatureGate';
 
-function groupDisplayName(detail: ChatDetailResponse | null, id: string): string {
+function groupDisplayName(detail: GroupInfoResponse | null, id: string): string {
   if (detail?.name?.trim()) return detail.name.trim();
   return `Chat ${id}`;
 }
 
-function avatarUrl(detail: ChatDetailResponse | null): string | null {
+function avatarUrl(detail: GroupInfoResponse | null): string | null {
   if (detail?.avatar?.trim()) return detail.avatar.trim();
   return null;
 }
 
-function initials(detail: ChatDetailResponse | null): string {
+function initials(detail: GroupInfoResponse | null): string {
   const name = detail?.name?.trim();
   if (name && name.length > 0) return name.charAt(0).toUpperCase();
   return '?';
@@ -39,7 +39,7 @@ export default function GroupDetail() {
   const [presentToast] = useIonToast();
   const [presentAlert] = useIonAlert();
 
-  const [detail, setDetail] = useState<ChatDetailResponse | null>(null);
+  const [detail, setDetail] = useState<GroupInfoResponse | null>(null);
   const [members, setMembers] = useState<MemberResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +48,7 @@ export default function GroupDetail() {
     if (!id) return;
     setLoading(true);
     setError(null);
-    Promise.all([getChatDetails(id), getMembers(id)])
+    Promise.all([getGroupInfo(id), getMembers(id)])
       .then(([chatRes, membersRes]) => {
         setDetail(chatRes.data);
         setMembers(membersRes.data ?? []);
