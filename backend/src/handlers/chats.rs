@@ -1153,10 +1153,41 @@ async fn mark_as_read(
     Ok(StatusCode::OK)
 }
 
+#[derive(Serialize)]
+pub struct UnreadCountResponse {
+    unread_count: i64,
+}
+
+/// GET /chats/unread — Get total unread count for the current user.
+async fn get_unread_count(
+    CurrentUid(uid): CurrentUid,
+    State(state): State<AppState>,
+) -> Result<Json<UnreadCountResponse>, (StatusCode, &'static str)> {
+    let conn = &mut state.db.get().map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Database connection failed",
+        )
+    })?;
+
+    let counts = crate::services::chat::get_unread_counts(conn, &[uid]).map_err(|e| {
+        tracing::error!("Failed to get unread counts: {:?}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to get unread counts",
+        )
+    })?;
+
+    let unread_count = counts.get(&uid).copied().unwrap_or(0);
+
+    Ok(Json(UnreadCountResponse { unread_count }))
+}
+
 pub fn router() -> Router<crate::AppState> {
     use axum::routing::*;
     Router::new()
         .route("/", get(get_chats)) //
+        .route("/unread", get(get_unread_count))
         .nest(
             "/{chat_id}",
             Router::new() //
@@ -1164,12 +1195,12 @@ pub fn router() -> Router<crate::AppState> {
                     "/messages",
                     Router::new()
                         .route("/", get(get_messages).post(post_message))
-                        .route("/read", post(mark_as_read))
                         .route(
-                            "/messages/{message_id}",
+                            "/{message_id}",
                             get(get_message).patch(patch_message).delete(delete_message),
                         ),
                 )
+                .route("/read", post(mark_as_read))
                 .route("/threads/{thread_id}/messages", post(post_thread_message)),
         )
 }

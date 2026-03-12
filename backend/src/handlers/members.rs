@@ -162,7 +162,7 @@ async fn post_add_member(
     let username = names.remove(&body.uid).flatten();
 
     if username.is_none() {
-        return Err((StatusCode::NOT_FOUND, "User not found"));
+        return Err((StatusCode::BAD_REQUEST, "User not found"));
     }
 
     // Check if already a member

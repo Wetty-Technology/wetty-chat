@@ -28,3 +28,7 @@ export function getChats(params: { limit?: number; after?: string } = {}): Promi
 export function createChat(body: { name?: string } = {}): Promise<AxiosResponse<CreateChatResponse>> {
   return apiClient.post('/group', body);
 }
+
+export function getUnreadCount(): Promise<AxiosResponse<{ unread_count: number }>> {
+  return apiClient.get('/chats/unread');
+}

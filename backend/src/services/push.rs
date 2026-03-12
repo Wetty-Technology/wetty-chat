@@ -236,7 +236,14 @@ async fn process_push_job(
         job.message_id
     );
 
-    // 4. Build the push payload.
+    // 3.5 Calculate unread counts for target users
+    let unread_counts = crate::services::chat::get_unread_counts(&mut conn, &target_uids)
+        .unwrap_or_else(|e| {
+            warn!("Failed to load unread counts for push job: {:?}", e);
+            std::collections::HashMap::new()
+        });
+
+    // 4. Build the push payload base text.
     let body_text = match &job.message_preview {
         Some(preview) => {
             let truncated = if preview.len() > MESSAGE_PREVIEW_MAX {
@@ -249,22 +256,24 @@ async fn process_push_job(
         None => format!("{} sent a message", job.sender_username),
     };
 
-    let payload = serde_json::to_vec(&serde_json::json!({
-        "type": "new_message",
-        "title": job.chat_name,
-        "body": body_text,
-        "data": {
-            "chat_id": job.chat_id.to_string(),
-            "message_id": job.message_id.to_string(),
-        }
-    }))
-    .map_err(|e| format!("Failed to serialize push payload: {:?}", e))?;
-
     // 5. Send concurrently with bounded parallelism.
     let stale_endpoints: Vec<String> = stream::iter(subs.into_iter())
         .map(|sub| {
             let service = service.clone();
-            let payload = payload.clone();
+            
+            let unread = unread_counts.get(&sub.user_id).copied().unwrap_or(0);
+            let payload = serde_json::to_vec(&serde_json::json!({
+                "type": "new_message",
+                "title": job.chat_name,
+                "body": body_text,
+                "unread_count": unread,
+                "data": {
+                    "chat_id": job.chat_id.to_string(),
+                    "message_id": job.message_id.to_string(),
+                }
+            }))
+            .unwrap_or_default();
+
             async move {
                 match service.send_to_subscription(&sub, &payload).await {
                     Ok(()) => None,

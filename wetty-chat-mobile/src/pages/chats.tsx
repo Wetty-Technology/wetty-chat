@@ -14,18 +14,21 @@ import {
   IonRefresher,
   IonRefresherContent,
   IonBadge,
+  IonItemSliding,
+  IonItemOptions,
+  IonItemOption,
   type RefresherEventDetail,
 } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { createOutline } from 'ionicons/icons';
-import { getChats, type ChatListItem } from '@/api/chats';
-import { setChatsList, selectAllChats } from '@/store/chatsSlice';
+import { createOutline, mailUnreadOutline, checkmarkDone } from 'ionicons/icons';
+import { getChats, getUnreadCount, type ChatListItem } from '@/api/chats';
+import { setChatsList, selectAllChats, markChatAsRead, setChatMeta } from '@/store/chatsSlice';
 import { selectEffectiveLocale } from '@/store/settingsSlice';
 import './chats.scss';
 import { Trans } from '@lingui/react/macro';
 import { FeatureGate } from '@/components/FeatureGate';
-import type { MessageResponse } from '@/api/messages';
+import { type MessageResponse, markMessagesAsRead } from '@/api/messages';
 import { t } from '@lingui/core/macro';
 
 function formatLastActivity(isoString: string | null, locale: string): string {
@@ -115,9 +118,53 @@ export default function Chats() {
       .finally(() => setLoading(false));
   };
 
+  const updateAppBadge = async () => {
+    try {
+      const res = await getUnreadCount();
+      if (res.data.unread_count > 0) {
+        if ('setAppBadge' in navigator) {
+          // @ts-ignore
+          navigator.setAppBadge(res.data.unread_count).catch(console.error);
+        }
+      } else {
+        if ('clearAppBadge' in navigator) {
+          // @ts-ignore
+          navigator.clearAppBadge().catch(console.error);
+        }
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   useEffect(() => {
     loadChats();
+    updateAppBadge();
   }, []);
+
+  const handleToggleRead = async (chat: ChatListItem, slidingItem: HTMLIonItemSlidingElement | null) => {
+    slidingItem?.close();
+    if (!chat.last_message) return;
+
+    if (chat.unread_count > 0) {
+      dispatch(markChatAsRead({ chatId: chat.id }));
+      try {
+        await markMessagesAsRead(chat.id, chat.last_message.id);
+        updateAppBadge();
+      } catch (err) {
+        console.error('Failed to mark as read', err);
+      }
+    } else {
+      try {
+        const prevId = (BigInt(chat.last_message.id) - 1n).toString();
+        dispatch(setChatMeta({ chatId: chat.id, meta: { unread_count: 1 } }));
+        await markMessagesAsRead(chat.id, prevId);
+        updateAppBadge();
+      } catch (err) {
+        console.error('Failed to mark as unread', err);
+      }
+    }
+  };
 
   const handleRefresh = (event: CustomEvent<RefresherEventDetail>) => {
     const startTime = Date.now();
@@ -190,33 +237,60 @@ export default function Chats() {
               </IonItem>
             )}
             {chats.map((chat) => (
-              <IonItem
-                key={chat.id}
-                id={chat.id}
-                button
-                detail={false}
-                onClick={() => history.push(`/chats/chat/${chat.id}`)}
-              >
-                <div slot="start" className="chats-list-avatar">
-                  {chat.name && chat.name.trim() ? chat.name.trim().charAt(0).toUpperCase() : '?'}
-                </div>
-                <IonLabel className="chats-list-label">
-                  <h2>{chatDisplayName(chat)}</h2>
-                  <p className="chats-list-preview">{getMessagePreview(chat.last_message)}</p>
-                </IonLabel>
-                <div slot="end" className="chats-list-end-slot">
-                  <div className="chats-list-time">
-                    {formatLastActivity(chat.last_message_at, locale)}
-                  </div>
-                  <div className="chats-list-badge">
-                    {chat.unread_count > 0 && (
-                      <IonBadge mode="ios" color="primary">
-                        {chat.unread_count > 99 ? '99+' : chat.unread_count}
-                      </IonBadge>
+              <IonItemSliding key={chat.id}>
+                <IonItemOptions
+                  side="start"
+                  onIonSwipe={(e) => {
+                    const slidingItem = (e.target as HTMLElement).closest('ion-item-sliding');
+                    handleToggleRead(chat, slidingItem as HTMLIonItemSlidingElement | null);
+                  }}
+                >
+                  <IonItemOption
+                    color="primary"
+                    expandable
+                    onClick={(e) => {
+                      const slidingItem = (e.target as HTMLElement).closest('ion-item-sliding');
+                      handleToggleRead(chat, slidingItem as HTMLIonItemSlidingElement | null);
+                    }}
+                  >
+                    <IonIcon
+                      slot="top"
+                      icon={chat.unread_count > 0 ? checkmarkDone : mailUnreadOutline}
+                    />
+                    {chat.unread_count > 0 ? (
+                      <Trans>Read</Trans>
+                    ) : (
+                      <Trans>Unread</Trans>
                     )}
+                  </IonItemOption>
+                </IonItemOptions>
+                <IonItem
+                  id={chat.id}
+                  button
+                  detail={false}
+                  onClick={() => history.push(`/chats/chat/${chat.id}`)}
+                >
+                  <div slot="start" className="chats-list-avatar">
+                    {chat.name && chat.name.trim() ? chat.name.trim().charAt(0).toUpperCase() : '?'}
                   </div>
-                </div>
-              </IonItem>
+                  <IonLabel className="chats-list-label">
+                    <h2>{chatDisplayName(chat)}</h2>
+                    <p className="chats-list-preview">{getMessagePreview(chat.last_message)}</p>
+                  </IonLabel>
+                  <div slot="end" className="chats-list-end-slot">
+                    <div className="chats-list-time">
+                      {formatLastActivity(chat.last_message_at, locale)}
+                    </div>
+                    <div className="chats-list-badge">
+                      {chat.unread_count > 0 && (
+                        <IonBadge mode="ios" color="primary">
+                          {chat.unread_count > 99 ? '99+' : chat.unread_count}
+                        </IonBadge>
+                      )}
+                    </div>
+                  </div>
+                </IonItem>
+              </IonItemSliding>
             ))}
           </IonList>
         )}

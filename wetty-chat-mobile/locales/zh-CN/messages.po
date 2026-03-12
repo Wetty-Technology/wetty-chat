@@ -15,7 +15,7 @@ msgstr ""
 
 #: src/pages/chat-thread.tsx:457
 #: src/pages/chat-thread.tsx:473
-#: src/pages/chats.tsx:77
+#: src/pages/chats.tsx:80
 msgid "[Deleted]"
 msgstr "[已删除]"
 
@@ -34,7 +34,7 @@ msgstr "添加成员"
 
 #: src/pages/chat-thread.tsx:357
 msgid "Are you sure you want to delete this message?"
-msgstr "确定要删除这条消息吗？"
+msgstr "确定要撤回这条消息吗？"
 
 #: src/pages/chat-members.tsx:148
 #~ msgid "Are you sure you want to leave this group?"
@@ -59,23 +59,23 @@ msgid "Cancel"
 msgstr "取消"
 
 #. placeholder {0}: chat.id
-#: src/pages/chats.tsx:72
+#: src/pages/chats.tsx:75
 msgid "Chat {0}"
 msgstr "聊天 {0}"
 
 #: src/App.tsx:66
-#: src/pages/chats.tsx:148
+#: src/pages/chats.tsx:195
 msgid "Chats"
 msgstr "消息"
 
 #: src/pages/chat-thread.tsx:354
 #: src/pages/chat-thread.tsx:361
 msgid "Delete"
-msgstr "删除"
+msgstr "撤回"
 
 #: src/pages/chat-thread.tsx:356
 msgid "Delete Message"
-msgstr "删除消息"
+msgstr "撤回消息"
 
 #: src/pages/chat-members.tsx:130
 msgid "Demote"
@@ -109,7 +109,7 @@ msgstr "忽略"
 msgid "Edit"
 msgstr "编辑"
 
-#: src/components/chat/ChatBubble.tsx:198
+#: src/components/chat/ChatBubble.tsx:216
 msgid "Edited"
 msgstr "已编辑"
 
@@ -129,7 +129,7 @@ msgstr "输入群组名称"
 msgid "Enter user ID to add:"
 msgstr "输入要添加的用户 ID："
 
-#: src/pages/chats.tsx:167
+#: src/pages/chats.tsx:214
 msgid "Error"
 msgstr "错误"
 
@@ -139,7 +139,7 @@ msgstr "添加成员失败"
 
 #: src/pages/chat-thread.tsx:366
 msgid "Failed to delete message"
-msgstr "删除消息失败"
+msgstr "撤回消息失败"
 
 #: src/pages/chat-thread.tsx:273
 msgid "Failed to edit message"
@@ -157,7 +157,7 @@ msgstr "跳转到消息失败"
 msgid "Failed to load chat details"
 msgstr "加载聊天详情失败"
 
-#: src/pages/chats.tsx:113
+#: src/pages/chats.tsx:116
 msgid "Failed to load chats"
 msgstr "加载聊天失败"
 
@@ -177,7 +177,7 @@ msgstr "加载更多失败"
 msgid "Failed to load newer messages"
 msgstr "加载新消息失败"
 
-#: src/pages/chats.tsx:131
+#: src/pages/chats.tsx:178
 msgid "Failed to refresh chats"
 msgstr "刷新聊天失败"
 
@@ -238,7 +238,7 @@ msgstr "语言"
 msgid "Loading..."
 msgstr "正在加载..."
 
-#: src/pages/chats.tsx:178
+#: src/pages/chats.tsx:225
 msgid "Loading…"
 msgstr "正在加载…"
 
@@ -262,15 +262,15 @@ msgstr "成员已移除"
 msgid "Message cannot be empty"
 msgstr "消息不能为空"
 
-#: src/pages/chats.tsx:80
+#: src/pages/chats.tsx:83
 msgid "New message"
 msgstr "新消息"
 
-#: src/pages/chats.tsx:188
+#: src/pages/chats.tsx:235
 msgid "No chats yet"
 msgstr "暂无聊天"
 
-#: src/pages/chats.tsx:76
+#: src/pages/chats.tsx:79
 msgid "No messages yet"
 msgstr "暂无消息"
 
@@ -298,6 +298,10 @@ msgstr "升级为管理员"
 msgid "Public"
 msgstr "公开"
 
+#: src/pages/chats.tsx:261
+msgid "Read"
+msgstr "标记已读"
+
 #: src/pages/chat-members.tsx:101
 msgid "Remove"
 msgstr "移除"
@@ -314,15 +318,15 @@ msgstr "从群组中移除"
 msgid "Remove Member"
 msgstr "移除成员"
 
-#: src/components/chat/ChatBubble.tsx:211
+#: src/components/chat/ChatBubble.tsx:229
 msgid "replies"
 msgstr "条回复"
 
-#: src/components/chat/ChatBubble.tsx:211
+#: src/components/chat/ChatBubble.tsx:229
 msgid "reply"
 msgstr "条回复"
 
-#: src/components/chat/ChatBubble.tsx:216
+#: src/components/chat/ChatBubble.tsx:234
 #: src/pages/chat-thread.tsx:341
 msgid "Reply"
 msgstr "回复"
@@ -348,7 +352,7 @@ msgstr "设置已保存"
 msgid "Start Thread"
 msgstr "发起话题"
 
-#: src/pages/chats.tsx:84
+#: src/pages/chats.tsx:87
 msgid "Text message"
 msgstr "文本消息"
 
@@ -359,6 +363,10 @@ msgstr "话题"
 #: src/pages/chat-thread.tsx:96
 msgid "Today"
 msgstr "今天"
+
+#: src/pages/chats.tsx:263
+msgid "Unread"
+msgstr "标记未读"
 
 #: src/App.tsx:98
 msgid "Update Now"
