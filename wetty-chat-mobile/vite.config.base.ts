@@ -2,42 +2,11 @@ import path from 'path';
 import react from '@vitejs/plugin-react';
 import { lingui } from '@lingui/vite-plugin';
 import { VitePWA } from 'vite-plugin-pwa';
-import fs from 'fs';
-import dotenv from 'dotenv';
 import { defineConfig } from 'vite';
-import { execSync } from 'child_process';
-
-dotenv.config();
 
 const SRC_DIR = path.resolve(__dirname, './src');
 
-const API_PROXY_TARGET = process.env.API_PROXY_TARGET ?? 'http://localhost:3000';
-
-let commitHash = 'development';
-if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV !== 'development') {
-  try {
-    commitHash = execSync('git rev-parse --short HEAD').toString().trim();
-  } catch (e) {
-    commitHash = 'unknown';
-  }
-}
-// Force development if command is dev
-const isDevCommand = process.argv.includes('dev');
-if (isDevCommand) {
-  commitHash = 'development';
-}
-
-const keyPath = path.resolve(__dirname, './dev-certs/key.pem');
-const certPath = path.resolve(__dirname, './dev-certs/cert.pem');
-const httpsConfig = fs.existsSync(keyPath) && fs.existsSync(certPath) ? {
-  key: fs.readFileSync(keyPath),
-  cert: fs.readFileSync(certPath),
-} : undefined;
-
 export default defineConfig({
-  define: {
-    __APP_VERSION__: JSON.stringify(commitHash),
-  },
   plugins: [
     react({
       babel: {
@@ -84,23 +53,6 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': SRC_DIR,
-    },
-  },
-  server: {
-    host: true,
-    https: httpsConfig,
-    proxy: {
-      // WebSocket: must be more specific than /_api/ so it matches first
-      '/_api/ws': {
-        target: API_PROXY_TARGET,
-        ws: true,
-        rewrite: (p) => p.replace(/^\/_api/, ''),
-      },
-      '^/_api/': {
-        target: API_PROXY_TARGET,
-        changeOrigin: true,
-        rewrite: (p) => p.replace(/^\/_api/, ''),
-      },
     },
   },
 });

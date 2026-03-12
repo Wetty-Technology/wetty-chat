@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { HttpStatusCode } from 'axios';
 import { getCurrentUserId } from '@/js/current-user';
 
 /**
@@ -15,5 +15,16 @@ apiClient.interceptors.request.use((config) => {
   }
   return config;
 });
+
+if (import.meta.env.PROD && __AUTH_REDIRECT_URL__) {
+  apiClient.interceptors.response.use((fulfilled) => {
+    return fulfilled
+  }, (error) => {
+    if (error.response?.status === HttpStatusCode.Unauthorized) {
+      window.location.href = __AUTH_REDIRECT_URL__;
+    }
+    return Promise.reject(error);
+  });
+}
 
 export default apiClient;
