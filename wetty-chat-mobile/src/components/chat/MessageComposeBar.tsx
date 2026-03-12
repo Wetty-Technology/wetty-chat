@@ -74,16 +74,39 @@ export function MessageComposeBar({ onSend, replyTo, onCancelReply, editing, onC
     return () => textarea.removeEventListener('keydown', onKeyDown);
   }, []);
 
+  const getImageDimensions = (file: File): Promise<{ width?: number; height?: number }> => {
+    return new Promise((resolve) => {
+      if (!file.type.startsWith('image/')) {
+        resolve({});
+        return;
+      }
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      img.onload = () => {
+        resolve({ width: img.width, height: img.height });
+        URL.revokeObjectURL(objectUrl);
+      };
+      img.onerror = () => {
+        resolve({});
+        URL.revokeObjectURL(objectUrl);
+      };
+      img.src = objectUrl;
+    });
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setIsUploading(true);
     try {
+      const dimensions = await getImageDimensions(file);
+
       const res = await requestUploadUrl({
         filename: file.name,
         content_type: file.type || 'application/octet-stream',
         size: file.size,
+        ...dimensions,
       });
 
       const { upload_url, attachment_id } = res.data;

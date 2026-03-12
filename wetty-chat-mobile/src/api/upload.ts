@@ -5,6 +5,8 @@ export interface UploadUrlRequest {
     filename: string;
     content_type: string;
     size: number;
+    width?: number;
+    height?: number;
 }
 
 export interface UploadUrlResponse {

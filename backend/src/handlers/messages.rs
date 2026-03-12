@@ -200,6 +200,8 @@ pub async fn attach_replies(
                     kind: att.kind,
                     size: att.size,
                     file_name: att.file_name,
+                    width: att.width,
+                    height: att.height,
                 });
             }
         }

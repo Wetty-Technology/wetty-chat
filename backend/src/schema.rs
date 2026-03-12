@@ -26,6 +26,8 @@ diesel::table! {
         deleted_at -> Nullable<Timestamptz>,
         #[max_length = 255]
         file_name -> Varchar,
+        width -> Nullable<Int4>,
+        height -> Nullable<Int4>,
     }
 }
 

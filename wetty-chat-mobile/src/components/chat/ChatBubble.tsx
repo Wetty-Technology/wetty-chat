@@ -180,14 +180,29 @@ export function ChatBubble({
             )}
             {attachments && attachments.length > 0 && (
               <div className={styles.attachmentsContainer}>
-                {attachments.map((att) => (
-                  <img
-                    key={att.id}
-                    src={att.url}
-                    alt="attachment"
-                    className={styles.attachmentImage}
-                  />
-                ))}
+                {attachments.map((att) => {
+                  const imageStyle: React.CSSProperties = {
+                    backgroundColor: 'rgba(128, 128, 128, 0.2)',
+                    maxWidth: '100%',
+                    maxHeight: '300px',
+                    width: 'auto',
+                    height: 'auto',
+                  };
+                  if (att.width && att.height) {
+                    imageStyle.aspectRatio = `${att.width} / ${att.height}`;
+                  }
+                  return (
+                    <img
+                      key={att.id}
+                      src={att.url}
+                      alt="attachment"
+                      className={styles.attachmentImage}
+                      width={att.width || undefined}
+                      height={att.height || undefined}
+                      style={imageStyle}
+                    />
+                  );
+                })}
               </div>
             )}
             <div className={styles.messageWrapper}>

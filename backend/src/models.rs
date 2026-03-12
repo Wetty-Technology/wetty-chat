@@ -139,6 +139,8 @@ pub struct Attachment {
     pub size: i64,
     pub created_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
+    pub width: Option<i32>,
+    pub height: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -149,6 +151,8 @@ pub struct AttachmentResponse {
     pub kind: String,
     pub size: i64,
     pub file_name: String,
+    pub width: Option<i32>,
+    pub height: Option<i32>,
 }
 
 #[derive(Debug, Clone, Insertable)]
@@ -162,6 +166,8 @@ pub struct NewAttachment {
     pub size: i64,
     pub created_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
+    pub width: Option<i32>,
+    pub height: Option<i32>,
 }
 
 #[derive(Debug, Clone, AsChangeset)]

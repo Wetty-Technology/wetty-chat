@@ -19,6 +19,8 @@ export interface Attachment {
   kind: string;
   size: number;
   file_name: string;
+  width?: number | null;
+  height?: number | null;
 }
 
 export interface ThreadInfo {

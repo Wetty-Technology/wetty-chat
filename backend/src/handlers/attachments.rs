@@ -17,6 +17,8 @@ pub struct UploadUrlRequest {
     filename: String,
     content_type: String,
     size: i64,
+    width: Option<i32>,
+    height: Option<i32>,
 }
 
 #[derive(Serialize)]
@@ -126,6 +128,8 @@ async fn post_upload_url(
         size: payload.size,
         created_at: Utc::now(),
         deleted_at: None,
+        width: payload.width,
+        height: payload.height,
     };
 
     diesel::insert_into(attachments::table)
