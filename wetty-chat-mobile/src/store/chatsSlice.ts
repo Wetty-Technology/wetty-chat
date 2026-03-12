@@ -1,4 +1,4 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, createSelector } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from './index';
 import type { MessageResponse } from '@/api/messages';
@@ -86,21 +86,26 @@ export const selectChatMeta = (state: RootState, chatId: string): ChatMeta | und
 export const selectChatName = (state: RootState, chatId: string): string | null =>
   state.chats.byId[chatId]?.name ?? null;
 
-export const selectAllChats = (state: RootState): ChatListItem[] => {
-  return Object.entries(state.chats.byId)
-    .filter(([_, meta]) => meta.in_list)
-    .map(([id, meta]) => ({
-      id,
-      name: meta.name ?? null,
-      last_message_at: meta.last_message_at ?? null,
-      unread_count: meta.unread_count ?? 0,
-      last_message: meta.last_message ?? null,
-    }))
-    .sort((a, b) => {
-      const dateA = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
-      const dateB = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
-      return dateB - dateA; // Descending
-    });
-};
+const selectChatsById = (state: RootState) => state.chats.byId;
+
+export const selectAllChats = createSelector(
+  [selectChatsById],
+  (byId): ChatListItem[] => {
+    return Object.entries(byId)
+      .filter(([_, meta]) => meta.in_list)
+      .map(([id, meta]) => ({
+        id,
+        name: meta.name ?? null,
+        last_message_at: meta.last_message_at ?? null,
+        unread_count: meta.unread_count ?? 0,
+        last_message: meta.last_message ?? null,
+      }))
+      .sort((a, b) => {
+        const dateA = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+        const dateB = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+        return dateB - dateA; // Descending
+      });
+  }
+);
 
 export default chatsSlice.reducer;
