@@ -4,6 +4,7 @@ import { arrowUndo, chatbubbles, checkmarkCircle, checkmarkCircleOutline } from 
 import { t } from '@lingui/core/macro';
 import styles from './ChatBubble.module.scss';
 import type { Attachment } from '@/api/messages';
+import { ImageViewer } from './ImageViewer';
 
 interface ChatBubbleProps {
   senderName: string;
@@ -65,6 +66,7 @@ export function ChatBubble({
   const swipeSign = swipeDirection === 'left' ? -1 : 1;
   const [offset, setOffset] = useState(0);
   const [animating, setAnimating] = useState(false);
+  const [viewingAttachment, setViewingAttachment] = useState<Attachment | null>(null);
   const startX = useRef(0);
   const startY = useRef(0);
   const swiping = useRef(false);
@@ -199,7 +201,8 @@ export function ChatBubble({
                       className={styles.attachmentImage}
                       width={att.width || undefined}
                       height={att.height || undefined}
-                      style={imageStyle}
+                      style={{ ...imageStyle, cursor: 'pointer' }}
+                      onClick={() => setViewingAttachment(att)}
                     />
                   );
                 })}
@@ -234,6 +237,13 @@ export function ChatBubble({
           )}
         </div>
       </div>
+      {viewingAttachment && (
+        <ImageViewer
+          src={viewingAttachment.url}
+          fileName={viewingAttachment.file_name}
+          onClose={() => setViewingAttachment(null)}
+        />
+      )}
     </div>
   );
 }
