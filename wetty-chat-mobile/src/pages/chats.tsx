@@ -200,7 +200,7 @@ export default function Chats() {
                 <div slot="start" className="chats-list-avatar">
                   {chat.name && chat.name.trim() ? chat.name.trim().charAt(0).toUpperCase() : '?'}
                 </div>
-                <IonLabel>
+                <IonLabel className="chats-list-label">
                   <h2>{chatDisplayName(chat)}</h2>
                   <p className="chats-list-preview">{getMessagePreview(chat.last_message)}</p>
                 </IonLabel>

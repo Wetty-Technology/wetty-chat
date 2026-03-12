@@ -28,12 +28,27 @@
   font-size: 12px;
 }
 
+.chats-list-label {
+  overflow: hidden;
+
+  h2 {
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100%;
+  }
+}
+
 .chats-list-preview {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
   color: var(--ion-color-medium);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 90%;
 }
 
 .chats-list-preview-sender {
