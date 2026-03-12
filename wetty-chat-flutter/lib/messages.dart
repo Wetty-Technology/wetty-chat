@@ -27,15 +27,20 @@ Future<ListMessagesResponse> fetchMessages(
   );
 }
 
-Future<MessageItem> sendMessage(String chatId, String text) async {
+Future<MessageItem> sendMessage(
+  String chatId,
+  String text, {
+  String? replyToId,
+}) async {
   final uri = Uri.parse('$apiBaseUrl/chats/$chatId/messages');
   final clientGeneratedId =
       '${DateTime.now().millisecondsSinceEpoch}-${Uri.base.hashCode}';
-  final body = {
+  final body = <String, dynamic>{
     'message': text,
     'message_type': 'text',
     'client_generated_id': clientGeneratedId,
   };
+  if (replyToId != null) body['reply_to_id'] = int.parse(replyToId);
   final response = await http.post(
     uri,
     headers: apiHeaders,
@@ -50,6 +55,41 @@ Future<MessageItem> sendMessage(String chatId, String text) async {
     jsonDecode(response.body) as Map<String, dynamic>,
   );
 }
+
+Future<MessageItem> editMessage(
+  String chatId,
+  String messageId,
+  String newText,
+) async {
+  final uri = Uri.parse('$apiBaseUrl/chats/$chatId/messages/$messageId');
+  final response = await http.patch(
+    uri,
+    headers: apiHeaders,
+    body: jsonEncode({'message': newText}),
+  );
+  if (response.statusCode != 200) {
+    throw Exception(
+      'Failed to edit message: ${response.statusCode} ${response.body}',
+    );
+  }
+  return MessageItem.fromJson(
+    jsonDecode(response.body) as Map<String, dynamic>,
+  );
+}
+
+Future<void> deleteMessage(String chatId, String messageId) async {
+  final uri = Uri.parse('$apiBaseUrl/chats/$chatId/messages/$messageId');
+  final response = await http.delete(uri, headers: apiHeaders);
+  if (response.statusCode != 204) {
+    throw Exception(
+      'Failed to delete message: ${response.statusCode} ${response.body}',
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// ChatDetailPage
+// ---------------------------------------------------------------------------
 
 /// Chat detail screen: message list (oldest at top, newest at bottom) and send input.
 /// Scroll up loads older messages via [nextCursor] / before cursor.
@@ -74,6 +114,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   bool _isLoadingMore = false;
   String? _errorMessage;
   bool _showScrollToBottom = false;
+  MessageItem? _replyingTo;
+  MessageItem? _editingMessage;
+  String? _highlightedMessageId;
   late ScrollController _scrollController;
   final TextEditingController _textController = TextEditingController();
   static const int _messagesSize = 11;
@@ -135,7 +178,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         _isLoading = false;
         _errorMessage = null;
       });
-      // No manual scroll needed — reverse: true starts at the bottom automatically.
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -161,7 +203,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           .where((m) => !existingIds.contains(m.id))
           .toList();
       setState(() {
-        // Append older messages to the end (they appear at the top in reverse mode).
         _messages.addAll(newMessages.reversed);
         _nextCursor = res.nextCursor;
         _isLoadingMore = false;
@@ -172,15 +213,89 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     }
   }
 
+  void _setReplyTo(MessageItem msg) {
+    setState(() => _replyingTo = msg);
+  }
+
+  void _clearReply() {
+    setState(() {
+      _replyingTo = null;
+      _editingMessage = null;
+    });
+  }
+
+  void _startEditing(MessageItem msg) {
+    setState(() {
+      _replyingTo = null;
+      _editingMessage = msg;
+      _textController.text = msg.message ?? '';
+    });
+  }
+
+  void _jumpToMessage(String messageId) {
+    final idx = _messages.indexWhere((m) => m.id == messageId);
+    if (idx < 0) return; // message not loaded
+    // In a reversed list, index 0 is at the bottom.
+    // Estimate position: each item ~80px tall, but we use ensureVisible-like approach.
+    // We'll use a rough estimate and let the scroll settle.
+    final estimatedOffset = idx * 70.0;
+    _scrollController.animateTo(
+      estimatedOffset,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
+    // Highlight the message briefly
+    setState(() => _highlightedMessageId = messageId);
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (mounted) setState(() => _highlightedMessageId = null);
+    });
+  }
+
   Future<void> _sendMessage() async {
     final text = _textController.text.trim();
     if (text.isEmpty) return;
     _textController.clear();
+
+    // Edit mode: PATCH the existing message
+    if (_editingMessage != null) {
+      final editMsg = _editingMessage!;
+      _clearReply();
+      if (text == editMsg.message) return; // no change
+      try {
+        final updated = await editMessage(widget.chatId, editMsg.id, text);
+        if (!mounted) return;
+        setState(() {
+          final idx = _messages.indexWhere((m) => m.id == editMsg.id);
+          if (idx >= 0) _messages[idx] = updated;
+        });
+      } catch (e) {
+        if (mounted) {
+          showCupertinoDialog(
+            context: context,
+            builder: (_) => CupertinoAlertDialog(
+              title: const Text('Error'),
+              content: Text('Failed to edit: $e'),
+              actions: [
+                CupertinoDialogAction(
+                  isDefaultAction: true,
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        }
+      }
+      return;
+    }
+
+    // Normal send mode
+    final replyId = _replyingTo?.id;
+    _clearReply();
     try {
-      final msg = await sendMessage(widget.chatId, text);
+      final msg = await sendMessage(widget.chatId, text, replyToId: replyId);
       if (!mounted) return;
       setState(() => _messages.insert(0, msg));
-      // Scroll to newest message (offset 0 in reversed list).
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           0,
@@ -189,7 +304,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         );
       }
     } catch (e) {
-      // Cupertino doesn't have SnackBar — show an alert instead.
       if (mounted) {
         showCupertinoDialog(
           context: context,
@@ -209,9 +323,102 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     }
   }
 
+  // ---- Edit / Delete actions ----
+
+  void _showMessageActions(MessageItem msg) {
+    if (msg.isDeleted) return;
+    final isOwn = msg.sender.uid == curUserId;
+
+    showCupertinoModalPopup(
+      context: context,
+      builder: (_) => CupertinoActionSheet(
+        actions: [
+          // Reply — available for all messages
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _setReplyTo(msg);
+            },
+            child: const Text('Reply'),
+          ),
+          if (isOwn)
+            CupertinoActionSheetAction(
+              onPressed: () {
+                Navigator.pop(context);
+                _startEditing(msg);
+              },
+              child: const Text('Edit'),
+            ),
+          // Delete — only own messages
+          if (isOwn)
+            CupertinoActionSheetAction(
+              isDestructiveAction: true,
+              onPressed: () {
+                Navigator.pop(context);
+                _confirmDelete(msg);
+              },
+              child: const Text('Delete'),
+            ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+      ),
+    );
+  }
+
+  void _confirmDelete(MessageItem msg) {
+    showCupertinoDialog(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: const Text('Delete message?'),
+        content: const Text('This cannot be undone.'),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                await deleteMessage(widget.chatId, msg.id);
+                if (!mounted) return;
+                setState(() {
+                  _messages.removeWhere((m) => m.id == msg.id);
+                });
+              } catch (e) {
+                if (mounted) {
+                  showCupertinoDialog(
+                    context: context,
+                    builder: (_) => CupertinoAlertDialog(
+                      title: const Text('Error'),
+                      content: Text('Failed to delete: $e'),
+                      actions: [
+                        CupertinoDialogAction(
+                          isDefaultAction: true,
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('OK'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---- Build methods ----
+
   @override
   Widget build(BuildContext context) {
-    // let the chat name be either chat name or chat id
     final chatName = widget.chatName.isEmpty
         ? 'Chat ${widget.chatId}'
         : widget.chatName;
@@ -224,7 +431,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
               child: Stack(
                 children: [
                   _buildBody(),
-                  // scroll to bottom button
                   if (_showScrollToBottom)
                     Positioned(
                       right: 16,
@@ -301,81 +507,219 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       padding: EdgeInsets.zero,
       itemCount: itemCount,
       itemBuilder: (context, index) {
-        // loading more messages indicator
         if (showTopLoader && index == itemCount - 1) {
           return const Padding(
             padding: EdgeInsets.symmetric(vertical: 16),
             child: Center(child: CupertinoActivityIndicator()),
           );
         }
-        // _messages is ordered newest-first (index 0 = newest).
-        // In reverse mode, index 0 is at the visual bottom.
         final msg = _messages[index];
-        return _MessageRow(message: msg);
+        final isHighlighted = _highlightedMessageId == msg.id;
+        return _MessageRow(
+          key: ValueKey(msg.id),
+          message: msg,
+          isHighlighted: isHighlighted,
+          onLongPress: () => _showMessageActions(msg),
+          onReply: () => _setReplyTo(msg),
+          onTapReply: msg.replyToMessage != null
+              ? () => _jumpToMessage(msg.replyToMessage!.id)
+              : null,
+        );
       },
     );
   }
 
-  // send message: input field and send button
+  // Reply preview bar + input field
   Widget _buildInput() {
-    return Padding(
-      padding: const EdgeInsets.only(top: 10),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
-        decoration: BoxDecoration(
-          border: Border(
-            top: BorderSide(
-              color: CupertinoColors.separator.resolveFrom(context),
-              width: 0.5,
-            ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Reply or Edit preview
+        if (_replyingTo != null)
+          _buildPreviewBar(
+            title: 'Replying to ${_replyingTo!.sender.name ?? 'User ${_replyingTo!.sender.uid}'}',
+            body: _replyingTo!.message ?? '',
           ),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: CupertinoTextField(
-                controller: _textController,
-                placeholder: 'Message',
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: CupertinoColors.systemGrey6.resolveFrom(context),
-                  borderRadius: BorderRadius.circular(20),
+        if (_editingMessage != null)
+          _buildPreviewBar(
+            title: 'Editing',
+            body: _editingMessage!.message ?? '',
+          ),
+        Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(
+                  color: CupertinoColors.separator.resolveFrom(context),
+                  width: 0.5,
                 ),
               ),
             ),
-            const SizedBox(width: 6),
-            CupertinoButton(
-              padding: EdgeInsets.zero,
-              onPressed: _sendMessage,
-              child: const Icon(CupertinoIcons.paperplane_fill, size: 32),
+            child: Row(
+              children: [
+                Expanded(
+                  child: CupertinoTextField(
+                    controller: _textController,
+                    placeholder: 'Message',
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: CupertinoColors.systemGrey6.resolveFrom(context),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                // Send button: filled circle with white paper plane
+                GestureDetector(
+                  onTap: _sendMessage,
+                  child: Container(
+                    width: 34,
+                    height: 34,
+                    decoration: const BoxDecoration(
+                      color: CupertinoColors.activeBlue,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      CupertinoIcons.paperplane_fill,
+                      size: 18,
+                      color: CupertinoColors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+              ],
             ),
-          ],
+          ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildPreviewBar({required String title, required String body}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemGrey6.resolveFrom(context),
+        border: Border(
+          top: BorderSide(
+            color: CupertinoColors.separator.resolveFrom(context),
+            width: 0.5,
+          ),
+          left: const BorderSide(color: CupertinoColors.activeBlue, width: 3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: CupertinoColors.activeBlue,
+                  ),
+                ),
+                Text(
+                  body,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            minSize: 24,
+            onPressed: _clearReply,
+            child: Icon(
+              CupertinoIcons.xmark_circle_fill,
+              size: 20,
+              color: CupertinoColors.secondaryLabel.resolveFrom(context),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-// each message row: bubble with sender, message, time, and optional reply quote
-class _MessageRow extends StatelessWidget {
-  const _MessageRow({required this.message});
+// ---------------------------------------------------------------------------
+// _MessageRow — message bubble with avatar, inline time, reply quote,
+// swipe-to-reply gesture
+// ---------------------------------------------------------------------------
+
+class _MessageRow extends StatefulWidget {
+  const _MessageRow({
+    super.key,
+    required this.message,
+    this.isHighlighted = false,
+    this.onLongPress,
+    this.onReply,
+    this.onTapReply,
+  });
 
   final MessageItem message;
+  final bool isHighlighted;
+  final VoidCallback? onLongPress;
+  final VoidCallback? onReply;
+  final VoidCallback? onTapReply;
 
-  bool get _isMe => message.sender.uid == curUserId;
+  @override
+  State<_MessageRow> createState() => _MessageRowState();
+}
+
+class _MessageRowState extends State<_MessageRow>
+    with SingleTickerProviderStateMixin {
+  double _dragOffset = 0;
+  bool _hasTriggeredReply = false;
+  static const double _replyThreshold = 60;
+
+  bool get _isMe => widget.message.sender.uid == curUserId;
+
+  void _onHorizontalDragUpdate(DragUpdateDetails details) {
+    setState(() {
+      // Only allow dragging to the left (negative offset)
+      _dragOffset = (_dragOffset + details.delta.dx).clamp(
+        -_replyThreshold * 1.3,
+        0,
+      );
+    });
+    if (!_hasTriggeredReply && _dragOffset <= -_replyThreshold) {
+      _hasTriggeredReply = true;
+    }
+  }
+
+  void _onHorizontalDragEnd(DragEndDetails details) {
+    if (_hasTriggeredReply) {
+      widget.onReply?.call();
+    }
+    _hasTriggeredReply = false;
+    setState(() => _dragOffset = 0);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final message = widget.message;
     final screenWidth = MediaQuery.of(context).size.width;
     final text = message.message ?? '';
     final senderName = message.sender.name ?? 'User ${message.sender.uid}';
+    final timeStr = _formatTime(message.createdAt);
 
     final isDark = MediaQuery.platformBrightnessOf(context) == Brightness.dark;
 
-    // select color based on theme and message sender
     final bubbleColor = _isMe
         ? CupertinoColors.activeBlue
         : (isDark
@@ -388,69 +732,179 @@ class _MessageRow extends StatelessWidget {
         ? CupertinoColors.white.withAlpha(180)
         : CupertinoColors.secondaryLabel.resolveFrom(context);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-      child: Row(
-        //decide whether the msg appears on the right side or the left side
-        mainAxisAlignment: _isMe
-            ? MainAxisAlignment.end
-            : MainAxisAlignment.start,
-        children: [
-          Container(
-            constraints: BoxConstraints(maxWidth: screenWidth * 0.75),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: bubbleColor,
-              borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(18),
-                topRight: const Radius.circular(18),
-                bottomLeft: Radius.circular(_isMe ? 18 : 4),
-                bottomRight: Radius.circular(_isMe ? 4 : 18),
+    // Avatar initial
+    final initial = (senderName.isNotEmpty ? senderName[0] : '?').toUpperCase();
+
+    final maxBubbleWidth = screenWidth * 0.75;
+
+    // Build time widget
+    final editedLabel = message.isEdited ? 'edited ' : '';
+    Widget timeWidget = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (message.isEdited)
+          Padding(
+            padding: const EdgeInsets.only(right: 3),
+            child: Text(
+              'edited',
+              style: TextStyle(color: metaColor, fontSize: 11),
+            ),
+          ),
+        Text(timeStr, style: TextStyle(color: metaColor, fontSize: 11)),
+      ],
+    );
+
+    // Measure time width to create a matching invisible spacer.
+    final timePainter = TextPainter(
+      text: TextSpan(
+        text: ' $editedLabel$timeStr',
+        style: const TextStyle(fontSize: 11),
+      ),
+      maxLines: 1,
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: double.infinity);
+    final timeSpacerWidth = timePainter.width + 8;
+
+    Widget bubbleContent = Stack(
+      children: [
+        Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(
+                text: text,
+                style: TextStyle(color: textColor, fontSize: 15),
+              ),
+              WidgetSpan(child: SizedBox(width: timeSpacerWidth, height: 14)),
+            ],
+          ),
+        ),
+        Positioned(right: 0, bottom: 0, child: timeWidget),
+      ],
+    );
+
+    Widget fullContent = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (!_isMe)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 2),
+            child: Text(
+              senderName,
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+                color: CupertinoColors.activeBlue.resolveFrom(context),
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Sender name (only for others' messages)
-                if (!_isMe)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 2),
-                    child: Text(
-                      senderName,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                        color: CupertinoColors.activeBlue.resolveFrom(context),
-                      ),
-                    ),
-                  ),
-                // Reply-to quote
-                if (message.replyToMessage != null)
-                  _buildReplyQuote(context, message.replyToMessage!),
-                // Message text
-                Text(text, style: TextStyle(color: textColor, fontSize: 15)),
-                const SizedBox(height: 2),
-                // Time + edited indicator
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (message.isEdited)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 4),
-                        child: Text(
-                          'edited',
-                          style: TextStyle(color: metaColor, fontSize: 11),
-                        ),
-                      ),
-                    Text(
-                      _formatTime(message.createdAt),
-                      style: TextStyle(color: metaColor, fontSize: 11),
-                    ),
-                  ],
+          ),
+        if (message.replyToMessage != null)
+          GestureDetector(
+            onTap: widget.onTapReply,
+            child: _buildReplyQuote(context, message.replyToMessage!),
+          ),
+        bubbleContent,
+      ],
+    );
+
+    Widget bubble = Container(
+      constraints: BoxConstraints(maxWidth: maxBubbleWidth),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: bubbleColor,
+        borderRadius: BorderRadius.only(
+          topLeft: const Radius.circular(18),
+          topRight: const Radius.circular(18),
+          bottomLeft: Radius.circular(_isMe ? 18 : 4),
+          bottomRight: Radius.circular(_isMe ? 4 : 18),
+        ),
+      ),
+      child: fullContent,
+    );
+
+    Widget avatar = Container(
+      width: 30,
+      height: 30,
+      decoration: BoxDecoration(
+        color: isDark
+            ? CupertinoColors.systemGrey4.darkColor
+            : CupertinoColors.systemGrey4.color,
+        shape: BoxShape.circle,
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: CupertinoColors.white,
+        ),
+      ),
+    );
+
+    // Reply icon that appears on the right when swiping
+    final replyIconOpacity = (_dragOffset.abs() / _replyThreshold).clamp(
+      0.0,
+      1.0,
+    );
+
+    Widget messageRow = AnimatedContainer(
+      duration: const Duration(milliseconds: 600),
+      decoration: BoxDecoration(
+        color: widget.isHighlighted
+            ? CupertinoColors.systemYellow.withAlpha(60)
+            : const Color(0x00000000),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        child: Row(
+          mainAxisAlignment: _isMe
+              ? MainAxisAlignment.end
+              : MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: _isMe
+              ? [bubble, const SizedBox(width: 6), avatar]
+              : [avatar, const SizedBox(width: 6), bubble],
+        ),
+      ),
+    );
+
+    return GestureDetector(
+      onLongPress: widget.onLongPress,
+      onHorizontalDragUpdate: _onHorizontalDragUpdate,
+      onHorizontalDragEnd: _onHorizontalDragEnd,
+      child: Stack(
+        alignment: Alignment.centerRight,
+        children: [
+          // Reply icon behind the message
+          Positioned(
+            right: 12,
+            child: Opacity(
+              opacity: replyIconOpacity,
+              child: Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: CupertinoColors.systemGrey5.resolveFrom(context),
+                  shape: BoxShape.circle,
                 ),
-              ],
+                child: Icon(
+                  CupertinoIcons.reply,
+                  size: 16,
+                  color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                ),
+              ),
             ),
+          ),
+          // The actual message, translated by drag offset
+          AnimatedContainer(
+            duration: _dragOffset == 0
+                ? const Duration(milliseconds: 200)
+                : Duration.zero,
+            curve: Curves.easeOut,
+            transform: Matrix4.translationValues(_dragOffset, 0, 0),
+            child: messageRow,
           ),
         ],
       ),
@@ -506,7 +960,7 @@ class _MessageRow extends StatelessWidget {
               color: _isMe
                   ? CupertinoColors.white.withAlpha(200)
                   : CupertinoColors.secondaryLabel.resolveFrom(context),
-              fontStyle: reply.isDeleted ? FontStyle.italic : FontStyle.normal,
+              // fontStyle: reply.isDeleted ? FontStyle.italic : FontStyle.normal,
             ),
           ),
         ],

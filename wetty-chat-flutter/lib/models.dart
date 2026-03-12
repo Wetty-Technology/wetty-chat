@@ -3,25 +3,26 @@ class ChatListItem {
   final String id;
   final String? name;
   final String? lastMessageAt;
-  final String? lastMessagePreview;
-  final String? lastMessageSenderName;
+  final int unreadCount;
+  final MessageItem? lastMessage;
 
-  // TODO: add lastMessagePreview and lastMessageSenderName
   ChatListItem({
     required this.id,
     this.name,
     this.lastMessageAt,
-    this.lastMessagePreview,
-    this.lastMessageSenderName,
+    this.unreadCount = 0,
+    this.lastMessage,
   });
 
   factory ChatListItem.fromJson(Map<String, dynamic> json) {
+    final lastMsgJson = json['last_message'] as Map<String, dynamic>?;
     return ChatListItem(
       id: json['id']?.toString() ?? '',
       name: json['name'] as String?,
       lastMessageAt: json['last_message_at'] as String?,
-      lastMessagePreview: json['last_message_preview'] as String?,
-      lastMessageSenderName: json['last_message_sender_name'] as String?,
+      unreadCount: json['unread_count'] as int? ?? 0,
+      lastMessage:
+          lastMsgJson != null ? MessageItem.fromJson(lastMsgJson) : null,
     );
   }
 }
