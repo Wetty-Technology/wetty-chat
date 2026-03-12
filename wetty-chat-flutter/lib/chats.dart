@@ -110,9 +110,7 @@ class _ChatPageState extends State<ChatPage> {
           child: const Icon(CupertinoIcons.add),
         ),
       ),
-      child: SafeArea(
-        child: _buildBody(),
-      ),
+      child: SafeArea(child: _buildBody()),
     );
   }
 
@@ -172,8 +170,9 @@ class _ChatPageState extends State<ChatPage> {
             dateText = chat.lastMessageAt;
           }
         }
-        final senderName = chat.lastMessageSenderName;
-        final lastMsg = chat.lastMessagePreview;
+        final senderName = chat.lastMessage?.sender.name;
+        final lastMsg = chat.lastMessage?.message;
+        final unreadCount = chat.unreadCount;
         final hasMessage =
             (senderName != null && senderName.isNotEmpty) &&
             (lastMsg != null && lastMsg.isNotEmpty);
@@ -234,24 +233,59 @@ class _ChatPageState extends State<ChatPage> {
                             ),
                           ),
                           if (dateText != null)
-                            Text(
-                              dateText,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: CupertinoColors.secondaryLabel
-                                    .resolveFrom(context),
+                            Padding(
+                              padding: const EdgeInsets.only(left: 8),
+                              child: Text(
+                                dateText,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: CupertinoColors.secondaryLabel
+                                      .resolveFrom(context),
+                                ),
                               ),
                             ),
                         ],
                       ),
-                      // sender
-                      hasMessage ? Text(senderName) : const Text(''),
-                      const SizedBox(width: 4),
-                      // last message
-                      hasMessage ? Text(lastMsg) : const Text(''),
+                      const SizedBox(height: 3),
+                      // Bottom row: sender: last message + unread count
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              hasMessage ? '$senderName: $lastMsg' : '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: CupertinoColors.secondaryLabel
+                                    .resolveFrom(context),
+                              ),
+                            ),
+                          ),
+                          if (unreadCount > 0)
+                            Container(
+                              margin: const EdgeInsets.only(left: 8),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: CupertinoColors.activeBlue,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '$unreadCount',
+                                style: const TextStyle(
+                                  color: CupertinoColors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
+                const SizedBox(width: 8),
                 // Disclosure indicator
                 const Icon(
                   CupertinoIcons.chevron_right,
@@ -335,9 +369,6 @@ class _ChatPageState extends State<ChatPage> {
         final newChat = ChatListItem(
           id: id,
           name: createdName,
-          lastMessageAt: null,
-          lastMessagePreview: null,
-          lastMessageSenderName: null,
         );
         setState(() => chats.insert(0, newChat));
         if (mounted) {
