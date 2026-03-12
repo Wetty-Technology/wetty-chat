@@ -1,4 +1,4 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, createSelector } from '@reduxjs/toolkit';
 import type { MessageResponse } from '@/api/messages';
 
 const MAX_WINDOWS = 5;
@@ -217,14 +217,21 @@ export const {
 } = messagesSlice.actions;
 
 /** Selectors */
-export function selectMessagesForChat(
-  state: { messages: MessagesState },
-  chatId: string
-): MessageResponse[] {
-  const chat = state.messages.chats[chatId];
-  if (!chat || chat.windows.length === 0) return [];
-  return chat.windows[chat.activeWindowIndex]?.messages ?? [];
-}
+const EMPTY_ARRAY: MessageResponse[] = [];
+
+const selectMessagesChats = (state: { messages: MessagesState }) => state.messages.chats;
+
+export const selectMessagesForChat = createSelector(
+  [
+    selectMessagesChats,
+    (_state: { messages: MessagesState }, chatId: string) => chatId
+  ],
+  (chats, chatId): MessageResponse[] => {
+    const chat = chats[chatId];
+    if (!chat || chat.windows.length === 0) return EMPTY_ARRAY;
+    return chat.windows[chat.activeWindowIndex]?.messages ?? EMPTY_ARRAY;
+  }
+);
 
 export function selectNextCursorForChat(
   state: { messages: MessagesState },
