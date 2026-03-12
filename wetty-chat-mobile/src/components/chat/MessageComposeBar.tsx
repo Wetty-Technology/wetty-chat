@@ -28,7 +28,7 @@ export function MessageComposeBar({ onSend, replyTo, onCancelReply, editing, onC
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState('');
   const [isUploading, setIsUploading] = useState(false);
-  const [attachments, setAttachments] = useState<{ id: string, name: string }[]>([]);
+  const [attachments, setAttachments] = useState<{ id: string, name: string, previewUrl?: string }[]>([]);
 
   useEffect(() => {
     if (editing) {
@@ -50,6 +50,9 @@ export function MessageComposeBar({ onSend, replyTo, onCancelReply, editing, onC
     if (!trimmed && attachments.length === 0) return;
     onSend(trimmed, attachments.map(a => a.id));
     setText('');
+    attachments.forEach(a => {
+      if (a.previewUrl) URL.revokeObjectURL(a.previewUrl);
+    });
     setAttachments([]);
     const ta = textareaRef.current;
     if (ta) ta.style.height = 'auto';
@@ -94,11 +97,13 @@ export function MessageComposeBar({ onSend, replyTo, onCancelReply, editing, onC
     });
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const processFile = useCallback(async (file: File) => {
     setIsUploading(true);
+    let previewUrl: string | undefined;
+    if (file.type.startsWith('image/')) {
+      previewUrl = URL.createObjectURL(file);
+    }
+
     try {
       const dimensions = await getImageDimensions(file);
 
@@ -112,18 +117,55 @@ export function MessageComposeBar({ onSend, replyTo, onCancelReply, editing, onC
       const { upload_url, attachment_id } = res.data;
       await uploadFileToS3(upload_url, file);
 
-      setAttachments(prev => [...prev, { id: attachment_id, name: file.name }]);
+      setAttachments(prev => [...prev, { id: attachment_id, name: file.name, previewUrl }]);
     } catch (err) {
       console.error('Failed to upload attachment:', err);
       alert('Failed to upload file');
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  }, []);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await processFile(file);
   };
 
+  useEffect(() => {
+    const handleGlobalPaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith('image/')) {
+          e.preventDefault();
+          const file = items[i].getAsFile();
+          if (file) {
+            processFile(file);
+          }
+          break; // Process one image at a time
+        }
+      }
+    };
+    
+    document.addEventListener('paste', handleGlobalPaste);
+    return () => document.removeEventListener('paste', handleGlobalPaste);
+  }, [processFile]);
+
   const removeAttachment = (index: number) => {
-    setAttachments(prev => prev.filter((_, i) => i !== index));
+    setAttachments(prev => {
+      const newAttachments = [...prev];
+      const removed = newAttachments.splice(index, 1)[0];
+      if (removed.previewUrl) {
+        URL.revokeObjectURL(removed.previewUrl);
+      }
+      return newAttachments;
+    });
   };
 
   return (
@@ -171,7 +213,11 @@ export function MessageComposeBar({ onSend, replyTo, onCancelReply, editing, onC
           <div className={styles.attachmentsPreview}>
             {attachments.map((att, idx) => (
               <div key={idx} className={styles.attachmentChip}>
-                <IonIcon icon={imageOutline} />
+                {att.previewUrl ? (
+                  <img src={att.previewUrl} alt={att.name} className={styles.attachmentPreviewImage} />
+                ) : (
+                  <IonIcon icon={imageOutline} />
+                )}
                 <span className={styles.attachmentName}>{att.name}</span>
                 <button type="button" className={styles.removeAttachment} onClick={() => removeAttachment(idx)}>
                   <IonIcon icon={closeCircle} />

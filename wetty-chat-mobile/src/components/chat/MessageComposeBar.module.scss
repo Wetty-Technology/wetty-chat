@@ -165,6 +165,13 @@
   color: var(--ion-color-primary);
 }
 
+.attachmentPreviewImage {
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
 .attachmentName {
   max-width: 120px;
   white-space: nowrap;
