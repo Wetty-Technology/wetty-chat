@@ -108,6 +108,7 @@ export function VirtualScroll({
   const hasInitialScrolled = useRef(false);
   const heightCache = useRef(new Map<number, number>());
   const isAtBottomRef = useRef(true);
+  const prevLoadingOlderRef = useRef(loadingOlder);
   const pendingBottomScrollRef = useRef(false);
   const initialScrollIndexRef = useRef<number | undefined>(undefined);
   const [, forceUpdate] = useState(0);
@@ -185,7 +186,17 @@ export function VirtualScroll({
       }
     }
     prevPrependedCountRef.current = prependedCount;
-  }, [prependedCount, estimatedItemHeight]);
+
+    // Compensate for loading bar appearing/disappearing
+    if (prevLoadingOlderRef.current !== loadingOlder) {
+      const el = containerRef.current;
+      if (el) {
+        const delta = loadingOlder ? 36 : -36;
+        el.scrollTop += delta;
+      }
+      prevLoadingOlderRef.current = loadingOlder;
+    }
+  }, [prependedCount, estimatedItemHeight, loadingOlder]);
 
   // Auto-scroll to bottom when new messages appended and user was at bottom
   useLayoutEffect(() => {
