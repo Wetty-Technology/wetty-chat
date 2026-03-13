@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -88,6 +90,24 @@ Future<void> deleteMessage(String chatId, String messageId) async {
 }
 
 // ---------------------------------------------------------------------------
+// InputState – the three mutually exclusive states for the input bar
+// ---------------------------------------------------------------------------
+
+sealed class InputState {}
+
+class InputEmpty extends InputState {}
+
+class InputReplying extends InputState {
+  final MessageItem message;
+  InputReplying(this.message);
+}
+
+class InputEditing extends InputState {
+  final MessageItem message;
+  InputEditing(this.message);
+}
+
+// ---------------------------------------------------------------------------
 // ChatDetailPage
 // ---------------------------------------------------------------------------
 
@@ -114,8 +134,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   bool _isLoadingMore = false;
   String? _errorMessage;
   bool _showScrollToBottom = false;
-  MessageItem? _replyingTo;
-  MessageItem? _editingMessage;
+  InputState _inputState = InputEmpty();
   String? _highlightedMessageId;
   late ScrollController _scrollController;
   final TextEditingController _textController = TextEditingController();
@@ -214,20 +233,18 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   }
 
   void _setReplyTo(MessageItem msg) {
-    setState(() => _replyingTo = msg);
+    setState(() => _inputState = InputReplying(msg));
   }
 
-  void _clearReply() {
-    setState(() {
-      _replyingTo = null;
-      _editingMessage = null;
-    });
+  // used when the cancel button is clicked
+  void _clearMessage() {
+    _textController.clear();
+    setState(() => _inputState = InputEmpty());
   }
 
   void _startEditing(MessageItem msg) {
     setState(() {
-      _replyingTo = null;
-      _editingMessage = msg;
+      _inputState = InputEditing(msg);
       _textController.text = msg.message ?? '';
     });
   }
@@ -254,77 +271,69 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   Future<void> _sendMessage() async {
     final text = _textController.text.trim();
     if (text.isEmpty) return;
-    _textController.clear();
 
-    // Edit mode: PATCH the existing message
-    if (_editingMessage != null) {
-      final editMsg = _editingMessage!;
-      _clearReply();
-      if (text == editMsg.message) return; // no change
-      try {
-        final updated = await editMessage(widget.chatId, editMsg.id, text);
-        if (!mounted) return;
-        setState(() {
-          final idx = _messages.indexWhere((m) => m.id == editMsg.id);
-          if (idx >= 0) _messages[idx] = updated;
-        });
-      } catch (e) {
-        if (mounted) {
-          showCupertinoDialog(
-            context: context,
-            builder: (_) => CupertinoAlertDialog(
-              title: const Text('Error'),
-              content: Text('Failed to edit: $e'),
-              actions: [
-                CupertinoDialogAction(
-                  isDefaultAction: true,
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('OK'),
-                ),
-              ],
-            ),
-          );
+    final state = _inputState;
+    switch (state) {
+      case InputEditing(:final message):
+        // if the edited msg is the same as the original msg, no change
+        if (text == message.message) return;
+        try {
+          final updated = await editMessage(widget.chatId, message.id, text);
+          if (!mounted) return;
+          setState(() {
+            final idx = _messages.indexWhere((m) => m.id == message.id);
+            if (idx >= 0) _messages[idx] = updated;
+          });
+        } catch (e) {
+          if (mounted) _showErrorDialog('Failed to edit: $e');
         }
-      }
-      return;
+
+      case InputReplying(:final message):
+        try {
+          final msg = await sendMessage(
+            widget.chatId,
+            text,
+            replyToId: message.id,
+          );
+          if (!mounted) return;
+          setState(() => _messages.insert(0, msg));
+          _scrollToBottom();
+        } catch (e) {
+          if (mounted) _showErrorDialog('Failed to send: $e');
+        }
+
+      case InputEmpty():
+        try {
+          final msg = await sendMessage(widget.chatId, text);
+          if (!mounted) return;
+          setState(() => _messages.insert(0, msg));
+          _scrollToBottom();
+        } catch (e) {
+          if (mounted) _showErrorDialog('Failed to send: $e');
+        }
     }
 
-    // Normal send mode
-    final replyId = _replyingTo?.id;
-    _clearReply();
-    try {
-      final msg = await sendMessage(widget.chatId, text, replyToId: replyId);
-      if (!mounted) return;
-      setState(() => _messages.insert(0, msg));
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          0,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        showCupertinoDialog(
-          context: context,
-          builder: (_) => CupertinoAlertDialog(
-            title: const Text('Error'),
-            content: Text('Failed to send: $e'),
-            actions: [
-              CupertinoDialogAction(
-                isDefaultAction: true,
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
+    _clearMessage();
+  }
+
+  void _showErrorDialog(String message) {
+    showCupertinoDialog(
+      context: context,
+      builder: (_) => CupertinoAlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
           ),
-        );
-      }
-    }
+        ],
+      ),
+    );
   }
 
   // ---- Edit / Delete actions ----
-
   void _showMessageActions(MessageItem msg) {
     if (msg.isDeleted) return;
     final isOwn = msg.sender.uid == curUserId;
@@ -423,6 +432,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         ? 'Chat ${widget.chatId}'
         : widget.chatName;
     return CupertinoPageScaffold(
+      backgroundColor: const Color(0xFFECE5DD),
       navigationBar: CupertinoNavigationBar(middle: Text(chatName)),
       child: SafeArea(
         child: Column(
@@ -530,7 +540,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   }
 
   Widget _buildInput() {
-    final hasPreview = _replyingTo != null || _editingMessage != null;
+    final hasPreview = _inputState is! InputEmpty;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
@@ -554,33 +564,37 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: CupertinoColors.systemGrey6.resolveFrom(context),
+                color: CupertinoColors.systemBackground.resolveFrom(context),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: CupertinoColors.systemGrey4.resolveFrom(context),
-                  width: 0.5,
+                  width: 1.0,
                 ),
               ),
               clipBehavior: Clip.antiAlias,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (_replyingTo != null)
-                    _buildPreviewBar(
+                  // preview bar: switch input state to get msg /and sender
+                  switch (_inputState) {
+                    InputReplying(:final message) => _replyToMsg(
                       title:
-                          'Replying to ${_replyingTo!.sender.name ?? 'User ${_replyingTo!.sender.uid}'}',
-                      body: _replyingTo!.message ?? '',
+                          'Replying to ${message.sender.name ?? 'User ${message.sender.uid}'}',
+                      body: message.message ?? '',
                     ),
-                  if (_editingMessage != null)
-                    _buildPreviewBar(
+                    InputEditing(:final message) => _buildPreviewBar(
                       title: 'Edit Message',
-                      body: _editingMessage!.message ?? '',
+                      body: message.message ?? '',
                     ),
+                    InputEmpty() => const SizedBox.shrink(),
+                  },
                   if (hasPreview)
-                    Divider(
+                    // use container as divider
+                    Container(
                       height: 0.5,
                       color: CupertinoColors.separator.resolveFrom(context),
                     ),
+                  // text field
                   CupertinoTextField(
                     controller: _textController,
                     placeholder: 'Message',
@@ -619,13 +633,23 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     );
   }
 
+  Widget _replyToMsg({required String title, required String body}) {
+    _textController.clear();
+    return _buildPreviewBar(title: title, body: body);
+  }
+
+  // show preview bar when replying or editing
   Widget _buildPreviewBar({required String title, required String body}) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 8, 4),
       decoration: BoxDecoration(
-        color: CupertinoColors.systemGrey6.resolveFrom(context),
+        color: CupertinoColors.systemGrey5.resolveFrom(context),
         border: const Border(
           left: BorderSide(color: CupertinoColors.activeBlue, width: 3),
+        ),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
         ),
       ),
       child: Row(
@@ -658,10 +682,11 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
               ],
             ),
           ),
+          // cancel button
           CupertinoButton(
             padding: EdgeInsets.zero,
-            minSize: 30,
-            onPressed: _clearReply,
+            minimumSize: const Size(30, 30),
+            onPressed: _clearMessage,
             child: Icon(
               CupertinoIcons.xmark_circle_fill,
               size: 20,
@@ -732,20 +757,19 @@ class _MessageRowState extends State<_MessageRow>
   Widget build(BuildContext context) {
     final message = widget.message;
     final screenWidth = MediaQuery.of(context).size.width;
-    final text = message.message ?? '';
-    final senderName = message.sender.name ?? 'User ${message.sender.uid}';
+    final msgText = message.message ?? '';
+    final senderName = message.sender.name ?? 'aUser ${message.sender.uid}';
     final timeStr = _formatTime(message.createdAt);
 
     final isDark = MediaQuery.platformBrightnessOf(context) == Brightness.dark;
 
     final bubbleColor = _isMe
         ? CupertinoColors.activeBlue
-        : (isDark
-              ? CupertinoColors.systemGrey5.darkColor
-              : CupertinoColors.systemGrey5.color);
+        : (isDark ? CupertinoColors.systemGrey5.darkColor : Color(0xfff0f0f0));
     final textColor = _isMe
         ? CupertinoColors.white
         : CupertinoColors.label.resolveFrom(context);
+    // edited label, time
     final metaColor = _isMe
         ? CupertinoColors.white.withAlpha(180)
         : CupertinoColors.secondaryLabel.resolveFrom(context);
@@ -755,7 +779,7 @@ class _MessageRowState extends State<_MessageRow>
 
     final maxBubbleWidth = screenWidth * 0.75;
 
-    // Build time widget
+    // edited label, time
     final editedLabel = message.isEdited ? 'edited ' : '';
     Widget timeWidget = Row(
       mainAxisSize: MainAxisSize.min,
@@ -783,13 +807,14 @@ class _MessageRowState extends State<_MessageRow>
     )..layout(maxWidth: double.infinity);
     final timeSpacerWidth = timePainter.width + 8;
 
+    // msg content, edited label, date/time
     Widget bubbleContent = Stack(
       children: [
         Text.rich(
           TextSpan(
             children: [
               TextSpan(
-                text: text,
+                text: msgText,
                 style: TextStyle(color: textColor, fontSize: 15),
               ),
               WidgetSpan(child: SizedBox(width: timeSpacerWidth, height: 14)),
@@ -800,10 +825,12 @@ class _MessageRowState extends State<_MessageRow>
       ],
     );
 
+    // the whole bubble
     Widget fullContent = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
+        // sender name
         if (!_isMe)
           Padding(
             padding: const EdgeInsets.only(bottom: 2),
@@ -816,11 +843,13 @@ class _MessageRowState extends State<_MessageRow>
               ),
             ),
           ),
+        // reply quote
         if (message.replyToMessage != null)
           GestureDetector(
             onTap: widget.onTapReply,
             child: _buildReplyQuote(context, message.replyToMessage!),
           ),
+        // message content
         bubbleContent,
       ],
     );
@@ -909,8 +938,8 @@ class _MessageRowState extends State<_MessageRow>
                 ),
                 child: Icon(
                   CupertinoIcons.reply,
-                  size: 16,
-                  color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                  size: 22,
+                  color: CupertinoColors.activeBlue,
                 ),
               ),
             ),
@@ -941,7 +970,7 @@ class _MessageRowState extends State<_MessageRow>
         ? Color.lerp(CupertinoColors.activeBlue, const Color(0xFF000000), 0.15)!
         : (isDark
               ? CupertinoColors.systemGrey4.darkColor
-              : CupertinoColors.systemGrey4.color);
+              : CupertinoColors.systemGrey5.color);
     final quoteBorderColor = _isMe
         ? CupertinoColors.white.withAlpha(150)
         : CupertinoColors.activeBlue;
@@ -978,7 +1007,6 @@ class _MessageRowState extends State<_MessageRow>
               color: _isMe
                   ? CupertinoColors.white.withAlpha(200)
                   : CupertinoColors.secondaryLabel.resolveFrom(context),
-              // fontStyle: reply.isDeleted ? FontStyle.italic : FontStyle.normal,
             ),
           ),
         ],
@@ -994,20 +1022,5 @@ class _MessageRowState extends State<_MessageRow>
     } catch (_) {
       return iso;
     }
-  }
-}
-
-/// Cupertino-style thin separator line.
-class Divider extends StatelessWidget {
-  const Divider({super.key, this.height = 1, this.color});
-  final double height;
-  final Color? color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      color: color ?? CupertinoColors.separator.resolveFrom(context),
-    );
   }
 }
