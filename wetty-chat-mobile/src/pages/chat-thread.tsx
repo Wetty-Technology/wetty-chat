@@ -109,6 +109,8 @@ export default function ChatThread() {
   const loadingMoreRef = useRef(false);
   const loadingNewerRef = useRef(false);
   const [prependedCount, setPrependedCount] = useState(0);
+  const pendingPrependRef = useRef<{ messages: MessageResponse[]; nextCursor: string | null; gen: number } | null>(null);
+  const isScrollIdleRef = useRef(true);
   const [windowKey, setWindowKey] = useState(0);
   const [initialScrollIndex, setInitialScrollIndex] = useState<number | undefined>(undefined);
 
@@ -158,6 +160,7 @@ export default function ChatThread() {
         const list = res.data.messages ?? [];
         dispatch(resetChat({ chatId: storeChatId, messages: list, nextCursor: res.data.next_cursor ?? null, prevCursor: null }));
         setPrependedCount(0);
+        pendingPrependRef.current = null;
         setWindowKey(k => k + 1);
         setInitialScrollIndex(undefined);
       })
@@ -167,10 +170,27 @@ export default function ChatThread() {
       });
   }, [apiChatId, storeChatId, threadId, dispatch, showToast]);
 
+  const flushPendingPrepend = useCallback(() => {
+    const pending = pendingPrependRef.current;
+    if (!pending) return;
+    pendingPrependRef.current = null;
+    if (selectChatGeneration(store.getState(), storeChatId) !== pending.gen) return;
+    dispatch(prependMessages({ chatId: storeChatId, messages: pending.messages, nextCursor: pending.nextCursor }));
+    setPrependedCount(c => c + pending.messages.length);
+    loadingMoreRef.current = false;
+    setLoadingMore(false);
+  }, [storeChatId, dispatch]);
+
+  const handleScrollIdle = useCallback(() => {
+    isScrollIdleRef.current = true;
+    flushPendingPrepend();
+  }, [flushPendingPrepend]);
+
   const loadMore = useCallback(() => {
     const st = store.getState();
     const cursor = selectNextCursorForChat(st, storeChatId);
     if (!apiChatId || cursor == null || loadingMoreRef.current) return;
+    isScrollIdleRef.current = false;
     const gen = selectChatGeneration(st, storeChatId);
     loadingMoreRef.current = true;
     setLoadingMore(true);
@@ -178,13 +198,20 @@ export default function ChatThread() {
       .then((res) => {
         if (selectChatGeneration(store.getState(), storeChatId) !== gen) return;
         const list = res.data.messages ?? [];
-        dispatch(prependMessages({ chatId: storeChatId, messages: list, nextCursor: res.data.next_cursor ?? null }));
-        setPrependedCount(c => c + list.length);
+        const pending = { messages: list, nextCursor: res.data.next_cursor ?? null, gen };
+        if (isScrollIdleRef.current) {
+          // Scroll already stopped — flush immediately
+          dispatch(prependMessages({ chatId: storeChatId, messages: list, nextCursor: pending.nextCursor }));
+          setPrependedCount(c => c + list.length);
+          loadingMoreRef.current = false;
+          setLoadingMore(false);
+        } else {
+          // Buffer until scroll idle
+          pendingPrependRef.current = pending;
+        }
       })
       .catch((err: Error) => {
         showToast(err.message || t`Failed to load more`);
-      })
-      .finally(() => {
         loadingMoreRef.current = false;
         setLoadingMore(false);
       });
@@ -227,6 +254,7 @@ export default function ChatThread() {
         setInitialScrollIndex(idx !== -1 ? idx : undefined);
         setWindowKey(k => k + 1);
         setPrependedCount(0);
+        pendingPrependRef.current = null;
       })
       .catch((err: Error) => {
         showToast(err.message || t`Failed to jump to message`);
@@ -417,6 +445,7 @@ export default function ChatThread() {
           windowKey={windowKey}
           initialScrollIndex={initialScrollIndex}
           onAtBottomChange={setAtBottom}
+          onScrollIdle={handleScrollIdle}
 
           renderItem={(index: number) => {
             const msg = messages[index];

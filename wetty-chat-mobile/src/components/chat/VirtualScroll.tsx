@@ -17,6 +17,7 @@ interface VirtualScrollProps {
   windowKey?: number | string;
   initialScrollIndex?: number;
   onAtBottomChange?: (atBottom: boolean) => void;
+  onScrollIdle?: () => void;
   header?: ReactNode;
 }
 
@@ -78,10 +79,13 @@ export function VirtualScroll({
   windowKey,
   initialScrollIndex,
   onAtBottomChange,
+  onScrollIdle,
   header,
 }: VirtualScrollProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
+  const scrollIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isScrollIdleRef = useRef(true);
   const [headerHeight, setHeaderHeight] = useState(0);
 
   useEffect(() => {
@@ -308,11 +312,21 @@ export function VirtualScroll({
     }
   }, [getItemOffset, estimatedItemHeight, loadingOlder, headerHeight, onAtBottomChange]);
 
+  const onScrollIdleRef = useRef(onScrollIdle);
+  onScrollIdleRef.current = onScrollIdle;
+
   const handleScroll = useCallback(() => {
     const el = containerRef.current;
     if (!el) return;
     setScrollTop(el.scrollTop);
     setContainerHeight(el.clientHeight);
+
+    isScrollIdleRef.current = false;
+    if (scrollIdleTimerRef.current) clearTimeout(scrollIdleTimerRef.current);
+    scrollIdleTimerRef.current = setTimeout(() => {
+      isScrollIdleRef.current = true;
+      onScrollIdleRef.current?.();
+    }, 150);
 
     const wasAtBottom = isAtBottomRef.current;
     isAtBottomRef.current = el.scrollTop + el.clientHeight >= el.scrollHeight - 30;
