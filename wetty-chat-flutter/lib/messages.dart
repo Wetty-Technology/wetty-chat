@@ -529,88 +529,103 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     );
   }
 
-  // Reply preview bar + input field
   Widget _buildInput() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Reply or Edit preview
-        if (_replyingTo != null)
-          _buildPreviewBar(
-            title: 'Replying to ${_replyingTo!.sender.name ?? 'User ${_replyingTo!.sender.uid}'}',
-            body: _replyingTo!.message ?? '',
+    final hasPreview = _replyingTo != null || _editingMessage != null;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          // Plus button
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            onPressed: () {
+              // TODO: implement attachment sheet
+            },
+            child: Icon(
+              CupertinoIcons.add_circled,
+              color: CupertinoColors.activeBlue.resolveFrom(context),
+              size: 28,
+            ),
           ),
-        if (_editingMessage != null)
-          _buildPreviewBar(
-            title: 'Editing',
-            body: _editingMessage!.message ?? '',
-          ),
-        Padding(
-          padding: const EdgeInsets.only(top: 10),
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
-            decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(
-                  color: CupertinoColors.separator.resolveFrom(context),
+          const SizedBox(width: 4),
+          // Unified input box (Preview + Text field)
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: CupertinoColors.systemGrey6.resolveFrom(context),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: CupertinoColors.systemGrey4.resolveFrom(context),
                   width: 0.5,
                 ),
               ),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: CupertinoTextField(
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_replyingTo != null)
+                    _buildPreviewBar(
+                      title:
+                          'Replying to ${_replyingTo!.sender.name ?? 'User ${_replyingTo!.sender.uid}'}',
+                      body: _replyingTo!.message ?? '',
+                    ),
+                  if (_editingMessage != null)
+                    _buildPreviewBar(
+                      title: 'Edit Message',
+                      body: _editingMessage!.message ?? '',
+                    ),
+                  if (hasPreview)
+                    Divider(
+                      height: 0.5,
+                      color: CupertinoColors.separator.resolveFrom(context),
+                    ),
+                  CupertinoTextField(
                     controller: _textController,
                     placeholder: 'Message',
+                    maxLines: 5,
+                    minLines: 1,
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
+                      horizontal: 16,
+                      vertical: 8,
                     ),
-                    decoration: BoxDecoration(
-                      color: CupertinoColors.systemGrey6.resolveFrom(context),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
+                    decoration: null, // use container decoration
                   ),
-                ),
-                const SizedBox(width: 6),
-                // Send button: filled circle with white paper plane
-                GestureDetector(
-                  onTap: _sendMessage,
-                  child: Container(
-                    width: 34,
-                    height: 34,
-                    decoration: const BoxDecoration(
-                      color: CupertinoColors.activeBlue,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      CupertinoIcons.paperplane_fill,
-                      size: 18,
-                      color: CupertinoColors.white,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 4),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-      ],
+          const SizedBox(width: 8),
+          // Send button
+          GestureDetector(
+            onTap: _sendMessage,
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: const BoxDecoration(
+                color: CupertinoColors.activeBlue,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                CupertinoIcons.paperplane_fill,
+                size: 20,
+                color: CupertinoColors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildPreviewBar({required String title, required String body}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(16, 8, 8, 4),
       decoration: BoxDecoration(
         color: CupertinoColors.systemGrey6.resolveFrom(context),
-        border: Border(
-          top: BorderSide(
-            color: CupertinoColors.separator.resolveFrom(context),
-            width: 0.5,
-          ),
-          left: const BorderSide(color: CupertinoColors.activeBlue, width: 3),
+        border: const Border(
+          left: BorderSide(color: CupertinoColors.activeBlue, width: 3),
         ),
       ),
       child: Row(
@@ -627,7 +642,10 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                     fontSize: 13,
                     color: CupertinoColors.activeBlue,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(height: 2),
                 Text(
                   body,
                   maxLines: 1,
@@ -642,12 +660,12 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           ),
           CupertinoButton(
             padding: EdgeInsets.zero,
-            minSize: 24,
+            minSize: 30,
             onPressed: _clearReply,
             child: Icon(
               CupertinoIcons.xmark_circle_fill,
               size: 20,
-              color: CupertinoColors.secondaryLabel.resolveFrom(context),
+              color: CupertinoColors.systemGrey3.resolveFrom(context),
             ),
           ),
         ],
@@ -976,5 +994,20 @@ class _MessageRowState extends State<_MessageRow>
     } catch (_) {
       return iso;
     }
+  }
+}
+
+/// Cupertino-style thin separator line.
+class Divider extends StatelessWidget {
+  const Divider({super.key, this.height = 1, this.color});
+  final double height;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: height,
+      color: color ?? CupertinoColors.separator.resolveFrom(context),
+    );
   }
 }
