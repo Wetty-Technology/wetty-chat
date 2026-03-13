@@ -1,5 +1,6 @@
 //! WebSocket connection registry: maps user id to active connections, supports broadcast and stale-connection pruning.
 
+use crate::handlers::ws::messages::ServerWsMessage;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -9,7 +10,7 @@ use tokio::sync::mpsc;
 #[derive(Debug)]
 pub struct ConnectionEntry {
     pub conn_id: u64,
-    pub tx: mpsc::Sender<String>,
+    pub tx: mpsc::Sender<Arc<ServerWsMessage>>,
     /// Unix timestamp (seconds) when we last received a ping from the client.
     pub last_ping_at: AtomicU64,
 }
@@ -42,7 +43,7 @@ impl ConnectionRegistry {
 
     /// Register a new connection for the given user. Returns the entry (to update last_ping_at)
     /// and the receiver for the send task. Caller must call `remove_connection(uid, conn_id)` when the socket closes.
-    pub fn register(&self, uid: i32) -> (Arc<ConnectionEntry>, mpsc::Receiver<String>) {
+    pub fn register(&self, uid: i32) -> (Arc<ConnectionEntry>, mpsc::Receiver<Arc<ServerWsMessage>>) {
         let conn_id = next_conn_id();
         let (tx, rx) = mpsc::channel(256);
         let now = now_secs();
@@ -69,11 +70,11 @@ impl ConnectionRegistry {
 
     /// Broadcast a JSON string to all connections for the given user ids. Each uid may have multiple connections.
     /// Failures to send (e.g. full buffer) are logged but do not remove the connection here.
-    pub fn broadcast_to_uids(&self, uids: &[i32], message: &str) {
+    pub fn broadcast_to_uids(&self, uids: &[i32], message: Arc<ServerWsMessage>) {
         for &uid in uids {
             if let Some(vec) = self.inner.get(&uid) {
                 for entry in vec.iter() {
-                    if entry.tx.try_send(message.to_string()).is_err() {
+                    if entry.tx.try_send(message.clone()).is_err() {
                         tracing::warn!(
                             uid,
                             conn_id = entry.conn_id,

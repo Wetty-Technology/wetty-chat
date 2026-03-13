@@ -259,7 +259,7 @@ pub struct ListMessagesResponse {
     prev_cursor: Option<i64>,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct MessageResponse {
     #[serde(with = "crate::serde_i64_string")]
     pub id: i64,
@@ -280,7 +280,7 @@ pub struct MessageResponse {
     pub attachments: Vec<AttachmentResponse>,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct ReplyToMessage {
     #[serde(with = "crate::serde_i64_string")]
     id: i64,
@@ -718,12 +718,8 @@ async fn post_message(
                 (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
             })?
     };
-    if let Ok(ws_json) = serde_json::to_string(&serde_json::json!({
-        "type": "message",
-        "payload": &response
-    })) {
-        state.ws_registry.broadcast_to_uids(&member_uids, &ws_json);
-    }
+    let ws_msg = std::sync::Arc::new(crate::handlers::ws::messages::ServerWsMessage::Message(response.clone()));
+    state.ws_registry.broadcast_to_uids(&member_uids, ws_msg);
 
     // Enqueue push notification job (non-blocking; runs in background).
     let sender_username = lookup_users(&state, &[uid])
@@ -851,12 +847,8 @@ async fn post_thread_message(
             })?
     };
 
-    if let Ok(ws_json) = serde_json::to_string(&serde_json::json!({
-        "type": "message",
-        "payload": &response
-    })) {
-        state.ws_registry.broadcast_to_uids(&member_uids, &ws_json);
-    }
+    let ws_msg = std::sync::Arc::new(crate::handlers::ws::messages::ServerWsMessage::Message(response.clone()));
+    state.ws_registry.broadcast_to_uids(&member_uids, ws_msg);
 
     // Enqueue push notification job (non-blocking; runs in background).
     let sender_username = lookup_users(&state, &[uid])
@@ -892,12 +884,8 @@ async fn post_thread_message(
             .into_iter()
             .next()
             .unwrap();
-        if let Ok(ws_json) = serde_json::to_string(&serde_json::json!({
-            "type": "message_updated",
-            "payload": &root_response
-        })) {
-            state.ws_registry.broadcast_to_uids(&member_uids, &ws_json);
-        }
+        let ws_msg = std::sync::Arc::new(crate::handlers::ws::messages::ServerWsMessage::MessageUpdated(root_response.clone()));
+        state.ws_registry.broadcast_to_uids(&member_uids, ws_msg);
     }
 
     Ok((StatusCode::CREATED, Json(response)))
@@ -989,12 +977,8 @@ async fn patch_message(
                 (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
             })?
     };
-    if let Ok(ws_json) = serde_json::to_string(&serde_json::json!({
-        "type": "message_updated",
-        "payload": &response
-    })) {
-        state.ws_registry.broadcast_to_uids(&member_uids, &ws_json);
-    }
+    let ws_msg = std::sync::Arc::new(crate::handlers::ws::messages::ServerWsMessage::MessageUpdated(response.clone()));
+    state.ws_registry.broadcast_to_uids(&member_uids, ws_msg);
 
     Ok(Json(response))
 }
@@ -1068,12 +1052,8 @@ async fn delete_message(
                 (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
             })?
     };
-    if let Ok(ws_json) = serde_json::to_string(&serde_json::json!({
-        "type": "message_deleted",
-        "payload": &response
-    })) {
-        state.ws_registry.broadcast_to_uids(&member_uids, &ws_json);
-    }
+    let ws_msg = std::sync::Arc::new(crate::handlers::ws::messages::ServerWsMessage::MessageDeleted(response.clone()));
+    state.ws_registry.broadcast_to_uids(&member_uids, ws_msg);
 
     Ok(StatusCode::NO_CONTENT)
 }

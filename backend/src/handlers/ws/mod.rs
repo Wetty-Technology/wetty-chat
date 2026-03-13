@@ -1,5 +1,7 @@
 //! WebSocket handler: auth via uid query, ping/pong keepalive, connection registry, 300s stale timeout.
 
+pub mod messages;
+
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::State;
 use axum::response::Response;
@@ -14,6 +16,7 @@ use tracing::trace;
 use crate::services::ws_registry;
 use crate::utils::auth::CurrentUid;
 use crate::AppState;
+use messages::ServerWsMessage;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WsClaims {
@@ -116,15 +119,17 @@ async fn handle_socket(
     conn_id: u64,
     registry: Arc<ws_registry::ConnectionRegistry>,
     entry: Arc<ws_registry::ConnectionEntry>,
-    mut rx: tokio::sync::mpsc::Receiver<String>,
+    mut rx: tokio::sync::mpsc::Receiver<Arc<ServerWsMessage>>,
 ) {
     loop {
         tokio::select! {
             msg = rx.recv() => {
                 match msg {
-                    Some(text) => {
-                        if socket.send(Message::Text(text.into())).await.is_err() {
-                            break;
+                    Some(ws_msg) => {
+                        if let Ok(text) = serde_json::to_string(&*ws_msg) {
+                            if socket.send(Message::Text(text.into())).await.is_err() {
+                                break;
+                            }
                         }
                     }
                     None => break,

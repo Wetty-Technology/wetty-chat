@@ -9,7 +9,7 @@ import { addMessage, confirmPendingMessage, updateMessageInStore } from '@/store
 import { updateChatFromMessage } from '@/store/chatsSlice';
 import { setWsConnected } from '@/store/connectionSlice';
 import { syncApp } from '@/api/sync';
-import type { MessageResponse, ReplyToMessage, ThreadInfo } from '@/api/messages';
+import type { MessageResponse } from '@/api/messages';
 
 const WS_PATH = import.meta.env.BASE_URL + '_api/ws';
 const PING_INTERVAL_MS = 10_000;
@@ -51,70 +51,11 @@ function scheduleReconnect(): void {
 
 function normalizePayload(p: unknown): MessageResponse | null {
   if (p == null || typeof p !== 'object') return null;
-  const o = p as Record<string, unknown>;
-  const id = o.id != null ? String(o.id) : undefined;
-  // Server sends group/chat id as 'gid'; map to chat_id used in MessageResponse
-  const chat_id = o.gid != null ? String(o.gid) : (o.chat_id != null ? String(o.chat_id) : undefined);
-  const client_generated_id = typeof o.client_generated_id === 'string' ? o.client_generated_id : '';
-
-  // Extract sender
-  const senderObj = o.sender as Record<string, unknown> | undefined;
-  const sender_uid = senderObj != null && typeof senderObj.uid === 'number' ? senderObj.uid : 0;
-  const sender_name = senderObj != null && typeof senderObj.name === 'string' ? senderObj.name : null;
-  const sender = { uid: sender_uid, name: sender_name };
-
-  const message = o.message != null ? String(o.message) : null;
-  const message_type = typeof o.message_type === 'string' ? o.message_type : 'text';
-  const created_at = typeof o.created_at === 'string' ? o.created_at : new Date().toISOString();
-  if (chat_id == null) return null;
-  const reply_to_message_raw = o.reply_to_message;
-  let reply_to_message: ReplyToMessage | undefined;
-  if (reply_to_message_raw != null && typeof reply_to_message_raw === 'object') {
-    const r = reply_to_message_raw as Record<string, unknown>;
-    const repSenderObj = r.sender as Record<string, unknown> | undefined;
-    reply_to_message = {
-      id: r.id != null ? String(r.id) : '0',
-      message: r.message != null ? String(r.message) : null,
-      sender: {
-        uid: repSenderObj != null && typeof repSenderObj.uid === 'number' ? repSenderObj.uid : 0,
-        name: repSenderObj != null && typeof repSenderObj.name === 'string' ? repSenderObj.name : null,
-      },
-      is_deleted: Boolean(r.is_deleted),
-    };
-  }
-  const attachmentsRaw = Array.isArray(o.attachments) ? o.attachments : [];
-  const attachments = attachmentsRaw.map((a: any) => ({
-    id: a.id != null ? String(a.id) : '0',
-    url: typeof a.url === 'string' ? a.url : '',
-    kind: typeof a.kind === 'string' ? a.kind : 'unknown',
-    size: typeof a.size === 'number' ? a.size : 0,
-    file_name: typeof a.file_name === 'string' ? a.file_name : 'attachment',
-  }));
-
-  let thread_info: ThreadInfo | undefined;
-  if (o.thread_info != null && typeof o.thread_info === 'object') {
-    const ti = o.thread_info as Record<string, unknown>;
-    thread_info = {
-      reply_count: typeof ti.reply_count === 'number' ? ti.reply_count : 0,
-    };
-  }
-
-  return {
-    id: id ?? '0',
-    message,
-    message_type,
-    reply_root_id: o.reply_root_id != null ? String(o.reply_root_id) : null,
-    reply_to_message,
-    client_generated_id,
-    sender,
-    chat_id,
-    created_at,
-    is_edited: Boolean(o.is_edited),
-    is_deleted: Boolean(o.is_deleted),
-    has_attachments: Boolean(o.has_attachments),
-    thread_info,
-    attachments,
-  };
+  const msg = p as MessageResponse;
+  
+  if (!msg.chat_id || !msg.id) return null;
+  
+  return msg;
 }
 
 function allMessagesForChat(chatId: string): MessageResponse[] {
@@ -184,9 +125,9 @@ export function initWebSocket(): void {
       clearReconnectTimeout();
       store.dispatch(setWsConnected(true));
       console.log('ws opened');
-      
+
       syncApp();
-      
+
       pingIntervalId = setInterval(() => {
         if (socket.readyState === WebSocket.OPEN) {
           socket.send(PING_JSON);
