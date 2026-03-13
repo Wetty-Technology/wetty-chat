@@ -51,7 +51,7 @@ function MeasuredItem({
       ref={ref}
       className={styles.item}
       style={{
-        transform: invisible ? `translateY(0px)` : `translateY(${offset}px)`,
+        transform: invisible ? `translateY(0px)` : `translateY(${Math.round(offset)}px)`,
         visibility: invisible ? 'hidden' : 'visible',
         pointerEvents: invisible ? 'none' : 'auto',
         zIndex: invisible ? -1 : undefined,
