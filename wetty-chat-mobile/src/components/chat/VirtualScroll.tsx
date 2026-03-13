@@ -25,11 +25,13 @@ function MeasuredItem({
   offset,
   onResize,
   children,
+  invisible = false,
 }: {
   index: number;
   offset: number;
   onResize: (index: number, height: number) => void;
   children: ReactNode;
+  invisible?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -48,7 +50,12 @@ function MeasuredItem({
     <div
       ref={ref}
       className={styles.item}
-      style={{ transform: `translateY(${offset}px)` }}
+      style={{
+        transform: invisible ? `translateY(0px)` : `translateY(${offset}px)`,
+        visibility: invisible ? 'hidden' : 'visible',
+        pointerEvents: invisible ? 'none' : 'auto',
+        zIndex: invisible ? -1 : undefined,
+      }}
     >
       {children}
     </div>
@@ -141,7 +148,8 @@ export function VirtualScroll({
     if (!el) return;
     const targetIdx = initialScrollIndexRef.current;
     if (targetIdx != null) {
-      const offset = targetIdx * estimatedItemHeight;
+      const currentTopPadding = (loadingOlder ? 36 : 0) + headerHeight;
+      const offset = targetIdx * estimatedItemHeight + currentTopPadding;
       el.scrollTop = Math.max(0, offset - el.clientHeight / 2);
     } else {
       el.scrollTop = el.scrollHeight;
@@ -150,7 +158,7 @@ export function VirtualScroll({
     setScrollTop(el.scrollTop);
     setContainerHeight(el.clientHeight);
     hasInitialScrolled.current = true;
-  }, [totalHeight]);
+  }, [totalHeight, estimatedItemHeight, loadingOlder, headerHeight]);
 
   // When items are prepended at top, adjust scrollTop to maintain position
   useLayoutEffect(() => {
@@ -234,8 +242,8 @@ export function VirtualScroll({
       scrollToIndexRef.current = (index: number, behavior: ScrollBehavior = 'auto') => {
         const el = containerRef.current;
         if (!el) return;
-        const loadingRowH = loadingOlder ? 36 : 0;
-        const offset = getItemOffset(index) + loadingRowH;
+        const currentTopPadding = (loadingOlder ? 36 : 0) + headerHeight;
+        const offset = getItemOffset(index) + currentTopPadding;
 
         const targetAtBottom = offset + el.clientHeight >= el.scrollHeight - 30;
         if (isAtBottomRef.current !== targetAtBottom) {
@@ -247,18 +255,22 @@ export function VirtualScroll({
       };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scrollToIndexRef, getItemOffset, loadingOlder]);
+  }, [scrollToIndexRef, getItemOffset, loadingOlder, headerHeight]);
 
   const handleResize = useCallback((index: number, height: number) => {
-    const prev = heightCache.current.get(index);
-    if (prev !== height) {
+    const isFirstMeasure = !heightCache.current.has(index);
+    const prev = heightCache.current.get(index) ?? estimatedItemHeight;
+
+    if (prev !== height || isFirstMeasure) {
       heightCache.current.set(index, height);
       forceUpdate(c => c + 1);
 
       const el = containerRef.current;
-      if (el && prev !== undefined) {
+      if (el) {
         const diff = height - prev;
-        const itemOffset = getItemOffset(index);
+        const currentTopPadding = (loadingOlder ? 36 : 0) + headerHeight;
+        const itemOffset = getItemOffset(index) + currentTopPadding;
+        
         if (itemOffset < el.scrollTop) {
           el.scrollTop += diff;
           setScrollTop(el.scrollTop);
@@ -271,7 +283,8 @@ export function VirtualScroll({
         requestAnimationFrame(() => {
           const el = containerRef.current;
           if (!el) return;
-          const offset = getItemOffset(targetIdx);
+          const currentTopPadding = (loadingOlder ? 36 : 0) + headerHeight;
+          const offset = getItemOffset(targetIdx) + currentTopPadding;
           el.scrollTop = Math.max(0, offset - el.clientHeight / 2);
           // Clear after the target item itself is measured
           if (heightCache.current.has(targetIdx)) {
@@ -293,7 +306,7 @@ export function VirtualScroll({
         });
       }
     }
-  }, [getItemOffset]);
+  }, [getItemOffset, estimatedItemHeight, loadingOlder, headerHeight, onAtBottomChange]);
 
   const handleScroll = useCallback(() => {
     const el = containerRef.current;
@@ -349,15 +362,43 @@ export function VirtualScroll({
   const loadingRowHeight = 36;
   const topPadding = (loadingOlder ? loadingRowHeight : 0) + headerHeight;
 
-  const visibleItems: ReactNode[] = [];
+  const itemsToRender = new Set<number>();
   for (let i = startIndex; i <= endIndex; i++) {
-    const offset = getItemOffset(i) + topPadding;
-    visibleItems.push(
-      <MeasuredItem key={`${windowKey}-${i}`} index={i} offset={offset} onResize={handleResize}>
-        {renderItem(i)}
-      </MeasuredItem>,
-    );
+    itemsToRender.add(i);
   }
+
+  let measuredCount = 0;
+  const maxMeasure = 20;
+
+  for (let i = startIndex - 1; i >= 0 && measuredCount < maxMeasure; i--) {
+    if (!heightCache.current.has(i)) {
+      itemsToRender.add(i);
+      measuredCount++;
+    }
+  }
+
+  for (let i = endIndex + 1; i < totalItems && measuredCount < maxMeasure; i++) {
+    if (!heightCache.current.has(i)) {
+      itemsToRender.add(i);
+      measuredCount++;
+    }
+  }
+
+  const visibleItems: ReactNode[] = Array.from(itemsToRender).sort((a, b) => a - b).map(i => {
+    const isVisible = i >= startIndex && i <= endIndex;
+    const offset = isVisible ? getItemOffset(i) + topPadding : 0;
+    return (
+      <MeasuredItem 
+        key={`${windowKey}-${i}`} 
+        index={i} 
+        offset={offset} 
+        onResize={handleResize} 
+        invisible={!isVisible}
+      >
+        {renderItem(i)}
+      </MeasuredItem>
+    );
+  });
 
   return (
     <div ref={containerRef} className={styles.container} onScroll={handleScroll}>
