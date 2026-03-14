@@ -115,38 +115,55 @@ export function VirtualScroll({
   const batchTimerRef = useRef<number | null>(null);
   const [, forceUpdate] = useState(0);
 
+  // Prefix-sum array for O(1) offset lookups and O(log n) index search.
+  // prefixSums[i] = sum of heights for items 0..i-1; prefixSums[0] = 0.
+  const prefixSumsRef = useRef(new Float64Array(1));
+
+  // Rebuild prefix sums once per render (O(n), replaces multiple O(n) per-call scans)
+  {
+    const n = totalItems;
+    let ps = prefixSumsRef.current;
+    if (ps.length !== n + 1) {
+      ps = new Float64Array(n + 1);
+      prefixSumsRef.current = ps;
+    }
+    ps[0] = 0;
+    for (let i = 0; i < n; i++) {
+      ps[i + 1] = ps[i] + (heightCache.current.get(i) ?? estimatedItemHeight);
+    }
+  }
+
+  // O(1) — reads from prefix-sum ref, stable across renders
+  const getItemOffset = useCallback((index: number): number => {
+    const ps = prefixSumsRef.current;
+    return index < ps.length ? ps[index] : 0;
+  }, []);
+
   const getHeight = useCallback((i: number) => {
     return heightCache.current.get(i) ?? estimatedItemHeight;
   }, [estimatedItemHeight]);
 
-  const getItemOffset = useCallback((index: number) => {
-    let offset = 0;
-    for (let i = 0; i < index; i++) {
-      offset += heightCache.current.get(i) ?? estimatedItemHeight;
-    }
-    return offset;
-  }, [estimatedItemHeight]);
+  // O(1) — last entry in prefix-sum array
+  const totalHeight = prefixSumsRef.current[totalItems] ?? 0;
 
-  const getTotalHeight = useCallback(() => {
-    let total = 0;
-    for (let i = 0; i < totalItems; i++) {
-      total += heightCache.current.get(i) ?? estimatedItemHeight;
+  // O(log n) binary search for first item whose bottom edge is past scrollTop
+  const findStartIndex = (target: number): number => {
+    const ps = prefixSumsRef.current;
+    const n = totalItems;
+    if (n === 0) return 0;
+    // Find first i where ps[i+1] > target (i.e. item i's bottom edge passes target)
+    let lo = 0;
+    let hi = n - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >>> 1;
+      if (ps[mid + 1] <= target) {
+        lo = mid + 1;
+      } else {
+        hi = mid;
+      }
     }
-    return total;
-  }, [totalItems, estimatedItemHeight]);
-
-  // Binary search: find the first index whose bottom edge is past scrollTop
-  const findStartIndex = useCallback((scrollTop: number) => {
-    let offset = 0;
-    for (let i = 0; i < totalItems; i++) {
-      const h = heightCache.current.get(i) ?? estimatedItemHeight;
-      if (offset + h > scrollTop) return i;
-      offset += h;
-    }
-    return totalItems - 1;
-  }, [totalItems, estimatedItemHeight]);
-
-  const totalHeight = getTotalHeight();
+    return lo;
+  };
 
   // Scroll to bottom on initial mount, or to target index on jump
   useLayoutEffect(() => {
