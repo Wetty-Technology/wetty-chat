@@ -114,6 +114,24 @@ export function VirtualScroll({
   const isStabilizedRef = useRef(false);
   const batchTimerRef = useRef<number | null>(null);
   const [, forceUpdate] = useState(0);
+  const prevWindowKeyRef = useRef(windowKey);
+
+  // Detect windowKey changes during render (MUST happen before layout effects)
+  if (prevWindowKeyRef.current !== windowKey && windowKey != null) {
+    prevWindowKeyRef.current = windowKey;
+    heightCache.current = new Map();
+    isStabilizedRef.current = false;
+    prevTotalRef.current = 0;
+    prevPrependedCountRef.current = 0;
+    if (initialScrollIndex != null) {
+      hasInitialScrolled.current = false;
+      isAtBottomRef.current = false;
+      initialScrollIndexRef.current = initialScrollIndex;
+    } else {
+      hasInitialScrolled.current = false;
+      isAtBottomRef.current = true;
+    }
+  }
 
   // Prefix-sum array for O(1) offset lookups and O(log n) index search.
   // prefixSums[i] = sum of heights for items 0..i-1; prefixSums[0] = 0.
@@ -213,7 +231,6 @@ export function VirtualScroll({
       }
       if (pendingBottomScrollRef.current) {
         pendingBottomScrollRef.current = false;
-        isStabilizedRef.current = true;
       }
       if (!isAtBottomRef.current) {
         isAtBottomRef.current = true;
@@ -269,23 +286,13 @@ export function VirtualScroll({
     prevTotalRef.current = totalItems;
   }, [totalItems]);
 
-  // Reset state when windowKey changes (new message window loaded)
+  // Side effects for windowKey changes (callback + re-render for measurement cycle)
+  // Ref resets are handled during render (above) to avoid effect ordering bugs.
   useEffect(() => {
     if (windowKey == null) return;
-    heightCache.current = new Map();
-    isStabilizedRef.current = false;
-    prevTotalRef.current = 0;
-    prevPrependedCountRef.current = 0;
     if (initialScrollIndex != null) {
-      // Jump to target: let the useLayoutEffect handle scrolling
-      hasInitialScrolled.current = false;
-      isAtBottomRef.current = false;
       onAtBottomChange?.(false);
-      initialScrollIndexRef.current = initialScrollIndex;
     } else {
-      // Normal window reset: scroll to bottom
-      hasInitialScrolled.current = false;
-      isAtBottomRef.current = true;
       onAtBottomChange?.(true);
     }
     forceUpdate(c => c + 1);
@@ -375,10 +382,12 @@ export function VirtualScroll({
       onScrollIdleRef.current?.();
     }, 150);
 
-    const wasAtBottom = isAtBottomRef.current;
-    isAtBottomRef.current = el.scrollTop + el.clientHeight >= el.scrollHeight - 30;
-    if (wasAtBottom !== isAtBottomRef.current) {
-      onAtBottomChange?.(isAtBottomRef.current);
+    if (isStabilizedRef.current) {
+      const wasAtBottom = isAtBottomRef.current;
+      isAtBottomRef.current = el.scrollTop + el.clientHeight >= el.scrollHeight - 30;
+      if (wasAtBottom !== isAtBottomRef.current) {
+        onAtBottomChange?.(isAtBottomRef.current);
+      }
     }
 
     if (onLoadOlder && el.scrollTop < loadMoreThreshold) {
