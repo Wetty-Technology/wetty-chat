@@ -187,7 +187,7 @@ export function VirtualScroll({
         isStabilizedRef.current = true;
         forceUpdate(c => c + 1);
       }
-    }, 500);
+    }, 100);
   }, [totalHeight, estimatedItemHeight, loadingOlder, headerHeight]);
 
   // After every render, snap to bottom if we should be there.
@@ -451,11 +451,11 @@ export function VirtualScroll({
     const isVisible = i >= startIndex && i <= endIndex;
     const offset = isVisible ? getItemOffset(i) + topPadding : 0;
     return (
-      <MeasuredItem 
-        key={`${windowKey}-${i}`} 
-        index={i} 
-        offset={offset} 
-        onResize={handleResize} 
+      <MeasuredItem
+        key={`${windowKey}-${i}`}
+        index={i}
+        offset={offset}
+        onResize={handleResize}
         invisible={!isVisible}
       >
         {renderItem(i)}
