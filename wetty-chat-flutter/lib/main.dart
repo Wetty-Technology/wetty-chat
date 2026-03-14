@@ -1,8 +1,11 @@
 import 'package:flutter/cupertino.dart';
 
 import 'chats.dart';
+import 'draft_store.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await DraftStore.instance.init();
   runApp(const MyApp());
 }
 

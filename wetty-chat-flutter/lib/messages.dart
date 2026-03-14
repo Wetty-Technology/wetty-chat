@@ -1,10 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/gestures.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 
 import 'api_config.dart';
+import 'draft_store.dart';
 import 'models.dart';
 
 Future<ListMessagesResponse> fetchMessages(
@@ -147,14 +150,28 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     super.initState();
     _scrollController = ScrollController()..addListener(_onScroll);
     _loadMessages();
+    // Restore saved draft
+    final draft = DraftStore.instance.getDraft(widget.chatId);
+    if (draft != null) _textController.text = draft;
   }
 
   @override
   void dispose() {
+    // Save draft on dispose as a fallback
+    _saveDraft();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _textController.dispose();
     super.dispose();
+  }
+
+  void _saveDraft() {
+    final text = _textController.text.trim();
+    if (text.isNotEmpty) {
+      DraftStore.instance.setDraft(widget.chatId, text);
+    } else {
+      DraftStore.instance.clearDraft(widget.chatId);
+    }
   }
 
   void _onScroll() {
@@ -314,6 +331,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     }
 
     _clearMessage();
+    DraftStore.instance.clearDraft(widget.chatId);
   }
 
   void _showErrorDialog(String message) {
@@ -431,7 +449,11 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     final chatName = widget.chatName.isEmpty
         ? 'Chat ${widget.chatId}'
         : widget.chatName;
-    return CupertinoPageScaffold(
+    return PopScope(
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) _saveDraft();
+      },
+      child: CupertinoPageScaffold(
       backgroundColor: const Color(0xFFECE5DD),
       navigationBar: CupertinoNavigationBar(middle: Text(chatName)),
       child: SafeArea(
@@ -479,6 +501,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           ],
         ),
       ),
+    ),
     );
   }
 
@@ -808,14 +831,20 @@ class _MessageRowState extends State<_MessageRow>
     final timeSpacerWidth = timePainter.width + 8;
 
     // msg content, edited label, date/time
+    // Link detection colors
+    final linkColor = _isMe
+        ? CupertinoColors.white
+        : CupertinoColors.activeBlue;
+
     Widget bubbleContent = Stack(
       children: [
         Text.rich(
           TextSpan(
             children: [
-              TextSpan(
-                text: msgText,
-                style: TextStyle(color: textColor, fontSize: 15),
+              ..._buildLinkedSpans(
+                msgText,
+                TextStyle(color: textColor, fontSize: 15),
+                linkColor,
               ),
               WidgetSpan(child: SizedBox(width: timeSpacerWidth, height: 14)),
             ],
@@ -1012,6 +1041,56 @@ class _MessageRowState extends State<_MessageRow>
         ],
       ),
     );
+  }
+
+  // ---- Link-detection helper ----
+  static final RegExp _urlRegex = RegExp(
+    r'(https?://[^\s<>]+|www\.[^\s<>]+)',
+    caseSensitive: false,
+  );
+
+  List<InlineSpan> _buildLinkedSpans(
+    String text,
+    TextStyle baseStyle,
+    Color linkColor,
+  ) {
+    final spans = <InlineSpan>[];
+    int lastEnd = 0;
+    for (final match in _urlRegex.allMatches(text)) {
+      if (match.start > lastEnd) {
+        spans.add(TextSpan(
+          text: text.substring(lastEnd, match.start),
+          style: baseStyle,
+        ));
+      }
+      final url = match.group(0)!;
+      final recognizer = TapGestureRecognizer()
+        ..onTap = () {
+          final uri = url.startsWith('http') ? url : 'https://$url';
+          launchUrl(Uri.parse(uri), mode: LaunchMode.externalApplication);
+        };
+      spans.add(TextSpan(
+        text: url,
+        style: baseStyle.copyWith(
+          color: linkColor,
+          decoration: TextDecoration.underline,
+          decorationColor: linkColor,
+        ),
+        recognizer: recognizer,
+      ));
+      lastEnd = match.end;
+    }
+    if (lastEnd < text.length) {
+      spans.add(TextSpan(
+        text: text.substring(lastEnd),
+        style: baseStyle,
+      ));
+    }
+    // If no links found, return a single span
+    if (spans.isEmpty) {
+      spans.add(TextSpan(text: text, style: baseStyle));
+    }
+    return spans;
   }
 
   String _formatTime(String iso) {

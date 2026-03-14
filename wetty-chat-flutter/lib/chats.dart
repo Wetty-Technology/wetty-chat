@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 import 'api_config.dart';
+import 'draft_store.dart';
 import 'messages.dart';
 import 'models.dart';
 
@@ -178,15 +179,19 @@ class _ChatPageState extends State<ChatPage> {
             (lastMsg != null && lastMsg.isNotEmpty);
 
         return GestureDetector(
-          onTap: () => Navigator.push(
-            context,
-            CupertinoPageRoute(
-              builder: (_) => ChatDetailPage(
-                chatId: chat.id,
-                chatName: chat.name ?? 'Chat ${chat.id}',
+          onTap: () async {
+            await Navigator.push(
+              context,
+              CupertinoPageRoute(
+                builder: (_) => ChatDetailPage(
+                  chatId: chat.id,
+                  chatName: chat.name ?? 'Chat ${chat.id}',
+                ),
               ),
-            ),
-          ),
+            );
+            // Refresh so draft indicators update immediately
+            if (mounted) setState(() {});
+          },
           behavior: HitTestBehavior.opaque,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -247,40 +252,95 @@ class _ChatPageState extends State<ChatPage> {
                         ],
                       ),
                       const SizedBox(height: 3),
-                      // Bottom row: sender: last message + unread count
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              hasMessage ? '$senderName: $lastMsg' : '',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: CupertinoColors.secondaryLabel
-                                    .resolveFrom(context),
-                              ),
-                            ),
-                          ),
-                          if (unreadCount > 0)
-                            Container(
-                              margin: const EdgeInsets.only(left: 8),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: CupertinoColors.activeBlue,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                '$unreadCount',
-                                style: const TextStyle(
-                                  color: CupertinoColors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
+                      // Bottom row: draft or sender: last message + unread count
+                      Builder(
+                        builder: (context) {
+                          final draft = DraftStore.instance.getDraft(chat.id);
+                          if (draft != null) {
+                            return Row(
+                              children: [
+                                Expanded(
+                                  child: Text.rich(
+                                    TextSpan(
+                                      children: [
+                                        const TextSpan(
+                                          text: '[Draft] ',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: CupertinoColors.destructiveRed,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        TextSpan(
+                                          text: draft,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: CupertinoColors.secondaryLabel
+                                                .resolveFrom(context),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (unreadCount > 0)
+                                  Container(
+                                    margin: const EdgeInsets.only(left: 8),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: CupertinoColors.activeBlue,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      '$unreadCount',
+                                      style: const TextStyle(
+                                        color: CupertinoColors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            );
+                          }
+                          return Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  hasMessage ? '$senderName: $lastMsg' : '',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: CupertinoColors.secondaryLabel
+                                        .resolveFrom(context),
+                                  ),
                                 ),
                               ),
-                            ),
-                        ],
+                              if (unreadCount > 0)
+                                Container(
+                                  margin: const EdgeInsets.only(left: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: CupertinoColors.activeBlue,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    '$unreadCount',
+                                    style: const TextStyle(
+                                      color: CupertinoColors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
                       ),
                     ],
                   ),
