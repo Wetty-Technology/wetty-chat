@@ -111,6 +111,8 @@ export function VirtualScroll({
   const prevLoadingOlderRef = useRef(loadingOlder);
   const pendingBottomScrollRef = useRef(false);
   const initialScrollIndexRef = useRef<number | undefined>(undefined);
+  const isStabilizedRef = useRef(false);
+  const batchTimerRef = useRef<number | null>(null);
   const [, forceUpdate] = useState(0);
 
   const getHeight = useCallback((i: number) => {
@@ -163,7 +165,45 @@ export function VirtualScroll({
     setScrollTop(el.scrollTop);
     setContainerHeight(el.clientHeight);
     hasInitialScrolled.current = true;
+    setTimeout(() => {
+      if (!isStabilizedRef.current) {
+        isStabilizedRef.current = true;
+        forceUpdate(c => c + 1);
+      }
+    }, 500);
   }, [totalHeight, estimatedItemHeight, loadingOlder, headerHeight]);
+
+  // After every render, snap to bottom if we should be there.
+  // This replaces RAF-based bottom-scroll: useLayoutEffect sees the updated DOM.
+  useLayoutEffect(() => {
+    if (!hasInitialScrolled.current) return;
+    const el = containerRef.current;
+    if (!el) return;
+
+    const targetIdx = initialScrollIndexRef.current;
+    if (targetIdx != null) {
+      const currentTopPadding = (loadingOlder ? 36 : 0) + headerHeight;
+      const offset = getItemOffset(targetIdx) + currentTopPadding;
+      el.scrollTop = Math.max(0, offset - el.clientHeight / 2);
+      if (heightCache.current.has(targetIdx)) {
+        initialScrollIndexRef.current = undefined;
+        isStabilizedRef.current = true;
+      }
+    } else if (isAtBottomRef.current || pendingBottomScrollRef.current) {
+      const target = el.scrollHeight - el.clientHeight;
+      if (Math.abs(el.scrollTop - target) > 1) {
+        el.scrollTop = target;
+      }
+      if (pendingBottomScrollRef.current) {
+        pendingBottomScrollRef.current = false;
+        isStabilizedRef.current = true;
+      }
+      if (!isAtBottomRef.current) {
+        isAtBottomRef.current = true;
+        onAtBottomChange?.(true);
+      }
+    }
+  });
 
   // When items are prepended at top, adjust scrollTop to maintain position
   useLayoutEffect(() => {
@@ -216,6 +256,7 @@ export function VirtualScroll({
   useEffect(() => {
     if (windowKey == null) return;
     heightCache.current = new Map();
+    isStabilizedRef.current = false;
     prevTotalRef.current = 0;
     prevPrependedCountRef.current = 0;
     if (initialScrollIndex != null) {
@@ -278,50 +319,28 @@ export function VirtualScroll({
 
     if (prev !== height || isFirstMeasure) {
       heightCache.current.set(index, height);
-      forceUpdate(c => c + 1);
+      if (batchTimerRef.current == null) {
+        batchTimerRef.current = requestAnimationFrame(() => {
+          batchTimerRef.current = null;
+          forceUpdate(c => c + 1);
+        });
+      }
 
+      // For items above viewport when NOT at bottom, adjust scrollTop to maintain position.
+      // When at bottom, the useLayoutEffect snap-to-bottom handles it after re-render.
       const el = containerRef.current;
-      if (el) {
+      if (el && !isAtBottomRef.current) {
         const diff = height - prev;
         const currentTopPadding = (loadingOlder ? 36 : 0) + headerHeight;
         const itemOffset = getItemOffset(index) + currentTopPadding;
-        
+
         if (itemOffset < el.scrollTop) {
           el.scrollTop += diff;
           setScrollTop(el.scrollTop);
         }
       }
-
-      // Re-adjust scroll for jump target after items are measured
-      const targetIdx = initialScrollIndexRef.current;
-      if (targetIdx != null) {
-        requestAnimationFrame(() => {
-          const el = containerRef.current;
-          if (!el) return;
-          const currentTopPadding = (loadingOlder ? 36 : 0) + headerHeight;
-          const offset = getItemOffset(targetIdx) + currentTopPadding;
-          el.scrollTop = Math.max(0, offset - el.clientHeight / 2);
-          // Clear after the target item itself is measured
-          if (heightCache.current.has(targetIdx)) {
-            initialScrollIndexRef.current = undefined;
-          }
-        });
-      } else if (isAtBottomRef.current || pendingBottomScrollRef.current) {
-        requestAnimationFrame(() => {
-          const el = containerRef.current;
-          if (!el) return;
-          el.scrollTop = el.scrollHeight - el.clientHeight;
-          // Once we've scrolled to true bottom, isAtBottomRef will stay true
-          // via handleScroll, so we can stop forcing it
-          pendingBottomScrollRef.current = false;
-          if (!isAtBottomRef.current) {
-            isAtBottomRef.current = true;
-            onAtBottomChange?.(true);
-          }
-        });
-      }
     }
-  }, [getItemOffset, estimatedItemHeight, loadingOlder, headerHeight, onAtBottomChange]);
+  }, [getItemOffset, estimatedItemHeight, loadingOlder, headerHeight]);
 
   const onScrollIdleRef = useRef(onScrollIdle);
   onScrollIdleRef.current = onScrollIdle;
@@ -392,20 +411,22 @@ export function VirtualScroll({
     itemsToRender.add(i);
   }
 
-  let measuredCount = 0;
-  const maxMeasure = 20;
+  if (isStabilizedRef.current) {
+    let measuredCount = 0;
+    const maxMeasure = 20;
 
-  for (let i = startIndex - 1; i >= 0 && measuredCount < maxMeasure; i--) {
-    if (!heightCache.current.has(i)) {
-      itemsToRender.add(i);
-      measuredCount++;
+    for (let i = startIndex - 1; i >= 0 && measuredCount < maxMeasure; i--) {
+      if (!heightCache.current.has(i)) {
+        itemsToRender.add(i);
+        measuredCount++;
+      }
     }
-  }
 
-  for (let i = endIndex + 1; i < totalItems && measuredCount < maxMeasure; i++) {
-    if (!heightCache.current.has(i)) {
-      itemsToRender.add(i);
-      measuredCount++;
+    for (let i = endIndex + 1; i < totalItems && measuredCount < maxMeasure; i++) {
+      if (!heightCache.current.has(i)) {
+        itemsToRender.add(i);
+        measuredCount++;
+      }
     }
   }
 
