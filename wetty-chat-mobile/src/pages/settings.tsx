@@ -24,7 +24,7 @@ import { FeatureGate } from '@/components/FeatureGate';
 
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { t } from '@lingui/core/macro';
-import { language, codeWorking, notifications, informationCircle, logIn, logOut } from 'ionicons/icons';
+import { language, codeWorking, notifications, informationCircle, logIn, logOut, refreshCircle } from 'ionicons/icons';
 
 export default function Settings() {
   const currentUid = useSelector((state: RootState) => state.user.uid);
@@ -126,6 +126,24 @@ export default function Settings() {
             <IonIcon aria-hidden="true" icon={informationCircle} slot="start" color="secondary" />
             <IonLabel>Version</IonLabel>
             <IonNote slot="end" color="medium" style={{ fontFamily: 'monospace' }}>{__APP_VERSION__}</IonNote>
+          </IonItem>
+          <IonItem button detail={false} onClick={async () => {
+            try {
+              if (navigator.serviceWorker) {
+                const reg = await navigator.serviceWorker.getRegistration();
+                if (reg) {
+                  await reg.update();
+                  presentToast({ message: t`Update check complete`, duration: 2000 });
+                  return;
+                }
+              }
+              presentToast({ message: t`No service worker registered`, duration: 2000 });
+            } catch (e) {
+              presentToast({ message: t`Update check failed`, duration: 2000 });
+            }
+          }}>
+            <IonIcon aria-hidden="true" icon={refreshCircle} slot="start" color="secondary" />
+            <IonLabel color="primary"><Trans>Check for Update</Trans></IonLabel>
           </IonItem>
         </IonList>
       </IonContent>

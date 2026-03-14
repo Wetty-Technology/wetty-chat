@@ -68,6 +68,10 @@ msgstr "Chat {0}"
 msgid "Chats"
 msgstr "Chats"
 
+#: src/pages/settings.tsx
+msgid "Check for Update"
+msgstr "Check for Update"
+
 #: src/pages/chat-thread.tsx
 #: src/pages/chat-thread.tsx
 msgid "Delete"
@@ -274,6 +278,10 @@ msgstr "No chats yet"
 msgid "No messages yet"
 msgstr "No messages yet"
 
+#: src/pages/settings.tsx
+msgid "No service worker registered"
+msgstr "No service worker registered"
+
 #: src/pages/chat-settings.tsx
 msgid "Private"
 msgstr "Private"
@@ -367,6 +375,14 @@ msgstr "Today"
 #: src/pages/chats.tsx
 msgid "Unread"
 msgstr "Unread"
+
+#: src/pages/settings.tsx
+msgid "Update check complete"
+msgstr "Update check complete"
+
+#: src/pages/settings.tsx
+msgid "Update check failed"
+msgstr "Update check failed"
 
 #: src/App.tsx
 msgid "Update Now"

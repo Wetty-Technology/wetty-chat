@@ -68,6 +68,10 @@ msgstr "聊天 {0}"
 msgid "Chats"
 msgstr "聊天"
 
+#: src/pages/settings.tsx
+msgid "Check for Update"
+msgstr "檢查更新"
+
 #: src/pages/chat-thread.tsx
 #: src/pages/chat-thread.tsx
 msgid "Delete"
@@ -274,6 +278,10 @@ msgstr "暫無聊天"
 msgid "No messages yet"
 msgstr "暫無訊息"
 
+#: src/pages/settings.tsx
+msgid "No service worker registered"
+msgstr "未註冊 Service Worker"
+
 #: src/pages/chat-settings.tsx
 msgid "Private"
 msgstr "私密"
@@ -367,6 +375,14 @@ msgstr "今天"
 #: src/pages/chats.tsx
 msgid "Unread"
 msgstr "標記未讀"
+
+#: src/pages/settings.tsx
+msgid "Update check complete"
+msgstr "更新檢查完成"
+
+#: src/pages/settings.tsx
+msgid "Update check failed"
+msgstr "更新檢查失敗"
 
 #: src/App.tsx
 msgid "Update Now"
