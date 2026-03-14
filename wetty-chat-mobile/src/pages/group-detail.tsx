@@ -34,8 +34,14 @@ function initials(detail: GroupInfoResponse | null): string {
   return '?';
 }
 
-export default function GroupDetail() {
-  const { id } = useParams<{ id: string }>();
+interface GroupDetailProps {
+  chatId?: string;
+  embedded?: boolean;
+}
+
+export default function GroupDetail({ chatId: propChatId, embedded }: GroupDetailProps) {
+  const { id: paramId } = useParams<{ id: string }>();
+  const id = propChatId ?? paramId;
   const [presentToast] = useIonToast();
   const [presentAlert] = useIonAlert();
 
@@ -106,13 +112,16 @@ export default function GroupDetail() {
     });
   };
 
+  const PageWrapper = embedded ? 'div' : IonPage;
+  const pageProps = embedded ? { className: 'ion-page' } : {};
+
   if (!id) {
     return (
-      <IonPage>
+      <PageWrapper {...pageProps}>
         <IonHeader>
           <IonToolbar>
             <IonButtons slot="start">
-              <IonBackButton defaultHref={`/chats/chat/${id}`} text="" />
+              {!embedded && <IonBackButton defaultHref={`/chats/chat/${id}`} text="" />}
             </IonButtons>
             <IonTitle>Group</IonTitle>
           </IonToolbar>
@@ -120,7 +129,7 @@ export default function GroupDetail() {
         <IonContent>
           <div style={{ padding: '16px' }}>Invalid group.</div>
         </IonContent>
-      </IonPage>
+      </PageWrapper>
     );
   }
 
@@ -128,11 +137,11 @@ export default function GroupDetail() {
   const displayName = groupDisplayName(detail, id);
 
   return (
-    <IonPage>
+    <PageWrapper {...pageProps}>
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            <IonBackButton defaultHref={`/chats/chat/${id}`} text="" />
+            {!embedded && <IonBackButton defaultHref={`/chats/chat/${id}`} text="" />}
           </IonButtons>
           <IonTitle>Group</IonTitle>
         </IonToolbar>
@@ -208,6 +217,6 @@ export default function GroupDetail() {
           </>
         )}
       </IonContent>
-    </IonPage>
+    </PageWrapper>
   );
 }
