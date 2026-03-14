@@ -28,6 +28,7 @@ interface ChatBubbleProps {
   threadInfo?: { reply_count: number };
   onThreadClick?: () => void;
   attachments?: Attachment[];
+  maxImageHeight?: number;
 }
 
 function formatTime(iso: string): string {
@@ -71,6 +72,7 @@ export function ChatBubble({
   threadInfo,
   onThreadClick,
   attachments,
+  maxImageHeight = 300,
 }: ChatBubbleProps) {
   const swipeSign = swipeDirection === 'left' ? -1 : 1;
   const [offset, setOffset] = useState(0);
@@ -198,25 +200,34 @@ export function ChatBubble({
             {attachments && attachments.length > 0 && (
               <div className={styles.attachmentsContainer}>
                 {attachments.map((att) => {
+                  const hasSize = att.width && att.height;
+
                   const imageStyle: React.CSSProperties = {
                     backgroundColor: 'rgba(128, 128, 128, 0.2)',
-                    maxWidth: '100%',
-                    maxHeight: '300px',
-                    width: 'auto',
-                    height: 'auto',
+                    cursor: 'pointer',
+                    display: 'block',
                   };
-                  if (att.width && att.height) {
+
+                  if (hasSize) {
+                    imageStyle.width = att.width!;
+                    imageStyle.height = att.height!;
+                    imageStyle.maxHeight = maxImageHeight;
+                    imageStyle.maxWidth = '100%';
                     imageStyle.aspectRatio = `${att.width} / ${att.height}`;
+                  } else {
+                    imageStyle.height = maxImageHeight;
+                    imageStyle.width = 'auto';
+                    imageStyle.maxWidth = '100%';
+                    imageStyle.objectFit = 'contain';
                   }
+
                   return (
                     <img
                       key={att.id}
                       src={att.url}
                       alt="attachment"
                       className={styles.attachmentImage}
-                      width={att.width || undefined}
-                      height={att.height || undefined}
-                      style={{ ...imageStyle, cursor: 'pointer' }}
+                      style={imageStyle}
                       onClick={() => setViewingAttachment(att)}
                     />
                   );
