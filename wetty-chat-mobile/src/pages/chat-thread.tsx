@@ -151,10 +151,8 @@ export default function ChatThread() {
     }
   }, [messages, atBottom, apiChatId, dispatch]);
 
-  // Initial load
-  useEffect(() => {
+  const fetchLatestWindow = useCallback(() => {
     if (!apiChatId) return;
-    setInitialScrollIndex(undefined);
     getMessages(apiChatId, threadId ? { thread_id: threadId } : undefined)
       .then((res) => {
         const list = res.data.messages ?? [];
@@ -169,6 +167,13 @@ export default function ChatThread() {
         showToast(err.message || t`Failed to load messages`);
       });
   }, [apiChatId, storeChatId, threadId, dispatch, showToast]);
+
+  // Initial load
+  useEffect(() => {
+    if (!apiChatId) return;
+    setInitialScrollIndex(undefined);
+    fetchLatestWindow();
+  }, [apiChatId, fetchLatestWindow]);
 
   const flushPendingPrepend = useCallback(() => {
     const pending = pendingPrependRef.current;
@@ -512,7 +517,13 @@ export default function ChatThread() {
           horizontal="end"
           className={`scroll-to-bottom-fab ${atBottom ? 'scroll-to-bottom-fab--hidden' : ''}`}
         >
-          <IonFabButton size="small" onClick={() => scrollToBottomRef.current?.()}>
+          <IonFabButton size="small" onClick={() => {
+              if (prevCursor != null) {
+                fetchLatestWindow();
+              } else {
+                scrollToBottomRef.current?.();
+              }
+            }}>
             <IonIcon icon={chevronDown} />
           </IonFabButton>
         </IonFab>
