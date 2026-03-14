@@ -68,7 +68,7 @@ export function MessageComposeBar({ onSend, replyTo, onCancelReply, editing, onC
     if (!textarea) return;
     textarea.setAttribute('enterkeyhint', 'send');
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
+      if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
         e.preventDefault();
         handleSendRef.current();
       }
