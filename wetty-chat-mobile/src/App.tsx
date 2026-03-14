@@ -37,7 +37,7 @@ import { syncApp } from '@/api/sync';
 
 setupIonicReact();
 
-const TAB_ROOT_PATHS = ['/chats', '/settings', '/demo'];
+const TAB_ROOT_PATHS = ['/', '/chats', '/settings', '/demo'];
 
 const TabsContainer: React.FC = () => {
   const location = useLocation();
