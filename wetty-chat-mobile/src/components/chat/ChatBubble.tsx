@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { memo, useRef, useState } from 'react';
 import { IonIcon } from '@ionic/react';
 import { arrowUndo, chatbubbles, checkmarkCircle, checkmarkCircleOutline } from 'ionicons/icons';
 import { t } from '@lingui/core/macro';
@@ -6,7 +6,7 @@ import styles from './ChatBubble.module.scss';
 import type { Attachment } from '@/api/messages';
 import { ImageViewer } from './ImageViewer';
 
-interface ChatBubbleProps {
+export interface ChatBubbleProps {
   senderName: string;
   message: string;
   isSent: boolean;
@@ -52,7 +52,44 @@ function colorForUser(name: string): string {
 const SWIPE_THRESHOLD = 60;
 const SWIPE_MAX = 80;
 
-export function ChatBubble({
+function arePropsEqual(prev: ChatBubbleProps, next: ChatBubbleProps): boolean {
+  // Compare primitive data props
+  if (
+    prev.senderName !== next.senderName ||
+    prev.message !== next.message ||
+    prev.isSent !== next.isSent ||
+    prev.avatarUrl !== next.avatarUrl ||
+    prev.showName !== next.showName ||
+    prev.showAvatar !== next.showAvatar ||
+    prev.swipeDirection !== next.swipeDirection ||
+    prev.timestamp !== next.timestamp ||
+    prev.edited !== next.edited ||
+    prev.isConfirmed !== next.isConfirmed
+  ) {
+    return false;
+  }
+
+  // Compare replyTo by value
+  if (prev.replyTo !== next.replyTo) {
+    if (!prev.replyTo || !next.replyTo) return false;
+    if (prev.replyTo.senderName !== next.replyTo.senderName || prev.replyTo.message !== next.replyTo.message) return false;
+  }
+
+  // Compare threadInfo by value
+  if (prev.threadInfo !== next.threadInfo) {
+    if (!prev.threadInfo || !next.threadInfo) return false;
+    if (prev.threadInfo.reply_count !== next.threadInfo.reply_count) return false;
+  }
+
+  // Compare attachments by reference (stable from parent data)
+  if (prev.attachments !== next.attachments) return false;
+
+  // Skip function props — they are inline closures recreated per render
+  // but functionally equivalent (same message index, same handlers)
+  return true;
+}
+
+export const ChatBubble = memo(function ChatBubble({
   senderName,
   message,
   isSent,
@@ -263,4 +300,4 @@ export function ChatBubble({
       }
     </div >
   );
-}
+}, arePropsEqual);
