@@ -49,7 +49,7 @@ export function DesktopSplitLayout() {
     rightPane = <CreateChatPage embedded />;
   } else {
     rightPane = (
-      <div className={styles.desktopSplitLayout}>
+      <div className={styles.desktopSplitPlaceholder}>
         <Trans>Select a chat</Trans>
       </div>
     );

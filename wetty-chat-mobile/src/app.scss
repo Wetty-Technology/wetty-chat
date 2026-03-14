@@ -19,13 +19,6 @@ ion-tab-bar {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-.tab-bar-hidden > .tabs-inner {
-  --ion-safe-area-bottom: 0px;
-}
-
-.tab-bar-hidden ion-tab-bar {
-  display: none !important;
-}
 
 .desktop-overlay {
   position: fixed;
