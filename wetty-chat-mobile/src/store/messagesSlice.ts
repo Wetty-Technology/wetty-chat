@@ -200,6 +200,43 @@ const messagesSlice = createSlice({
       const win = getActiveWindow(chat);
       if (win) win.prevCursor = cursor;
     },
+
+    refreshLatest(state, action: { payload: { chatId: string; messages: MessageResponse[]; nextCursor: string | null; prevCursor: string | null } }) {
+      const { chatId, messages, nextCursor, prevCursor } = action.payload;
+      const chat = state.chats[chatId];
+
+      if (!chat || chat.windows.length === 0) {
+        // No existing data — full reset
+        const prevGen = chat?.generation ?? 0;
+        state.chats[chatId] = {
+          windows: [{ messages, nextCursor, prevCursor }],
+          activeWindowIndex: 0,
+          generation: prevGen + 1,
+        };
+        return;
+      }
+
+      // Check the last window (most recent chronologically) for overlap
+      const lastWinIdx = chat.windows.length - 1;
+      const lastWin = chat.windows[lastWinIdx];
+      const fetchedIds = new Set(messages.map(m => m.id));
+      const hasOverlap = lastWin.messages.some(m => fetchedIds.has(m.id));
+
+      if (hasOverlap) {
+        // Merge: keep existing messages not in fetched set, then append fetched
+        const older = lastWin.messages.filter(m => !fetchedIds.has(m.id));
+        lastWin.messages = [...older, ...messages];
+        // Preserve nextCursor from existing window (allows loading older),
+        // use prevCursor from API response
+        lastWin.prevCursor = prevCursor;
+        chat.activeWindowIndex = lastWinIdx;
+      } else {
+        // No overlap — stale data, full reset
+        chat.windows = [{ messages, nextCursor, prevCursor }];
+        chat.activeWindowIndex = 0;
+      }
+      chat.generation++;
+    },
   },
 });
 
@@ -214,6 +251,7 @@ export const {
   prependMessages,
   confirmPendingMessage,
   updateMessageInStore,
+  refreshLatest,
 } = messagesSlice.actions;
 
 /** Selectors */

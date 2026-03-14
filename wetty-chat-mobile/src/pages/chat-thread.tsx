@@ -34,6 +34,7 @@ import {
   selectNextCursorForChat,
   selectPrevCursorForChat,
   resetChat,
+  refreshLatest,
   pushWindow,
   addMessage,
   appendMessages,
@@ -156,7 +157,7 @@ export default function ChatThread() {
     getMessages(apiChatId, threadId ? { thread_id: threadId } : undefined)
       .then((res) => {
         const list = res.data.messages ?? [];
-        dispatch(resetChat({ chatId: storeChatId, messages: list, nextCursor: res.data.next_cursor ?? null, prevCursor: null }));
+        dispatch(refreshLatest({ chatId: storeChatId, messages: list, nextCursor: res.data.next_cursor ?? null, prevCursor: null }));
         setPrependedCount(0);
         pendingPrependRef.current = null;
         setWindowKey(k => k + 1);
