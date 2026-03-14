@@ -83,6 +83,7 @@ export function VirtualScroll({
   header,
 }: VirtualScrollProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const spacerRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const scrollIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isScrollIdleRef = useRef(true);
@@ -101,19 +102,22 @@ export function VirtualScroll({
     ro.observe(el);
     return () => ro.disconnect();
   }, [header]);
+
   const [scrollTop, setScrollTop] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
   const prevTotalRef = useRef(totalItems);
   const prevPrependedCountRef = useRef(prependedCount);
-  const hasInitialScrolled = useRef(false);
   const heightCache = useRef(new Map<number, number>());
   const isAtBottomRef = useRef(true);
   const prevLoadingOlderRef = useRef(loadingOlder);
-  const pendingBottomScrollRef = useRef(false);
   const initialScrollIndexRef = useRef<number | undefined>(undefined);
-  const isStabilizedRef = useRef(false);
   const batchTimerRef = useRef<number | null>(null);
   const [, forceUpdate] = useState(0);
+
+  // Phase state machine: MEASURING → READY
+  const [phase, setPhase] = useState<'MEASURING' | 'READY'>('MEASURING');
+  const phaseRef = useRef<'MEASURING' | 'READY'>('MEASURING');
+  const safetyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const getHeight = useCallback((i: number) => {
     return heightCache.current.get(i) ?? estimatedItemHeight;
@@ -148,35 +152,80 @@ export function VirtualScroll({
 
   const totalHeight = getTotalHeight();
 
-  // Scroll to bottom on initial mount, or to target index on jump
-  useLayoutEffect(() => {
-    if (hasInitialScrolled.current) return;
+  // transitionToReady: the critical MEASURING → READY transition
+  const transitionToReady = useCallback(() => {
     const el = containerRef.current;
-    if (!el) return;
+    const spacer = spacerRef.current;
+    if (!el || !spacer) return;
+    if (phaseRef.current === 'READY') return;
+
+    // Clear safety timeout
+    if (safetyTimeoutRef.current) {
+      clearTimeout(safetyTimeoutRef.current);
+      safetyTimeoutRef.current = null;
+    }
+
+    // Compute real totalHeight from fully-populated heightCache
+    let realTotal = 0;
+    for (let i = 0; i < totalItems; i++) {
+      realTotal += heightCache.current.get(i) ?? estimatedItemHeight;
+    }
+
+    const currentTopPadding = (loadingOlder ? 36 : 0) + headerHeight;
+    // Set spacer DOM height directly before React re-renders
+    spacer.style.height = `${realTotal + currentTopPadding + bottomPadding}px`;
+
+    // Set scroll position
     const targetIdx = initialScrollIndexRef.current;
     if (targetIdx != null) {
-      const currentTopPadding = (loadingOlder ? 36 : 0) + headerHeight;
-      const offset = targetIdx * estimatedItemHeight + currentTopPadding;
+      const offset = getItemOffset(targetIdx) + currentTopPadding;
       el.scrollTop = Math.max(0, offset - el.clientHeight / 2);
+      if (heightCache.current.has(targetIdx)) {
+        initialScrollIndexRef.current = undefined;
+      }
     } else {
-      el.scrollTop = el.scrollHeight;
-      pendingBottomScrollRef.current = true;
+      // Scroll to bottom
+      el.scrollTop = el.scrollHeight - el.clientHeight;
+      isAtBottomRef.current = true;
     }
+
+    // Sync React state
     setScrollTop(el.scrollTop);
     setContainerHeight(el.clientHeight);
-    hasInitialScrolled.current = true;
-    setTimeout(() => {
-      if (!isStabilizedRef.current) {
-        isStabilizedRef.current = true;
-        forceUpdate(c => c + 1);
-      }
-    }, 500);
-  }, [totalHeight, estimatedItemHeight, loadingOlder, headerHeight]);
 
-  // After every render, snap to bottom if we should be there.
-  // This replaces RAF-based bottom-scroll: useLayoutEffect sees the updated DOM.
+    // Transition phase
+    phaseRef.current = 'READY';
+    setPhase('READY');
+  }, [totalItems, estimatedItemHeight, loadingOlder, headerHeight, bottomPadding, getItemOffset]);
+
+  // Safety timeout: if MEASURING doesn't complete in 2s, transition anyway
+  useEffect(() => {
+    if (phase === 'MEASURING' && totalItems > 0) {
+      safetyTimeoutRef.current = setTimeout(() => {
+        if (phaseRef.current === 'MEASURING') {
+          transitionToReady();
+        }
+      }, 2000);
+      return () => {
+        if (safetyTimeoutRef.current) {
+          clearTimeout(safetyTimeoutRef.current);
+          safetyTimeoutRef.current = null;
+        }
+      };
+    }
+  }, [phase, totalItems, transitionToReady]);
+
+  // If totalItems is 0 during MEASURING, transition immediately
+  useEffect(() => {
+    if (phase === 'MEASURING' && totalItems === 0) {
+      phaseRef.current = 'READY';
+      setPhase('READY');
+    }
+  }, [phase, totalItems]);
+
+  // After every render in READY phase, snap to bottom if we should be there
   useLayoutEffect(() => {
-    if (!hasInitialScrolled.current) return;
+    if (phaseRef.current !== 'READY') return;
     const el = containerRef.current;
     if (!el) return;
 
@@ -187,16 +236,11 @@ export function VirtualScroll({
       el.scrollTop = Math.max(0, offset - el.clientHeight / 2);
       if (heightCache.current.has(targetIdx)) {
         initialScrollIndexRef.current = undefined;
-        isStabilizedRef.current = true;
       }
-    } else if (isAtBottomRef.current || pendingBottomScrollRef.current) {
+    } else if (isAtBottomRef.current) {
       const target = el.scrollHeight - el.clientHeight;
       if (Math.abs(el.scrollTop - target) > 1) {
         el.scrollTop = target;
-      }
-      if (pendingBottomScrollRef.current) {
-        pendingBottomScrollRef.current = false;
-        isStabilizedRef.current = true;
       }
       if (!isAtBottomRef.current) {
         isAtBottomRef.current = true;
@@ -207,8 +251,9 @@ export function VirtualScroll({
 
   // When items are prepended at top, adjust scrollTop to maintain position
   useLayoutEffect(() => {
+    if (phaseRef.current !== 'READY') return;
     const newPrepended = prependedCount - prevPrependedCountRef.current;
-    if (newPrepended > 0 && hasInitialScrolled.current) {
+    if (newPrepended > 0) {
       if (heightCache.current.size > 0) {
         const newCache = new Map<number, number>();
         for (const [k, v] of heightCache.current.entries()) {
@@ -240,6 +285,7 @@ export function VirtualScroll({
 
   // Auto-scroll to bottom when new messages appended and user was at bottom
   useLayoutEffect(() => {
+    if (phaseRef.current !== 'READY') return;
     const prev = prevTotalRef.current;
     if (isAtBottomRef.current && totalItems > prev) {
       const el = containerRef.current;
@@ -256,21 +302,19 @@ export function VirtualScroll({
   useEffect(() => {
     if (windowKey == null) return;
     heightCache.current = new Map();
-    isStabilizedRef.current = false;
     prevTotalRef.current = 0;
     prevPrependedCountRef.current = 0;
     if (initialScrollIndex != null) {
-      // Jump to target: let the useLayoutEffect handle scrolling
-      hasInitialScrolled.current = false;
       isAtBottomRef.current = false;
       onAtBottomChange?.(false);
       initialScrollIndexRef.current = initialScrollIndex;
     } else {
-      // Normal window reset: scroll to bottom
-      hasInitialScrolled.current = false;
       isAtBottomRef.current = true;
       onAtBottomChange?.(true);
     }
+    // Reset to MEASURING phase
+    phaseRef.current = 'MEASURING';
+    setPhase('MEASURING');
     forceUpdate(c => c + 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [windowKey]);
@@ -314,38 +358,48 @@ export function VirtualScroll({
   }, [scrollToIndexRef, getItemOffset, loadingOlder, headerHeight]);
 
   const handleResize = useCallback((index: number, height: number) => {
-    const isFirstMeasure = !heightCache.current.has(index);
     const prev = heightCache.current.get(index) ?? estimatedItemHeight;
+    const isFirstMeasure = !heightCache.current.has(index);
 
-    if (prev !== height || isFirstMeasure) {
-      heightCache.current.set(index, height);
-      if (batchTimerRef.current == null) {
-        batchTimerRef.current = requestAnimationFrame(() => {
-          batchTimerRef.current = null;
-          forceUpdate(c => c + 1);
-        });
+    if (prev === height && !isFirstMeasure) return;
+
+    heightCache.current.set(index, height);
+
+    if (phaseRef.current === 'MEASURING') {
+      // Check if all items measured
+      if (heightCache.current.size >= totalItems) {
+        transitionToReady();
       }
+      return;
+    }
 
-      // For items above viewport when NOT at bottom, adjust scrollTop to maintain position.
-      // When at bottom, the useLayoutEffect snap-to-bottom handles it after re-render.
-      const el = containerRef.current;
-      if (el && !isAtBottomRef.current) {
-        const diff = height - prev;
-        const currentTopPadding = (loadingOlder ? 36 : 0) + headerHeight;
-        const itemOffset = getItemOffset(index) + currentTopPadding;
+    // READY phase: batched forceUpdate + scroll adjustment
+    if (batchTimerRef.current == null) {
+      batchTimerRef.current = requestAnimationFrame(() => {
+        batchTimerRef.current = null;
+        forceUpdate(c => c + 1);
+      });
+    }
 
-        if (itemOffset < el.scrollTop) {
-          el.scrollTop += diff;
-          setScrollTop(el.scrollTop);
-        }
+    // For items above viewport when NOT at bottom, adjust scrollTop to maintain position
+    const el = containerRef.current;
+    if (el && !isAtBottomRef.current) {
+      const diff = height - prev;
+      const currentTopPadding = (loadingOlder ? 36 : 0) + headerHeight;
+      const itemOffset = getItemOffset(index) + currentTopPadding;
+
+      if (itemOffset < el.scrollTop) {
+        el.scrollTop += diff;
+        setScrollTop(el.scrollTop);
       }
     }
-  }, [getItemOffset, estimatedItemHeight, loadingOlder, headerHeight]);
+  }, [getItemOffset, estimatedItemHeight, loadingOlder, headerHeight, totalItems, transitionToReady]);
 
   const onScrollIdleRef = useRef(onScrollIdle);
   onScrollIdleRef.current = onScrollIdle;
 
   const handleScroll = useCallback(() => {
+    if (phaseRef.current !== 'READY') return;
     const el = containerRef.current;
     if (!el) return;
     setScrollTop(el.scrollTop);
@@ -384,7 +438,46 @@ export function VirtualScroll({
     return () => ro.disconnect();
   }, []);
 
-  // Compute visible range
+  const loadingRowHeight = 36;
+  const topPadding = (loadingOlder ? loadingRowHeight : 0) + headerHeight;
+
+  // MEASURING phase: render ALL items invisibly
+  if (phase === 'MEASURING') {
+    const measuringItems: ReactNode[] = [];
+    for (let i = 0; i < totalItems; i++) {
+      measuringItems.push(
+        <MeasuredItem
+          key={`${windowKey}-${i}`}
+          index={i}
+          offset={0}
+          onResize={handleResize}
+          invisible
+        >
+          {renderItem(i)}
+        </MeasuredItem>
+      );
+    }
+
+    return (
+      <div ref={containerRef} className={styles.container} onScroll={handleScroll} style={{ opacity: 0 }}>
+        <div ref={spacerRef} className={styles.spacer} style={{ height: totalItems * estimatedItemHeight + topPadding + bottomPadding }}>
+          {loadingOlder && (
+            <div className={styles.loadingRow} style={{ height: loadingRowHeight }}>
+              Loading…
+            </div>
+          )}
+          {header && (
+            <div ref={headerRef} style={{ position: 'absolute', top: loadingOlder ? loadingRowHeight : 0, left: 0, right: 0 }}>
+              {header}
+            </div>
+          )}
+          {measuringItems}
+        </div>
+      </div>
+    );
+  }
+
+  // READY phase: compute visible range and render normally
   const startIndex = Math.max(0, findStartIndex(scrollTop) - overscan);
   const endOffset = scrollTop + containerHeight;
   let endIndex = startIndex;
@@ -403,30 +496,25 @@ export function VirtualScroll({
     }
   }
 
-  const loadingRowHeight = 36;
-  const topPadding = (loadingOlder ? loadingRowHeight : 0) + headerHeight;
-
+  // Collect visible items + unmeasured items near viewport for pre-measurement
   const itemsToRender = new Set<number>();
   for (let i = startIndex; i <= endIndex; i++) {
     itemsToRender.add(i);
   }
 
-  if (isStabilizedRef.current) {
-    let measuredCount = 0;
-    const maxMeasure = 20;
-
-    for (let i = startIndex - 1; i >= 0 && measuredCount < maxMeasure; i--) {
-      if (!heightCache.current.has(i)) {
-        itemsToRender.add(i);
-        measuredCount++;
-      }
+  // Pre-measure unmeasured items near the viewport (e.g., newly prepended/appended)
+  const maxPreMeasure = 20;
+  let preMeasured = 0;
+  for (let i = startIndex - 1; i >= 0 && preMeasured < maxPreMeasure; i--) {
+    if (!heightCache.current.has(i)) {
+      itemsToRender.add(i);
+      preMeasured++;
     }
-
-    for (let i = endIndex + 1; i < totalItems && measuredCount < maxMeasure; i++) {
-      if (!heightCache.current.has(i)) {
-        itemsToRender.add(i);
-        measuredCount++;
-      }
+  }
+  for (let i = endIndex + 1; i < totalItems && preMeasured < maxPreMeasure; i++) {
+    if (!heightCache.current.has(i)) {
+      itemsToRender.add(i);
+      preMeasured++;
     }
   }
 
@@ -434,11 +522,11 @@ export function VirtualScroll({
     const isVisible = i >= startIndex && i <= endIndex;
     const offset = isVisible ? getItemOffset(i) + topPadding : 0;
     return (
-      <MeasuredItem 
-        key={`${windowKey}-${i}`} 
-        index={i} 
-        offset={offset} 
-        onResize={handleResize} 
+      <MeasuredItem
+        key={`${windowKey}-${i}`}
+        index={i}
+        offset={offset}
+        onResize={handleResize}
         invisible={!isVisible}
       >
         {renderItem(i)}
@@ -448,7 +536,7 @@ export function VirtualScroll({
 
   return (
     <div ref={containerRef} className={styles.container} onScroll={handleScroll}>
-      <div className={styles.spacer} style={{ height: totalHeight + topPadding + bottomPadding }}>
+      <div ref={spacerRef} className={styles.spacer} style={{ height: totalHeight + topPadding + bottomPadding }}>
         {loadingOlder && (
           <div className={styles.loadingRow} style={{ height: loadingRowHeight }}>
             Loading…
