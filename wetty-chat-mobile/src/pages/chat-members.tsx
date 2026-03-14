@@ -25,9 +25,14 @@ import { useSelector } from 'react-redux';
 import type { RootState } from '@/store/index';
 import { FeatureGate } from '@/components/FeatureGate';
 
-export default function ChatMembersPage() {
+interface ChatMembersPageProps {
+  chatId?: string;
+  embedded?: boolean;
+}
+
+export default function ChatMembersPage({ chatId: propChatId, embedded }: ChatMembersPageProps) {
   const { id } = useParams<{ id: string }>();
-  const chatId = id ? String(id) : '';
+  const chatId = propChatId ?? (id ? String(id) : '');
   const currentUserId = useSelector((state: RootState) => state.user.uid);
 
   const [presentToast] = useIonToast();
@@ -143,32 +148,6 @@ export default function ChatMembersPage() {
     });
   };
 
-  /*
-  const handleLeaveGroup = () => {
-    presentAlert({
-      header: t`Leave Group`,
-      message: t`Are you sure you want to leave this group?`,
-      buttons: [
-        { text: t`Cancel`, role: 'cancel' },
-        {
-          text: t`Leave`,
-          role: 'destructive',
-          handler: () => {
-            removeMember(chatId, currentUserId)
-              .then(() => {
-                showToast(t`Left group`, 2000);
-                history.replace('/chats');
-              })
-              .catch((err: Error) => {
-                showToast(err.message || t`Failed to leave group`);
-              });
-          },
-        },
-      ],
-    });
-  };
-  */
-
   const handleMemberTap = (member: MemberResponse) => {
     if (!isAdmin || member.uid === currentUserId) return;
     presentActionSheet({
@@ -187,12 +166,15 @@ export default function ChatMembersPage() {
     });
   };
 
+  const PageWrapper = embedded ? 'div' : IonPage;
+  const pageProps = embedded ? { className: 'ion-page' } : {};
+
   return (
-    <IonPage>
+    <PageWrapper {...pageProps}>
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            <IonBackButton defaultHref={`/chats/${chatId}`} text="" />
+            {!embedded && <IonBackButton defaultHref={`/chats/${chatId}`} text="" />}
           </IonButtons>
           <IonTitle><Trans>Group Members</Trans></IonTitle>
         </IonToolbar>
@@ -231,14 +213,9 @@ export default function ChatMembersPage() {
                 </IonItem>
               ))}
             </IonList>
-            {/* <div style={{ padding: '16px' }}>
-              <IonButton expand="block" color="danger" onClick={handleLeaveGroup}>
-                <Trans>Leave Group</Trans>
-              </IonButton>
-            </div> */}
           </>
         )}
       </IonContent>
-    </IonPage>
+    </PageWrapper>
   );
 }

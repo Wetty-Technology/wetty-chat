@@ -57,8 +57,16 @@ function generateClientId(): string {
   return `cg_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 }
 
-export default function ChatThread() {
-  const { id, threadId } = useParams<{ id: string; threadId?: string }>();
+interface ChatThreadProps {
+  chatId?: string;
+  threadId?: string;
+  embedded?: boolean;
+}
+
+export default function ChatThread({ chatId: propChatId, threadId: propThreadId, embedded }: ChatThreadProps) {
+  const params = useParams<{ id: string; threadId?: string }>();
+  const id = propChatId ?? params.id;
+  const threadId = propThreadId ?? params.threadId;
   const apiChatId = id ? String(id) : '';
   const storeChatId = threadId ? `${apiChatId}_thread_${threadId}` : apiChatId;
   const history = useHistory();
@@ -412,14 +420,15 @@ export default function ChatThread() {
     });
   }, [messages, apiChatId, threadId, history, showToast, presentActionSheet, setReplyingTo, setEditingMessage, presentAlert]);
 
-
+  const PageWrapper = embedded ? 'div' : IonPage;
+  const pageProps = embedded ? { className: 'ion-page chat-thread-page' } : { className: 'chat-thread-page' };
 
   return (
-    <IonPage className="chat-thread-page">
+    <PageWrapper {...pageProps}>
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            <IonBackButton defaultHref="/chats" text="" />
+            {!embedded && <IonBackButton defaultHref="/chats" text="" />}
           </IonButtons>
           <IonTitle>{chatName}</IonTitle>
           <IonButtons slot="end">
@@ -546,6 +555,6 @@ export default function ChatThread() {
           onCancelEdit={() => setEditingMessage(null)}
         />
       </IonFooter>
-    </IonPage>
+    </PageWrapper>
   );
 }

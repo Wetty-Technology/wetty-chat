@@ -3,11 +3,21 @@ import react from '@vitejs/plugin-react';
 import { lingui } from '@lingui/vite-plugin';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vite';
+import { patchCssModules } from 'vite-css-modules';
 
 const SRC_DIR = path.resolve(__dirname, './src');
 
 export default defineConfig({
+  css: {
+    modules: {
+      localsConvention: "camelCase",
+    }
+  },
   plugins: [
+    patchCssModules({
+      generateSourceTypes: true,
+      declarationMap: true,
+    }),
     react({
       babel: {
         plugins: ["@lingui/babel-plugin-lingui-macro"],

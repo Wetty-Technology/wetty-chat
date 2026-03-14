@@ -17,7 +17,11 @@ import {
 import { useHistory } from 'react-router-dom';
 import { createChat } from '@/api/chats';
 
-export default function CreateChat() {
+interface CreateChatProps {
+  embedded?: boolean;
+}
+
+export default function CreateChat({ embedded }: CreateChatProps) {
   const history = useHistory();
   const [presentAlert] = useIonAlert();
   const [name, setName] = useState('');
@@ -42,12 +46,15 @@ export default function CreateChat() {
       });
   };
 
+  const PageWrapper = embedded ? 'div' : IonPage;
+  const pageProps = embedded ? { className: 'ion-page' } : {};
+
   return (
-    <IonPage>
+    <PageWrapper {...pageProps}>
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            <IonBackButton defaultHref="/chats" text="" />
+            {!embedded && <IonBackButton defaultHref="/chats" text="" />}
           </IonButtons>
           <IonTitle>New Chat</IonTitle>
         </IonToolbar>
@@ -73,6 +80,6 @@ export default function CreateChat() {
           </div>
         </div>
       </IonContent>
-    </IonPage>
+    </PageWrapper>
   );
 }

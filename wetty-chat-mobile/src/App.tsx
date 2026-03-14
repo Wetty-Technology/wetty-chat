@@ -27,6 +27,8 @@ import LanguagePage from '@/pages/settings/language';
 import GroupDetailPage from '@/pages/group-detail';
 import NotFoundPage from '@/pages/not-found';
 import ComponentDemoPage from '@/pages/component-demo';
+import { DesktopSplitLayout } from '@/layouts/DesktopSplitLayout';
+import { useIsDesktop } from '@/hooks/useIsDesktop';
 
 import './app.scss';
 import { Trans } from '@lingui/react/macro';
@@ -97,6 +99,7 @@ const TabsContainer: React.FC = () => {
 const App: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const wsConnected = useSelector((state: RootState) => state.connection.wsConnected);
+  const isDesktop = useIsDesktop();
 
   const {
     needRefresh: [needRefresh, setNeedRefresh],

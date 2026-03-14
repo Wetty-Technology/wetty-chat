@@ -26,9 +26,14 @@ import { selectChatMeta, setChatMeta } from '@/store/chatsSlice';
 import type { RootState } from '@/store/index';
 import { getGroupInfo, updateGroupInfo } from '@/api/group';
 
-export default function ChatSettingsPage() {
+interface ChatSettingsPageProps {
+  chatId?: string;
+  embedded?: boolean;
+}
+
+export default function ChatSettingsPage({ chatId: propChatId, embedded }: ChatSettingsPageProps) {
   const { id } = useParams<{ id: string }>();
-  const chatId = id ? String(id) : '';
+  const chatId = propChatId ?? (id ? String(id) : '');
   const history = useHistory();
   const dispatch = useDispatch();
   const [presentToast] = useIonToast();
@@ -98,12 +103,15 @@ export default function ChatSettingsPage() {
       .finally(() => setSaving(false));
   };
 
+  const PageWrapper = embedded ? 'div' : IonPage;
+  const pageProps = embedded ? { className: 'ion-page' } : {};
+
   return (
-    <IonPage>
+    <PageWrapper {...pageProps}>
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            <IonBackButton defaultHref={`/chats/chat/${chatId}`} text="" />
+            {!embedded && <IonBackButton defaultHref={`/chats/chat/${chatId}`} text="" />}
           </IonButtons>
           <IonTitle><Trans>Group Settings</Trans></IonTitle>
         </IonToolbar>
@@ -161,6 +169,6 @@ export default function ChatSettingsPage() {
           </>
         )}
       </IonContent>
-    </IonPage>
+    </PageWrapper>
   );
 }
