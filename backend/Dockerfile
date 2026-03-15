@@ -67,8 +67,9 @@ WORKDIR /app
 # Copy the built binary from builder
 COPY --from=builder /app/wetty-chat-backend /app/wetty-chat-backend
 
-# Server listens on 3000
+# Server listens on 3000 and exposes Prometheus metrics on 3001
 EXPOSE 3000
+EXPOSE 3001
 
 # DATABASE_URL must be set at runtime (e.g. via docker run -e or compose environment)
 ENV RUST_LOG=info

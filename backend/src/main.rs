@@ -1,6 +1,6 @@
 use axum::body::Body;
 use axum::http::Request;
-use axum::{extract::State, routing::get, Router};
+use axum::{middleware, routing::get, Router};
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::{MysqlConnection, PgConnection};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
@@ -18,6 +18,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilte
 
 mod db_tracing;
 mod handlers;
+mod metrics;
 mod models;
 mod schema;
 mod serde_i64_string;
@@ -53,6 +54,7 @@ pub(crate) enum AuthMethod {
 pub(crate) struct AppState {
     db: Pool<ConnectionManager<PgConnection>>,
     id_gen: Arc<utils::ids::IdGen>,
+    metrics: Arc<metrics::Metrics>,
     ws_registry: Arc<services::ws_registry::ConnectionRegistry>,
     push_service: Arc<services::push::PushService>,
     s3_client: aws_sdk_s3::Client,
@@ -117,6 +119,9 @@ async fn main() {
         "Discuz" => AuthMethod::Discuz,
         _ => AuthMethod::UIDHeader,
     };
+    let app_addr = read_socket_addr("APP_ADDR", SocketAddr::from(([0, 0, 0, 0], 3000)));
+    let metrics_addr =
+        read_socket_addr("METRICS_ADDR", SocketAddr::from(([0, 0, 0, 0], 3001)));
 
     let mut discuz_db = None;
     let mut discuz_cookie_prefix = String::new();
@@ -148,6 +153,7 @@ async fn main() {
     let state = AppState {
         db: pool.clone(),
         id_gen: Arc::new(utils::ids::new_generator()),
+        metrics: Arc::new(metrics::Metrics::new()),
         ws_registry: ws_registry.clone(),
         push_service: services::push::PushService::start(pool, ws_registry.clone()),
         s3_client,
@@ -196,8 +202,8 @@ async fn main() {
                 .latency_unit(LatencyUnit::Micros),
         );
 
+    let metrics_registry = state.metrics.clone();
     let app = Router::new()
-        .route("/health", get(health))
         .merge(handlers::api_router())
         .layer(RequestBodyLimitLayer::new(256 * 1024))
         .layer(
@@ -206,14 +212,42 @@ async fn main() {
                 .propagate_x_request_id()
                 .layer(trace_layer),
         )
+        .layer(middleware::from_fn_with_state(
+            metrics_registry.clone(),
+            metrics::track_http_metrics,
+        ))
         .with_state(state);
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
-    info!("Starting server listening on {:?}", addr);
-    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    let metrics_app = Router::new()
+        .route("/metrics", get(metrics::metrics_handler))
+        .with_state(metrics_registry);
+
+    info!("Starting API server listening on {:?}", app_addr);
+    let app_listener = tokio::net::TcpListener::bind(app_addr).await.unwrap();
+
+    info!("Starting metrics server listening on {:?}", metrics_addr);
+    let metrics_listener = tokio::net::TcpListener::bind(metrics_addr).await.unwrap();
+
+    let api_server = axum::serve(app_listener, app);
+    let metrics_server = axum::serve(metrics_listener, metrics_app);
+
+    tokio::select! {
+        result = api_server => {
+            result.unwrap();
+        }
+        result = metrics_server => {
+            result.unwrap();
+        }
+    }
 }
 
-async fn health(State(_state): State<AppState>) -> &'static str {
-    "ok"
+fn read_socket_addr(var_name: &str, default: SocketAddr) -> SocketAddr {
+    std::env::var(var_name)
+        .ok()
+        .map(|value| {
+            value
+                .parse()
+                .unwrap_or_else(|_| panic!("{var_name} must be a valid socket address"))
+        })
+        .unwrap_or(default)
 }

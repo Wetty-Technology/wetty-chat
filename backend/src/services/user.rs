@@ -1,6 +1,7 @@
 use crate::{AppState, AuthMethod};
 use diesel::prelude::*;
 use std::collections::HashMap;
+use std::time::Instant;
 use std::time::UNIX_EPOCH;
 
 pub fn lookup_user_avatars(state: &AppState, uids: &[i32]) -> HashMap<i32, Option<String>> {
@@ -13,6 +14,8 @@ pub fn lookup_user_avatars(state: &AppState, uids: &[i32]) -> HashMap<i32, Optio
         _ => return HashMap::new(),
     };
 
+    let start = Instant::now();
+    let mut fs_duration_seconds = 0.0;
     let mut map = HashMap::with_capacity(uids.len());
     for &uid in uids {
         let uid1 = format!("{:0>9}", uid);
@@ -22,14 +25,21 @@ pub fn lookup_user_avatars(state: &AppState, uids: &[i32]) -> HashMap<i32, Optio
         let stem = &uid1[7..9];
         let rel = format!("{}/{}/{}/{}_avatar_middle.jpg", dir1, dir2, dir3, stem);
         let full_path = format!("{}/{}", avatar_path, rel);
+        let fs_start = Instant::now();
         let entry = std::fs::metadata(&full_path)
             .ok()
             .and_then(|m| m.modified().ok())
             .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
             .map(|d| format!("{}/{}?ts={}", public_url, rel, d.as_secs()))
             .unwrap_or_else(|| format!("{}/noavatar.svg", public_url));
+        fs_duration_seconds += fs_start.elapsed().as_secs_f64();
         map.insert(uid, Some(entry));
     }
+    state.metrics.record_discuz_avatar_lookup(
+        uids.len(),
+        start.elapsed().as_secs_f64(),
+        fs_duration_seconds,
+    );
     map
 }
 
@@ -43,6 +53,7 @@ pub async fn lookup_users(state: &AppState, uids: &[i32]) -> HashMap<i32, Option
 
     match state.auth_method {
         AuthMethod::Discuz => {
+            let start = Instant::now();
             if let Some(ref pool) = state.discuz_db {
                 if let Ok(mut conn) = pool.get() {
                     use crate::services::discuz::schema::common_member::dsl::*;
@@ -60,6 +71,9 @@ pub async fn lookup_users(state: &AppState, uids: &[i32]) -> HashMap<i32, Option
                     }
                 }
             }
+            state
+                .metrics
+                .record_discuz_username_lookup(uids.len(), start.elapsed().as_secs_f64());
         }
         AuthMethod::UIDHeader => {
             if let Ok(mut conn) = state.db.get() {
