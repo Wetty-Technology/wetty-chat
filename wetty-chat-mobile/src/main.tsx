@@ -26,8 +26,9 @@ import { setupIonicReact } from '@ionic/react';
 initWebSocket();
 activateDetectedLocale();
 setupIonicReact({
-  swipeBackEnabled: false
-})
+  mode: 'ios',
+  swipeBackEnabled: false,
+});
 
 console.log(`Running in ${import.meta.env.MODE} mode, dev=${import.meta.env.DEV}`);
 

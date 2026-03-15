@@ -7,7 +7,6 @@ import {
   IonIcon,
   IonLabel,
   IonToast,
-  setupIonicReact,
 } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
 import { Route, Redirect, useLocation } from 'react-router-dom';
@@ -27,6 +26,7 @@ import LanguagePage from '@/pages/settings/language';
 import GroupDetailPage from '@/pages/group-detail';
 import NotFoundPage from '@/pages/not-found';
 import ComponentDemoPage from '@/pages/component-demo';
+import LandingPage from '@/pages/landing';
 
 import './app.scss';
 import { Trans } from '@lingui/react/macro';
@@ -34,8 +34,6 @@ import { getCurrentUserId } from './js/current-user';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { t } from '@lingui/core/macro';
 import { syncApp } from '@/api/sync';
-
-setupIonicReact();
 
 const TAB_ROOT_PATHS = ['/', '/chats', '/settings', '/demo'];
 
@@ -82,6 +80,7 @@ const TabsContainer: React.FC = () => {
         <Route path="/chats/chat/:id/members" exact component={ChatMembersPage} />
         <Route path="/chats/chat/:id/details" exact component={GroupDetailPage} />
         <Route path="/demo" exact component={ComponentDemoPage} />
+        <Route path="/landing" exact component={LandingPage} />
         <Route path="/settings/language" exact component={LanguagePage} />
         <Route path="/settings" exact component={SettingsPage} />
         <Redirect exact from="/" to="/chats" />

@@ -423,9 +423,9 @@ export default function ChatThread() {
           </IonButtons>
           <IonTitle>{chatName}</IonTitle>
           <IonButtons slot="end">
-            <IonButton onClick={() => history.push(`/chats/chat/${apiChatId}/members`)}>
-              <IonIcon slot="icon-only" icon={people} />
-            </IonButton>
+            {/*<IonButton onClick={() => history.push(`/chats/chat/${apiChatId}/members`)}>*/}
+            {/*  <IonIcon slot="icon-only" icon={people} />*/}
+            {/*</IonButton>*/}
             <FeatureGate>
               <IonButton onClick={() => history.push(`/chats/chat/${apiChatId}/settings`)}>
                 <IonIcon slot="icon-only" icon={settings} />
