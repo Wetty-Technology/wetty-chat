@@ -74,7 +74,7 @@ ion-item-option {
   color: var(--ion-color-medium);
 
   &:hover {
-    color: var(--ion-color-medium-shade);
+    color: var(--ion-color-medium);
   }
 
   &.active {
@@ -94,5 +94,3 @@ ion-item-option {
     }
   }
 }
-
-.chats-list-item--active {}

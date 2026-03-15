@@ -19,7 +19,9 @@ import MobileLayout from './layouts/MobileLayout';
 import { useIsDesktop } from './hooks/useIsDesktop';
 import { DesktopSplitLayout } from './layouts/DesktopSplitLayout';
 
-setupIonicReact();
+setupIonicReact({
+  mode: 'ios',
+});
 
 const App: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();

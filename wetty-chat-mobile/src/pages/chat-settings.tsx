@@ -13,7 +13,6 @@ import {
   IonSelect,
   IonSelectOption,
   IonButton,
-  IonBackButton,
   IonButtons,
   IonSpinner,
   useIonToast,
@@ -25,13 +24,15 @@ import { Trans } from '@lingui/react/macro';
 import { selectChatMeta, setChatMeta } from '@/store/chatsSlice';
 import type { RootState } from '@/store/index';
 import { getGroupInfo, updateGroupInfo } from '@/api/group';
+import { BackButton } from '@/components/BackButton';
+import type { BackAction } from '@/types/back-action';
 
-interface ChatSettingsPageProps {
+interface ChatSettingsCoreProps {
   chatId?: string;
-  embedded?: boolean;
+  backAction?: BackAction;
 }
 
-export default function ChatSettingsPage({ chatId: propChatId, embedded }: ChatSettingsPageProps) {
+export default function ChatSettingsCore({ chatId: propChatId, backAction }: ChatSettingsCoreProps) {
   const { id } = useParams<{ id: string }>();
   const chatId = propChatId ?? (id ? String(id) : '');
   const history = useHistory();
@@ -103,15 +104,12 @@ export default function ChatSettingsPage({ chatId: propChatId, embedded }: ChatS
       .finally(() => setSaving(false));
   };
 
-  const PageWrapper = embedded ? 'div' : IonPage;
-  const pageProps = embedded ? { className: 'ion-page' } : {};
-
   return (
-    <PageWrapper {...pageProps}>
+    <div className="ion-page">
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            {!embedded && <IonBackButton defaultHref={`/chats/chat/${chatId}`} text="" />}
+            {backAction && <BackButton action={backAction} />}
           </IonButtons>
           <IonTitle><Trans>Group Settings</Trans></IonTitle>
         </IonToolbar>
@@ -169,6 +167,15 @@ export default function ChatSettingsPage({ chatId: propChatId, embedded }: ChatS
           </>
         )}
       </IonContent>
-    </PageWrapper>
+    </div>
+  );
+}
+
+export function ChatSettingsPage() {
+  const { id } = useParams<{ id: string }>();
+  return (
+    <IonPage>
+      <ChatSettingsCore chatId={id} backAction={{ type: 'back', defaultHref: `/chats/chat/${id}` }} />
+    </IonPage>
   );
 }

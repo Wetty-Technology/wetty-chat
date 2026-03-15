@@ -10,7 +10,6 @@ import {
   IonLabel,
   IonChip,
   IonButton,
-  IonBackButton,
   IonButtons,
   IonSpinner,
   useIonToast,
@@ -24,13 +23,15 @@ import { getMembers, addMember, removeMember, updateMemberRole, type MemberRespo
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/store/index';
 import { FeatureGate } from '@/components/FeatureGate';
+import { BackButton } from '@/components/BackButton';
+import type { BackAction } from '@/types/back-action';
 
-interface ChatMembersPageProps {
+interface ChatMembersCoreProps {
   chatId?: string;
-  embedded?: boolean;
+  backAction?: BackAction;
 }
 
-export default function ChatMembersPage({ chatId: propChatId, embedded }: ChatMembersPageProps) {
+export default function ChatMembersCore({ chatId: propChatId, backAction }: ChatMembersCoreProps) {
   const { id } = useParams<{ id: string }>();
   const chatId = propChatId ?? (id ? String(id) : '');
   const currentUserId = useSelector((state: RootState) => state.user.uid);
@@ -166,15 +167,12 @@ export default function ChatMembersPage({ chatId: propChatId, embedded }: ChatMe
     });
   };
 
-  const PageWrapper = embedded ? 'div' : IonPage;
-  const pageProps = embedded ? { className: 'ion-page' } : {};
-
   return (
-    <PageWrapper {...pageProps}>
+    <div className="ion-page">
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            {!embedded && <IonBackButton defaultHref={`/chats/${chatId}`} text="" />}
+            {backAction && <BackButton action={backAction} />}
           </IonButtons>
           <IonTitle><Trans>Group Members</Trans></IonTitle>
         </IonToolbar>
@@ -216,6 +214,15 @@ export default function ChatMembersPage({ chatId: propChatId, embedded }: ChatMe
           </>
         )}
       </IonContent>
-    </PageWrapper>
+    </div>
+  );
+}
+
+export function ChatMembersPage() {
+  const { id } = useParams<{ id: string }>();
+  return (
+    <IonPage>
+      <ChatMembersCore chatId={id} backAction={{ type: 'back', defaultHref: `/chats/chat/${id}` }} />
+    </IonPage>
   );
 }

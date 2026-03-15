@@ -19,6 +19,11 @@
   position: relative;
 }
 
+.desktop-split-pane {
+  position: absolute;
+  inset: 0;
+}
+
 .desktop-split-placeholder {
   display: flex;
   align-items: center;

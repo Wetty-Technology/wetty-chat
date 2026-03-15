@@ -1,57 +1,71 @@
-import { useCallback } from 'react';
-import { useHistory, useRouteMatch } from 'react-router-dom';
+import { useCallback, type ReactNode } from 'react';
+import { useHistory } from 'react-router-dom';
 import { Trans } from '@lingui/react/macro';
+import { IonModal } from '@ionic/react';
 import { ChatList } from '@/components/chat/ChatList';
-import ChatThread from '@/pages/chat-thread';
-import ChatSettingsPage from '@/pages/chat-settings';
-import ChatMembersPage from '@/pages/chat-members';
-import GroupDetailPage from '@/pages/group-detail';
-import CreateChatPage from '@/pages/create-chat';
+import ChatThreadCore from '@/pages/chat-thread';
+import ChatSettingsCore from '@/pages/chat-settings';
+import ChatMembersCore from '@/pages/chat-members';
+import GroupDetailCore from '@/pages/group-detail';
+import CreateChatCore from '@/pages/create-chat';
+import { useChatRoutes } from '@/hooks/useChatRoutes';
+import type { BackAction } from '@/types/back-action';
 import styles from './DesktopSplitLayout.module.scss';
+
+/** Deduplicates the settings / members modal pattern. */
+function ChatModal({
+  chatId,
+  activeChatId,
+  children,
+}: {
+  chatId: string | null;
+  activeChatId: string | undefined;
+  children: (chatId: string, backAction: BackAction) => ReactNode;
+}) {
+  const history = useHistory();
+  return (
+    <IonModal
+      isOpen={chatId != null}
+      onDidDismiss={() => history.push(`/chats/chat/${activeChatId}`)}
+    >
+      {chatId != null &&
+        children(chatId, {
+          type: 'close',
+          onClose: () => history.push(`/chats/chat/${chatId}`),
+        })}
+    </IonModal>
+  );
+}
 
 export function DesktopSplitLayout() {
   const history = useHistory();
-
-  // Match the most specific routes first
-  const threadMatch = useRouteMatch<{ id: string; threadId: string }>('/chats/chat/:id/thread/:threadId');
-  const settingsMatch = useRouteMatch<{ id: string }>('/chats/chat/:id/settings');
-  const membersMatch = useRouteMatch<{ id: string }>('/chats/chat/:id/members');
-  const detailsMatch = useRouteMatch<{ id: string }>('/chats/chat/:id/details');
-  const chatMatch = useRouteMatch<{ id: string }>('/chats/chat/:id');
-  const newMatch = useRouteMatch('/chats/new');
-
-  const activeChatId =
-    threadMatch?.params.id ??
-    settingsMatch?.params.id ??
-    membersMatch?.params.id ??
-    detailsMatch?.params.id ??
-    chatMatch?.params.id ??
-    undefined;
+  const { activeChatId, threadMatch, settingsMatch, membersMatch, detailsMatch, isNewChat } =
+    useChatRoutes();
 
   const handleChatSelect = useCallback((chatId: string) => {
     history.replace(`/chats/chat/${chatId}`);
   }, [history]);
 
-  let rightPane: React.ReactNode;
+  let subPageOverlay: ReactNode = null;
 
-  if (threadMatch?.isExact) {
-    const { id, threadId } = threadMatch.params;
-    rightPane = <ChatThread key={`${threadId}`} chatId={id} threadId={threadId} embedded />;
-  } else if (settingsMatch?.isExact) {
-    rightPane = <ChatSettingsPage key={settingsMatch.params.id} chatId={settingsMatch.params.id} embedded />;
-  } else if (membersMatch?.isExact) {
-    rightPane = <ChatMembersPage key={membersMatch.params.id} chatId={membersMatch.params.id} embedded />;
-  } else if (detailsMatch?.isExact) {
-    rightPane = <GroupDetailPage key={detailsMatch.params.id} chatId={detailsMatch.params.id} embedded />;
-  } else if (chatMatch?.isExact) {
-    rightPane = <ChatThread key={chatMatch.params.id} chatId={chatMatch.params.id} embedded />;
-  } else if (newMatch) {
-    rightPane = <CreateChatPage embedded />;
-  } else {
-    rightPane = (
-      <div className={styles.desktopSplitPlaceholder}>
-        <Trans>Select a chat</Trans>
-      </div>
+  if (threadMatch) {
+    const { id, threadId } = threadMatch;
+    subPageOverlay = (
+      <ChatThreadCore
+        key={threadId}
+        chatId={id}
+        threadId={threadId}
+        backAction={{ type: 'callback', onBack: () => history.go(-1) }}
+      />
+    );
+  } else if (detailsMatch) {
+    const { id } = detailsMatch;
+    subPageOverlay = (
+      <GroupDetailCore
+        key={id}
+        chatId={id}
+        backAction={{ type: 'callback', onBack: () => history.go(-1) }}
+      />
     );
   }
 
@@ -61,7 +75,48 @@ export function DesktopSplitLayout() {
         <ChatList activeChatId={activeChatId} onChatSelect={handleChatSelect} />
       </div>
       <div className={styles.desktopSplitRight}>
-        {rightPane}
+        {/* Base layer: always render ChatThreadCore when a chat is selected */}
+        {activeChatId && !isNewChat && (
+          <div
+            style={{ display: subPageOverlay ? 'none' : undefined }}
+            className={styles.desktopSplitPane}
+          >
+            <ChatThreadCore key={activeChatId} chatId={activeChatId} />
+          </div>
+        )}
+
+        {/* Overlay layer: sub-page (details, thread) */}
+        {subPageOverlay && (
+          <div className={styles.desktopSplitPane}>
+            {subPageOverlay}
+          </div>
+        )}
+
+        {/* Settings modal */}
+        <ChatModal chatId={settingsMatch?.id ?? null} activeChatId={activeChatId}>
+          {(chatId, backAction) => <ChatSettingsCore chatId={chatId} backAction={backAction} />}
+        </ChatModal>
+
+        {/* Members modal */}
+        <ChatModal chatId={membersMatch?.id ?? null} activeChatId={activeChatId}>
+          {(chatId, backAction) => <ChatMembersCore chatId={chatId} backAction={backAction} />}
+        </ChatModal>
+
+        {/* Create chat page */}
+        {isNewChat && (
+          <div className={styles.desktopSplitPane}>
+            <CreateChatCore
+              backAction={{ type: 'close', onClose: () => history.replace('/chats') }}
+            />
+          </div>
+        )}
+
+        {/* Placeholder when no chat selected */}
+        {!activeChatId && !isNewChat && (
+          <div className={styles.desktopSplitPlaceholder}>
+            <Trans>Select a chat</Trans>
+          </div>
+        )}
       </div>
     </div>
   );

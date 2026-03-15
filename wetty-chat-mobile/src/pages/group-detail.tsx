@@ -8,7 +8,6 @@ import {
   IonList,
   IonItem,
   IonLabel,
-  IonBackButton,
   IonButtons,
   IonSpinner,
   useIonToast,
@@ -17,6 +16,8 @@ import {
 import { useParams } from 'react-router-dom';
 import { addMember, getGroupInfo, getMembers, type GroupInfoResponse, type MemberResponse } from '@/api/group';
 import { FeatureGate } from '@/components/FeatureGate';
+import { BackButton } from '@/components/BackButton';
+import type { BackAction } from '@/types/back-action';
 
 function groupDisplayName(detail: GroupInfoResponse | null, id: string): string {
   if (detail?.name?.trim()) return detail.name.trim();
@@ -34,12 +35,12 @@ function initials(detail: GroupInfoResponse | null): string {
   return '?';
 }
 
-interface GroupDetailProps {
+interface GroupDetailCoreProps {
   chatId?: string;
-  embedded?: boolean;
+  backAction?: BackAction;
 }
 
-export default function GroupDetail({ chatId: propChatId, embedded }: GroupDetailProps) {
+export default function GroupDetailCore({ chatId: propChatId, backAction }: GroupDetailCoreProps) {
   const { id: paramId } = useParams<{ id: string }>();
   const id = propChatId ?? paramId;
   const [presentToast] = useIonToast();
@@ -112,16 +113,13 @@ export default function GroupDetail({ chatId: propChatId, embedded }: GroupDetai
     });
   };
 
-  const PageWrapper = embedded ? 'div' : IonPage;
-  const pageProps = embedded ? { className: 'ion-page' } : {};
-
   if (!id) {
     return (
-      <PageWrapper {...pageProps}>
+      <div className="ion-page">
         <IonHeader>
           <IonToolbar>
             <IonButtons slot="start">
-              {!embedded && <IonBackButton defaultHref={`/chats/chat/${id}`} text="" />}
+              {backAction && <BackButton action={backAction} />}
             </IonButtons>
             <IonTitle>Group</IonTitle>
           </IonToolbar>
@@ -129,7 +127,7 @@ export default function GroupDetail({ chatId: propChatId, embedded }: GroupDetai
         <IonContent>
           <div style={{ padding: '16px' }}>Invalid group.</div>
         </IonContent>
-      </PageWrapper>
+      </div>
     );
   }
 
@@ -137,11 +135,11 @@ export default function GroupDetail({ chatId: propChatId, embedded }: GroupDetai
   const displayName = groupDisplayName(detail, id);
 
   return (
-    <PageWrapper {...pageProps}>
+    <div className="ion-page">
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            {!embedded && <IonBackButton defaultHref={`/chats/chat/${id}`} text="" />}
+            {backAction && <BackButton action={backAction} />}
           </IonButtons>
           <IonTitle>Group</IonTitle>
         </IonToolbar>
@@ -217,6 +215,15 @@ export default function GroupDetail({ chatId: propChatId, embedded }: GroupDetai
           </>
         )}
       </IonContent>
-    </PageWrapper>
+    </div>
+  );
+}
+
+export function GroupDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  return (
+    <IonPage>
+      <GroupDetailCore chatId={id} backAction={{ type: 'back', defaultHref: `/chats/chat/${id}` }} />
+    </IonPage>
   );
 }

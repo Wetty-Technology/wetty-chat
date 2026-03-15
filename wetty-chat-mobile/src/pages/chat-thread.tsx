@@ -9,7 +9,6 @@ import {
   IonButtons,
   IonButton,
   IonIcon,
-  IonBackButton,
   IonFab,
   IonFabButton,
   useIonToast,
@@ -52,18 +51,20 @@ import './chat-thread.scss';
 import { t } from '@lingui/core/macro';
 import { FeatureGate } from '@/components/FeatureGate';
 import { getGroupInfo } from '@/api/group';
+import { BackButton } from '@/components/BackButton';
+import type { BackAction } from '@/types/back-action';
 
 function generateClientId(): string {
   return `cg_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 }
 
-interface ChatThreadProps {
+interface ChatThreadCoreProps {
   chatId?: string;
   threadId?: string;
-  embedded?: boolean;
+  backAction?: BackAction;
 }
 
-export default function ChatThread({ chatId: propChatId, threadId: propThreadId, embedded }: ChatThreadProps) {
+export default function ChatThreadCore({ chatId: propChatId, threadId: propThreadId, backAction }: ChatThreadCoreProps) {
   const params = useParams<{ id: string; threadId?: string }>();
   const id = propChatId ?? params.id;
   const threadId = propThreadId ?? params.threadId;
@@ -420,15 +421,12 @@ export default function ChatThread({ chatId: propChatId, threadId: propThreadId,
     });
   }, [messages, apiChatId, threadId, history, showToast, presentActionSheet, setReplyingTo, setEditingMessage, presentAlert]);
 
-  const PageWrapper = embedded ? 'div' : IonPage;
-  const pageProps = embedded ? { className: 'ion-page chat-thread-page' } : { className: 'chat-thread-page' };
-
   return (
-    <PageWrapper {...pageProps}>
+    <div className="ion-page chat-thread-page">
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            {!embedded && <IonBackButton defaultHref="/chats" text="" />}
+            {backAction && <BackButton action={backAction} />}
           </IonButtons>
           <IonTitle>{chatName}</IonTitle>
           <IonButtons slot="end">
@@ -555,6 +553,18 @@ export default function ChatThread({ chatId: propChatId, threadId: propThreadId,
           onCancelEdit={() => setEditingMessage(null)}
         />
       </IonFooter>
-    </PageWrapper>
+    </div>
+  );
+}
+
+export function ChatThreadPage() {
+  const { id, threadId } = useParams<{ id: string; threadId?: string }>();
+  const backAction: BackAction = threadId
+    ? { type: 'back', defaultHref: `/chats/chat/${id}` }
+    : { type: 'back', defaultHref: '/chats' };
+  return (
+    <IonPage>
+      <ChatThreadCore chatId={id} threadId={threadId} backAction={backAction} />
+    </IonPage>
   );
 }

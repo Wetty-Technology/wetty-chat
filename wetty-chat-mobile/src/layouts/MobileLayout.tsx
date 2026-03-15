@@ -5,13 +5,13 @@ import { useMemo } from "react";
 import { Redirect, Route, useLocation } from "react-router-dom";
 
 import ChatsPage from '@/pages/chats';
-import CreateChatPage from '@/pages/create-chat';
-import ChatThreadPage from '@/pages/chat-thread';
-import ChatSettingsPage from '@/pages/chat-settings';
-import ChatMembersPage from '@/pages/chat-members';
+import { CreateChatPage } from '@/pages/create-chat';
+import { ChatThreadPage } from '@/pages/chat-thread';
+import { ChatSettingsPage } from '@/pages/chat-settings';
+import { ChatMembersPage } from '@/pages/chat-members';
 import SettingsPage from '@/pages/settings';
 import LanguagePage from '@/pages/settings/language';
-import GroupDetailPage from '@/pages/group-detail';
+import { GroupDetailPage } from '@/pages/group-detail';
 import NotFoundPage from '@/pages/not-found';
 import ComponentDemoPage from '@/pages/component-demo';
 

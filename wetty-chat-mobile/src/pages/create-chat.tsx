@@ -10,18 +10,19 @@ import {
   IonLabel,
   IonInput,
   IonButton,
-  IonBackButton,
   IonButtons,
   useIonAlert,
 } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
 import { createChat } from '@/api/chats';
+import { BackButton } from '@/components/BackButton';
+import type { BackAction } from '@/types/back-action';
 
-interface CreateChatProps {
-  embedded?: boolean;
+interface CreateChatCoreProps {
+  backAction?: BackAction;
 }
 
-export default function CreateChat({ embedded }: CreateChatProps) {
+export default function CreateChatCore({ backAction }: CreateChatCoreProps) {
   const history = useHistory();
   const [presentAlert] = useIonAlert();
   const [name, setName] = useState('');
@@ -46,15 +47,12 @@ export default function CreateChat({ embedded }: CreateChatProps) {
       });
   };
 
-  const PageWrapper = embedded ? 'div' : IonPage;
-  const pageProps = embedded ? { className: 'ion-page' } : {};
-
   return (
-    <PageWrapper {...pageProps}>
+    <div className="ion-page">
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            {!embedded && <IonBackButton defaultHref="/chats" text="" />}
+            {backAction && <BackButton action={backAction} />}
           </IonButtons>
           <IonTitle>New Chat</IonTitle>
         </IonToolbar>
@@ -80,6 +78,14 @@ export default function CreateChat({ embedded }: CreateChatProps) {
           </div>
         </div>
       </IonContent>
-    </PageWrapper>
+    </div>
+  );
+}
+
+export function CreateChatPage() {
+  return (
+    <IonPage>
+      <CreateChatCore backAction={{ type: 'back', defaultHref: '/chats' }} />
+    </IonPage>
   );
 }
