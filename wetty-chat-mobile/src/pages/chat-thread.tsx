@@ -17,7 +17,7 @@ import {
   useIonAlert,
 } from '@ionic/react';
 import { useParams, useHistory } from 'react-router-dom';
-import { settings, chevronDown } from 'ionicons/icons';
+import { settings, chevronDown, people } from 'ionicons/icons';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   getMessages,
@@ -423,9 +423,11 @@ export default function ChatThread() {
           </IonButtons>
           <IonTitle>{chatName}</IonTitle>
           <IonButtons slot="end">
-            {/*<IonButton onClick={() => history.push(`/chats/chat/${apiChatId}/members`)}>*/}
-            {/*  <IonIcon slot="icon-only" icon={people} />*/}
-            {/*</IonButton>*/}
+            <FeatureGate>
+              <IonButton onClick={() => history.push(`/chats/chat/${apiChatId}/members`)}>
+                <IonIcon slot="icon-only" icon={people} />
+              </IonButton>
+            </FeatureGate>
             <FeatureGate>
               <IonButton onClick={() => history.push(`/chats/chat/${apiChatId}/settings`)}>
                 <IonIcon slot="icon-only" icon={settings} />
@@ -519,12 +521,12 @@ export default function ChatThread() {
           className={`scroll-to-bottom-fab ${atBottom ? 'scroll-to-bottom-fab--hidden' : ''}`}
         >
           <IonFabButton size="small" onClick={() => {
-              if (prevCursor != null) {
-                fetchLatestWindow();
-              } else {
-                scrollToBottomRef.current?.();
-              }
-            }}>
+            if (prevCursor != null) {
+              fetchLatestWindow();
+            } else {
+              scrollToBottomRef.current?.();
+            }
+          }}>
             <IonIcon icon={chevronDown} />
           </IonFabButton>
         </IonFab>
