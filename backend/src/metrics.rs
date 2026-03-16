@@ -14,6 +14,7 @@ pub(crate) struct Metrics {
     registry: Registry,
     http_requests_total: IntCounterVec,
     http_request_duration_seconds: HistogramVec,
+    messages_total: IntCounterVec,
     discuz_username_lookup_duration_seconds: Histogram,
     discuz_username_lookup_users_total: IntCounter,
     discuz_avatar_lookup_duration_seconds: Histogram,
@@ -41,6 +42,14 @@ impl Metrics {
             &["method", "route", "status"],
         )
         .expect("http_request_duration_seconds metric should be valid");
+        let messages_total = IntCounterVec::new(
+            opts!(
+                "messages_total",
+                "Total number of messages successfully persisted"
+            ),
+            &["chat_id"],
+        )
+        .expect("messages_total metric should be valid");
         let discuz_username_lookup_duration_seconds = Histogram::with_opts(histogram_opts!(
             "discuz_username_lookup_duration_seconds",
             "Discuz username lookup latency in seconds",
@@ -77,6 +86,9 @@ impl Metrics {
             .register(Box::new(http_request_duration_seconds.clone()))
             .expect("http_request_duration_seconds registration should succeed");
         registry
+            .register(Box::new(messages_total.clone()))
+            .expect("messages_total registration should succeed");
+        registry
             .register(Box::new(discuz_username_lookup_duration_seconds.clone()))
             .expect("discuz_username_lookup_duration_seconds registration should succeed");
         registry
@@ -96,6 +108,7 @@ impl Metrics {
             registry,
             http_requests_total,
             http_request_duration_seconds,
+            messages_total,
             discuz_username_lookup_duration_seconds,
             discuz_username_lookup_users_total,
             discuz_avatar_lookup_duration_seconds,
@@ -126,6 +139,11 @@ impl Metrics {
         TextEncoder::new().encode(&metric_families, &mut output)?;
         String::from_utf8(output)
             .map_err(|err| prometheus::Error::Msg(err.utf8_error().to_string()))
+    }
+
+    pub(crate) fn record_message(&self, chat_id: i64) {
+        let chat_id = chat_id.to_string();
+        self.messages_total.with_label_values(&[&chat_id]).inc();
     }
 
     pub(crate) fn record_discuz_username_lookup(
@@ -212,6 +230,7 @@ mod tests {
     async fn metrics_endpoint_renders_registered_collectors() {
         let metrics = Arc::new(Metrics::new());
         metrics.record_http("GET", "/seed", StatusCode::OK, 0.001);
+        metrics.record_message(42);
         metrics.record_discuz_username_lookup(2, 0.002);
         metrics.record_discuz_avatar_lookup(2, 0.003, 0.001);
         let app = Router::new()
@@ -235,6 +254,7 @@ mod tests {
         let body = String::from_utf8(body.to_vec()).expect("metrics body should be utf8");
         assert!(body.contains("http_requests_total"));
         assert!(body.contains("http_request_duration_seconds"));
+        assert!(body.contains("messages_total"));
         assert!(body.contains("discuz_username_lookup_duration_seconds"));
         assert!(body.contains("discuz_username_lookup_users_total"));
         assert!(body.contains("discuz_avatar_lookup_duration_seconds"));
@@ -300,10 +320,12 @@ mod tests {
     #[test]
     fn discuz_metrics_render_expected_values() {
         let metrics = Metrics::new();
+        metrics.record_message(123);
         metrics.record_discuz_username_lookup(3, 0.012);
         metrics.record_discuz_avatar_lookup(3, 0.015, 0.006);
 
         let rendered = metrics.render().expect("metrics should render");
+        assert!(rendered.contains("messages_total{chat_id=\"123\"} 1"));
         assert!(rendered.contains("discuz_username_lookup_duration_seconds_sum"));
         assert!(rendered.contains("discuz_username_lookup_users_total 3"));
         assert!(rendered.contains("discuz_avatar_lookup_duration_seconds_sum"));

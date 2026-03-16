@@ -671,6 +671,7 @@ async fn post_message(
             tracing::error!("insert message: {:?}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, "Failed to send message")
         })?;
+    state.metrics.record_message(chat_id);
 
     use crate::schema::groups::dsl as g_dsl;
     diesel::update(groups::table.filter(g_dsl::id.eq(chat_id)))
@@ -811,6 +812,7 @@ async fn post_thread_message(
             tracing::error!("insert threaded message: {:?}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, "Failed to send message")
         })?;
+    state.metrics.record_message(chat_id);
 
     if !body.attachment_ids.is_empty() {
         let attachment_ids: Vec<i64> = body
