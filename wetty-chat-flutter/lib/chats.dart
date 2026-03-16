@@ -6,6 +6,7 @@ import 'api_config.dart';
 import 'draft_store.dart';
 import 'messages.dart';
 import 'models.dart';
+import 'widgets.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -108,7 +109,7 @@ class _ChatPageState extends State<ChatPage> {
         trailing: CupertinoButton(
           padding: EdgeInsets.zero,
           onPressed: addChat,
-          child: const Icon(CupertinoIcons.add),
+          child: const Icon(CupertinoIcons.square_pencil),
         ),
       ),
       child: SafeArea(child: _buildBody()),
@@ -141,13 +142,9 @@ class _ChatPageState extends State<ChatPage> {
     if (chats.isEmpty) {
       return const Center(child: Text('No chats yet'));
     }
-    return ListView.separated(
+    return ListView.builder(
       controller: _scrollController,
       itemCount: chats.length,
-      separatorBuilder: (_, _) => const Padding(
-        padding: EdgeInsets.only(left: 72),
-        child: Divider(height: 0.5, color: CupertinoColors.separator),
-      ),
       itemBuilder: (context, index) {
         final chat = chats[index];
         final chatName = chat.name?.isNotEmpty == true
@@ -178,183 +175,229 @@ class _ChatPageState extends State<ChatPage> {
             (senderName != null && senderName.isNotEmpty) &&
             (lastMsg != null && lastMsg.isNotEmpty);
 
-        return GestureDetector(
-          onTap: () async {
-            await Navigator.push(
-              context,
-              CupertinoPageRoute(
-                builder: (_) => ChatDetailPage(
-                  chatId: chat.id,
-                  chatName: chat.name ?? 'Chat ${chat.id}',
-                ),
-              ),
-            );
-            // Refresh so draft indicators update immediately
-            if (mounted) setState(() {});
-          },
-          behavior: HitTestBehavior.opaque,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            // each chat item
-            child: Row(
-              children: [
-                // TODO: change avatar to group avatar
-                // Avatar
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: CupertinoColors.systemGrey4,
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    chatName.isNotEmpty ? chatName[0].toUpperCase() : '?',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: CupertinoColors.white,
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            GestureDetector(
+              onTap: () async {
+                await Navigator.push(
+                  context,
+                  CupertinoPageRoute(
+                    builder: (_) => ChatDetailPage(
+                      chatId: chat.id,
+                      chatName: chat.name ?? 'Chat ${chat.id}',
                     ),
                   ),
+                );
+                // Refresh so draft indicators update immediately
+                if (mounted) setState(() {});
+              },
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
                 ),
-                const SizedBox(width: 12),
-                // Chat info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Top row: chat name + date
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              chatName,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (dateText != null)
-                            Padding(
-                              padding: const EdgeInsets.only(left: 8),
-                              child: Text(
-                                dateText,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: CupertinoColors.secondaryLabel
-                                      .resolveFrom(context),
-                                ),
-                              ),
-                            ),
-                        ],
+                // each chat item
+                child: Row(
+                  children: [
+                    // TODO: change avatar to group avatar
+                    // Avatar
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: CupertinoColors.systemGrey4,
+                        shape: BoxShape.circle,
                       ),
-                      const SizedBox(height: 3),
-                      // Bottom row: draft or sender: last message + unread count
-                      Builder(
-                        builder: (context) {
-                          final draft = DraftStore.instance.getDraft(chat.id);
-                          if (draft != null) {
-                            return Row(
-                              children: [
-                                Expanded(
-                                  child: Text.rich(
-                                    TextSpan(
-                                      children: [
-                                        const TextSpan(
-                                          text: '[Draft] ',
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            color: CupertinoColors.destructiveRed,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                        TextSpan(
-                                          text: draft,
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            color: CupertinoColors.secondaryLabel
-                                                .resolveFrom(context),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                if (unreadCount > 0)
-                                  Container(
-                                    margin: const EdgeInsets.only(left: 8),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: CupertinoColors.activeBlue,
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Text(
-                                      '$unreadCount',
-                                      style: const TextStyle(
-                                        color: CupertinoColors.white,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            );
-                          }
-                          return Row(
+                      alignment: Alignment.center,
+                      child: Text(
+                        chatName.isNotEmpty ? chatName[0].toUpperCase() : '?',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: CupertinoColors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Chat info
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Top row: chat name + date
+                          Row(
                             children: [
                               Expanded(
                                 child: Text(
-                                  hasMessage ? '$senderName: $lastMsg' : '',
+                                  chatName,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: CupertinoColors.secondaryLabel
-                                        .resolveFrom(context),
-                                  ),
                                 ),
                               ),
-                              if (unreadCount > 0)
-                                Container(
-                                  margin: const EdgeInsets.only(left: 8),
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: CupertinoColors.activeBlue,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
+                              if (dateText != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 8),
                                   child: Text(
-                                    '$unreadCount',
-                                    style: const TextStyle(
-                                      color: CupertinoColors.white,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
+                                    dateText,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: CupertinoColors.secondaryLabel
+                                          .resolveFrom(context),
                                     ),
                                   ),
                                 ),
                             ],
-                          );
-                        },
+                          ),
+                          const SizedBox(height: 3),
+                          // Bottom row: draft or sender: last message + unread count
+                          Builder(
+                            builder: (context) {
+                              final draft = DraftStore.instance.getDraft(
+                                chat.id,
+                              );
+                              if (draft != null) {
+                                return Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text.rich(
+                                        TextSpan(
+                                          children: [
+                                            const TextSpan(
+                                              text: '[Draft] ',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: CupertinoColors
+                                                    .destructiveRed,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                            TextSpan(
+                                              text: draft,
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: CupertinoColors
+                                                    .secondaryLabel
+                                                    .resolveFrom(context),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    if (unreadCount > 0)
+                                      Container(
+                                        margin: const EdgeInsets.only(left: 8),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: CupertinoColors.activeBlue,
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          '$unreadCount',
+                                          style: const TextStyle(
+                                            color: CupertinoColors.white,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              }
+                              return Row(
+                                children: [
+                                  Expanded(
+                                    child: hasMessage
+                                        ? Text.rich(
+                                            TextSpan(
+                                              children: [
+                                                TextSpan(
+                                                  text: '$senderName: ',
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                                TextSpan(text: lastMsg),
+                                              ],
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: CupertinoColors
+                                                  .secondaryLabel
+                                                  .resolveFrom(context),
+                                            ),
+                                          )
+                                        : Text(
+                                            'No messages yet',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: CupertinoColors
+                                                  .secondaryLabel
+                                                  .resolveFrom(context),
+                                            ),
+                                          ),
+                                  ),
+                                  if (unreadCount > 0)
+                                    Container(
+                                      margin: const EdgeInsets.only(left: 8),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: CupertinoColors.activeBlue,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Text(
+                                        '$unreadCount',
+                                        style: const TextStyle(
+                                          color: CupertinoColors.white,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              );
+                            },
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Disclosure indicator
+                    const Icon(
+                      CupertinoIcons.chevron_right,
+                      size: 16,
+                      color: CupertinoColors.systemGrey3,
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                // Disclosure indicator
-                const Icon(
-                  CupertinoIcons.chevron_right,
-                  size: 16,
-                  color: CupertinoColors.systemGrey3,
-                ),
-              ],
+              ),
             ),
-          ),
+            // Bottom separator for every item (including the last)
+            Padding(
+              padding: const EdgeInsets.only(left: 72),
+              child: Divider(height: 0.5, color: CupertinoColors.separator),
+            ),
+          ],
         );
       },
     );
@@ -390,59 +433,13 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Future<void> addChat() async {
-    final nameController = TextEditingController();
-    final result = await showCupertinoDialog<bool>(
-      context: context,
-      builder: (context) => CupertinoAlertDialog(
-        title: const Text('New chat'),
-        content: Padding(
-          padding: const EdgeInsets.only(top: 12),
-          child: CupertinoTextField(
-            controller: nameController,
-            placeholder: 'Chat name (optional)',
-            autofocus: true,
-          ),
-        ),
-        actions: [
-          CupertinoDialogAction(
-            isDefaultAction: false,
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          CupertinoDialogAction(
-            isDefaultAction: true,
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Create'),
-          ),
-        ],
-      ),
+    final newChat = await Navigator.push<ChatListItem>(
+      context,
+      CupertinoPageRoute(builder: (_) => NewChatPage(createChat: createChat)),
     );
-    if (result != true || !mounted) return;
-    final name = nameController.text.trim();
-    try {
-      final response = await createChat(name: name.isEmpty ? null : name);
-      // TODO: check response status code, the response code is 201 for now
-      if (response.statusCode == 201) {
-        final body = jsonDecode(response.body) as Map<String, dynamic>;
-        final id = body['id']?.toString() ?? '';
-        final createdName = body['name'] as String?;
-        final newChat = ChatListItem(
-          id: id,
-          name: createdName,
-        );
-        setState(() => chats.insert(0, newChat));
-        if (mounted) {
-          _showToast('Chat created');
-        }
-      } else {
-        if (mounted) {
-          _showToast('Server error: ${response.body}');
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        _showToast('Network error: $e');
-      }
+    if (newChat != null && mounted) {
+      setState(() => chats.insert(0, newChat));
+      _showToast('Chat created');
     }
   }
 
@@ -460,6 +457,116 @@ class _ChatPageState extends State<ChatPage> {
       ),
     );
     overlay.insert(entry);
+  }
+}
+
+/// New Chat page – opened from the "+" button on the Chats page.
+class NewChatPage extends StatefulWidget {
+  const NewChatPage({super.key, required this.createChat});
+  final Future<http.Response> Function({String? name}) createChat;
+
+  @override
+  State<NewChatPage> createState() => _NewChatPageState();
+}
+
+class _NewChatPageState extends State<NewChatPage> {
+  final _nameController = TextEditingController();
+  bool _isCreating = false;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _onCreate() async {
+    if (_isCreating) return;
+    setState(() => _isCreating = true);
+    final name = _nameController.text.trim();
+    try {
+      final response = await widget.createChat(
+        name: name.isEmpty ? null : name,
+      );
+      if (!mounted) return;
+      if (response.statusCode == 201) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        final id = body['id']?.toString() ?? '';
+        final createdName = body['name'] as String?;
+        Navigator.of(context).pop(ChatListItem(id: id, name: createdName));
+      } else {
+        setState(() => _isCreating = false);
+        _showError('Server error: ${response.body}');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isCreating = false);
+      _showError('Network error: $e');
+    }
+  }
+
+  void _showError(String message) {
+    showCupertinoDialog(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoPageScaffold(
+      navigationBar: CupertinoNavigationBar(
+        middle: const Text('New Chat'),
+        leading: CupertinoButton(
+          padding: EdgeInsets.zero,
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Back'),
+        ),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Chat Name',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              CupertinoTextField(
+                controller: _nameController,
+                placeholder: 'Optional',
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: CupertinoButton.filled(
+                  onPressed: _isCreating ? null : _onCreate,
+                  child: _isCreating
+                      ? const CupertinoActivityIndicator(
+                          color: CupertinoColors.white,
+                        )
+                      : const Text('Create'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -511,17 +618,4 @@ class _ToastWidgetState extends State<_ToastWidget> {
   }
 }
 
-/// Cupertino-style thin separator line.
-class Divider extends StatelessWidget {
-  const Divider({super.key, this.height = 1, this.color});
-  final double height;
-  final Color? color;
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      color: color ?? CupertinoColors.separator.resolveFrom(context),
-    );
-  }
-}

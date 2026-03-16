@@ -8,6 +8,8 @@ import 'dart:convert';
 
 import 'api_config.dart';
 import 'draft_store.dart';
+import 'group_members.dart';
+import 'group_settings.dart';
 import 'models.dart';
 
 Future<ListMessagesResponse> fetchMessages(
@@ -442,8 +444,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     );
   }
 
-  // ---- Build methods ----
-
   @override
   Widget build(BuildContext context) {
     final chatName = widget.chatName.isEmpty
@@ -454,54 +454,89 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         if (didPop) _saveDraft();
       },
       child: CupertinoPageScaffold(
-      backgroundColor: const Color(0xFFECE5DD),
-      navigationBar: CupertinoNavigationBar(middle: Text(chatName)),
-      child: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: Stack(
-                children: [
-                  _buildBody(),
-                  if (_showScrollToBottom)
-                    Positioned(
-                      right: 16,
-                      bottom: 16,
-                      child: CupertinoButton(
-                        padding: EdgeInsets.zero,
-                        onPressed: _scrollToBottom,
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: CupertinoColors.systemGrey5.resolveFrom(
-                              context,
-                            ),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: CupertinoColors.systemGrey.withAlpha(80),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
+        backgroundColor: const Color(0xFFECE5DD),
+        navigationBar: CupertinoNavigationBar(
+          backgroundColor: CupertinoColors.white,
+          middle: Text(chatName),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Members
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                onPressed: () => Navigator.push(
+                  context,
+                  CupertinoPageRoute(
+                    builder: (_) => GroupMembersPage(chatId: widget.chatId),
+                  ),
+                ),
+                child: const Icon(CupertinoIcons.person_2_fill, size: 22),
+              ),
+              // Settings
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                onPressed: () => Navigator.push(
+                  context,
+                  CupertinoPageRoute(
+                    builder: (_) => GroupSettingsPage(
+                      chatId: widget.chatId,
+                      currentName: widget.chatName,
+                    ),
+                  ),
+                ),
+                child: const Icon(CupertinoIcons.gear_solid, size: 22),
+              ),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: Stack(
+                  children: [
+                    _buildBody(),
+                    if (_showScrollToBottom)
+                      Positioned(
+                        right: 16,
+                        bottom: 16,
+                        child: CupertinoButton(
+                          padding: EdgeInsets.zero,
+                          onPressed: _scrollToBottom,
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: CupertinoColors.systemGrey5.resolveFrom(
+                                context,
                               ),
-                            ],
-                          ),
-                          child: Icon(
-                            CupertinoIcons.chevron_down,
-                            size: 20,
-                            color: CupertinoColors.label.resolveFrom(context),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: CupertinoColors.systemGrey.withAlpha(
+                                    80,
+                                  ),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              CupertinoIcons.chevron_down,
+                              size: 20,
+                              color: CupertinoColors.label.resolveFrom(context),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            _buildInput(),
-          ],
+              Container(color: CupertinoColors.white, child: _buildInput()),
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 
@@ -781,7 +816,7 @@ class _MessageRowState extends State<_MessageRow>
     final message = widget.message;
     final screenWidth = MediaQuery.of(context).size.width;
     final msgText = message.message ?? '';
-    final senderName = message.sender.name ?? 'aUser ${message.sender.uid}';
+    final senderName = message.sender.name ?? 'User ${message.sender.uid}';
     final timeStr = _formatTime(message.createdAt);
 
     final isDark = MediaQuery.platformBrightnessOf(context) == Brightness.dark;
@@ -868,7 +903,7 @@ class _MessageRowState extends State<_MessageRow>
               style: TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 13,
-                color: CupertinoColors.activeBlue.resolveFrom(context),
+                color: textColor,
               ),
             ),
           ),
@@ -1058,10 +1093,12 @@ class _MessageRowState extends State<_MessageRow>
     int lastEnd = 0;
     for (final match in _urlRegex.allMatches(text)) {
       if (match.start > lastEnd) {
-        spans.add(TextSpan(
-          text: text.substring(lastEnd, match.start),
-          style: baseStyle,
-        ));
+        spans.add(
+          TextSpan(
+            text: text.substring(lastEnd, match.start),
+            style: baseStyle,
+          ),
+        );
       }
       final url = match.group(0)!;
       final recognizer = TapGestureRecognizer()
@@ -1069,22 +1106,21 @@ class _MessageRowState extends State<_MessageRow>
           final uri = url.startsWith('http') ? url : 'https://$url';
           launchUrl(Uri.parse(uri), mode: LaunchMode.externalApplication);
         };
-      spans.add(TextSpan(
-        text: url,
-        style: baseStyle.copyWith(
-          color: linkColor,
-          decoration: TextDecoration.underline,
-          decorationColor: linkColor,
+      spans.add(
+        TextSpan(
+          text: url,
+          style: baseStyle.copyWith(
+            color: linkColor,
+            decoration: TextDecoration.underline,
+            decorationColor: linkColor,
+          ),
+          recognizer: recognizer,
         ),
-        recognizer: recognizer,
-      ));
+      );
       lastEnd = match.end;
     }
     if (lastEnd < text.length) {
-      spans.add(TextSpan(
-        text: text.substring(lastEnd),
-        style: baseStyle,
-      ));
+      spans.add(TextSpan(text: text.substring(lastEnd), style: baseStyle));
     }
     // If no links found, return a single span
     if (spans.isEmpty) {
