@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'dart:ui';
+
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter_application_1/widgets.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
@@ -142,6 +145,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   InputState _inputState = InputEmpty();
   String? _highlightedMessageId;
   late ScrollController _scrollController;
+  final ScrollController _inputScrollController = ScrollController();
   final TextEditingController _textController = TextEditingController();
   static const int _messagesSize = 11;
 
@@ -163,6 +167,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     _saveDraft();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    _inputScrollController.dispose();
     _textController.dispose();
     super.dispose();
   }
@@ -455,84 +460,182 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       },
       child: CupertinoPageScaffold(
         backgroundColor: const Color(0xFFECE5DD),
-        navigationBar: CupertinoNavigationBar(
-          backgroundColor: CupertinoColors.white,
-          middle: Text(chatName),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
+        child: GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Stack(
             children: [
-              // Members
-              CupertinoButton(
-                padding: EdgeInsets.zero,
-                onPressed: () => Navigator.push(
-                  context,
-                  CupertinoPageRoute(
-                    builder: (_) => GroupMembersPage(chatId: widget.chatId),
-                  ),
-                ),
-                child: const Icon(CupertinoIcons.person_2_fill, size: 22),
-              ),
-              // Settings
-              CupertinoButton(
-                padding: EdgeInsets.zero,
-                onPressed: () => Navigator.push(
-                  context,
-                  CupertinoPageRoute(
-                    builder: (_) => GroupSettingsPage(
-                      chatId: widget.chatId,
-                      currentName: widget.chatName,
-                    ),
-                  ),
-                ),
-                child: const Icon(CupertinoIcons.gear_solid, size: 22),
-              ),
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              Expanded(
-                child: Stack(
+              // Main content column (messages + input)
+              SafeArea(
+                child: Column(
                   children: [
-                    _buildBody(),
-                    if (_showScrollToBottom)
-                      Positioned(
-                        right: 16,
-                        bottom: 16,
-                        child: CupertinoButton(
-                          padding: EdgeInsets.zero,
-                          onPressed: _scrollToBottom,
-                          child: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: CupertinoColors.systemGrey5.resolveFrom(
-                                context,
-                              ),
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: CupertinoColors.systemGrey.withAlpha(
-                                    80,
+                    Expanded(
+                      child: Stack(
+                        children: [
+                          // messages
+                          _buildBody(),
+                          // scroll to bottom button
+                          if (_showScrollToBottom)
+                            Positioned(
+                              right: 16,
+                              bottom: 16,
+                              child: CupertinoButton(
+                                padding: EdgeInsets.zero,
+                                onPressed: _scrollToBottom,
+                                child: Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: CupertinoColors.systemGrey5
+                                        .resolveFrom(context),
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: CupertinoColors.systemGrey
+                                            .withAlpha(80),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
                                   ),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
+                                  child: Icon(
+                                    CupertinoIcons.chevron_down,
+                                    size: 20,
+                                    color: CupertinoColors.label.resolveFrom(
+                                      context,
+                                    ),
+                                  ),
                                 ),
-                              ],
+                              ),
                             ),
-                            child: Icon(
-                              CupertinoIcons.chevron_down,
-                              size: 20,
-                              color: CupertinoColors.label.resolveFrom(context),
-                            ),
-                          ),
+                        ],
+                      ),
+                    ),
+
+                    Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment(0, 0),
+                          colors: [
+                            Color(0x00ECE5DD), // transparent
+                            Color(0x40ECE5DD), // ~25%
+                            // Color(0x80ECE5DD), // ~50%
+                            // Color(0xCCECE5DD), // ~80%
+                            Color(0xF2ECE5DD), // ~95%
+                            Color(0xFFECE5DD), // solid
+                          ],
+                          // stops: [0.0, 0.2, 0.4, 0.5, 0.6, 1.0],
+                          stops: [0.0, 0.4, 0.6, 1.0],
                         ),
                       ),
+                      // padding between input and message body
+                      padding: const EdgeInsets.only(top: 10),
+                      child: _buildInput(),
+                    ),
                   ],
                 ),
               ),
-              Container(color: CupertinoColors.white, child: _buildInput()),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: ClipRect(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            const Color(0xFFECE5DD).withOpacity(0.9),
+                            const Color(0xFFECE5DD).withOpacity(0.7),
+                            const Color(0xFFECE5DD).withOpacity(0.0),
+                          ],
+                          stops: const [0.0, 0.6, 1.0],
+                        ),
+                      ),
+                      child: SafeArea(
+                        bottom: false,
+                        child: SizedBox(
+                          height: 70,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 36),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            // Centered title (independent of buttons)
+                            Text(
+                              chatName,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            // Back button on left
+                            Positioned(
+                              left: 8,
+                              child: CupertinoButton(
+                                padding: EdgeInsets.zero,
+                                onPressed: () {
+                                  _saveDraft();
+                                  Navigator.pop(context);
+                                },
+                                child: const Icon(
+                                  CupertinoIcons.back,
+                                  size: 28,
+                                ),
+                              ),
+                            ),
+                            // Action buttons on right
+                            Positioned(
+                              right: 8,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  CupertinoButton(
+                                    padding: EdgeInsets.zero,
+                                    onPressed: () => Navigator.push(
+                                      context,
+                                      CupertinoPageRoute(
+                                        builder: (_) => GroupMembersPage(
+                                          chatId: widget.chatId,
+                                        ),
+                                      ),
+                                    ),
+                                    child: const Icon(
+                                      CupertinoIcons.person_2_fill,
+                                      size: 22,
+                                    ),
+                                  ),
+                                  CupertinoButton(
+                                    padding: EdgeInsets.zero,
+                                    onPressed: () => Navigator.push(
+                                      context,
+                                      CupertinoPageRoute(
+                                        builder: (_) => GroupSettingsPage(
+                                          chatId: widget.chatId,
+                                          currentName: widget.chatName,
+                                        ),
+                                      ),
+                                    ),
+                                    child: const Icon(
+                                      CupertinoIcons.gear_solid,
+                                      size: 22,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -598,93 +701,108 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   }
 
   Widget _buildInput() {
+    // when editing or replying to a message, show the preview of that message
     final hasPreview = _inputState is! InputEmpty;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
+      padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
+      // padding: EdgeInsets.zero,
+      child: Column(
         children: [
-          // Plus button
-          CupertinoButton(
-            padding: EdgeInsets.zero,
-            onPressed: () {
-              // TODO: implement attachment sheet
-            },
-            child: Icon(
-              CupertinoIcons.add_circled,
-              color: CupertinoColors.activeBlue.resolveFrom(context),
-              size: 28,
-            ),
-          ),
-          const SizedBox(width: 4),
-          // Unified input box (Preview + Text field)
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: CupertinoColors.systemBackground.resolveFrom(context),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: CupertinoColors.systemGrey4.resolveFrom(context),
-                  width: 1.0,
+          Divider(height: 0.5, color: CupertinoColors.separator),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              // attachment button
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                // padding: const EdgeInsets.fromLTRB(1, 1, 1, 0),
+                onPressed: () {
+                  // TODO: implement attachment sheet
+                },
+                child: Icon(
+                  CupertinoIcons.add_circled,
+                  color: CupertinoColors.activeBlue.resolveFrom(context),
+                  size: 28,
                 ),
               ),
-              clipBehavior: Clip.antiAlias,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // preview bar: switch input state to get msg /and sender
-                  switch (_inputState) {
-                    InputReplying(:final message) => _replyToMsg(
-                      title:
-                          'Replying to ${message.sender.name ?? 'User ${message.sender.uid}'}',
-                      body: message.message ?? '',
+              const SizedBox(width: 4),
+              // Unified input box (Preview + Text field)
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: CupertinoColors.systemBackground.resolveFrom(
+                      context,
                     ),
-                    InputEditing(:final message) => _buildPreviewBar(
-                      title: 'Edit Message',
-                      body: message.message ?? '',
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: CupertinoColors.systemGrey4.resolveFrom(context),
+                      width: 1.0,
                     ),
-                    InputEmpty() => const SizedBox.shrink(),
-                  },
-                  if (hasPreview)
-                    // use container as divider
-                    Container(
-                      height: 0.5,
-                      color: CupertinoColors.separator.resolveFrom(context),
-                    ),
-                  // text field
-                  CupertinoTextField(
-                    controller: _textController,
-                    placeholder: 'Message',
-                    maxLines: 5,
-                    minLines: 1,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    decoration: null, // use container decoration
                   ),
-                ],
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // preview bar: switch input state to get msg /and sender
+                      switch (_inputState) {
+                        InputReplying(:final message) => _replyToMsg(
+                          title:
+                              'Replying to ${message.sender.name ?? 'User ${message.sender.uid}'}',
+                          body: message.message ?? '',
+                        ),
+                        InputEditing(:final message) => _buildPreviewBar(
+                          title: 'Edit Message',
+                          body: message.message ?? '',
+                        ),
+                        InputEmpty() => const SizedBox.shrink(),
+                      },
+                      if (hasPreview)
+                        // use container as divider
+                        Container(
+                          height: 0.5,
+                          color: CupertinoColors.separator.resolveFrom(context),
+                        ),
+                      // text field
+                      CupertinoScrollbar(
+                        controller: _inputScrollController,
+                        child: CupertinoTextField(
+                          controller: _textController,
+                          scrollController: _inputScrollController,
+                          placeholder: 'Message',
+                          maxLines: 5,
+                          minLines: 1,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          decoration: null, // use container decoration
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          // Send button
-          GestureDetector(
-            onTap: _sendMessage,
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: const BoxDecoration(
-                color: CupertinoColors.activeBlue,
-                shape: BoxShape.circle,
+              const SizedBox(width: 8),
+              // Send button
+              GestureDetector(
+                onTap: _sendMessage,
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: const BoxDecoration(
+                    color: CupertinoColors.activeBlue,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    CupertinoIcons.paperplane_fill,
+                    size: 20,
+                    color: CupertinoColors.white,
+                  ),
+                ),
               ),
-              child: const Icon(
-                CupertinoIcons.paperplane_fill,
-                size: 20,
-                color: CupertinoColors.white,
-              ),
-            ),
+              const SizedBox(width: 8),
+            ],
           ),
         ],
       ),
@@ -968,7 +1086,7 @@ class _MessageRowState extends State<_MessageRow>
         borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
         child: Row(
           mainAxisAlignment: _isMe
               ? MainAxisAlignment.end
