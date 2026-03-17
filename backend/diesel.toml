@@ -1,2 +1,6 @@
 [print_schema]
-file = "src/schema.rs"
+file = "src/schema/primary.rs"
+
+[print_schema.discuz]
+schema = "discuz"
+file = "src/schema/discuz.rs"

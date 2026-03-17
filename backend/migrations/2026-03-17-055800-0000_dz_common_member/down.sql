@@ -1,0 +1,2 @@
+-- This file should undo anything in `up.sql`
+-- Nothing to do here, up is all *IF EXISTS*
