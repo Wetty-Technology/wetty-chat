@@ -1,116 +1,57 @@
-.landing-page {
-  --background:
-    radial-gradient(circle at top left, rgba(74, 144, 226, 0.18), transparent 32%),
-    radial-gradient(circle at top right, rgba(255, 159, 67, 0.18), transparent 30%),
-    linear-gradient(180deg, #f8fbff 0%, #eef4f8 100%);
-  color: #16324f;
+:host {
+  background: #fbf9e9;
 }
 
 .landing-hero {
-  padding: calc(24px + env(safe-area-inset-top)) 20px 12px;
+  padding: calc(24px + env(safe-area-inset-top)) 16px 12px;
 }
 
-.landing-hero__copy h1 {
-  margin: 14px 0 12px;
-  font-size: clamp(2rem, 6vw, 3.5rem);
-  line-height: 0.96;
-  letter-spacing: -0.04em;
-}
-
-.landing-hero__copy p {
-  max-width: 42rem;
-  margin: 0;
-  color: rgba(22, 50, 79, 0.78);
-  font-size: 1.02rem;
-  line-height: 1.6;
-}
-
-.landing-hero__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 22px;
-}
-
-.landing-grid {
-  display: grid;
-  gap: 16px;
+.landing-content {
   padding: 8px 16px calc(32px + env(safe-area-inset-bottom));
 }
 
 .landing-platform-segment {
-  padding: 6px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.74);
-  border: 1px solid rgba(22, 50, 79, 0.08);
-  box-shadow: 0 14px 32px rgba(17, 38, 58, 0.08);
+  margin-bottom: 16px;
 }
 
 ion-segment-button {
   min-width: initial;
+  --padding-start: 0;
+  --padding-end: 0;
 }
 
-.landing-inline-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 0 4px;
-  text-decoration: none;
-  vertical-align: bottom;
+.landing-platform-segment__button--current {
+  --color: var(--ion-color-primary);
+  --color-checked: var(--ion-color-primary);
+  font-weight: 700;
 }
 
 .landing-card {
   margin: 0;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(22, 50, 79, 0.08);
-  box-shadow: 0 18px 40px rgba(17, 38, 58, 0.08);
 }
 
-.landing-card--active {
-  border-color: rgba(56, 128, 255, 0.35);
-  box-shadow: 0 24px 60px rgba(56, 128, 255, 0.16);
-}
-
-.landing-card__eyebrow {
-  display: flex;
+.landing-inline-text {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 4px;
+  vertical-align: bottom;
 }
 
-.landing-card__title-wrap {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.landing-inline-text__icon {
+  font-size: 1rem;
 }
 
-.landing-card__title-wrap ion-icon {
-  font-size: 1.35rem;
-}
-
-.landing-card__steps {
+.landing-steps {
   margin: 0;
   padding-left: 20px;
-  color: rgba(22, 50, 79, 0.88);
   line-height: 1.7;
 }
 
-.landing-card__steps li + li {
-  margin-top: 8px;
-}
-
-.landing-card__note {
+.landing-note {
   margin-top: 12px !important;
+  margin-bottom: 0;
 }
 
-@media (min-width: 840px) {
-  .landing-hero {
-    padding: calc(36px + env(safe-area-inset-top)) 28px 20px;
-  }
-
-  .landing-grid {
-    padding: 8px 24px calc(40px + env(safe-area-inset-bottom));
-    max-width: 920px;
-  }
+.landing-note--compact {
+  margin-top: 0;
 }

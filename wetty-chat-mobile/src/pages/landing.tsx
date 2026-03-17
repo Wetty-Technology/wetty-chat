@@ -41,8 +41,8 @@ function IconText({
     children: ReactNode;
 }) {
     return (
-        <span className="landing-inline-link">
-            <IonIcon className="landing-inline-icon" icon={icon}/>
+        <span className="landing-inline-text">
+            <IonIcon icon={icon} className="landing-inline-text__icon"/>
             <span>{children}</span>
         </span>
     );
@@ -86,7 +86,7 @@ export default function LandingPage() {
                     <IonTitle>安装 Wetty Chat</IonTitle>
                 </IonToolbar>
             </IonHeader>
-            <IonContent fullscreen={true} className="landing-page">
+            <IonContent fullscreen={true}>
                 <section className="landing-hero">
                     <div className="landing-hero__copy">
                         <h1>把 Wetty Chat 添加到主屏幕</h1>
@@ -94,7 +94,7 @@ export default function LandingPage() {
                     </div>
                 </section>
 
-                <section className="landing-grid" id="platform-guides">
+                <section id="platform-guides" className="landing-content">
                     <IonSegment
                         value={selectedPlatform}
                         scrollable={true}
@@ -113,27 +113,29 @@ export default function LandingPage() {
                         }}
                     >
                         {platformOptions.map((option) => (
-                            <IonSegmentButton key={option.id} value={option.id}>
+                            <IonSegmentButton
+                                key={option.id}
+                                value={option.id}
+                                className={option.id === detectedPlatform ? 'landing-platform-segment__button--current' : undefined}
+                            >
                                 {option.label}
                             </IonSegmentButton>
                         ))}
                     </IonSegment>
 
-                    <IonCard
-                        className={selectedPlatform === detectedPlatform ? 'landing-card landing-card--active' : 'landing-card'}>
+                    <IonCard className="landing-card">
                         {selectedPlatform === 'android' && (
                             <IonCardContent>
-                                <ol className="landing-card__steps">
+                                <ol className="landing-steps">
                                     <li>使用 <IconText icon={logoChrome}>Chrome 浏览器</IconText> 访问本页</li>
                                     <li>点击 <IconText icon={ellipsisVertical}>菜单</IconText></li>
                                     <li>选择“添加到主屏幕”，然后点“安装”</li>
                                     <li>确认安装，之后即可从桌面直接打开</li>
                                 </ol>
                                 <IonText color="medium">
-                                    <p className="landing-card__note">如果浏览器主动弹出了安装界面，直接点安装即可。</p>
-                                    <p className="landing-card__note">
-                                        如果无法使用 Chrome，也可以用
-                                        <IconText icon={logoEdge}>Edge 浏览器</IconText>
+                                    <p className="landing-note">如果浏览器主动弹出了安装界面，直接点安装即可。</p>
+                                    <p className="landing-note">
+                                        如果无法使用 Chrome，也可以用 <IconText icon={logoEdge}>Edge 浏览器</IconText>
                                         <br/>
                                         点击 <IconText icon={menuOutline}>菜单</IconText>，选择“添加至手机” (可能会在第二页)。
                                     </p>
@@ -143,7 +145,7 @@ export default function LandingPage() {
 
                         {selectedPlatform === 'ios' && (
                             <IonCardContent>
-                                <ol className="landing-card__steps">
+                                <ol className="landing-steps">
                                     <li>使用 <IconText icon={logoApple}>Safari 浏览器</IconText> 访问本页</li>
                                     <li>点击 <IconText icon={ellipsisHorizontal}>菜单</IconText>，选择 <IconText icon={shareOutline}>共享</IconText></li>
                                     <li>选择 “添加到主屏幕” (可能会在 “查看更多” 里面)</li>
@@ -154,21 +156,21 @@ export default function LandingPage() {
 
                         {selectedPlatform === 'windows' && (
                             <IonCardContent>
-                                <ol className="landing-card__steps">
+                                <ol className="landing-steps">
                                     <li>在 <IconText icon={logoEdge}>Edge 浏览器</IconText> 中打开聊天应用链接。</li>
                                     <li>点击 <IconText icon={ellipsisHorizontal}>菜单 </IconText></li>
                                     <li>选择“更多工具” {'>'} “应用” {'>'} “将此站点安装为应用”。</li>
                                     <li>自行选择将图标创建在任务栏、开始菜单或桌面。</li>
                                 </ol>
                                 <IonText color="medium">
-                                    <p className="landing-card__note">如果浏览器在地址栏显示了 “安装 Wetty Chat 应用” 按钮，直接点安装即可</p>
+                                    <p className="landing-note">如果浏览器在地址栏显示了 “安装 Wetty Chat 应用” 按钮，直接点安装即可</p>
                                 </IonText>
                             </IonCardContent>
                         )}
 
                         {selectedPlatform === 'macos' && (
                             <IonCardContent>
-                                <ol className="landing-card__steps">
+                                <ol className="landing-steps">
                                     <li>使用 <IconText icon={logoApple}>Safari 浏览器</IconText> 访问本页</li>
                                     <li>点击 <IconText icon={ellipsisHorizontal}>共享</IconText></li>
                                     <li>选择“添加到程序坞”</li>
@@ -178,15 +180,11 @@ export default function LandingPage() {
                         )}
 
                         {selectedPlatform === 'linux' && (
-                            <>
-                                <IonCardContent>
-                                    <IonText color="medium">
-                                        <p className="landing-card__note">
-                                            这点小问题想必难不住你 :)
-                                        </p>
-                                    </IonText>
-                                </IonCardContent>
-                            </>
+                            <IonCardContent>
+                                <IonText color="medium">
+                                    <p className="landing-note landing-note--compact">这点小问题想必难不住你 :)</p>
+                                </IonText>
+                            </IonCardContent>
                         )}
                     </IonCard>
                 </section>
