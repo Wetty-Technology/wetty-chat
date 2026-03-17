@@ -460,7 +460,7 @@ class _ChatPageState extends State<ChatPage> {
   }
 }
 
-/// New Chat page – opened from the "+" button on the Chats page.
+// New Chat page
 class NewChatPage extends StatefulWidget {
   const NewChatPage({super.key, required this.createChat});
   final Future<http.Response> Function({String? name}) createChat;
@@ -531,38 +531,41 @@ class _NewChatPageState extends State<NewChatPage> {
           child: const Text('Back'),
         ),
       ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Chat Name',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              CupertinoTextField(
-                controller: _nameController,
-                placeholder: 'Optional',
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 12,
+      child: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Chat Name',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                 ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: CupertinoButton.filled(
-                  onPressed: _isCreating ? null : _onCreate,
-                  child: _isCreating
-                      ? const CupertinoActivityIndicator(
-                          color: CupertinoColors.white,
-                        )
-                      : const Text('Create'),
+                const SizedBox(height: 8),
+                CupertinoTextField(
+                  controller: _nameController,
+                  placeholder: 'Optional',
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: CupertinoButton.filled(
+                    onPressed: _isCreating ? null : _onCreate,
+                    child: _isCreating
+                        ? const CupertinoActivityIndicator(
+                            color: CupertinoColors.white,
+                          )
+                        : const Text('Create'),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -617,5 +620,3 @@ class _ToastWidgetState extends State<_ToastWidget> {
     );
   }
 }
-
-

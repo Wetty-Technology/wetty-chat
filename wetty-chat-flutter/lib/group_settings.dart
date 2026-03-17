@@ -18,6 +18,7 @@ class GroupSettingsPage extends StatefulWidget {
 class _GroupSettingsPageState extends State<GroupSettingsPage> {
   late TextEditingController _nameController;
   late TextEditingController _descriptionController;
+  final ScrollController _descScrollController = ScrollController();
 
   @override
   void initState() {
@@ -30,6 +31,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
+    _descScrollController.dispose();
     super.dispose();
   }
 
@@ -44,51 +46,58 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
       navigationBar: const CupertinoNavigationBar(
         middle: Text('Group Settings'),
       ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Name
-              const Text(
-                'Name',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              CupertinoTextField(
-                controller: _nameController,
-                placeholder: 'Group name',
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: null,
-              ),
-              const Divider(height: 1),
-              const SizedBox(height: 24),
-              // Description
-              const Text(
-                'Description',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              CupertinoTextField(
-                controller: _descriptionController,
-                placeholder: 'Enter group description',
-                maxLines: 4,
-                minLines: 2,
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: null,
-              ),
-              const Divider(height: 1),
-              const SizedBox(height: 32),
-              // Save button
-              SizedBox(
-                width: double.infinity,
-                child: CupertinoButton.filled(
-                  onPressed: _onSave,
-                  child: const Text('Save Settings'),
+      child: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Name
+                const Text(
+                  'Name',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                CupertinoTextField(
+                  controller: _nameController,
+                  placeholder: 'Group name',
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: null,
+                ),
+                const Divider(height: 1),
+                const SizedBox(height: 24),
+                // Description
+                const Text(
+                  'Description',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                CupertinoScrollbar(
+                  controller: _descScrollController,
+                  child: CupertinoTextField(
+                    controller: _descriptionController,
+                    scrollController: _descScrollController,
+                    placeholder: 'Enter group description',
+                    maxLines: 4,
+                    minLines: 2,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: null,
+                  ),
+                ),
+                const Divider(height: 1),
+                const SizedBox(height: 32),
+                // Save button
+                SizedBox(
+                  width: double.infinity,
+                  child: CupertinoButton.filled(
+                    onPressed: _onSave,
+                    child: const Text('Save Settings'),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
