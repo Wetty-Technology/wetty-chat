@@ -96,6 +96,7 @@ export default function LandingPage() {
 
                 <section id="platform-guides" className="landing-content">
                     <IonSegment
+                        mode="ios"
                         value={selectedPlatform}
                         scrollable={true}
                         className="landing-platform-segment"

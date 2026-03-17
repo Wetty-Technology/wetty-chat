@@ -1,33 +1,55 @@
-:host {
-  background: #fbf9e9;
+ion-content {
+  --background: var(--ion-color-step-50, #f2f2f6);
 }
 
 .landing-hero {
-  padding: calc(24px + env(safe-area-inset-top)) 16px 12px;
+  padding: calc(48px + env(safe-area-inset-top)) 24px 24px;
+}
+
+.landing-hero__copy h1 {
+  font-size: 28px;
+  font-weight: 600;
+  margin-top: 0;
+  margin-bottom: 16px;
+  color: var(--ion-text-color);
+  letter-spacing: -0.5px;
+}
+
+.landing-hero__copy p {
+  font-size: 17px;
+  color: var(--ion-color-step-600, #666);
+  margin: 0;
+  line-height: 1.5;
 }
 
 .landing-content {
-  padding: 8px 16px calc(32px + env(safe-area-inset-bottom));
+  padding: 0 16px calc(32px + env(safe-area-inset-bottom));
 }
 
 .landing-platform-segment {
-  margin-bottom: 16px;
+  margin-bottom: 24px;
 }
 
 ion-segment-button {
   min-width: initial;
   --padding-start: 0;
   --padding-end: 0;
+  font-size: 15px;
+  letter-spacing: 0;
 }
 
 .landing-platform-segment__button--current {
   --color: var(--ion-color-primary);
   --color-checked: var(--ion-color-primary);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .landing-card {
   margin: 0;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  background: var(--ion-card-background, #fff);
+  padding: 8px 0;
 }
 
 .landing-inline-text {
@@ -35,21 +57,43 @@ ion-segment-button {
   align-items: center;
   gap: 4px;
   vertical-align: bottom;
+  color: var(--ion-color-dark);
 }
 
 .landing-inline-text__icon {
-  font-size: 1rem;
+  font-size: 1.1rem;
+  color: var(--ion-color-step-700, #555);
 }
 
 .landing-steps {
   margin: 0;
-  padding-left: 20px;
-  line-height: 1.7;
+  padding: 0;
+  line-height: 1.8;
+  list-style: none;
+  counter-reset: step-counter;
+}
+
+.landing-steps li {
+  position: relative;
+  padding-left: 28px;
+  margin-bottom: 12px;
+  color: var(--ion-color-step-800, #333);
+  font-size: 16px;
+}
+
+.landing-steps li::before {
+  counter-increment: step-counter;
+  content: counter(step-counter) ". ";
+  position: absolute;
+  left: 0;
+  color: var(--ion-color-step-500, #888);
+  font-weight: 400;
 }
 
 .landing-note {
-  margin-top: 12px !important;
   margin-bottom: 0;
+  font-size: 15px;
+  line-height: 1.6;
 }
 
 .landing-note--compact {
