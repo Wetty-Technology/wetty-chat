@@ -216,6 +216,7 @@ export function DesktopSplitLayout() {
         {/* Base layer: always render ChatThreadCore when a chat is selected */}
         {activeChatId && !isNewChat && (
           <div
+            key={`chat-pane-${activeChatId}`}
             style={{ display: subPageOverlay ? 'none' : undefined }}
             className={styles.desktopSplitPane}
           >
