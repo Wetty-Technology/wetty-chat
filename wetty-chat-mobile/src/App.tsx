@@ -4,6 +4,7 @@ import {
   setupIonicReact,
 } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
+import { Redirect, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { useEffect } from 'react';
 import type { RootState, AppDispatch } from '@/store/index';
@@ -18,10 +19,33 @@ import { syncApp } from '@/api/sync';
 import MobileLayout from './layouts/MobileLayout';
 import { useIsDesktop } from './hooks/useIsDesktop';
 import { DesktopSplitLayout } from './layouts/DesktopSplitLayout';
+import OobePage from '@/pages/oobe';
 
 setupIonicReact({
   mode: 'ios',
 });
+
+const OOBE_STORAGE_KEY = 'oobe';
+
+function hasCompletedOobe() {
+  return localStorage.getItem(OOBE_STORAGE_KEY) !== null;
+}
+
+function AppRouter({ isDesktop }: { isDesktop: boolean }) {
+  const location = useLocation();
+  const isOobeRoute = location.pathname === '/oobe';
+  const isLandingRoute = location.pathname === '/landing';
+
+  if (!hasCompletedOobe() && !isOobeRoute && !isLandingRoute) {
+    return <Redirect to="/oobe" />;
+  }
+
+  if (isOobeRoute) {
+    return <OobePage />;
+  }
+
+  return isDesktop ? <DesktopSplitLayout /> : <MobileLayout />;
+}
 
 const App: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -92,7 +116,7 @@ const App: React.FC = () => {
         </div>
       )}
       <IonReactRouter basename={import.meta.env.BASE_URL}>
-        { isDesktop ? (<DesktopSplitLayout />) : (<MobileLayout />)}
+        <AppRouter isDesktop={isDesktop} />
       </IonReactRouter>
     </IonApp>
   );
