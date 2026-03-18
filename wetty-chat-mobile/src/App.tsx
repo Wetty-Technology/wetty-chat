@@ -5,9 +5,9 @@ import {
 } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
 import { Redirect, useLocation } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useEffect } from 'react';
-import type { RootState, AppDispatch } from '@/store/index';
+import type { AppDispatch, RootState } from '@/store/index';
 import { fetchCurrentUser, setUser } from '@/store/userSlice';
 
 import './app.scss';
@@ -111,13 +111,15 @@ const App: React.FC = () => {
         ]}
       />
       {!wsConnected && (
-        <div className="ws-disconnected-banner">
+        <div className="ws-disconnected-banner" role="status" aria-live="polite">
           <Trans>Disconnected. Retrying…</Trans>
         </div>
       )}
-      <IonReactRouter basename={import.meta.env.BASE_URL}>
-        <AppRouter isDesktop={isDesktop} />
-      </IonReactRouter>
+      <div className="app-router-shell">
+        <IonReactRouter basename={import.meta.env.BASE_URL}>
+          <AppRouter isDesktop={isDesktop} />
+        </IonReactRouter>
+      </div>
     </IonApp>
   );
 };
