@@ -69,7 +69,10 @@ export function MessageComposeBar({ onSend, replyTo, onCancelReply, editing, onC
     if (!textarea) return;
     textarea.setAttribute('enterkeyhint', 'send');
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+      // macOS Safari can report isComposing=false on the Enter key that
+      // confirms an IME candidate, while still marking the event with 229.
+      const isImeConfirm = e.isComposing || e.keyCode === 229 || e.which === 229;
+      if (e.key === 'Enter' && !e.shiftKey && !isImeConfirm) {
         e.preventDefault();
         handleSendRef.current();
       }
