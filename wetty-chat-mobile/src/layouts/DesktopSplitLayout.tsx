@@ -1,5 +1,5 @@
 import { useCallback, useRef, type ReactNode } from 'react';
-import { matchPath, useRouteMatch, useHistory, useLocation } from 'react-router-dom';
+import { matchPath, useHistory, useLocation } from 'react-router-dom';
 import { Trans } from '@lingui/react/macro';
 import { IonButton, IonButtons, IonHeader, IonIcon, IonModal, IonTitle, IonToolbar } from '@ionic/react';
 import { createOutline, settings } from 'ionicons/icons';
@@ -13,7 +13,6 @@ import { SettingsCore } from '@/pages/settings';
 import { LanguagePageCore } from '@/pages/settings/language';
 import type { BackAction } from '@/types/back-action';
 import styles from './DesktopSplitLayout.module.scss';
-import LandingPage from '@/pages/landing';
 import { FeatureGate } from '@/components/FeatureGate';
 
 interface DesktopRouteState {
@@ -111,7 +110,6 @@ function ChatModal({
 export function DesktopSplitLayout() {
   const history = useHistory();
   const location = useLocation<DesktopRouteState | undefined>();
-  const landingPageMatch = useRouteMatch('/landing');
   const skipNextGlobalSettingsDismiss = useRef(false);
   const currentRoute = getDesktopRouteMatches(location.pathname);
   const backgroundPath = location.state?.backgroundPath ?? '/chats';
@@ -162,10 +160,6 @@ export function DesktopSplitLayout() {
 
   let subPageOverlay: ReactNode = null;
   
-  if (landingPageMatch?.isExact) {
-    return (<LandingPage />);
-  }
-
   if (threadMatch) {
     const { id, threadId } = threadMatch;
     subPageOverlay = (

@@ -16,8 +16,6 @@ import NotFoundPage from '@/pages/not-found';
 import ComponentDemoPage from '@/pages/component-demo';
 
 import styles from './MobileLayout.module.scss';
-import LandingPage from "@/pages/landing";
-
 
 const TAB_ROOT_PATHS = ['/', '/chats', '/settings', '/demo'];
 
@@ -64,7 +62,6 @@ const MobileLayout: React.FC = () => {
                 <Route path="/chats/chat/:id/members" exact component={ChatMembersPage} />
                 <Route path="/chats/chat/:id/details" exact component={GroupDetailPage} />
                 <Route path="/demo" exact component={ComponentDemoPage} />
-                <Route path="/landing" exact component={LandingPage} />
                 <Route path="/settings/language" exact component={LanguagePage} />
                 <Route path="/settings" exact component={SettingsPage} />
                 <Redirect exact from="/" to="/chats" />

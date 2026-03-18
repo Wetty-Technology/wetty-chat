@@ -4,7 +4,7 @@ import {
   setupIonicReact,
 } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
-import { Redirect, useLocation } from 'react-router-dom';
+import { Redirect, useLocation, useRouteMatch } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useEffect } from 'react';
 import type { AppDispatch, RootState } from '@/store/index';
@@ -20,6 +20,7 @@ import MobileLayout from './layouts/MobileLayout';
 import { useIsDesktop } from './hooks/useIsDesktop';
 import { DesktopSplitLayout } from './layouts/DesktopSplitLayout';
 import OobePage from '@/pages/oobe';
+import LandingPage from './pages/landing';
 
 setupIonicReact({
   mode: 'ios',
@@ -32,16 +33,15 @@ function hasCompletedOobe() {
 }
 
 function AppRouter({ isDesktop }: { isDesktop: boolean }) {
-  const location = useLocation();
-  const isOobeRoute = location.pathname === '/oobe';
-  const isLandingRoute = location.pathname === '/landing';
+  const isOobeRoute = useRouteMatch('/oobe');
+  const isLandingRoute = useRouteMatch('/landing');
 
-  if (!hasCompletedOobe() && !isOobeRoute && !isLandingRoute) {
-    return <Redirect to="/oobe" />;
-  }
-
-  if (isOobeRoute) {
+  if (isLandingRoute?.isExact) {
+    return <LandingPage />;
+  } else if (isOobeRoute?.isExact) {
     return <OobePage />;
+  } else if (!hasCompletedOobe()) {
+    return <Redirect to="/oobe" />;
   }
 
   return isDesktop ? <DesktopSplitLayout /> : <MobileLayout />;
