@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
-
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
@@ -32,9 +30,15 @@ Future<ListMessagesResponse> fetchMessages(
       'Failed to load messages: ${response.statusCode} ${response.body}',
     );
   }
-  return ListMessagesResponse.fromJson(
+  final res = ListMessagesResponse.fromJson(
     jsonDecode(response.body) as Map<String, dynamic>,
   );
+  print('Fetched ${res.messages.length} messages for chat $chatId');
+  for (var m in res.messages) {
+    print(' - [${m.id}] ${m.sender.name}: ${m.message}');
+  }
+
+  return res;
 }
 
 Future<MessageItem> sendMessage(
@@ -147,7 +151,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   late ScrollController _scrollController;
   final ScrollController _inputScrollController = ScrollController();
   final TextEditingController _textController = TextEditingController();
-  static const int _messagesSize = 11;
+  // static const int _messagesSize = 15;
 
   bool get _hasMore => _nextCursor != null && _nextCursor!.isNotEmpty;
 
@@ -212,7 +216,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       _nextCursor = null;
     });
     try {
-      final res = await fetchMessages(widget.chatId, max: _messagesSize);
+      // TODO: can set max number of messages to fetch
+      final res = await fetchMessages(widget.chatId);
       if (!mounted) return;
       setState(() {
         _messages.clear();
@@ -235,11 +240,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     final oldestId = _messages.last.id;
     setState(() => _isLoadingMore = true);
     try {
-      final res = await fetchMessages(
-        widget.chatId,
-        max: _messagesSize,
-        before: oldestId,
-      );
+      final res = await fetchMessages(widget.chatId, before: oldestId);
       if (!mounted) return;
       final existingIds = _messages.map((m) => m.id).toSet();
       final newMessages = res.messages
@@ -510,55 +511,39 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                         ],
                       ),
                     ),
-
-                    Container(
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment(0, 0),
-                          colors: [
-                            Color(0x00ECE5DD), // transparent
-                            Color(0x40ECE5DD), // ~25%
-                            // Color(0x80ECE5DD), // ~50%
-                            // Color(0xCCECE5DD), // ~80%
-                            Color(0xF2ECE5DD), // ~95%
-                            Color(0xFFECE5DD), // solid
-                          ],
-                          // stops: [0.0, 0.2, 0.4, 0.5, 0.6, 1.0],
-                          stops: [0.0, 0.4, 0.6, 1.0],
-                        ),
-                      ),
-                      // padding between input and message body
-                      padding: const EdgeInsets.only(top: 10),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 5),
                       child: _buildInput(),
                     ),
                   ],
                 ),
               ),
+              // Gradient title bar overlay
               Positioned(
                 top: 0,
                 left: 0,
                 right: 0,
-                child: ClipRect(
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            const Color(0xFFECE5DD).withOpacity(0.9),
-                            const Color(0xFFECE5DD).withOpacity(0.7),
-                            const Color(0xFFECE5DD).withOpacity(0.0),
-                          ],
-                          stops: const [0.0, 0.6, 1.0],
-                        ),
-                      ),
-                      child: SafeArea(
-                        bottom: false,
-                        child: SizedBox(
-                          height: 70,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment(0, 0.5),
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0xFFECE5DD), // solid
+                        Color(0xDFECE5DD),
+                        Color(0xCCECE5DD),
+                        Color(0x80ECE5DD),
+                        Color(0x40ECE5DD),
+                        Color(0x00ECE5DD), // transparent
+                      ],
+                      // stops: [0.0, 1.0],
+                      stops: [0.0, 0.5, 0.6, 0.8, 0.9, 1.0],
+                    ),
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: SizedBox(
+                      height: 70,
                       child: Padding(
                         padding: const EdgeInsets.only(bottom: 36),
                         child: Stack(
@@ -704,108 +689,115 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     // when editing or replying to a message, show the preview of that message
     final hasPreview = _inputState is! InputEmpty;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
-      // padding: EdgeInsets.zero,
-      child: Column(
-        children: [
-          Divider(height: 0.5, color: CupertinoColors.separator),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+    return Column(
+      children: [
+        Divider(height: 0.5, color: CupertinoColors.separator),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
+          child: Column(
             children: [
-              // attachment button
-              CupertinoButton(
-                padding: EdgeInsets.zero,
-                // padding: const EdgeInsets.fromLTRB(1, 1, 1, 0),
-                onPressed: () {
-                  // TODO: implement attachment sheet
-                },
-                child: Icon(
-                  CupertinoIcons.add_circled,
-                  color: CupertinoColors.activeBlue.resolveFrom(context),
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 4),
-              // Unified input box (Preview + Text field)
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: CupertinoColors.systemBackground.resolveFrom(
-                      context,
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: CupertinoColors.systemGrey4.resolveFrom(context),
-                      width: 1.0,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  // attachment button
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    // padding: const EdgeInsets.fromLTRB(1, 1, 1, 0),
+                    onPressed: () {
+                      // TODO: implement attachment sheet
+                    },
+                    child: Icon(
+                      CupertinoIcons.add_circled,
+                      color: CupertinoColors.activeBlue.resolveFrom(context),
+                      size: 28,
                     ),
                   ),
-                  clipBehavior: Clip.antiAlias,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // preview bar: switch input state to get msg /and sender
-                      switch (_inputState) {
-                        InputReplying(:final message) => _replyToMsg(
-                          title:
-                              'Replying to ${message.sender.name ?? 'User ${message.sender.uid}'}',
-                          body: message.message ?? '',
+                  const SizedBox(width: 4),
+                  // Unified input box (Preview + Text field)
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: CupertinoColors.systemBackground.resolveFrom(
+                          context,
                         ),
-                        InputEditing(:final message) => _buildPreviewBar(
-                          title: 'Edit Message',
-                          body: message.message ?? '',
-                        ),
-                        InputEmpty() => const SizedBox.shrink(),
-                      },
-                      if (hasPreview)
-                        // use container as divider
-                        Container(
-                          height: 0.5,
-                          color: CupertinoColors.separator.resolveFrom(context),
-                        ),
-                      // text field
-                      CupertinoScrollbar(
-                        controller: _inputScrollController,
-                        child: CupertinoTextField(
-                          controller: _textController,
-                          scrollController: _inputScrollController,
-                          placeholder: 'Message',
-                          maxLines: 5,
-                          minLines: 1,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: CupertinoColors.systemGrey4.resolveFrom(
+                            context,
                           ),
-                          decoration: null, // use container decoration
+                          width: 1.0,
                         ),
                       ),
-                    ],
+                      clipBehavior: Clip.antiAlias,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // preview bar: switch input state to get msg /and sender
+                          switch (_inputState) {
+                            InputReplying(:final message) => _replyToMsg(
+                              title:
+                                  'Replying to ${message.sender.name ?? 'User ${message.sender.uid}'}',
+                              body: message.message ?? '',
+                            ),
+                            InputEditing(:final message) => _buildPreviewBar(
+                              title: 'Edit Message',
+                              body: message.message ?? '',
+                            ),
+                            InputEmpty() => const SizedBox.shrink(),
+                          },
+                          if (hasPreview)
+                            // use container as divider
+                            Container(
+                              height: 0.5,
+                              color: CupertinoColors.separator.resolveFrom(
+                                context,
+                              ),
+                            ),
+                          // text field
+                          CupertinoScrollbar(
+                            controller: _inputScrollController,
+                            child: CupertinoTextField(
+                              controller: _textController,
+                              scrollController: _inputScrollController,
+                              placeholder: 'Message',
+                              maxLines: 5,
+                              minLines: 1,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              decoration: null, // use container decoration
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  // Send button
+                  GestureDetector(
+                    onTap: _sendMessage,
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: const BoxDecoration(
+                        color: CupertinoColors.activeBlue,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        CupertinoIcons.paperplane_fill,
+                        size: 20,
+                        color: CupertinoColors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
               ),
-              const SizedBox(width: 8),
-              // Send button
-              GestureDetector(
-                onTap: _sendMessage,
-                child: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: const BoxDecoration(
-                    color: CupertinoColors.activeBlue,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    CupertinoIcons.paperplane_fill,
-                    size: 20,
-                    color: CupertinoColors.white,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
             ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -1086,7 +1078,7 @@ class _MessageRowState extends State<_MessageRow>
         borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         child: Row(
           mainAxisAlignment: _isMe
               ? MainAxisAlignment.end
