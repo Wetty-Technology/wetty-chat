@@ -1,6 +1,4 @@
-@use "sass:color";
-
-.chats-list-avatar {
+.chatsListAvatar {
   width: 48px;
   height: 48px;
   border-radius: 50%;
@@ -15,25 +13,26 @@
   flex-shrink: 0;
 }
 
-.chats-list-time {
+.chatsListTime {
   font-size: 13px;
   text-align: right;
   flex-grow: 0;
 }
 
-.chats-list-badge {
+.chatsListBadge {
   display: flex;
   flex-direction: column;
-
   flex-grow: 1;
   font-size: 12px;
 }
 
-.chats-list-label {
+.chatsListLabel {
   overflow: hidden;
 
   h2 {
     margin: 0;
+    color: black;
+    font-weight: 500;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -41,7 +40,7 @@
   }
 }
 
-.chats-list-preview {
+.chatsListPreview {
   display: block;
   width: 100%;
   margin: 0;
@@ -52,11 +51,12 @@
   white-space: nowrap;
 }
 
-.chats-list-preview-sender {
-  font-weight: 600;
+.chatsListPreviewSender {
+  font-weight: 500;
+  color: var(--ion-color-dark);
 }
 
-.chats-list-end-slot {
+.chatsListEndSlot {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -66,31 +66,35 @@
   height: 100%;
 }
 
-ion-item-option {
+:global(ion-item-option) {
   text-transform: none;
 }
 
-.chat-list-item {
-  color: var(--ion-color-medium);
+.chatListItem {
+  color: inherit;
+}
 
-  &:hover {
-    color: var(--ion-color-medium);
-  }
+.active {
+  color: var(--ion-color-primary-contrast);
+  --background: var(--ion-color-primary);
 
-  &.active {
-    color: var(--ion-color-light);
-    --background: var(--ion-color-primary-tint, rgba(var(--ion-color-primary-rgb), 0.12));
+  .chatsListLabel {
+    color: var(--ion-color-primary-contrast);
 
-    .chats-list-label {
-      color: var(--ion-color-light);
-    }
-
-    .chats-list-preview-sender {
+    h2 {
       color: var(--ion-color-primary-contrast);
     }
+  }
 
-    .chats-list-preview {
-      color: var(--ion-color-light);
-    }
+  .chatsListPreviewSender {
+    color: var(--ion-color-primary-contrast);
+  }
+
+  .chatsListPreview {
+    color: rgba(var(--ion-color-primary-contrast-rgb), 0.88);
+  }
+
+  .chatsListTime {
+    color: rgba(var(--ion-color-primary-contrast-rgb), 0.8);
   }
 }

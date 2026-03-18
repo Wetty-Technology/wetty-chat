@@ -1,14 +1,9 @@
 import { useState, useEffect, type ReactNode, useCallback } from 'react';
 import {
-  IonHeader,
-  IonToolbar,
-  IonTitle,
   IonContent,
   IonList,
   IonItem,
   IonLabel,
-  IonButtons,
-  IonButton,
   IonIcon,
   IonRefresher,
   IonRefresherContent,
@@ -18,17 +13,15 @@ import {
   IonItemOption,
   type RefresherEventDetail,
 } from '@ionic/react';
-import { useHistory } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { createOutline, mailUnreadOutline, checkmarkDone } from 'ionicons/icons';
+import { mailUnreadOutline, checkmarkDone } from 'ionicons/icons';
 import { getChats, getUnreadCount, type ChatListItem } from '@/api/chats';
 import { setChatsList, selectAllChats, markChatAsRead, setChatMeta } from '@/store/chatsSlice';
 import { selectEffectiveLocale } from '@/store/settingsSlice';
-import '@/pages/chats.scss';
 import { Trans } from '@lingui/react/macro';
-import { FeatureGate } from '@/components/FeatureGate';
 import { type MessageResponse, markMessagesAsRead } from '@/api/messages';
 import { t } from '@lingui/core/macro';
+import styles from './ChatList.module.scss';
 
 function formatLastActivity(isoString: string | null, locale: string): string {
   if (!isoString) return '';
@@ -89,7 +82,7 @@ function getMessagePreview(message: MessageResponse | null): ReactNode {
 
   return (
     <>
-      <span className="chats-list-preview-sender">{senderName}: </span>
+      <span className={styles.chatsListPreviewSender}>{senderName}: </span>
       {previewText}
     </>
   );
@@ -97,12 +90,10 @@ function getMessagePreview(message: MessageResponse | null): ReactNode {
 
 interface ChatListProps {
   activeChatId?: string;
-  onChatSelect?: (chatId: string) => void;
-  toolbarStart?: ReactNode;
+  onChatSelect: (chatId: string) => void;
 }
 
-export function ChatList({ activeChatId, onChatSelect, toolbarStart }: ChatListProps) {
-  const history = useHistory();
+export function ChatList({ activeChatId, onChatSelect }: ChatListProps) {
   const dispatch = useDispatch();
   const locale = useSelector(selectEffectiveLocale);
   const chats = useSelector(selectAllChats);
@@ -195,125 +186,100 @@ export function ChatList({ activeChatId, onChatSelect, toolbarStart }: ChatListP
     updateAppBadge();
   };
 
-  const handleChatClick = (chatId: string) => {
-    if (onChatSelect) {
-      onChatSelect(chatId);
-    } else {
-      history.push(`/chats/chat/${chatId}`);
-    }
-  };
-
   return (
-    <>
-      <IonHeader>
-        <IonToolbar>
-          <IonButtons slot="start">
-            {toolbarStart}
-          </IonButtons>
-          <IonTitle><Trans>Chats</Trans></IonTitle>
-          <IonButtons slot="end">
-            <FeatureGate>
-              <IonButton routerLink="/chats/new">
-                <IonIcon slot="icon-only" icon={createOutline} />
-              </IonButton>
-            </FeatureGate>
-          </IonButtons>
-        </IonToolbar>
-      </IonHeader>
-      <IonContent fullscreen>
-        <IonRefresher slot="fixed" onIonRefresh={handleRefresh}>
-          <IonRefresherContent />
-        </IonRefresher>
-        {error && (
-          <IonList>
+    <IonContent fullscreen>
+      <IonRefresher slot="fixed" onIonRefresh={handleRefresh}>
+        <IonRefresherContent />
+      </IonRefresher>
+      {error && (
+        <IonList>
+          <IonItem>
+            <IonLabel>
+              <h3>
+                <Trans>Error</Trans>
+              </h3>
+              <p>{error}</p>
+            </IonLabel>
+          </IonItem>
+        </IonList>
+      )}
+      {loading && !error && (
+        <IonList>
+          <IonItem>
+            <IonLabel>
+              <Trans>Loading…</Trans>
+            </IonLabel>
+          </IonItem>
+        </IonList>
+      )}
+      {!loading && !error && (
+        <IonList className={styles.chatsList}>
+          {chats.length === 0 && (
             <IonItem>
               <IonLabel>
-                <h3>
-                  <Trans>Error</Trans>
-                </h3>
-                <p>{error}</p>
+                <Trans>No chats yet</Trans>
               </IonLabel>
             </IonItem>
-          </IonList>
-        )}
-        {loading && !error && (
-          <IonList>
-            <IonItem>
-              <IonLabel>
-                <Trans>Loading…</Trans>
-              </IonLabel>
-            </IonItem>
-          </IonList>
-        )}
-        {!loading && !error && (
-          <IonList className="chats-list">
-            {chats.length === 0 && (
-              <IonItem>
-                <IonLabel>
-                  <Trans>No chats yet</Trans>
-                </IonLabel>
-              </IonItem>
-            )}
-            {chats.map((chat) => (
-              <IonItemSliding key={chat.id}>
-                <IonItemOptions
-                  side="start"
-                  onIonSwipe={(e) => {
+          )}
+          {chats.map((chat) => (
+            <IonItemSliding key={chat.id}>
+              <IonItemOptions
+                side="start"
+                onIonSwipe={(e) => {
+                  const slidingItem = (e.target as HTMLElement).closest('ion-item-sliding');
+                  handleToggleRead(chat, slidingItem as HTMLIonItemSlidingElement | null);
+                }}
+              >
+                <IonItemOption
+                  color="primary"
+                  expandable
+                  onClick={(e) => {
                     const slidingItem = (e.target as HTMLElement).closest('ion-item-sliding');
                     handleToggleRead(chat, slidingItem as HTMLIonItemSlidingElement | null);
                   }}
                 >
-                  <IonItemOption
-                    color="primary"
-                    expandable
-                    onClick={(e) => {
-                      const slidingItem = (e.target as HTMLElement).closest('ion-item-sliding');
-                      handleToggleRead(chat, slidingItem as HTMLIonItemSlidingElement | null);
-                    }}
-                  >
-                    <IonIcon
-                      slot="top"
-                      icon={chat.unread_count > 0 ? checkmarkDone : mailUnreadOutline}
-                    />
-                    {chat.unread_count > 0 ? (
-                      <Trans>Read</Trans>
-                    ) : (
-                      <Trans>Unread</Trans>
+                  <IonIcon
+                    slot="top"
+                    icon={chat.unread_count > 0 ? checkmarkDone : mailUnreadOutline}
+                  />
+                  {chat.unread_count > 0 ? (
+                    <Trans>Read</Trans>
+                  ) : (
+                    <Trans>Unread</Trans>
+                  )}
+                </IonItemOption>
+              </IonItemOptions>
+              <IonItem
+                id={chat.id}
+                button
+                detail={false}
+                className={`${styles.chatListItem} ${activeChatId === chat.id ? styles.active : ''}`}
+                onClick={() => onChatSelect(chat.id)}
+              >
+                <div slot="start" className={styles.chatsListAvatar}>
+                  {chat.name && chat.name.trim() ? chat.name.trim().charAt(0).toUpperCase() : '?'}
+                </div>
+                <IonLabel className={styles.chatsListLabel}>
+                  <h2>{chatDisplayName(chat)}</h2>
+                  <p className={styles.chatsListPreview}>{getMessagePreview(chat.last_message)}</p>
+                </IonLabel>
+                <div slot="end" className={styles.chatsListEndSlot}>
+                  <div className={styles.chatsListTime}>
+                    {formatLastActivity(chat.last_message_at, locale)}
+                  </div>
+                  <div className={styles.chatsListBadge}>
+                    {chat.unread_count > 0 && (
+                      <IonBadge mode="ios" color="primary">
+                        {chat.unread_count > 99 ? '99+' : chat.unread_count}
+                      </IonBadge>
                     )}
-                  </IonItemOption>
-                </IonItemOptions>
-                <IonItem
-                  id={chat.id}
-                  button
-                  detail={false}
-                  className={`chat-list-item ${activeChatId === chat.id ? 'active' : ''}`}
-                  onClick={() => handleChatClick(chat.id)}
-                >
-                  <div slot="start" className="chats-list-avatar">
-                    {chat.name && chat.name.trim() ? chat.name.trim().charAt(0).toUpperCase() : '?'}
                   </div>
-                  <IonLabel className="chats-list-label">
-                    <h2>{chatDisplayName(chat)}</h2>
-                    <p className="chats-list-preview">{getMessagePreview(chat.last_message)}</p>
-                  </IonLabel>
-                  <div slot="end" className="chats-list-end-slot">
-                    <div className="chats-list-time">
-                      {formatLastActivity(chat.last_message_at, locale)}
-                    </div>
-                    <div className="chats-list-badge">
-                      {chat.unread_count > 0 && (
-                        <IonBadge mode="ios" color="primary">
-                          {chat.unread_count > 99 ? '99+' : chat.unread_count}
-                        </IonBadge>
-                      )}
-                    </div>
-                  </div>
-                </IonItem>
-              </IonItemSliding>
-            ))}
-          </IonList>
-        )}
-      </IonContent>
-    </>
+                </div>
+              </IonItem>
+            </IonItemSliding>
+          ))}
+        </IonList>
+      )}
+    </IonContent>
   );
 }

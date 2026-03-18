@@ -1,8 +1,8 @@
 import { useCallback, useRef, type ReactNode } from 'react';
 import { matchPath, useRouteMatch, useHistory, useLocation } from 'react-router-dom';
 import { Trans } from '@lingui/react/macro';
-import { IonButton, IonIcon, IonModal } from '@ionic/react';
-import { settings } from 'ionicons/icons';
+import { IonButton, IonButtons, IonHeader, IonIcon, IonModal, IonTitle, IonToolbar } from '@ionic/react';
+import { createOutline, settings } from 'ionicons/icons';
 import { ChatList } from '@/components/chat/ChatList';
 import ChatThreadCore from '@/pages/chat-thread';
 import ChatSettingsCore from '@/pages/chat-settings';
@@ -14,6 +14,7 @@ import { LanguagePageCore } from '@/pages/settings/language';
 import type { BackAction } from '@/types/back-action';
 import styles from './DesktopSplitLayout.module.scss';
 import LandingPage from '@/pages/landing';
+import { FeatureGate } from '@/components/FeatureGate';
 
 interface DesktopRouteState {
   backgroundPath?: string;
@@ -189,14 +190,26 @@ export function DesktopSplitLayout() {
   return (
     <div className={styles.desktopSplitLayout}>
       <div className={styles.desktopSplitLeft}>
+        <IonHeader>
+          <IonToolbar>
+            <IonButtons slot="start">
+              <IonButton onClick={openSettingsModal} aria-label="Open settings">
+                <IonIcon slot="icon-only" icon={settings} />
+              </IonButton>
+            </IonButtons>
+            <IonTitle><Trans>Chats</Trans></IonTitle>
+            <IonButtons slot="end">
+              <FeatureGate>
+                <IonButton routerLink="/chats/new">
+                  <IonIcon slot="icon-only" icon={createOutline} />
+                </IonButton>
+              </FeatureGate>
+            </IonButtons>
+          </IonToolbar>
+        </IonHeader>
         <ChatList
           activeChatId={activeChatId}
           onChatSelect={handleChatSelect}
-          toolbarStart={(
-            <IonButton onClick={openSettingsModal} aria-label="Open settings">
-              <IonIcon slot="icon-only" icon={settings} />
-            </IonButton>
-          )}
         />
       </div>
       <div className={styles.desktopSplitRight}>
