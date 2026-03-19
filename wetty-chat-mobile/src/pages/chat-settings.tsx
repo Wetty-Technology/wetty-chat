@@ -32,45 +32,49 @@ interface ChatSettingsCoreProps {
   backAction?: BackAction;
 }
 
-export default function ChatSettingsCore({ chatId: propChatId, backAction }: ChatSettingsCoreProps) {
-  const { id } = useParams<{ id: string }>();
-  const chatId = propChatId ?? (id ? String(id) : '');
+function getInitialFormState(cachedMeta?: {
+  name?: string | null;
+  description?: string | null;
+  avatar?: string | null;
+  visibility?: string;
+}) {
+  return {
+    name: cachedMeta?.name || '',
+    description: cachedMeta?.description || '',
+    avatar: cachedMeta?.avatar || '',
+    visibility: (cachedMeta?.visibility as 'public' | 'private') || 'public',
+    loading: !cachedMeta?.visibility,
+  };
+}
+
+function ChatSettingsSession({ chatId, backAction }: { chatId: string; backAction?: BackAction }) {
   const history = useHistory();
   const dispatch = useDispatch();
   const [presentToast] = useIonToast();
   const cachedMeta = useSelector((state: RootState) => selectChatMeta(state, chatId));
+  const initialState = getInitialFormState(cachedMeta);
 
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [avatar, setAvatar] = useState('');
-  const [visibility, setVisibility] = useState<'public' | 'private'>('public');
-  const [loading, setLoading] = useState(true);
+  const [name, setName] = useState(initialState.name);
+  const [description, setDescription] = useState(initialState.description);
+  const [avatar, setAvatar] = useState(initialState.avatar);
+  const [visibility, setVisibility] = useState<'public' | 'private'>(initialState.visibility);
+  const [loading, setLoading] = useState(initialState.loading);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!chatId) return;
-
-    const applyDetails = (data: { name?: string | null; description?: string | null; avatar?: string | null; visibility?: string }) => {
-      setName(data.name || '');
-      setDescription(data.description || '');
-      setAvatar(data.avatar || '');
-      setVisibility((data.visibility as 'public' | 'private') || 'public');
-    };
-
-    // If we already have full details in the store (visibility is present from getChatDetails), use them
     if (cachedMeta?.visibility) {
-      applyDetails(cachedMeta);
-      setLoading(false);
       return;
     }
 
-    setLoading(true);
     getGroupInfo(chatId)
       .then((res) => {
         const { id, ...meta } = res.data;
         void id;
         dispatch(setChatMeta({ chatId, meta }));
-        applyDetails(meta);
+        setName(meta.name || '');
+        setDescription(meta.description || '');
+        setAvatar(meta.avatar || '');
+        setVisibility((meta.visibility as 'public' | 'private') || 'public');
       })
       .catch((err: Error) => {
         presentToast({ message: err.message || t`Failed to load chat details`, duration: 3000 });
@@ -170,6 +174,17 @@ export default function ChatSettingsCore({ chatId: propChatId, backAction }: Cha
       </IonContent>
     </div>
   );
+}
+
+export default function ChatSettingsCore({ chatId: propChatId, backAction }: ChatSettingsCoreProps) {
+  const { id } = useParams<{ id: string }>();
+  const chatId = propChatId ?? (id ? String(id) : '');
+
+  if (!chatId) {
+    return null;
+  }
+
+  return <ChatSettingsSession key={chatId} chatId={chatId} backAction={backAction} />;
 }
 
 export function ChatSettingsPage() {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   IonPage,
   IonHeader,
@@ -36,15 +36,11 @@ interface SettingsCoreProps {
 
 export function SettingsCore({ backAction, onOpenLanguage }: SettingsCoreProps) {
   const currentUid = useSelector((state: RootState) => state.user.uid);
-  const [uidInput, setUidInput] = useState(String(currentUid || '1'));
+  const [uidInput, setUidInput] = useState(() => String(currentUid || '1'));
   const [presentToast] = useIonToast();
   const history = useHistory();
   const locale = useSelector(selectLocale);
   const { permission, isSubscribed, loading, subscribeToPush, unsubscribeFromPush } = usePushNotifications();
-
-  useEffect(() => {
-    setUidInput(String(currentUid || '1'));
-  }, [currentUid]);
 
   const handleSave = () => {
     const trimmed = uidInput.trim();

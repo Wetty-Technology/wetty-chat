@@ -159,7 +159,7 @@ export function DesktopSplitLayout() {
   }, [backgroundPath, history]);
 
   let subPageOverlay: ReactNode = null;
-  
+
   if (threadMatch) {
     const { id, threadId } = threadMatch;
     subPageOverlay = (
@@ -210,7 +210,6 @@ export function DesktopSplitLayout() {
         {/* Base layer: always render ChatThreadCore when a chat is selected */}
         {activeChatId && !isNewChat && (
           <div
-            key={`chat-pane-${activeChatId}`}
             style={{ display: subPageOverlay ? 'none' : undefined }}
             className={styles.desktopSplitPane}
           >
@@ -239,10 +238,12 @@ export function DesktopSplitLayout() {
         <IonModal isOpen={globalSettingsOpen} onDidDismiss={handleGlobalSettingsDidDismiss}>
           {currentRoute.languageSettings ? (
             <LanguagePageCore
-              backAction={{ type: 'callback', onBack: () => history.push({
-                pathname: '/settings',
-                state: { backgroundPath },
-              }) }}
+              backAction={{
+                type: 'callback', onBack: () => history.push({
+                  pathname: '/settings',
+                  state: { backgroundPath },
+                })
+              }}
             />
           ) : (
             <SettingsCore

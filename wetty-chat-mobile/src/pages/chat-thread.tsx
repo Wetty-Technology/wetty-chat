@@ -16,7 +16,7 @@ import {
   useIonAlert,
 } from '@ionic/react';
 import { useParams, useHistory } from 'react-router-dom';
-import {settings, chevronDown, people} from 'ionicons/icons';
+import { settings, chevronDown, people } from 'ionicons/icons';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   getMessages,
@@ -59,36 +59,32 @@ function generateClientId(): string {
 }
 
 interface ChatThreadCoreProps {
-  chatId?: string;
+  chatId: string;
   threadId?: string;
   backAction?: BackAction;
 }
 
-export default function ChatThreadCore({ chatId: propChatId, threadId: propThreadId, backAction }: ChatThreadCoreProps) {
-  const params = useParams<{ id: string; threadId?: string }>();
-  const id = propChatId ?? params.id;
-  const threadId = propThreadId ?? params.threadId;
-  const apiChatId = id ? String(id) : '';
-  const storeChatId = threadId ? `${apiChatId}_thread_${threadId}` : apiChatId;
+function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
+  const storeChatId = threadId ? `${chatId}_thread_${threadId}` : chatId;
   const history = useHistory();
 
   const dispatch = useDispatch();
   const currentUserId = useSelector((state: RootState) => state.user.uid);
   const currentUserName = useSelector((state: RootState) => state.user.username);
   const currentUserAvatarUrl = useSelector((state: RootState) => state.user.avatar_url);
-  const storedName = useSelector((state: RootState) => selectChatName(state, apiChatId));
+  const storedName = useSelector((state: RootState) => selectChatName(state, chatId));
   const chatName = threadId ? t`Thread` : (storedName ?? t`Loading...`);
 
   useEffect(() => {
-    if (!apiChatId || storedName != null) return;
-    getGroupInfo(apiChatId)
+    if (!chatId || storedName != null) return;
+    getGroupInfo(chatId)
       .then((res) => {
         const { id, ...meta } = res.data;
         void id;
-        dispatch(setChatMeta({ chatId: apiChatId, meta }));
+        dispatch(setChatMeta({ chatId: chatId, meta }));
       })
       .catch(() => { });
-  }, [apiChatId, storedName, dispatch]);
+  }, [chatId, storedName, dispatch]);
   const messages = useSelector((state: RootState) => selectMessagesForChat(state, storeChatId));
 
   const formatDateSeparator = useCallback((iso: string) => {
@@ -141,7 +137,7 @@ export default function ChatThreadCore({ chatId: propChatId, threadId: propThrea
   const lastReportedReadId = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!apiChatId || messages.length === 0 || !atBottom) return;
+    if (!chatId || messages.length === 0 || !atBottom) return;
 
     const latestMessage = messages[messages.length - 1];
 
@@ -151,20 +147,20 @@ export default function ChatThreadCore({ chatId: propChatId, threadId: propThrea
     if (latestMessage.id !== lastReportedReadId.current) {
       lastReportedReadId.current = latestMessage.id;
 
-      markMessagesAsRead(apiChatId, latestMessage.id)
+      markMessagesAsRead(chatId, latestMessage.id)
         .then(() => {
-          dispatch(markChatAsRead({ chatId: apiChatId }));
+          dispatch(markChatAsRead({ chatId: chatId }));
         })
         .catch((err) => {
           console.error('Failed to mark as read', err);
           lastReportedReadId.current = null;
         });
     }
-  }, [messages, atBottom, apiChatId, dispatch]);
+  }, [messages, atBottom, chatId, dispatch]);
 
   const fetchLatestWindow = useCallback(() => {
-    if (!apiChatId) return;
-    getMessages(apiChatId, threadId ? { thread_id: threadId } : undefined)
+    if (!chatId) return;
+    getMessages(chatId, threadId ? { thread_id: threadId } : undefined)
       .then((res) => {
         const list = res.data.messages ?? [];
         dispatch(refreshLatest({ chatId: storeChatId, messages: list, nextCursor: res.data.next_cursor ?? null, prevCursor: null }));
@@ -177,14 +173,12 @@ export default function ChatThreadCore({ chatId: propChatId, threadId: propThrea
         dispatch(resetChat({ chatId: storeChatId, messages: [], nextCursor: null, prevCursor: null }));
         showToast(err.message || t`Failed to load messages`);
       });
-  }, [apiChatId, storeChatId, threadId, dispatch, showToast]);
+  }, [chatId, storeChatId, threadId, dispatch, showToast]);
 
   // Initial load
   useEffect(() => {
-    if (!apiChatId) return;
-    setInitialScrollIndex(undefined);
     fetchLatestWindow();
-  }, [apiChatId, fetchLatestWindow]);
+  }, [chatId, fetchLatestWindow]);
 
   const flushPendingPrepend = useCallback(() => {
     const pending = pendingPrependRef.current;
@@ -205,12 +199,12 @@ export default function ChatThreadCore({ chatId: propChatId, threadId: propThrea
   const loadMore = useCallback(() => {
     const st = store.getState();
     const cursor = selectNextCursorForChat(st, storeChatId);
-    if (!apiChatId || cursor == null || loadingMoreRef.current) return;
+    if (!chatId || cursor == null || loadingMoreRef.current) return;
     isScrollIdleRef.current = false;
     const gen = selectChatGeneration(st, storeChatId);
     loadingMoreRef.current = true;
     setLoadingMore(true);
-    getMessages(apiChatId, { before: cursor, max: 50, thread_id: threadId })
+    getMessages(chatId, { before: cursor, max: 50, thread_id: threadId })
       .then((res) => {
         if (selectChatGeneration(store.getState(), storeChatId) !== gen) return;
         const list = res.data.messages ?? [];
@@ -231,15 +225,15 @@ export default function ChatThreadCore({ chatId: propChatId, threadId: propThrea
         loadingMoreRef.current = false;
         setLoadingMore(false);
       });
-  }, [apiChatId, storeChatId, threadId, dispatch, showToast]);
+  }, [chatId, storeChatId, threadId, dispatch, showToast]);
 
   const loadNewer = useCallback(() => {
     const st = store.getState();
     const prevCursor = selectPrevCursorForChat(st, storeChatId);
-    if (!apiChatId || prevCursor == null || loadingNewerRef.current) return;
+    if (!chatId || prevCursor == null || loadingNewerRef.current) return;
     const gen = selectChatGeneration(st, storeChatId);
     loadingNewerRef.current = true;
-    getMessages(apiChatId, { after: prevCursor, max: 50, thread_id: threadId })
+    getMessages(chatId, { after: prevCursor, max: 50, thread_id: threadId })
       .then((res) => {
         if (selectChatGeneration(store.getState(), storeChatId) !== gen) return;
         const list = res.data.messages ?? [];
@@ -251,7 +245,7 @@ export default function ChatThreadCore({ chatId: propChatId, threadId: propThrea
       .finally(() => {
         loadingNewerRef.current = false;
       });
-  }, [apiChatId, storeChatId, threadId, dispatch, showToast]);
+  }, [chatId, storeChatId, threadId, dispatch, showToast]);
 
   const jumpToMessage = useCallback((messageId: string) => {
     const state = store.getState();
@@ -262,7 +256,7 @@ export default function ChatThreadCore({ chatId: propChatId, threadId: propThrea
       return;
     }
     // Message not in current window — fetch centered window
-    getMessages(apiChatId, { around: messageId, max: 50, thread_id: threadId })
+    getMessages(chatId, { around: messageId, max: 50, thread_id: threadId })
       .then((res) => {
         const list = res.data.messages ?? [];
         dispatch(pushWindow({ chatId: storeChatId, messages: list, nextCursor: res.data.next_cursor ?? null, prevCursor: res.data.prev_cursor ?? null }));
@@ -275,12 +269,12 @@ export default function ChatThreadCore({ chatId: propChatId, threadId: propThrea
       .catch((err: Error) => {
         showToast(err.message || t`Failed to jump to message`);
       });
-  }, [apiChatId, storeChatId, threadId, dispatch, showToast]);
+  }, [chatId, storeChatId, threadId, dispatch, showToast]);
 
   const prevCursor = useSelector((state: RootState) => selectPrevCursorForChat(state, storeChatId));
 
   const handleSend = useCallback((text: string, attachmentIds?: string[]) => {
-    if (!apiChatId) return;
+    if (!chatId) return;
 
     if (!text.trim() && (!attachmentIds || attachmentIds.length === 0)) {
       return;
@@ -304,7 +298,7 @@ export default function ChatThreadCore({ chatId: propChatId, threadId: propThrea
       dispatch(updateMessageInStore({ chatId: storeChatId, messageId, message: optimisticMsg }));
       setEditingMessage(null);
 
-      updateMessage(apiChatId, messageId, { message: text })
+      updateMessage(chatId, messageId, { message: text })
         .then((res) => {
           dispatch(updateMessageInStore({ chatId: storeChatId, messageId, message: res.data }));
         })
@@ -335,7 +329,7 @@ export default function ChatThreadCore({ chatId: propChatId, threadId: propThrea
         name: currentUserName,
         avatar_url: currentUserAvatarUrl || undefined
       },
-      chat_id: apiChatId,
+      chat_id: chatId,
       created_at: new Date().toISOString(),
       is_edited: false,
       is_deleted: false,
@@ -355,8 +349,8 @@ export default function ChatThreadCore({ chatId: propChatId, threadId: propThrea
     };
 
     const sendPromise = threadId
-      ? sendThreadMessage(apiChatId, threadId, messagePayload)
-      : sendMessage(apiChatId, messagePayload);
+      ? sendThreadMessage(chatId, threadId, messagePayload)
+      : sendMessage(chatId, messagePayload);
 
     sendPromise
       .then((res) => {
@@ -375,7 +369,7 @@ export default function ChatThreadCore({ chatId: propChatId, threadId: propThrea
           message: { ...optimistic, is_deleted: true }
         }));
       });
-  }, [apiChatId, storeChatId, threadId, dispatch, showToast, replyingTo, editingMessage, currentUserId, currentUserName, currentUserAvatarUrl]);
+  }, [chatId, storeChatId, threadId, dispatch, showToast, replyingTo, editingMessage, currentUserId, currentUserName, currentUserAvatarUrl]);
 
   const onClickChatItem = (messageIndex: number) => {
     const msg = messages[messageIndex];
@@ -387,7 +381,7 @@ export default function ChatThreadCore({ chatId: propChatId, threadId: propThrea
             setReplyingTo(msg);
           }
         },
-        ...(!threadId && !msg.thread_info ? [{ text: t`Start Thread`, handler: () => { history.push(`/chats/chat/${apiChatId}/thread/${msg.id}`); } }] : []),
+        ...(!threadId && !msg.thread_info ? [{ text: t`Start Thread`, handler: () => { history.push(`/chats/chat/${chatId}/thread/${msg.id}`); } }] : []),
         ...(isOwn ? [
           {
             text: t`Edit`, handler: () => {
@@ -406,7 +400,7 @@ export default function ChatThreadCore({ chatId: propChatId, threadId: propThrea
                     text: t`Delete`, role: 'destructive' as const, handler: () => {
                       const deletedOptimistic = { ...msg, is_deleted: true };
                       dispatch(updateMessageInStore({ chatId: storeChatId, messageId: msg.id, message: deletedOptimistic }));
-                      deleteMessage(apiChatId, msg.id).catch((e: any) => {
+                      deleteMessage(chatId, msg.id).catch((e: any) => {
                         dispatch(updateMessageInStore({ chatId: storeChatId, messageId: msg.id, message: msg }));
                         showToast(e.message || t`Failed to delete message`);
                       });
@@ -431,11 +425,11 @@ export default function ChatThreadCore({ chatId: propChatId, threadId: propThrea
           </IonButtons>
           <IonTitle>{chatName}</IonTitle>
           <IonButtons slot="end">
-            <IonButton onClick={() => history.push(`/chats/chat/${apiChatId}/members`)}>
+            <IonButton onClick={() => history.push(`/chats/chat/${chatId}/members`)}>
               <IonIcon slot="icon-only" icon={people} />
             </IonButton>
             <FeatureGate>
-              <IonButton onClick={() => history.push(`/chats/chat/${apiChatId}/settings`)}>
+              <IonButton onClick={() => history.push(`/chats/chat/${chatId}/settings`)}>
                 <IonIcon slot="icon-only" icon={settings} />
               </IonButton>
             </FeatureGate>
@@ -509,7 +503,7 @@ export default function ChatThreadCore({ chatId: propChatId, threadId: propThrea
                   timestamp={msg.created_at}
                   edited={msg.is_edited}
                   threadInfo={!threadId ? msg.thread_info : undefined}
-                  onThreadClick={() => history.push(`/chats/chat/${apiChatId}/thread/${msg.id}`)}
+                  onThreadClick={() => history.push(`/chats/chat/${chatId}/thread/${msg.id}`)}
                   attachments={msg.attachments}
                   isConfirmed={!msg.id.startsWith('cg_')}
                   replyTo={msg.reply_to_message ? {
@@ -527,12 +521,12 @@ export default function ChatThreadCore({ chatId: propChatId, threadId: propThrea
           className={`scroll-to-bottom-fab ${atBottom ? 'scroll-to-bottom-fab--hidden' : ''}`}
         >
           <IonFabButton size="small" onClick={() => {
-              if (prevCursor != null) {
-                fetchLatestWindow();
-              } else {
-                scrollToBottomRef.current?.();
-              }
-            }}>
+            if (prevCursor != null) {
+              fetchLatestWindow();
+            } else {
+              scrollToBottomRef.current?.();
+            }
+          }}>
             <IonIcon icon={chevronDown} />
           </IonFabButton>
         </IonFab>
@@ -559,13 +553,16 @@ export default function ChatThreadCore({ chatId: propChatId, threadId: propThrea
 }
 
 export function ChatThreadPage() {
-  const { id, threadId } = useParams<{ id: string; threadId?: string }>();
+  const { id: chatId, threadId } = useParams<{ id: string; threadId?: string }>();
+  const renderKey = threadId ?? chatId;
   const backAction: BackAction = threadId
-    ? { type: 'back', defaultHref: `/chats/chat/${id}` }
+    ? { type: 'back', defaultHref: `/chats/chat/${chatId}` }
     : { type: 'back', defaultHref: '/chats' };
   return (
     <IonPage>
-      <ChatThreadCore chatId={id} threadId={threadId} backAction={backAction} />
+      <ChatThreadCore key={renderKey} chatId={chatId} threadId={threadId} backAction={backAction} />
     </IonPage>
   );
 }
+
+export default ChatThreadCore;

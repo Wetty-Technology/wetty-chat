@@ -40,9 +40,7 @@ interface GroupDetailCoreProps {
   backAction?: BackAction;
 }
 
-export default function GroupDetailCore({ chatId: propChatId, backAction }: GroupDetailCoreProps) {
-  const { id: paramId } = useParams<{ id: string }>();
-  const id = propChatId ?? paramId;
+function GroupDetailSession({ id, backAction }: { id: string; backAction?: BackAction }) {
   const [presentToast] = useIonToast();
   const [presentAlert] = useIonAlert();
 
@@ -52,9 +50,6 @@ export default function GroupDetailCore({ chatId: propChatId, backAction }: Grou
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!id) return;
-    setLoading(true);
-    setError(null);
     Promise.all([getGroupInfo(id), getMembers(id)])
       .then(([chatRes, membersRes]) => {
         setDetail(chatRes.data);
@@ -217,6 +212,31 @@ export default function GroupDetailCore({ chatId: propChatId, backAction }: Grou
       </IonContent>
     </div>
   );
+}
+
+export default function GroupDetailCore({ chatId: propChatId, backAction }: GroupDetailCoreProps) {
+  const { id: paramId } = useParams<{ id: string }>();
+  const id = propChatId ?? paramId;
+
+  if (!id) {
+    return (
+      <div className="ion-page">
+        <IonHeader>
+          <IonToolbar>
+            <IonButtons slot="start">
+              {backAction && <BackButton action={backAction} />}
+            </IonButtons>
+            <IonTitle>Group</IonTitle>
+          </IonToolbar>
+        </IonHeader>
+        <IonContent>
+          <div style={{ padding: '16px' }}>Invalid group.</div>
+        </IonContent>
+      </div>
+    );
+  }
+
+  return <GroupDetailSession key={id} id={id} backAction={backAction} />;
 }
 
 export function GroupDetailPage() {
