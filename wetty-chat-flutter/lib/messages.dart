@@ -151,7 +151,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   late ScrollController _scrollController;
   final ScrollController _inputScrollController = ScrollController();
   final TextEditingController _textController = TextEditingController();
-  // static const int _messagesSize = 15;
+  static const double _titleBarHeight = 70.0;
 
   bool get _hasMore => _nextCursor != null && _nextCursor!.isNotEmpty;
 
@@ -543,7 +543,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   child: SafeArea(
                     bottom: false,
                     child: SizedBox(
-                      height: 70,
+                      height: _titleBarHeight,
                       child: Padding(
                         padding: const EdgeInsets.only(bottom: 36),
                         child: Stack(
@@ -660,7 +660,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     return ListView.builder(
       controller: _scrollController,
       reverse: true,
-      padding: EdgeInsets.zero,
+      padding: const EdgeInsets.only(top: _titleBarHeight),
       itemCount: itemCount,
       itemBuilder: (context, index) {
         if (showTopLoader && index == itemCount - 1) {
@@ -671,6 +671,15 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         }
         final msg = _messages[index];
         final isHighlighted = _highlightedMessageId == msg.id;
+
+        // Group messages by sender: only show name on the first (oldest) message of a block.
+        // In reverse order, "oldest message before" is index + 1.
+        final isOldestInList = index == _messages.length - 1;
+        final nextIsDifferent =
+            !isOldestInList &&
+            msg.sender.uid != _messages[index + 1].sender.uid;
+        final showSenderName = isOldestInList || nextIsDifferent;
+
         return _MessageRow(
           key: ValueKey(msg.id),
           message: msg,
@@ -680,6 +689,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           onTapReply: msg.replyToMessage != null
               ? () => _jumpToMessage(msg.replyToMessage!.id)
               : null,
+          showSenderName: showSenderName,
         );
       },
     );
@@ -880,6 +890,7 @@ class _MessageRow extends StatefulWidget {
     this.onLongPress,
     this.onReply,
     this.onTapReply,
+    this.showSenderName = true,
   });
 
   final MessageItem message;
@@ -887,6 +898,7 @@ class _MessageRow extends StatefulWidget {
   final VoidCallback? onLongPress;
   final VoidCallback? onReply;
   final VoidCallback? onTapReply;
+  final bool showSenderName;
 
   @override
   State<_MessageRow> createState() => _MessageRowState();
@@ -1005,7 +1017,7 @@ class _MessageRowState extends State<_MessageRow>
       mainAxisSize: MainAxisSize.min,
       children: [
         // sender name
-        if (!_isMe)
+        if (!_isMe && widget.showSenderName)
           Padding(
             padding: const EdgeInsets.only(bottom: 2),
             child: Text(
