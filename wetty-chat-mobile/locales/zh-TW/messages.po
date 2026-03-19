@@ -103,8 +103,8 @@ msgid "Description"
 msgstr "描述"
 
 #: src/App.tsx
-msgid "Disconnected. Retrying…"
-msgstr "已斷線。重新連線中…"
+#~ msgid "Disconnected. Retrying…"
+#~ msgstr "已斷線。重新連線中…"
 
 #: src/App.tsx
 msgid "Dismiss"
@@ -310,6 +310,10 @@ msgstr "公開"
 #: src/components/chat/ChatList.tsx
 msgid "Read"
 msgstr "標記已讀"
+
+#: src/components/TitleWithConnectionStatus.tsx
+msgid "Reconnecting..."
+msgstr "正在重新連線..."
 
 #: src/pages/chat-members.tsx
 msgid "Remove"

@@ -103,8 +103,8 @@ msgid "Description"
 msgstr "Description"
 
 #: src/App.tsx
-msgid "Disconnected. Retrying…"
-msgstr "Disconnected. Retrying…"
+#~ msgid "Disconnected. Retrying…"
+#~ msgstr "Disconnected. Retrying…"
 
 #: src/App.tsx
 msgid "Dismiss"
@@ -310,6 +310,10 @@ msgstr "Public"
 #: src/components/chat/ChatList.tsx
 msgid "Read"
 msgstr "Read"
+
+#: src/components/TitleWithConnectionStatus.tsx
+msgid "Reconnecting..."
+msgstr "Reconnecting..."
 
 #: src/pages/chat-members.tsx
 msgid "Remove"
