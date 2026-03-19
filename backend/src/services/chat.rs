@@ -1,9 +1,16 @@
-use crate::schema::{group_membership, messages};
 use diesel::prelude::*;
-use diesel::sql_types::{BigInt, Nullable};
+use diesel::sql_query;
 use diesel::PgConnection;
 use std::collections::HashMap;
 use tracing::warn;
+
+#[derive(QueryableByName)]
+struct UnreadCountRow {
+    #[diesel(sql_type = diesel::sql_types::Integer)]
+    uid: i32,
+    #[diesel(sql_type = diesel::sql_types::BigInt)]
+    unread_count: i64,
+}
 
 /// Calculate the global unread count for a given list of user IDs.
 pub fn get_unread_counts(
@@ -14,21 +21,27 @@ pub fn get_unread_counts(
         return Ok(HashMap::new());
     }
 
-    diesel::define_sql_function! {
-        fn coalesce(x: Nullable<BigInt>, y: BigInt) -> BigInt;
-    }
+    let query = sql_query(
+        "SELECT gm.uid, COALESCE(SUM(chat_counts.unread_count), 0) AS unread_count
+         FROM group_membership AS gm
+         LEFT JOIN LATERAL (
+             SELECT count(*)::bigint AS unread_count
+             FROM messages AS m
+             WHERE m.chat_id = gm.chat_id
+               AND m.id > COALESCE(gm.last_read_message_id, 0)
+               AND m.deleted_at IS NULL
+               AND m.reply_root_id IS NULL
+         ) AS chat_counts ON TRUE
+         WHERE gm.uid = ANY($1)
+         GROUP BY gm.uid",
+    )
+    .bind::<diesel::sql_types::Array<diesel::sql_types::Integer>, _>(target_uids.to_vec());
 
-    let query = group_membership::table
-        .inner_join(messages::table.on(group_membership::chat_id.eq(messages::chat_id)))
-        .filter(group_membership::uid.eq_any(target_uids))
-        .filter(messages::id.gt(coalesce(group_membership::last_read_message_id, 0i64)))
-        .filter(messages::deleted_at.is_null())
-        .filter(messages::reply_root_id.is_null())
-        .group_by(group_membership::uid)
-        .select((group_membership::uid, diesel::dsl::count(messages::id)));
-
-    match query.load::<(i32, i64)>(conn) {
-        Ok(rows) => Ok(rows.into_iter().collect()),
+    match query.load::<UnreadCountRow>(conn) {
+        Ok(rows) => Ok(rows
+            .into_iter()
+            .map(|row| (row.uid, row.unread_count))
+            .collect()),
         Err(e) => {
             warn!("Failed to load unread counts: {:?}", e);
             Err(e)

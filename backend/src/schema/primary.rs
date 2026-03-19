@@ -95,7 +95,6 @@ diesel::table! {
 
 diesel::joinable!(attachments -> messages (message_id));
 diesel::joinable!(group_membership -> groups (chat_id));
-diesel::joinable!(group_membership -> messages (last_read_message_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     attachments,
