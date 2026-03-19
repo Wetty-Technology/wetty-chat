@@ -33,10 +33,10 @@ Future<ListMessagesResponse> fetchMessages(
   final res = ListMessagesResponse.fromJson(
     jsonDecode(response.body) as Map<String, dynamic>,
   );
-  print('Fetched ${res.messages.length} messages for chat $chatId');
-  for (var m in res.messages) {
-    print(' - [${m.id}] ${m.sender.name}: ${m.message}');
-  }
+  // print('Fetched ${res.messages.length} messages for chat $chatId');
+  // for (var m in res.messages) {
+  //   print(' - [${m.id}] ${m.sender.name}: ${m.message}');
+  // }
 
   return res;
 }
@@ -680,6 +680,14 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
             msg.sender.uid != _messages[index + 1].sender.uid;
         final showSenderName = isOldestInList || nextIsDifferent;
 
+        // Group avatars by sender: only show on the last (newest) message of a block.
+        // In reverse order, "newest message after" is index - 1.
+        final isNewestInList = index == 0;
+        final prevIsDifferent =
+            !isNewestInList &&
+            msg.sender.uid != _messages[index - 1].sender.uid;
+        final showAvatar = isNewestInList || prevIsDifferent;
+
         return _MessageRow(
           key: ValueKey(msg.id),
           message: msg,
@@ -690,6 +698,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
               ? () => _jumpToMessage(msg.replyToMessage!.id)
               : null,
           showSenderName: showSenderName,
+          showAvatar: showAvatar,
         );
       },
     );
@@ -891,6 +900,7 @@ class _MessageRow extends StatefulWidget {
     this.onReply,
     this.onTapReply,
     this.showSenderName = true,
+    this.showAvatar = true,
   });
 
   final MessageItem message;
@@ -899,6 +909,7 @@ class _MessageRow extends StatefulWidget {
   final VoidCallback? onReply;
   final VoidCallback? onTapReply;
   final bool showSenderName;
+  final bool showAvatar;
 
   @override
   State<_MessageRow> createState() => _MessageRowState();
@@ -1097,8 +1108,22 @@ class _MessageRowState extends State<_MessageRow>
               : MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: _isMe
-              ? [bubble, const SizedBox(width: 6), avatar]
-              : [avatar, const SizedBox(width: 6), bubble],
+              ? [
+                  bubble,
+                  if (widget.showAvatar) ...[
+                    const SizedBox(width: 6),
+                    avatar,
+                  ] else
+                    const SizedBox(width: 36),
+                ]
+              : [
+                  if (widget.showAvatar) ...[
+                    avatar,
+                    const SizedBox(width: 6),
+                  ] else
+                    const SizedBox(width: 36),
+                  bubble,
+                ],
         ),
       ),
     );
