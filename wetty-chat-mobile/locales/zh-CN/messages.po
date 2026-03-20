@@ -40,6 +40,18 @@ msgstr "确定要撤回这条消息吗？"
 #~ msgid "Are you sure you want to leave this group?"
 #~ msgstr "确定要退出该群组吗？"
 
+#: src/components/chat/ChatBubble.tsx
+msgid "Attachment"
+msgstr "附件"
+
+#: src/components/chat/ImageViewer.tsx
+msgid "Attachment large view"
+msgstr "附件大图预览"
+
+#: src/components/chat/UploadPreview.tsx
+msgid "Attachment preview tray"
+msgstr "附件预览栏"
+
 #: src/pages/settings.tsx
 #: src/pages/settings/language.tsx
 msgid "Auto"
@@ -72,6 +84,14 @@ msgstr "消息"
 #: src/pages/settings.tsx
 msgid "Check for Update"
 msgstr "检查更新"
+
+#: src/components/chat/ImageViewer.tsx
+msgid "Close"
+msgstr "关闭"
+
+#: src/components/chat/ImageViewer.tsx
+msgid "Close viewer"
+msgstr "关闭查看器"
 
 #: src/pages/chat-thread.tsx
 #: src/pages/chat-thread.tsx
@@ -110,6 +130,14 @@ msgstr "描述"
 msgid "Dismiss"
 msgstr "忽略"
 
+#: src/components/chat/ImageViewer.tsx
+msgid "Download"
+msgstr "下载"
+
+#: src/components/chat/ImageViewer.tsx
+msgid "Download image"
+msgstr "下载图片"
+
 #: src/pages/chat-thread.tsx
 msgid "Edit"
 msgstr "编辑"
@@ -121,6 +149,11 @@ msgstr "已编辑"
 #: src/pages/chat-settings.tsx
 msgid "Enter avatar URL"
 msgstr "输入头像链接"
+
+#: src/components/chat/ImageViewer.tsx
+#: src/components/chat/ImageViewer.tsx
+msgid "Enter fullscreen"
+msgstr "进入全屏"
 
 #: src/pages/chat-settings.tsx
 msgid "Enter group description"
@@ -137,6 +170,11 @@ msgstr "输入要添加的用户 ID："
 #: src/components/chat/ChatList.tsx
 msgid "Error"
 msgstr "错误"
+
+#: src/components/chat/ImageViewer.tsx
+#: src/components/chat/ImageViewer.tsx
+msgid "Exit fullscreen"
+msgstr "退出全屏"
 
 #: src/pages/chat-members.tsx
 msgid "Failed to add member"
@@ -271,6 +309,10 @@ msgstr "消息不能为空"
 msgid "New message"
 msgstr "新消息"
 
+#: src/components/chat/ImageViewer.tsx
+msgid "Next image"
+msgstr "下一张图片"
+
 #: src/components/chat/ChatList.tsx
 msgid "No chats yet"
 msgstr "暂无聊天"
@@ -282,6 +324,10 @@ msgstr "暂无消息"
 #: src/pages/settings.tsx
 msgid "No service worker registered"
 msgstr "未注册 Service Worker"
+
+#: src/components/chat/ImageViewer.tsx
+msgid "Previous image"
+msgstr "上一张图片"
 
 #: src/pages/chat-settings.tsx
 msgid "Private"
@@ -319,6 +365,11 @@ msgstr "正在重新连接..."
 msgid "Remove"
 msgstr "移除"
 
+#. placeholder {0}: draft.name
+#: src/components/chat/UploadPreview.tsx
+msgid "Remove {0}"
+msgstr "移除 {0}"
+
 #: src/pages/chat-members.tsx
 msgid "Remove {displayName} from this group?"
 msgstr "将 {displayName} 从该群组中移除？"
@@ -343,6 +394,10 @@ msgstr "条回复"
 #: src/pages/chat-thread.tsx
 msgid "Reply"
 msgstr "回复"
+
+#: src/components/chat/UploadPreview.tsx
+msgid "Retry"
+msgstr "重试"
 
 #: src/pages/chat-settings.tsx
 msgid "Save Settings"
@@ -377,6 +432,11 @@ msgstr "文本消息"
 msgid "Thread"
 msgstr "话题"
 
+#. placeholder {0}: index + 1
+#: src/components/chat/ImageViewer.tsx
+msgid "Thumbnail {0}"
+msgstr "缩略图 {0}"
+
 #: src/pages/chat-thread.tsx
 msgid "Today"
 msgstr "今天"
@@ -397,6 +457,14 @@ msgstr "更新检查失败"
 msgid "Update Now"
 msgstr "立即更新"
 
+#: src/components/chat/UploadPreview.tsx
+msgid "Upload failed"
+msgstr "上传失败"
+
+#: src/components/chat/UploadPreview.tsx
+msgid "Uploading"
+msgstr "上传中"
+
 #. placeholder {0}: member.uid
 #: src/pages/chat-members.tsx
 #: src/pages/chat-members.tsx
@@ -407,6 +475,11 @@ msgstr "用户 {0}"
 #: src/pages/chat-members.tsx
 msgid "User ID"
 msgstr "用户 ID"
+
+#. placeholder {0}: index + 1
+#: src/components/chat/ImageViewer.tsx
+msgid "View image {0}"
+msgstr "查看图片 {0}"
 
 #: src/components/chat/ChatBubble.tsx
 #~ msgid "View Thread"

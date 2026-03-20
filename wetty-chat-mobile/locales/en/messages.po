@@ -40,6 +40,18 @@ msgstr "Are you sure you want to delete this message?"
 #~ msgid "Are you sure you want to leave this group?"
 #~ msgstr "Are you sure you want to leave this group?"
 
+#: src/components/chat/ChatBubble.tsx
+msgid "Attachment"
+msgstr "Attachment"
+
+#: src/components/chat/ImageViewer.tsx
+msgid "Attachment large view"
+msgstr "Attachment large view"
+
+#: src/components/chat/UploadPreview.tsx
+msgid "Attachment preview tray"
+msgstr "Attachment preview tray"
+
 #: src/pages/settings.tsx
 #: src/pages/settings/language.tsx
 msgid "Auto"
@@ -72,6 +84,14 @@ msgstr "Chats"
 #: src/pages/settings.tsx
 msgid "Check for Update"
 msgstr "Check for Update"
+
+#: src/components/chat/ImageViewer.tsx
+msgid "Close"
+msgstr "Close"
+
+#: src/components/chat/ImageViewer.tsx
+msgid "Close viewer"
+msgstr "Close viewer"
 
 #: src/pages/chat-thread.tsx
 #: src/pages/chat-thread.tsx
@@ -110,6 +130,14 @@ msgstr "Description"
 msgid "Dismiss"
 msgstr "Dismiss"
 
+#: src/components/chat/ImageViewer.tsx
+msgid "Download"
+msgstr "Download"
+
+#: src/components/chat/ImageViewer.tsx
+msgid "Download image"
+msgstr "Download image"
+
 #: src/pages/chat-thread.tsx
 msgid "Edit"
 msgstr "Edit"
@@ -121,6 +149,11 @@ msgstr "Edited"
 #: src/pages/chat-settings.tsx
 msgid "Enter avatar URL"
 msgstr "Enter avatar URL"
+
+#: src/components/chat/ImageViewer.tsx
+#: src/components/chat/ImageViewer.tsx
+msgid "Enter fullscreen"
+msgstr "Enter fullscreen"
 
 #: src/pages/chat-settings.tsx
 msgid "Enter group description"
@@ -137,6 +170,11 @@ msgstr "Enter user ID to add:"
 #: src/components/chat/ChatList.tsx
 msgid "Error"
 msgstr "Error"
+
+#: src/components/chat/ImageViewer.tsx
+#: src/components/chat/ImageViewer.tsx
+msgid "Exit fullscreen"
+msgstr "Exit fullscreen"
 
 #: src/pages/chat-members.tsx
 msgid "Failed to add member"
@@ -271,6 +309,10 @@ msgstr "Message cannot be empty"
 msgid "New message"
 msgstr "New message"
 
+#: src/components/chat/ImageViewer.tsx
+msgid "Next image"
+msgstr "Next image"
+
 #: src/components/chat/ChatList.tsx
 msgid "No chats yet"
 msgstr "No chats yet"
@@ -282,6 +324,10 @@ msgstr "No messages yet"
 #: src/pages/settings.tsx
 msgid "No service worker registered"
 msgstr "No service worker registered"
+
+#: src/components/chat/ImageViewer.tsx
+msgid "Previous image"
+msgstr "Previous image"
 
 #: src/pages/chat-settings.tsx
 msgid "Private"
@@ -319,6 +365,11 @@ msgstr "Reconnecting..."
 msgid "Remove"
 msgstr "Remove"
 
+#. placeholder {0}: draft.name
+#: src/components/chat/UploadPreview.tsx
+msgid "Remove {0}"
+msgstr "Remove {0}"
+
 #: src/pages/chat-members.tsx
 msgid "Remove {displayName} from this group?"
 msgstr "Remove {displayName} from this group?"
@@ -343,6 +394,10 @@ msgstr "reply"
 #: src/pages/chat-thread.tsx
 msgid "Reply"
 msgstr "Reply"
+
+#: src/components/chat/UploadPreview.tsx
+msgid "Retry"
+msgstr "Retry"
 
 #: src/pages/chat-settings.tsx
 msgid "Save Settings"
@@ -377,6 +432,11 @@ msgstr "Text message"
 msgid "Thread"
 msgstr "Thread"
 
+#. placeholder {0}: index + 1
+#: src/components/chat/ImageViewer.tsx
+msgid "Thumbnail {0}"
+msgstr "Thumbnail {0}"
+
 #: src/pages/chat-thread.tsx
 msgid "Today"
 msgstr "Today"
@@ -397,6 +457,14 @@ msgstr "Update check failed"
 msgid "Update Now"
 msgstr "Update Now"
 
+#: src/components/chat/UploadPreview.tsx
+msgid "Upload failed"
+msgstr "Upload failed"
+
+#: src/components/chat/UploadPreview.tsx
+msgid "Uploading"
+msgstr "Uploading"
+
 #. placeholder {0}: member.uid
 #: src/pages/chat-members.tsx
 #: src/pages/chat-members.tsx
@@ -407,6 +475,11 @@ msgstr "User {0}"
 #: src/pages/chat-members.tsx
 msgid "User ID"
 msgstr "User ID"
+
+#. placeholder {0}: index + 1
+#: src/components/chat/ImageViewer.tsx
+msgid "View image {0}"
+msgstr "View image {0}"
 
 #: src/components/chat/ChatBubble.tsx
 #~ msgid "View Thread"

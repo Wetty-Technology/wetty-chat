@@ -258,7 +258,7 @@ export function ChatBubble({
                     >
                       <img
                         src={att.url}
-                        alt="attachment"
+                        alt={t`Attachment`}
                         className={styles.attachmentImage}
                         style={imageLayoutStyle ? undefined : { maxHeight: maxImageHeight }}
                       />

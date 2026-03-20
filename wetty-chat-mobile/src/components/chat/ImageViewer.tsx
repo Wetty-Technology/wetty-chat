@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { IonIcon } from '@ionic/react';
+import { t } from '@lingui/core/macro';
 import {
   chevronBack,
   chevronForward,
@@ -509,22 +510,32 @@ export function ImageViewer({ images, initialIndex = 0, onClose }: ImageViewerPr
         }
       }}
     >
-      <div className={styles.viewer} ref={viewerRef}>
-        <div className={styles.toolbar}>
-          <button className={styles.iconButton} onClick={handleDownload} title="Download" aria-label="Download image">
+        <div className={styles.viewer} ref={viewerRef}>
+          <div className={styles.toolbar}>
+          <button
+            className={styles.iconButton}
+            onClick={handleDownload}
+            title={t`Download`}
+            aria-label={t`Download image`}
+          >
             <IonIcon icon={download} />
           </button>
           {isDesktop && (
             <button
               className={styles.iconButton}
               onClick={toggleFullscreen}
-              title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-              aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+              title={isFullscreen ? t`Exit fullscreen` : t`Enter fullscreen`}
+              aria-label={isFullscreen ? t`Exit fullscreen` : t`Enter fullscreen`}
             >
               <IonIcon icon={isFullscreen ? contractOutline : expandOutline} />
             </button>
           )}
-          <button className={styles.iconButton} onClick={onClose} title="Close" aria-label="Close viewer">
+          <button
+            className={styles.iconButton}
+            onClick={onClose}
+            title={t`Close`}
+            aria-label={t`Close viewer`}
+          >
             <IonIcon icon={close} />
           </button>
         </div>
@@ -547,7 +558,7 @@ export function ImageViewer({ images, initialIndex = 0, onClose }: ImageViewerPr
                 className={`${styles.navButton} ${styles.prevButton}`}
                 onClick={() => navigateTo(activeIndex - 1)}
                 disabled={activeIndex === 0}
-                aria-label="Previous image"
+                aria-label={t`Previous image`}
               >
                 <IonIcon icon={chevronBack} />
               </button>
@@ -555,7 +566,7 @@ export function ImageViewer({ images, initialIndex = 0, onClose }: ImageViewerPr
                 className={`${styles.navButton} ${styles.nextButton}`}
                 onClick={() => navigateTo(activeIndex + 1)}
                 disabled={activeIndex === images.length - 1}
-                aria-label="Next image"
+                aria-label={t`Next image`}
               >
                 <IonIcon icon={chevronForward} />
               </button>
@@ -567,7 +578,7 @@ export function ImageViewer({ images, initialIndex = 0, onClose }: ImageViewerPr
               key={activeImage.id || activeImage.src}
               src={activeImage.src}
               className={styles.image}
-              alt={activeImage.fileName || 'Attachment large view'}
+              alt={activeImage.fileName || t`Attachment large view`}
               draggable={false}
               onLoad={event => {
                 const nextSize = {
@@ -607,11 +618,11 @@ export function ImageViewer({ images, initialIndex = 0, onClose }: ImageViewerPr
                 key={image.id || image.src}
                 className={`${styles.thumbnailButton} ${index === activeIndex ? styles.thumbnailActive : ''}`}
                 onClick={() => navigateTo(index)}
-                aria-label={`View image ${index + 1}`}
+                aria-label={t`View image ${index + 1}`}
               >
                 <img
                   src={image.src}
-                  alt={image.fileName || `Thumbnail ${index + 1}`}
+                  alt={image.fileName || t`Thumbnail ${index + 1}`}
                   className={styles.thumbnail}
                   draggable={false}
                 />

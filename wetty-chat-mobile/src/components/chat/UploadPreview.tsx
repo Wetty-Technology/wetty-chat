@@ -1,4 +1,5 @@
 import { IonIcon } from '@ionic/react';
+import { t } from '@lingui/core/macro';
 import { alertCircleOutline, closeCircle, refreshOutline } from 'ionicons/icons';
 import styles from './UploadPreview.module.scss';
 
@@ -25,14 +26,14 @@ export function UploadPreview({ drafts, onRemove, onRetry }: UploadPreviewProps)
   if (drafts.length === 0) return null;
 
   return (
-    <div className={styles.previewTray} aria-label="Attachment preview tray">
+    <div className={styles.previewTray} aria-label={t`Attachment preview tray`}>
       {drafts.map((draft) => (
         <article key={draft.localId} className={styles.card}>
           <img src={draft.previewUrl} alt={draft.name} className={styles.previewImage} />
           <button
             type="button"
             className={styles.removeButton}
-            aria-label={`Remove ${draft.name}`}
+            aria-label={t`Remove ${draft.name}`}
             onClick={() => onRemove(draft.localId)}
           >
             <IonIcon icon={closeCircle} />
@@ -56,19 +57,19 @@ export function UploadPreview({ drafts, onRemove, onRetry }: UploadPreviewProps)
                     </svg>
                     <span className={styles.progressLabel}>{draft.progress}%</span>
                   </div>
-                  <span className={styles.statusText}>Uploading</span>
+                  <span className={styles.statusText}>{t`Uploading`}</span>
                 </>
               ) : (
                 <>
                   <IonIcon icon={alertCircleOutline} className={styles.errorIcon} />
-                  <span className={styles.statusText}>{draft.errorMessage ?? 'Upload failed'}</span>
+                  <span className={styles.statusText}>{draft.errorMessage ?? t`Upload failed`}</span>
                   <button
                     type="button"
                     className={styles.retryButton}
                     onClick={() => onRetry(draft.localId)}
                   >
                     <IonIcon icon={refreshOutline} />
-                    Retry
+                    {t`Retry`}
                   </button>
                 </>
               )}
