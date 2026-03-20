@@ -86,7 +86,7 @@ export default function LandingPage() {
                     <IonTitle>安装 Wetty Chat</IonTitle>
                 </IonToolbar>
             </IonHeader>
-            <IonContent fullscreen={true}>
+            <IonContent fullscreen={true} className="landing-page">
                 <section className="landing-hero">
                     <div className="landing-hero__copy">
                         <h1>把 Wetty Chat 添加到主屏幕</h1>
