@@ -13,14 +13,201 @@ import 'group_members.dart';
 import 'group_settings.dart';
 import 'models.dart';
 
+// ---------------------------------------------------------------------------
+// Message store with sorted ranges
+// ---------------------------------------------------------------------------
+
+class MessageRange {
+  BigInt start; // Oldest message ID
+  BigInt end; // Newest message ID
+  final List<MessageItem> messages = []; // Sorted newest→oldest (desc by ID)
+
+  MessageRange({required this.start, required this.end});
+
+  // /// Binary-search insert: keeps descending order, skips duplicates.
+  // bool insertSorted(MessageItem msg) {
+  //   int lo = 0, hi = messages.length;
+  //   while (lo < hi) {
+  //     final mid = (lo + hi) >> 1;
+  //     final c = cmp(messages[mid].id, msg.id);
+  //     if (c == 0) return false; // duplicate
+  //     if (c > 0) {
+  //       lo = mid + 1; // messages[mid] is newer → go right
+  //     } else {
+  //       hi = mid; // messages[mid] is older → go left
+  //     }
+  //   }
+  //   messages.insert(lo, msg);
+  //   _updateBounds();
+  //   return true;
+  // }
+
+  // /// Bulk insert.
+  // void insertAll(List<MessageItem> items) {
+  //   for (final m in items) {
+  //     insertSorted(m);
+  //   }
+  // }
+
+  // void _updateBounds() {
+  //   if (messages.isEmpty) return;
+  //   start = messages.last.id; // oldest
+  //   end = messages.first.id; // newest
+  // }
+}
+
+class MessageStore {
+  // ranges will be inserted in order
+  final List<MessageRange> messageRanges = [];
+
+  // Add a batch of messages from fetching: find overlapping ranges, merge them.
+  void addMessages(List<MessageItem> items) {
+    if (items.isEmpty) return;
+
+    // Sort newest→oldest (descending by ID as BigInt)
+    items.sort((a, b) {
+      return BigInt.parse(b.id).compareTo(BigInt.parse(a.id));
+    });
+
+    // new message range
+    final newest = BigInt.parse(items.first.id);
+    final oldest = BigInt.parse(items.last.id);
+    final range = MessageRange(start: oldest, end: newest);
+
+    // TODO: change this when have overlaped ranges
+    range.messages.addAll(items);
+    // Binary-search insert to keep ranges sorted desc by end
+    int lo = 0, hi = messageRanges.length;
+    while (lo < hi) {
+      final mid = (lo + hi) >> 1;
+      if (messageRanges[mid].end.compareTo(newest) > 0) {
+        lo = mid + 1;
+      } else {
+        hi = mid;
+      }
+    }
+    messageRanges.insert(lo, range);
+
+    // // Find all existing ranges that overlap with [oldest, newest]
+    // final overlapping = <int>[];
+    // for (int i = 0; i < ranges.length; i++) {
+    //   final r = ranges[i];
+    //   // Overlap if: newOldest <= rangeNewest AND newNewest >= rangeOldest
+    //   if (MessageRange.cmp(oldest, r.end) <= 0 &&
+    //       MessageRange.cmp(newest, r.start) >= 0) {
+    //     overlapping.add(i);
+    //   }
+    // }
+
+    // if (overlapping.isEmpty) {
+    //   // No overlap — create a new range
+    //   final range = MessageRange(start: oldest, end: newest);
+    //   range.insertAll(items);
+    //   ranges.add(range);
+    // } else {
+    //   // Merge: pick the first overlapping range as target, absorb others + new items
+    //   final targetIdx = overlapping.first;
+    //   final target = ranges[targetIdx];
+
+    //   // Absorb messages from all other overlapping ranges
+    //   for (int i = overlapping.length - 1; i >= 1; i--) {
+    //     final otherIdx = overlapping[i];
+    //     target.insertAll(ranges[otherIdx].messages);
+    //     ranges.removeAt(otherIdx);
+    //   }
+
+    //   // Insert the new items
+    //   target.insertAll(items);
+    // }
+
+    // // Keep ranges sorted desc by end
+    // ranges.sort((a, b) => MessageRange.cmp(b.end, a.end));
+  }
+
+  /// Flatten all sorted ranges into one list (newest→oldest).
+  List<MessageItem> buildDisplayItems() {
+    // Put all messages together
+    final all = <MessageItem>[];
+    for (final r in messageRanges) {
+      all.addAll(r.messages);
+    }
+    // all.sort((a, b) => MessageRange.cmp(b.id, a.id)); // desc
+    all.sort((a, b) => b.id.compareTo(a.id));
+    return all;
+  }
+
+  void clear() {
+    messageRanges.clear();
+  }
+
+  /// Remove a message by ID from whichever range contains it.
+  void removeById(String id) {
+    // TODO: can use binary search to remove
+    for (final r in messageRanges) {
+      final removed = r.messages.where((m) => m.id == id).isNotEmpty;
+      if (removed) {
+        r.messages.removeWhere((m) => m.id == id);
+        break;
+      }
+    }
+  }
+
+  /// Find and replace a message across all ranges.
+  void replaceWhere(bool Function(MessageItem) test, MessageItem replacement) {
+    for (final r in messageRanges) {
+      final idx = r.messages.indexWhere(test);
+      if (idx >= 0) {
+        r.messages[idx] = replacement;
+        return;
+      }
+    }
+  }
+
+  /// Remove messages matching a test from all ranges.
+  void removeWhere(bool Function(MessageItem) test) {
+    for (final r in messageRanges) {
+      r.messages.removeWhere(test);
+    }
+  }
+
+  bool get isEmpty =>
+      messageRanges.isEmpty || messageRanges.every((r) => r.messages.isEmpty);
+  bool get isNotEmpty => !isEmpty;
+
+  /// Oldest loaded ID (for "load more" before param).
+  String? get oldestId =>
+      messageRanges.isNotEmpty ? messageRanges.last.start.toString() : null;
+
+  /// Insert a single message into the newest range (for optimistic send).
+  /// Temp messages are always the newest, so insert at front.
+  // void insertIntoNewestRange(MessageItem msg) {
+  //   if (messageRanges.isNotEmpty) {
+  //     messageRanges.first.messages.insert(0, msg);
+  //   } else {
+  //     final range = MessageRange(
+  //       start: BigInt.parse(msg.id),
+  //       end: BigInt.parse(msg.id),
+  //     );
+  //     range.messages.add(msg);
+  //     messageRanges.add(range);
+  //   }
+  // }
+}
+
+// ---------------------------------------------------------------------------
+// API functions
+// ---------------------------------------------------------------------------
+
 Future<ListMessagesResponse> fetchMessages(
   String chatId, {
   int? max,
   String? before,
+  String? after,
 }) async {
   final query = <String, String>{};
   if (max != null) query['max'] = max.toString();
   if (before != null && before.isNotEmpty) query['before'] = before;
+  if (after != null && after.isNotEmpty) query['after'] = after;
   final uri = Uri.parse(
     '$apiBaseUrl/chats/$chatId/messages',
   ).replace(queryParameters: query.isEmpty ? null : query);
@@ -33,12 +220,14 @@ Future<ListMessagesResponse> fetchMessages(
   final res = ListMessagesResponse.fromJson(
     jsonDecode(response.body) as Map<String, dynamic>,
   );
-  // print('Fetched ${res.messages.length} messages for chat $chatId');
-  // for (var m in res.messages) {
-  //   print(' - [${m.id}] ${m.sender.name}: ${m.message}');
-  // }
-
   return res;
+}
+
+/// Fetches messages around [messageId] for deep linking.
+Future<List<MessageItem>> fetchAround(String chatId, String messageId) async {
+  final resBefore = await fetchMessages(chatId, max: 15, before: messageId);
+  final resAfter = await fetchMessages(chatId, max: 15, after: messageId);
+  return [...resBefore.messages, ...resAfter.messages];
 }
 
 Future<MessageItem> sendMessage(
@@ -140,34 +329,39 @@ class ChatDetailPage extends StatefulWidget {
 }
 
 class _ChatDetailPageState extends State<ChatDetailPage> {
-  final List<MessageItem> _messages = [];
-  String? _nextCursor;
+  final MessageStore _store = MessageStore();
+  List<MessageItem> _displayItems = [];
   bool _isLoading = true;
   bool _isLoadingMore = false;
   String? _errorMessage;
   bool _showScrollToBottom = false;
   InputState _inputState = InputEmpty();
   String? _highlightedMessageId;
+  String? _nextCursor; // For "load more" at the top
   late ScrollController _scrollController;
   final ScrollController _inputScrollController = ScrollController();
   final TextEditingController _textController = TextEditingController();
   static const double _titleBarHeight = 70.0;
 
-  bool get _hasMore => _nextCursor != null && _nextCursor!.isNotEmpty;
+  void _rebuildDisplay() {
+    setState(() {
+      _displayItems = _store.buildDisplayItems();
+    });
+  }
+
+  // ---- Lifecycle ----
 
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController()..addListener(_onScroll);
     _loadMessages();
-    // Restore saved draft
     final draft = DraftStore.instance.getDraft(widget.chatId);
     if (draft != null) _textController.text = draft;
   }
 
   @override
   void dispose() {
-    // Save draft on dispose as a fallback
     _saveDraft();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
@@ -192,8 +386,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     if (shouldShow != _showScrollToBottom) {
       setState(() => _showScrollToBottom = shouldShow);
     }
-    if (!_hasMore || _isLoadingMore || _isLoading || _messages.isEmpty) return;
-    // In a reversed list, maxScrollExtent is the TOP (oldest messages).
+    if (_isLoadingMore || _isLoading || _displayItems.isEmpty) return;
     if (pos.pixels >= pos.maxScrollExtent - 200) {
       _loadMoreMessages();
     }
@@ -213,19 +406,18 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
-      _nextCursor = null;
     });
     try {
-      // TODO: can set max number of messages to fetch
       final res = await fetchMessages(widget.chatId);
       if (!mounted) return;
+      _store.clear();
+      _store.addMessages(res.messages);
+      _nextCursor = res.nextCursor;
       setState(() {
-        _messages.clear();
-        _messages.addAll(res.messages.reversed);
-        _nextCursor = res.nextCursor;
         _isLoading = false;
         _errorMessage = null;
       });
+      _rebuildDisplay();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -236,21 +428,16 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   }
 
   Future<void> _loadMoreMessages() async {
-    if (!_hasMore || _isLoadingMore || _messages.isEmpty) return;
-    final oldestId = _messages.last.id;
+    if (_store.isEmpty || _isLoadingMore || _nextCursor == null) return;
+
     setState(() => _isLoadingMore = true);
     try {
-      final res = await fetchMessages(widget.chatId, before: oldestId);
+      final res = await fetchMessages(widget.chatId, before: _store.oldestId);
       if (!mounted) return;
-      final existingIds = _messages.map((m) => m.id).toSet();
-      final newMessages = res.messages
-          .where((m) => !existingIds.contains(m.id))
-          .toList();
-      setState(() {
-        _messages.addAll(newMessages.reversed);
-        _nextCursor = res.nextCursor;
-        _isLoadingMore = false;
-      });
+      _store.addMessages(res.messages);
+      _nextCursor = res.nextCursor;
+      setState(() => _isLoadingMore = false);
+      _rebuildDisplay();
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoadingMore = false);
@@ -261,8 +448,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     setState(() => _inputState = InputReplying(msg));
   }
 
-  // used when the cancel button is clicked
-  void _clearMessage() {
+  void _clearInputMessage() {
     _textController.clear();
     setState(() => _inputState = InputEmpty());
   }
@@ -274,21 +460,34 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     });
   }
 
-  void _jumpToMessage(String messageId) {
-    final idx = _messages.indexWhere((m) => m.id == messageId);
-    if (idx < 0) return; // message not loaded
-    // In a reversed list, index 0 is at the bottom.
-    // Estimate position: each item ~80px tall, but we use ensureVisible-like approach.
-    // We'll use a rough estimate and let the scroll settle.
-    final estimatedOffset = idx * 70.0;
+  Future<void> _jumpToMessage(String messageId) async {
+    int idx = _displayItems.indexWhere((m) => m.id == messageId);
+    if (idx < 0) {
+      setState(() => _isLoadingMore = true);
+      try {
+        final msgs = await fetchAround(widget.chatId, messageId);
+        if (!mounted) return;
+        _store.addMessages(msgs);
+        _rebuildDisplay();
+        setState(() => _isLoadingMore = false);
+        idx = _displayItems.indexWhere((m) => m.id == messageId);
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isLoadingMore = false);
+          _showErrorDialog('Failed to jump: $e');
+        }
+        return;
+      }
+    }
+    if (idx < 0) return;
+
     _scrollController.animateTo(
-      estimatedOffset,
+      idx * 80.0,
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOut,
     );
-    // Highlight the message briefly
     setState(() => _highlightedMessageId = messageId);
-    Future.delayed(const Duration(milliseconds: 1500), () {
+    Future.delayed(const Duration(milliseconds: 2000), () {
       if (mounted) setState(() => _highlightedMessageId = null);
     });
   }
@@ -297,49 +496,47 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     final text = _textController.text.trim();
     if (text.isEmpty) return;
 
-    final state = _inputState;
-    switch (state) {
+    switch (_inputState) {
       case InputEditing(:final message):
-        // if the edited msg is the same as the original msg, no change
         if (text == message.message) return;
         try {
           final updated = await editMessage(widget.chatId, message.id, text);
           if (!mounted) return;
-          setState(() {
-            final idx = _messages.indexWhere((m) => m.id == message.id);
-            if (idx >= 0) _messages[idx] = updated;
-          });
+          _store.replaceWhere((m) => m.id == message.id, updated);
+          _rebuildDisplay();
+          _clearInputMessage();
         } catch (e) {
           if (mounted) _showErrorDialog('Failed to edit: $e');
         }
 
       case InputReplying(:final message):
+        _clearInputMessage();
+        DraftStore.instance.clearDraft(widget.chatId);
         try {
-          final msg = await sendMessage(
+          final res = await sendMessage(
             widget.chatId,
             text,
             replyToId: message.id,
           );
           if (!mounted) return;
-          setState(() => _messages.insert(0, msg));
-          _scrollToBottom();
+          _store.addMessages([res]);
+          _rebuildDisplay();
         } catch (e) {
           if (mounted) _showErrorDialog('Failed to send: $e');
         }
 
       case InputEmpty():
+        _clearInputMessage();
+        DraftStore.instance.clearDraft(widget.chatId);
         try {
-          final msg = await sendMessage(widget.chatId, text);
+          final res = await sendMessage(widget.chatId, text);
           if (!mounted) return;
-          setState(() => _messages.insert(0, msg));
-          _scrollToBottom();
+          _store.addMessages([res]);
+          _rebuildDisplay();
         } catch (e) {
           if (mounted) _showErrorDialog('Failed to send: $e');
         }
     }
-
-    _clearMessage();
-    DraftStore.instance.clearDraft(widget.chatId);
   }
 
   void _showErrorDialog(String message) {
@@ -421,9 +618,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
               try {
                 await deleteMessage(widget.chatId, msg.id);
                 if (!mounted) return;
-                setState(() {
-                  _messages.removeWhere((m) => m.id == msg.id);
-                });
+                _store.removeById(msg.id);
+                _rebuildDisplay();
               } catch (e) {
                 if (mounted) {
                   showCupertinoDialog(
@@ -650,13 +846,13 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         ),
       );
     }
-    if (_messages.isEmpty) {
+    if (_displayItems.isEmpty) {
       return const Center(
         child: Text('No messages yet', style: TextStyle(fontSize: 20)),
       );
     }
-    final showTopLoader = _hasMore && _isLoadingMore;
-    final itemCount = _messages.length + (showTopLoader ? 1 : 0);
+    final showTopLoader = _nextCursor != null && _isLoadingMore;
+    final itemCount = _displayItems.length + (showTopLoader ? 1 : 0);
     return ListView.builder(
       controller: _scrollController,
       reverse: true,
@@ -669,24 +865,27 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
             child: Center(child: CupertinoActivityIndicator()),
           );
         }
-        final msg = _messages[index];
+
+        final msg = _displayItems[index];
         final isHighlighted = _highlightedMessageId == msg.id;
 
-        // Group messages by sender: only show name on the first (oldest) message of a block.
-        // In reverse order, "oldest message before" is index + 1.
-        final isOldestInList = index == _messages.length - 1;
-        final nextIsDifferent =
-            !isOldestInList &&
-            msg.sender.uid != _messages[index + 1].sender.uid;
-        final showSenderName = isOldestInList || nextIsDifferent;
+        // Sender name grouping: show on first (oldest) of contiguous block.
+        bool showSenderName = true;
+        if (index < _displayItems.length - 1) {
+          final next = _displayItems[index + 1];
+          if (next.sender.uid == msg.sender.uid) {
+            showSenderName = false;
+          }
+        }
 
-        // Group avatars by sender: only show on the last (newest) message of a block.
-        // In reverse order, "newest message after" is index - 1.
-        final isNewestInList = index == 0;
-        final prevIsDifferent =
-            !isNewestInList &&
-            msg.sender.uid != _messages[index - 1].sender.uid;
-        final showAvatar = isNewestInList || prevIsDifferent;
+        // Avatar grouping: show on last (newest) of contiguous block.
+        bool showAvatar = true;
+        if (index > 0) {
+          final prev = _displayItems[index - 1];
+          if (prev.sender.uid == msg.sender.uid) {
+            showAvatar = false;
+          }
+        }
 
         return _MessageRow(
           key: ValueKey(msg.id),
@@ -873,7 +1072,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           CupertinoButton(
             padding: EdgeInsets.zero,
             minimumSize: const Size(30, 30),
-            onPressed: _clearMessage,
+            onPressed: _clearInputMessage,
             child: Icon(
               CupertinoIcons.xmark_circle_fill,
               size: 20,
