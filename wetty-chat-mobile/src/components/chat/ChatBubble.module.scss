@@ -157,6 +157,11 @@
   white-space: pre-wrap;
 }
 
+.messageLink {
+  color: inherit;
+  text-decoration: underline;
+}
+
 .timestampSpacer {
   flex-grow: 1;
 }

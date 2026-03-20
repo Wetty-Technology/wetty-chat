@@ -9,6 +9,34 @@ import { ImageViewer } from './ImageViewer';
 import { getMessagePreviewText } from './messagePreview';
 import { selectChatFontSizeStyle } from '@/store/settingsSlice';
 
+const URL_REGEX = /(https?:\/\/[A-Za-z0-9\-._~:/?#\[\]@!$&'()*+,;=%]+)/g;
+const TRAILING_PUNCT = /[.,);!?]+$/;
+
+function renderMessageWithLinks(message: string): React.ReactNode[] {
+  const parts = message.split(URL_REGEX);
+  if (parts.length === 1) return [message];
+
+  return parts.map((part, i) => {
+    if (i % 2 === 1) {
+      const trimmed = part.replace(TRAILING_PUNCT, '');
+      const suffix = part.slice(trimmed.length);
+      return (
+        <span key={i}>
+          <a
+            href={trimmed}
+            className={styles.messageLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+          >{trimmed}</a>
+          {suffix}
+        </span>
+      );
+    }
+    return part;
+  });
+}
+
 interface ChatBubbleProps {
   senderName: string;
   message: string;
@@ -278,7 +306,7 @@ export function ChatBubble({
               </div>
             )}
             <div className={styles.messageWrapper}>
-              <span className={styles.messageText}>{message}</span>
+              <span className={styles.messageText}>{renderMessageWithLinks(message)}</span>
               <span className={styles.timestampSpacer} />
               {timestamp && (
                 <span className={styles.timestamp}>
