@@ -21,8 +21,9 @@ class ChatListItem {
       name: json['name'] as String?,
       lastMessageAt: json['last_message_at'] as String?,
       unreadCount: json['unread_count'] as int? ?? 0,
-      lastMessage:
-          lastMsgJson != null ? MessageItem.fromJson(lastMsgJson) : null,
+      lastMessage: lastMsgJson != null
+          ? MessageItem.fromJson(lastMsgJson)
+          : null,
     );
   }
 }
