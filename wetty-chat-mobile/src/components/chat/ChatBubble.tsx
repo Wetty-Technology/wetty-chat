@@ -1,11 +1,13 @@
 import { useRef, useState } from 'react';
 import { IonIcon } from '@ionic/react';
+import { useSelector } from 'react-redux';
 import { arrowUndo, chatbubbles, checkmarkCircle, checkmarkCircleOutline, documentOutline } from 'ionicons/icons';
 import { t } from '@lingui/core/macro';
 import styles from './ChatBubble.module.scss';
 import type { Attachment } from '@/api/messages';
 import { ImageViewer } from './ImageViewer';
 import { getMessagePreviewText } from './messagePreview';
+import { selectChatFontSizeStyle } from '@/store/settingsSlice';
 
 interface ChatBubbleProps {
   senderName: string;
@@ -178,6 +180,7 @@ export function ChatBubble({
   const progress = Math.min(offset / SWIPE_THRESHOLD, 1);
 
   const imageAttachments = attachments?.filter(att => att.kind.startsWith('image')) ?? [];
+  const chatFontSizeStyle = useSelector(selectChatFontSizeStyle);
 
   return (
     <div className={styles.swipeContainer}>
@@ -214,7 +217,7 @@ export function ChatBubble({
           ) : (
             <div className={styles.avatarSpacer} />
           )}
-          <div className={styles.bubble}>
+          <div className={styles.bubble} style={{ fontSize: chatFontSizeStyle }}>
             {showName && <div className={styles.senderName}>{senderName}</div>}
             {replyTo && (
               <div

@@ -4,6 +4,17 @@ import type { RootState } from './index';
 
 export const supportedLocales = ["en", "zh-CN", "zh-TW"];
 export const defaultLocale = "en";
+export const chatFontSizeOptions = ['small', 'mediumSmall', 'medium', 'mediumLarge', 'large'] as const;
+export type ChatFontSizeOption = typeof chatFontSizeOptions[number];
+export const defaultChatFontSize: ChatFontSizeOption = 'medium';
+
+const chatFontSizeStyles: Record<ChatFontSizeOption, string> = {
+  small: '12px',
+  mediumSmall: '14px',
+  medium: 'inherit',
+  mediumLarge: '18px',
+  large: '20px',
+};
 
 export function detectLocale(): string {
   for (const lang of navigator.languages) {
@@ -19,6 +30,11 @@ export function detectLocale(): string {
 
 export interface SettingsState {
   locale: string | null;
+  messageFontSize: ChatFontSizeOption;
+}
+
+function isChatFontSizeOption(value: unknown): value is ChatFontSizeOption {
+  return typeof value === 'string' && chatFontSizeOptions.includes(value as ChatFontSizeOption);
 }
 
 function loadInitialState(): SettingsState {
@@ -26,12 +42,23 @@ function loadInitialState(): SettingsState {
     const raw = localStorage.getItem('settings');
     if (raw) {
       const parsed = JSON.parse(raw);
-      return { locale: parsed.locale ?? null };
+      return {
+        locale: parsed.locale ?? null,
+        messageFontSize: isChatFontSizeOption(parsed.messageFontSize) ? parsed.messageFontSize : defaultChatFontSize,
+      };
     }
   } catch {
     // ignore corrupt data
   }
-  return { locale: null };
+  return { locale: null, messageFontSize: defaultChatFontSize };
+}
+
+function persistSettings(state: SettingsState) {
+  localStorage.setItem('settings', JSON.stringify(state));
+}
+
+export function getChatFontSizeStyle(messageFontSize: ChatFontSizeOption): string {
+  return chatFontSizeStyles[messageFontSize];
 }
 
 const settingsSlice = createSlice({
@@ -40,12 +67,18 @@ const settingsSlice = createSlice({
   reducers: {
     setLocale(state, action: PayloadAction<string | null>) {
       state.locale = action.payload;
-      localStorage.setItem('settings', JSON.stringify({ locale: action.payload }));
+      persistSettings({ locale: state.locale, messageFontSize: state.messageFontSize });
+    },
+    setMessageFontSize(state, action: PayloadAction<ChatFontSizeOption>) {
+      state.messageFontSize = action.payload;
+      persistSettings({ locale: state.locale, messageFontSize: state.messageFontSize });
     },
   },
 });
 
-export const { setLocale } = settingsSlice.actions;
+export const { setLocale, setMessageFontSize } = settingsSlice.actions;
 export const selectLocale = (state: RootState) => state.settings.locale;
 export const selectEffectiveLocale = (state: RootState) => state.settings.locale ?? detectLocale();
+export const selectMessageFontSize = (state: RootState) => state.settings.messageFontSize;
+export const selectChatFontSizeStyle = (state: RootState) => getChatFontSizeStyle(state.settings.messageFontSize);
 export default settingsSlice.reducer;

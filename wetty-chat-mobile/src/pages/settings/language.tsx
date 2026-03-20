@@ -52,9 +52,9 @@ export function LanguagePageCore({ backAction }: LanguageCoreProps) {
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            {backAction ? <BackButton action={backAction} /> : <IonBackButton defaultHref="/settings" />}
+            {backAction ? <BackButton action={backAction} /> : <IonBackButton defaultHref="/settings/general" />}
           </IonButtons>
-          <IonTitle>Language</IonTitle>
+          <IonTitle><Trans>Language</Trans></IonTitle>
         </IonToolbar>
       </IonHeader>
       <IonContent>

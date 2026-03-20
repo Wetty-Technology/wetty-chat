@@ -31,6 +31,10 @@ msgstr "[图片]"
 msgid "A new version of the app is available!"
 msgstr "发现新版本！"
 
+#: src/pages/settings.tsx
+msgid "About"
+msgstr "关于"
+
 #: src/pages/chat-members.tsx
 msgid "Add"
 msgstr "添加"
@@ -39,6 +43,10 @@ msgstr "添加"
 #: src/pages/chat-members.tsx
 msgid "Add Member"
 msgstr "添加成员"
+
+#: src/pages/settings/general.tsx
+msgid "Alex"
+msgstr "风纪委员"
 
 #: src/pages/settings.tsx
 msgid "Allowed"
@@ -72,7 +80,7 @@ msgstr "附件大图预览"
 msgid "Attachment preview tray"
 msgstr "附件预览栏"
 
-#: src/pages/settings.tsx
+#: src/pages/settings/general.tsx
 #: src/pages/settings/language.tsx
 msgid "Auto"
 msgstr "自动"
@@ -292,6 +300,8 @@ msgid "Failed to update role"
 msgstr "更新角色失败"
 
 #: src/pages/settings.tsx
+#: src/pages/settings.tsx
+#: src/pages/settings/general.tsx
 msgid "General"
 msgstr "通用"
 
@@ -311,9 +321,14 @@ msgstr "群组设置"
 msgid "Invalid user ID"
 msgstr "无效的用户 ID"
 
-#: src/pages/settings.tsx
+#: src/pages/settings/general.tsx
+#: src/pages/settings/language.tsx
 msgid "Language"
 msgstr "语言"
+
+#: src/pages/settings/general.tsx
+msgid "Large"
+msgstr "大"
 
 #: src/pages/chat-members.tsx
 #~ msgid "Leave"
@@ -359,6 +374,11 @@ msgstr "消息"
 #: src/pages/chat-thread.tsx
 msgid "Message cannot be empty"
 msgstr "消息不能为空"
+
+#: src/pages/settings/general.tsx
+#: src/pages/settings/general.tsx
+msgid "Messages Font Size"
+msgstr "消息字体大小"
 
 #: src/components/chat/ChatList.tsx
 msgid "New message"
@@ -540,6 +560,10 @@ msgstr "设置"
 msgid "Settings saved"
 msgstr "设置已保存"
 
+#: src/pages/settings/general.tsx
+msgid "Small"
+msgstr "小"
+
 #: src/pages/chat-thread.tsx
 #~ msgid "Start Thread"
 #~ msgstr "发起话题"
@@ -559,6 +583,10 @@ msgstr "已订阅"
 #: src/components/chat/ChatList.tsx
 msgid "Text message"
 msgstr "文本消息"
+
+#: src/pages/settings/general.tsx
+msgid "This is how your messages will look in chat."
+msgstr "这是你的消息在聊天中的显示效果。"
 
 #: src/pages/chat-thread.tsx
 msgid "Thread"

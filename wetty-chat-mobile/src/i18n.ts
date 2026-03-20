@@ -13,7 +13,8 @@ export async function activateDetectedLocale() {
   try {
     const raw = localStorage.getItem('settings');
     if (raw) {
-      const saved = JSON.parse(raw).locale;
+      const parsed = JSON.parse(raw);
+      const saved = parsed?.locale;
       if (saved && supportedLocales.includes(saved)) {
         locale = saved;
       }

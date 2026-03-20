@@ -14,10 +14,10 @@ import {
   IonIcon,
   IonNote,
   IonButtons,
+  IonText,
 } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { selectLocale } from '@/store/settingsSlice';
 import { setCurrentUserId } from '@/js/current-user';
 import type { RootState } from '@/store/index';
 import { Trans } from '@lingui/react/macro';
@@ -25,13 +25,13 @@ import { FeatureGate } from '@/components/FeatureGate';
 
 import { usePushNotifications, type PushNotificationErrorCode } from '@/hooks/usePushNotifications';
 import { t } from '@lingui/core/macro';
-import { language, codeWorking, notifications, informationCircle, logIn, logOut, refreshCircle } from 'ionicons/icons';
+import { cog, codeWorking, notifications, logIn, logOut, refreshCircle } from 'ionicons/icons';
 import { BackButton } from '@/components/BackButton';
 import type { BackAction } from '@/types/back-action';
 
 interface SettingsCoreProps {
   backAction?: BackAction;
-  onOpenLanguage?: () => void;
+  onOpenGeneral?: () => void;
 }
 
 function getPermissionLabel(permission: NotificationPermission) {
@@ -63,12 +63,11 @@ function getPushErrorMessage(code: PushNotificationErrorCode) {
   }
 }
 
-export function SettingsCore({ backAction, onOpenLanguage }: SettingsCoreProps) {
+export function SettingsCore({ backAction, onOpenGeneral }: SettingsCoreProps) {
   const currentUid = useSelector((state: RootState) => state.user.uid);
   const [uidInput, setUidInput] = useState(() => String(currentUid || '1'));
   const [presentToast] = useIonToast();
   const history = useHistory();
-  const locale = useSelector(selectLocale);
   const { permission, isSubscribed, loading, subscribeToPush, unsubscribeFromPush } = usePushNotifications();
 
   const handleSave = () => {
@@ -82,12 +81,12 @@ export function SettingsCore({ backAction, onOpenLanguage }: SettingsCoreProps) 
     window.location.reload();
   };
 
-  const handleOpenLanguage = () => {
-    if (onOpenLanguage) {
-      onOpenLanguage();
+  const handleOpenGeneral = () => {
+    if (onOpenGeneral) {
+      onOpenGeneral();
       return;
     }
-    history.push('/settings/language');
+    history.push('/settings/general');
   };
 
   const handleSubscribeToPush = async () => {
@@ -125,10 +124,9 @@ export function SettingsCore({ backAction, onOpenLanguage }: SettingsCoreProps) 
           <IonLabel><Trans>General</Trans></IonLabel>
         </IonListHeader>
         <IonList inset>
-          <IonItem button detail={true} onClick={handleOpenLanguage}>
-            <IonIcon aria-hidden="true" icon={language} slot="start" color="primary" />
-            <IonLabel><Trans>Language</Trans></IonLabel>
-            <IonNote slot="end" color="medium">{{ 'en': 'English', 'zh-CN': '简体中文', 'zh-TW': '繁體中文' }[locale!] ?? t`Auto`}</IonNote>
+          <IonItem button detail={true} onClick={handleOpenGeneral}>
+            <IonIcon aria-hidden="true" icon={cog} slot="start" color="primary" />
+            <IonLabel><Trans>General</Trans></IonLabel>
           </IonItem>
         </IonList>
 
@@ -185,14 +183,9 @@ export function SettingsCore({ backAction, onOpenLanguage }: SettingsCoreProps) 
         </IonList>
 
         <IonListHeader>
-          <IonLabel>About</IonLabel>
+          <IonLabel><Trans>About</Trans></IonLabel>
         </IonListHeader>
         <IonList inset={true}>
-          <IonItem>
-            <IonIcon aria-hidden="true" icon={informationCircle} slot="start" color="secondary" />
-            <IonLabel>Version</IonLabel>
-            <IonNote slot="end" color="medium" style={{ fontFamily: 'monospace' }}>{__APP_VERSION__}</IonNote>
-          </IonItem>
           <IonItem button detail={false} onClick={async () => {
             try {
               if (navigator.serviceWorker) {
@@ -212,6 +205,13 @@ export function SettingsCore({ backAction, onOpenLanguage }: SettingsCoreProps) 
             <IonLabel color="primary"><Trans>Check for Update</Trans></IonLabel>
           </IonItem>
         </IonList>
+        <IonText
+          color="medium"
+          className="ion-text-center ion-padding-bottom"
+          style={{ display: 'block', fontSize: '0.875rem'}}
+        >
+          {__APP_VERSION__}
+        </IonText>
       </IonContent>
     </IonPage>
   );

@@ -31,6 +31,10 @@ msgstr "[Image]"
 msgid "A new version of the app is available!"
 msgstr "A new version of the app is available!"
 
+#: src/pages/settings.tsx
+msgid "About"
+msgstr "About"
+
 #: src/pages/chat-members.tsx
 msgid "Add"
 msgstr "Add"
@@ -39,6 +43,10 @@ msgstr "Add"
 #: src/pages/chat-members.tsx
 msgid "Add Member"
 msgstr "Add Member"
+
+#: src/pages/settings/general.tsx
+msgid "Alex"
+msgstr "Alex"
 
 #: src/pages/settings.tsx
 msgid "Allowed"
@@ -72,7 +80,7 @@ msgstr "Attachment large view"
 msgid "Attachment preview tray"
 msgstr "Attachment preview tray"
 
-#: src/pages/settings.tsx
+#: src/pages/settings/general.tsx
 #: src/pages/settings/language.tsx
 msgid "Auto"
 msgstr "Auto"
@@ -292,6 +300,8 @@ msgid "Failed to update role"
 msgstr "Failed to update role"
 
 #: src/pages/settings.tsx
+#: src/pages/settings.tsx
+#: src/pages/settings/general.tsx
 msgid "General"
 msgstr "General"
 
@@ -311,9 +321,14 @@ msgstr "Group Settings"
 msgid "Invalid user ID"
 msgstr "Invalid user ID"
 
-#: src/pages/settings.tsx
+#: src/pages/settings/general.tsx
+#: src/pages/settings/language.tsx
 msgid "Language"
 msgstr "Language"
+
+#: src/pages/settings/general.tsx
+msgid "Large"
+msgstr "Large"
 
 #: src/pages/chat-members.tsx
 #~ msgid "Leave"
@@ -359,6 +374,11 @@ msgstr "Message"
 #: src/pages/chat-thread.tsx
 msgid "Message cannot be empty"
 msgstr "Message cannot be empty"
+
+#: src/pages/settings/general.tsx
+#: src/pages/settings/general.tsx
+msgid "Messages Font Size"
+msgstr "Messages Font Size"
 
 #: src/components/chat/ChatList.tsx
 msgid "New message"
@@ -540,6 +560,10 @@ msgstr "Settings"
 msgid "Settings saved"
 msgstr "Settings saved"
 
+#: src/pages/settings/general.tsx
+msgid "Small"
+msgstr "Small"
+
 #: src/pages/chat-thread.tsx
 #~ msgid "Start Thread"
 #~ msgstr "Start Thread"
@@ -559,6 +583,10 @@ msgstr "Subscribed"
 #: src/components/chat/ChatList.tsx
 msgid "Text message"
 msgstr "Text message"
+
+#: src/pages/settings/general.tsx
+msgid "This is how your messages will look in chat."
+msgstr "This is how your messages will look in chat."
 
 #: src/pages/chat-thread.tsx
 msgid "Thread"

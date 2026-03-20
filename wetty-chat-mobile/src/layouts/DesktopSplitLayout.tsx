@@ -10,6 +10,7 @@ import ChatMembersCore from '@/pages/chat-members';
 import GroupDetailCore from '@/pages/group-detail';
 import CreateChatCore from '@/pages/create-chat';
 import { SettingsCore } from '@/pages/settings';
+import { GeneralSettingsCore } from '@/pages/settings/general';
 import { LanguagePageCore } from '@/pages/settings/language';
 import type { BackAction } from '@/types/back-action';
 import styles from './DesktopSplitLayout.module.scss';
@@ -27,6 +28,7 @@ interface DesktopRouteMatches {
   detailsMatch: { id: string } | null;
   isNewChat: boolean;
   globalSettings: boolean;
+  generalSettings: boolean;
   languageSettings: boolean;
 }
 
@@ -59,10 +61,14 @@ function getDesktopRouteMatches(pathname: string): DesktopRouteMatches {
     path: '/settings/language',
     exact: true,
   });
+  const generalSettings = !!matchPath(pathname, {
+    path: '/settings/general',
+    exact: true,
+  });
   const globalSettings = !!matchPath(pathname, {
     path: '/settings',
     exact: true,
-  }) || languageSettings;
+  }) || generalSettings || languageSettings;
 
   return {
     activeChatId:
@@ -78,6 +84,7 @@ function getDesktopRouteMatches(pathname: string): DesktopRouteMatches {
     detailsMatch: detailsRaw?.params ?? null,
     isNewChat: !!newRaw,
     globalSettings,
+    generalSettings,
     languageSettings,
   };
 }
@@ -154,6 +161,13 @@ export function DesktopSplitLayout() {
   const openLanguageSettings = useCallback(() => {
     history.push({
       pathname: '/settings/language',
+      state: { backgroundPath },
+    });
+  }, [backgroundPath, history]);
+
+  const openGeneralSettings = useCallback(() => {
+    history.push({
+      pathname: '/settings/general',
       state: { backgroundPath },
     });
   }, [backgroundPath, history]);
@@ -240,15 +254,25 @@ export function DesktopSplitLayout() {
             <LanguagePageCore
               backAction={{
                 type: 'callback', onBack: () => history.push({
-                  pathname: '/settings',
+                  pathname: '/settings/general',
                   state: { backgroundPath },
                 })
               }}
             />
+          ) : currentRoute.generalSettings ? (
+            <GeneralSettingsCore
+              backAction={{
+                type: 'callback', onBack: () => history.push({
+                  pathname: '/settings',
+                  state: { backgroundPath },
+                })
+              }}
+              onOpenLanguage={openLanguageSettings}
+            />
           ) : (
             <SettingsCore
               backAction={{ type: 'close', onClose: closeGlobalSettings }}
-              onOpenLanguage={openLanguageSettings}
+              onOpenGeneral={openGeneralSettings}
             />
           )}
         </IonModal>
