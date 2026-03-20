@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { IonIcon } from '@ionic/react';
 import { t } from '@lingui/core/macro';
@@ -124,53 +124,77 @@ export function ImageViewer({ images, initialIndex = 0, onClose }: ImageViewerPr
   const isImageReadyForInitialRender = !!activeImageSize && !!stageSize.width && !!stageSize.height;
   const effectiveScale = minScale * zoom;
 
-  const clampTranslate = (nextTranslate: Point, nextZoom: number): Point => {
-    if (!activeImageSize || !stageSize.width || !stageSize.height) {
-      return { x: 0, y: 0 };
-    }
+  const clampTranslate = useCallback(
+    (nextTranslate: Point, nextZoom: number): Point => {
+      if (!activeImageSize || !stageSize.width || !stageSize.height) {
+        return { x: 0, y: 0 };
+      }
 
-    const nextEffectiveScale = minScale * nextZoom;
-    const scaledWidth = activeImageSize.width * nextEffectiveScale;
-    const scaledHeight = activeImageSize.height * nextEffectiveScale;
-    const maxX = Math.max((scaledWidth - stageSize.width) / 2, 0);
-    const maxY = Math.max((scaledHeight - stageSize.height) / 2, 0);
+      const nextEffectiveScale = minScale * nextZoom;
+      const scaledWidth = activeImageSize.width * nextEffectiveScale;
+      const scaledHeight = activeImageSize.height * nextEffectiveScale;
+      const maxX = Math.max((scaledWidth - stageSize.width) / 2, 0);
+      const maxY = Math.max((scaledHeight - stageSize.height) / 2, 0);
 
-    return {
-      x: clamp(nextTranslate.x, -maxX, maxX),
-      y: clamp(nextTranslate.y, -maxY, maxY),
-    };
-  };
+      return {
+        x: clamp(nextTranslate.x, -maxX, maxX),
+        y: clamp(nextTranslate.y, -maxY, maxY),
+      };
+    },
+    [activeImageSize, minScale, stageSize.height, stageSize.width]
+  );
 
-  const applyScaleAtPoint = (nextZoom: number, point: Point) => {
-    if (!activeImageSize || !stageSize.width || !stageSize.height || !stageRef.current) {
-      return;
-    }
+  const applyScaleAtPoint = useCallback(
+    (nextZoom: number, point: Point) => {
+      if (!activeImageSize || !stageSize.width || !stageSize.height || !stageRef.current) {
+        return;
+      }
 
-    const rect = stageRef.current.getBoundingClientRect();
-    const pointInStage = {
-      x: point.x - rect.left - stageSize.width / 2,
-      y: point.y - rect.top - stageSize.height / 2,
-    };
-    const contentPoint = {
-      x: (pointInStage.x - translate.x) / effectiveScale,
-      y: (pointInStage.y - translate.y) / effectiveScale,
-    };
-    const nextEffectiveScale = minScale * nextZoom;
-    const nextTranslate = clampTranslate(
-      {
-        x: pointInStage.x - contentPoint.x * nextEffectiveScale,
-        y: pointInStage.y - contentPoint.y * nextEffectiveScale,
-      },
-      nextZoom
-    );
+      const rect = stageRef.current.getBoundingClientRect();
+      const pointInStage = {
+        x: point.x - rect.left - stageSize.width / 2,
+        y: point.y - rect.top - stageSize.height / 2,
+      };
+      const contentPoint = {
+        x: (pointInStage.x - translate.x) / effectiveScale,
+        y: (pointInStage.y - translate.y) / effectiveScale,
+      };
+      const nextEffectiveScale = minScale * nextZoom;
+      const nextTranslate = clampTranslate(
+        {
+          x: pointInStage.x - contentPoint.x * nextEffectiveScale,
+          y: pointInStage.y - contentPoint.y * nextEffectiveScale,
+        },
+        nextZoom
+      );
 
-    setZoom(nextZoom);
-    setTranslate(nextTranslate);
-  };
+      setZoom(nextZoom);
+      setTranslate(nextTranslate);
+    },
+    [
+      activeImageSize,
+      clampTranslate,
+      effectiveScale,
+      minScale,
+      stageSize.height,
+      stageSize.width,
+      translate.x,
+      translate.y,
+    ]
+  );
 
-  const navigateTo = (nextIndex: number) => {
+  const navigateTo = useCallback((nextIndex: number) => {
     setActiveIndex(clamp(nextIndex, 0, Math.max(images.length - 1, 0)));
-  };
+  }, [images.length]);
+
+  const handleDismissClick = useCallback(
+    (event: MouseEvent<HTMLDivElement>) => {
+      if (event.target === event.currentTarget) {
+        onClose();
+      }
+    },
+    [onClose]
+  );
 
   useEffect(() => {
     if (!images.length) {
@@ -233,7 +257,7 @@ export function ImageViewer({ images, initialIndex = 0, onClose }: ImageViewerPr
       setTranslate(prevTranslate => clampTranslate(prevTranslate, prevZoom));
       return prevZoom;
     });
-  }, [minScale, stageSize.height, stageSize.width]);
+  }, [clampTranslate, minScale, stageSize.height, stageSize.width]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -268,7 +292,7 @@ export function ImageViewer({ images, initialIndex = 0, onClose }: ImageViewerPr
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [activeIndex, onClose]);
+  }, [activeIndex, navigateTo, onClose]);
 
   const handleDownload = async (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
@@ -502,16 +526,9 @@ export function ImageViewer({ images, initialIndex = 0, onClose }: ImageViewerPr
   }
 
   return createPortal(
-    <div
-      className={styles.overlay}
-      onClick={event => {
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-        <div className={styles.viewer} ref={viewerRef}>
-          <div className={styles.toolbar}>
+    <div className={styles.overlay} onClick={handleDismissClick}>
+      <div className={styles.viewer} ref={viewerRef}>
+        <div className={styles.toolbar}>
           <button
             className={styles.iconButton}
             onClick={handleDownload}
@@ -573,7 +590,7 @@ export function ImageViewer({ images, initialIndex = 0, onClose }: ImageViewerPr
             </>
           )}
 
-          <div className={styles.canvas}>
+          <div className={styles.canvas} onClick={handleDismissClick}>
             <img
               key={activeImage.id || activeImage.src}
               src={activeImage.src}
