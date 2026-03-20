@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useLayoutEffect } from 'react';
 import { IonIcon } from '@ionic/react';
 import { addCircleOutline, happyOutline, paperPlane, closeCircle } from 'ionicons/icons';
 import styles from './MessageComposeBar.module.scss';
@@ -71,6 +71,14 @@ export function MessageComposeBar({
   const prevTextLenRef = useRef(0);
   const [drafts, setDrafts] = useState<DraftUploadRecord[]>([]);
 
+  const resizeTextarea = useCallback(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+
+    ta.style.height = 'auto';
+    ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`;
+  }, []);
+
   const cleanupDraft = useCallback((draft: DraftUploadRecord) => {
     draft.abortController?.abort();
     URL.revokeObjectURL(draft.draft.previewUrl);
@@ -88,21 +96,22 @@ export function MessageComposeBar({
   useEffect(() => {
     if (editing) {
       setText(editing.text);
+      prevTextLenRef.current = editing.text.length;
       setDrafts((prev) => {
         prev.forEach(cleanupDraft);
         return [];
       });
-      const ta = textareaRef.current;
-      if (ta) {
-        ta.style.height = 'auto';
-        ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`;
-      }
     } else {
       setText('');
+      prevTextLenRef.current = 0;
       const ta = textareaRef.current;
       if (ta) ta.style.height = 'auto';
     }
   }, [cleanupDraft, editing]);
+
+  useLayoutEffect(() => {
+    resizeTextarea();
+  }, [resizeTextarea, text]);
 
   useEffect(() => () => {
     draftsRef.current.forEach(cleanupDraft);
@@ -378,22 +387,8 @@ export function MessageComposeBar({
             rows={1}
             onChange={(e) => {
               setText(e.target.value);
-              const ta = e.target;
               const newLen = e.target.value.length;
-              const couldHaveShrunk = newLen < prevTextLenRef.current;
               prevTextLenRef.current = newLen;
-
-              if (couldHaveShrunk) {
-                requestAnimationFrame(() => {
-                  ta.style.height = 'auto';
-                  ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`;
-                });
-              } else {
-                const desired = Math.min(ta.scrollHeight, 120);
-                if (desired > ta.clientHeight) {
-                  ta.style.height = `${desired}px`;
-                }
-              }
             }}
           />
           <button type="button" className={styles.stickerBtn} aria-label="Sticker">
