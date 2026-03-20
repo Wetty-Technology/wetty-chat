@@ -56,6 +56,10 @@ msgstr "確定要收回這則訊息嗎？"
 msgid "Ask first"
 msgstr "先詢問"
 
+#: src/components/chat/MessageComposeBar.tsx
+msgid "Attach image"
+msgstr "附加圖片"
+
 #: src/components/chat/ChatBubble.tsx
 msgid "Attachment"
 msgstr "附件"
@@ -89,6 +93,14 @@ msgstr "已封鎖"
 #: src/pages/chat-thread.tsx
 msgid "Cancel"
 msgstr "取消"
+
+#: src/components/chat/MessageComposeBar.tsx
+msgid "Cancel edit"
+msgstr "取消編輯"
+
+#: src/components/chat/MessageComposeBar.tsx
+msgid "Cancel reply"
+msgstr "取消回覆"
 
 #. placeholder {0}: chat.id
 #: src/components/chat/ChatList.tsx
@@ -162,6 +174,10 @@ msgstr "下載圖片"
 msgid "Edit"
 msgstr "編輯"
 
+#: src/components/chat/MessageComposeBar.tsx
+msgid "Edit message"
+msgstr "編輯訊息"
+
 #: src/components/chat/ChatBubble.tsx
 msgid "Edited"
 msgstr "已編輯"
@@ -224,6 +240,7 @@ msgstr "載入聊天詳情失敗"
 msgid "Failed to load chats"
 msgstr "載入聊天失敗"
 
+#: src/pages/chat-members.tsx
 #: src/pages/chat-members.tsx
 msgid "Failed to load members"
 msgstr "載入成員列表失敗"
@@ -331,6 +348,10 @@ msgstr "成員已升級"
 msgid "Member removed"
 msgstr "成員已移除"
 
+#: src/components/chat/MessageComposeBar.tsx
+msgid "Message"
+msgstr "訊息"
+
 #: src/pages/chat-thread.tsx
 msgid "Message cannot be empty"
 msgstr "訊息不能為空"
@@ -346,6 +367,10 @@ msgstr "下一張圖片"
 #: src/components/chat/ChatList.tsx
 msgid "No chats yet"
 msgstr "暫無聊天"
+
+#: src/pages/chat-members.tsx
+msgid "No members found."
+msgstr "找不到成員。"
 
 #: src/components/chat/ChatList.tsx
 msgid "No messages yet"
@@ -435,7 +460,7 @@ msgstr "正在重新連線..."
 msgid "Remove"
 msgstr "移除"
 
-#. placeholder {0}: draft.name
+#. placeholder {0}: item.name
 #: src/components/chat/UploadPreview.tsx
 msgid "Remove {0}"
 msgstr "移除 {0}"
@@ -465,6 +490,11 @@ msgstr "則回覆"
 msgid "Reply"
 msgstr "回覆"
 
+#. placeholder {0}: replyTo.username
+#: src/components/chat/MessageComposeBar.tsx
+msgid "Replying to {0}"
+msgstr "正在回覆 {0}"
+
 #: src/components/chat/UploadPreview.tsx
 msgid "Retry"
 msgstr "重試"
@@ -480,6 +510,10 @@ msgstr "儲存中..."
 #: src/layouts/DesktopSplitLayout.tsx
 msgid "Select a chat"
 msgstr "選擇一個聊天"
+
+#: src/components/chat/MessageComposeBar.tsx
+msgid "Send message"
+msgstr "傳送訊息"
 
 #: src/layouts/MobileLayout.tsx
 #: src/pages/settings.tsx
@@ -497,6 +531,10 @@ msgstr "開始話題"
 #: src/pages/settings.tsx
 msgid "Status"
 msgstr "狀態"
+
+#: src/components/chat/MessageComposeBar.tsx
+msgid "Sticker"
+msgstr "貼圖"
 
 #: src/pages/settings.tsx
 msgid "Subscribed"
@@ -543,6 +581,7 @@ msgstr "更新檢查失敗"
 msgid "Update Now"
 msgstr "立即更新"
 
+#: src/components/chat/MessageComposeBar.tsx
 #: src/components/chat/UploadPreview.tsx
 msgid "Upload failed"
 msgstr "上傳失敗"
@@ -552,7 +591,7 @@ msgid "Uploading"
 msgstr "上傳中"
 
 #. placeholder {0}: member.uid
-#: src/pages/chat-members.tsx
+#: src/components/chat-members/ChatMemberRow.tsx
 #: src/pages/chat-members.tsx
 #: src/pages/chat-members.tsx
 msgid "User {0}"
