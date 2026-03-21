@@ -488,6 +488,7 @@ export function MessageComposeBar({
 
         <div className={styles.inputRow}>
           <textarea
+            id="messageCompose"
             ref={textareaRef}
             className={styles.textarea}
             placeholder={t`Message`}
