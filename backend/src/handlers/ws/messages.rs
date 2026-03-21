@@ -14,6 +14,17 @@ pub enum ServerWsMessage {
     ReactionUpdated(ReactionUpdatePayload),
 }
 
+impl ServerWsMessage {
+    pub fn message_type(&self) -> &'static str {
+        match self {
+            Self::Message(_) => "message",
+            Self::MessageUpdated(_) => "message_updated",
+            Self::MessageDeleted(_) => "message_deleted",
+            Self::ReactionUpdated(_) => "reaction_updated",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct ReactionUpdatePayload {
     #[serde(with = "crate::serde_i64_string")]

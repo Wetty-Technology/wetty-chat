@@ -25,6 +25,8 @@ pub(crate) struct Metrics {
     discuz_avatar_lookup_duration_seconds: Histogram,
     discuz_avatar_lookup_fs_duration_seconds: Histogram,
     discuz_avatar_lookup_users_total: IntCounter,
+    ws_messages_pushed_total: IntCounterVec,
+    ws_messages_dropped_total: IntCounterVec,
 }
 
 impl Metrics {
@@ -111,6 +113,22 @@ impl Metrics {
             "Total number of requested users processed by Discuz avatar lookups"
         ))
         .expect("discuz_avatar_lookup_users_total metric should be valid");
+        let ws_messages_pushed_total = IntCounterVec::new(
+            opts!(
+                "ws_messages_pushed_total",
+                "Total number of messages successfully pushed to websocket connections"
+            ),
+            &["message_type"],
+        )
+        .expect("ws_messages_pushed_total metric should be valid");
+        let ws_messages_dropped_total = IntCounterVec::new(
+            opts!(
+                "ws_messages_dropped_total",
+                "Total number of messages dropped due to full websocket send buffer"
+            ),
+            &["message_type"],
+        )
+        .expect("ws_messages_dropped_total metric should be valid");
 
         registry
             .register(Box::new(http_requests_total.clone()))
@@ -151,6 +169,12 @@ impl Metrics {
         registry
             .register(Box::new(discuz_avatar_lookup_users_total.clone()))
             .expect("discuz_avatar_lookup_users_total registration should succeed");
+        registry
+            .register(Box::new(ws_messages_pushed_total.clone()))
+            .expect("ws_messages_pushed_total registration should succeed");
+        registry
+            .register(Box::new(ws_messages_dropped_total.clone()))
+            .expect("ws_messages_dropped_total registration should succeed");
 
         Self {
             registry,
@@ -167,6 +191,8 @@ impl Metrics {
             discuz_avatar_lookup_duration_seconds,
             discuz_avatar_lookup_fs_duration_seconds,
             discuz_avatar_lookup_users_total,
+            ws_messages_pushed_total,
+            ws_messages_dropped_total,
         }
     }
 
@@ -245,6 +271,18 @@ impl Metrics {
             .observe(fs_duration_seconds);
         self.discuz_avatar_lookup_users_total
             .inc_by(requested_users as u64);
+    }
+
+    pub(crate) fn record_ws_message_pushed(&self, message_type: &str) {
+        self.ws_messages_pushed_total
+            .with_label_values(&[message_type])
+            .inc();
+    }
+
+    pub(crate) fn record_ws_message_dropped(&self, message_type: &str) {
+        self.ws_messages_dropped_total
+            .with_label_values(&[message_type])
+            .inc();
     }
 }
 
@@ -326,6 +364,8 @@ mod tests {
         metrics.record_ws_connection_open();
         metrics.record_ws_connection_duration(12.0);
         metrics.record_discuz_avatar_lookup(2, 0.003, 0.001);
+        metrics.record_ws_message_pushed("message");
+        metrics.record_ws_message_dropped("message");
         let app = Router::new()
             .route("/metrics", get(metrics_handler))
             .with_state(metrics);
@@ -358,6 +398,8 @@ mod tests {
         assert!(body.contains("discuz_avatar_lookup_duration_seconds"));
         assert!(body.contains("discuz_avatar_lookup_fs_duration_seconds"));
         assert!(body.contains("discuz_avatar_lookup_users_total"));
+        assert!(body.contains("ws_messages_pushed_total"));
+        assert!(body.contains("ws_messages_dropped_total"));
     }
 
     #[tokio::test]
@@ -425,6 +467,9 @@ mod tests {
         metrics.record_ws_connection_open();
         metrics.record_ws_connection_duration(30.0);
         metrics.record_discuz_avatar_lookup(3, 0.015, 0.006);
+        metrics.record_ws_message_pushed("message");
+        metrics.record_ws_message_pushed("message");
+        metrics.record_ws_message_dropped("message_updated");
 
         let rendered = metrics.render().expect("metrics should render");
         assert!(rendered.contains("messages_total{chat_id=\"123\"} 1"));
@@ -439,5 +484,7 @@ mod tests {
         assert!(rendered.contains("discuz_avatar_lookup_duration_seconds_sum"));
         assert!(rendered.contains("discuz_avatar_lookup_fs_duration_seconds_sum"));
         assert!(rendered.contains("discuz_avatar_lookup_users_total 3"));
+        assert!(rendered.contains("ws_messages_pushed_total{message_type=\"message\"} 2"));
+        assert!(rendered.contains("ws_messages_dropped_total{message_type=\"message_updated\"} 1"));
     }
 }

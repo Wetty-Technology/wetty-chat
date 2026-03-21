@@ -121,6 +121,7 @@ impl ConnectionRegistry {
     /// Broadcast a JSON string to all connections for the given user ids. Each uid may have multiple connections.
     /// Failures to send (e.g. full buffer) are logged but do not remove the connection here.
     pub fn broadcast_to_uids(&self, uids: &[i32], message: Arc<ServerWsMessage>) {
+        let msg_type = message.message_type();
         for &uid in uids {
             if let Some(vec) = self.inner.get(&uid) {
                 for entry in vec.iter() {
@@ -130,6 +131,9 @@ impl ConnectionRegistry {
                             conn_id = entry.conn_id,
                             "ws broadcast try_send full, message dropped"
                         );
+                        self.metrics.record_ws_message_dropped(msg_type);
+                    } else {
+                        self.metrics.record_ws_message_pushed(msg_type);
                     }
                 }
             }
