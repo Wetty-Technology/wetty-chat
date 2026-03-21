@@ -32,6 +32,13 @@ pub(crate) struct Metrics {
     client_rebinds_total: IntCounter,
     client_tracking_purge_total: IntCounterVec,
     activity_daily_rollup_updates_total: IntCounterVec,
+    activity_today_active_users: IntGauge,
+    activity_today_new_users: IntGauge,
+    activity_today_active_clients: IntGauge,
+    activity_today_new_clients: IntGauge,
+    activity_today_client_rebinds: IntGauge,
+    activity_today_stale_clients_purged: IntGauge,
+    activity_today_legacy_subscriptions_purged: IntGauge,
 }
 
 impl Metrics {
@@ -171,6 +178,41 @@ impl Metrics {
             &["result"],
         )
         .expect("activity_daily_rollup_updates_total metric should be valid");
+        let activity_today_active_users = IntGauge::with_opts(opts!(
+            "activity_today_active_users",
+            "Today's exact active user count mirrored from the daily activity rollup"
+        ))
+        .expect("activity_today_active_users metric should be valid");
+        let activity_today_new_users = IntGauge::with_opts(opts!(
+            "activity_today_new_users",
+            "Today's exact new user count mirrored from the daily activity rollup"
+        ))
+        .expect("activity_today_new_users metric should be valid");
+        let activity_today_active_clients = IntGauge::with_opts(opts!(
+            "activity_today_active_clients",
+            "Today's exact active client count mirrored from the daily activity rollup"
+        ))
+        .expect("activity_today_active_clients metric should be valid");
+        let activity_today_new_clients = IntGauge::with_opts(opts!(
+            "activity_today_new_clients",
+            "Today's exact new client count mirrored from the daily activity rollup"
+        ))
+        .expect("activity_today_new_clients metric should be valid");
+        let activity_today_client_rebinds = IntGauge::with_opts(opts!(
+            "activity_today_client_rebinds",
+            "Today's exact client rebind count mirrored from the daily activity rollup"
+        ))
+        .expect("activity_today_client_rebinds metric should be valid");
+        let activity_today_stale_clients_purged = IntGauge::with_opts(opts!(
+            "activity_today_stale_clients_purged",
+            "Today's exact stale client purge count mirrored from the daily activity rollup"
+        ))
+        .expect("activity_today_stale_clients_purged metric should be valid");
+        let activity_today_legacy_subscriptions_purged = IntGauge::with_opts(opts!(
+            "activity_today_legacy_subscriptions_purged",
+            "Today's exact legacy subscription purge count mirrored from the daily activity rollup"
+        ))
+        .expect("activity_today_legacy_subscriptions_purged metric should be valid");
 
         registry
             .register(Box::new(http_requests_total.clone()))
@@ -232,6 +274,27 @@ impl Metrics {
         registry
             .register(Box::new(activity_daily_rollup_updates_total.clone()))
             .expect("activity_daily_rollup_updates_total registration should succeed");
+        registry
+            .register(Box::new(activity_today_active_users.clone()))
+            .expect("activity_today_active_users registration should succeed");
+        registry
+            .register(Box::new(activity_today_new_users.clone()))
+            .expect("activity_today_new_users registration should succeed");
+        registry
+            .register(Box::new(activity_today_active_clients.clone()))
+            .expect("activity_today_active_clients registration should succeed");
+        registry
+            .register(Box::new(activity_today_new_clients.clone()))
+            .expect("activity_today_new_clients registration should succeed");
+        registry
+            .register(Box::new(activity_today_client_rebinds.clone()))
+            .expect("activity_today_client_rebinds registration should succeed");
+        registry
+            .register(Box::new(activity_today_stale_clients_purged.clone()))
+            .expect("activity_today_stale_clients_purged registration should succeed");
+        registry
+            .register(Box::new(activity_today_legacy_subscriptions_purged.clone()))
+            .expect("activity_today_legacy_subscriptions_purged registration should succeed");
 
         Self {
             registry,
@@ -255,6 +318,13 @@ impl Metrics {
             client_rebinds_total,
             client_tracking_purge_total,
             activity_daily_rollup_updates_total,
+            activity_today_active_users,
+            activity_today_new_users,
+            activity_today_active_clients,
+            activity_today_new_clients,
+            activity_today_client_rebinds,
+            activity_today_stale_clients_purged,
+            activity_today_legacy_subscriptions_purged,
         }
     }
 
@@ -374,6 +444,27 @@ impl Metrics {
             .with_label_values(&[result])
             .inc();
     }
+
+    pub(crate) fn set_activity_today(
+        &self,
+        active_users: i64,
+        new_users: i64,
+        active_clients: i64,
+        new_clients: i64,
+        client_rebinds: i64,
+        stale_clients_purged: i64,
+        legacy_subscriptions_purged: i64,
+    ) {
+        self.activity_today_active_users.set(active_users);
+        self.activity_today_new_users.set(new_users);
+        self.activity_today_active_clients.set(active_clients);
+        self.activity_today_new_clients.set(new_clients);
+        self.activity_today_client_rebinds.set(client_rebinds);
+        self.activity_today_stale_clients_purged
+            .set(stale_clients_purged);
+        self.activity_today_legacy_subscriptions_purged
+            .set(legacy_subscriptions_purged);
+    }
 }
 
 pub(crate) async fn track_http_metrics(
@@ -461,6 +552,7 @@ mod tests {
         metrics.record_client_rebind();
         metrics.record_client_tracking_purge("stale_clients", 2);
         metrics.record_activity_daily_rollup_update("success");
+        metrics.set_activity_today(3, 1, 4, 2, 1, 2, 0);
         let app = Router::new()
             .route("/metrics", get(metrics_handler))
             .with_state(metrics);
@@ -500,6 +592,13 @@ mod tests {
         assert!(body.contains("client_rebinds_total"));
         assert!(body.contains("client_tracking_purge_total"));
         assert!(body.contains("activity_daily_rollup_updates_total"));
+        assert!(body.contains("activity_today_active_users"));
+        assert!(body.contains("activity_today_new_users"));
+        assert!(body.contains("activity_today_active_clients"));
+        assert!(body.contains("activity_today_new_clients"));
+        assert!(body.contains("activity_today_client_rebinds"));
+        assert!(body.contains("activity_today_stale_clients_purged"));
+        assert!(body.contains("activity_today_legacy_subscriptions_purged"));
     }
 
     #[tokio::test]
@@ -575,6 +674,7 @@ mod tests {
         metrics.record_client_rebind();
         metrics.record_client_tracking_purge("legacy_subscriptions", 3);
         metrics.record_activity_daily_rollup_update("success");
+        metrics.set_activity_today(5, 2, 6, 3, 1, 0, 0);
 
         let rendered = metrics.render().expect("metrics should render");
         assert!(rendered.contains("messages_total{chat_id=\"123\"} 1"));
@@ -596,5 +696,10 @@ mod tests {
         assert!(rendered.contains("client_rebinds_total 1"));
         assert!(rendered.contains("client_tracking_purge_total{kind=\"legacy_subscriptions\"} 3"));
         assert!(rendered.contains("activity_daily_rollup_updates_total{result=\"success\"} 1"));
+        assert!(rendered.contains("activity_today_active_users 5"));
+        assert!(rendered.contains("activity_today_new_users 2"));
+        assert!(rendered.contains("activity_today_active_clients 6"));
+        assert!(rendered.contains("activity_today_new_clients 3"));
+        assert!(rendered.contains("activity_today_client_rebinds 1"));
     }
 }
