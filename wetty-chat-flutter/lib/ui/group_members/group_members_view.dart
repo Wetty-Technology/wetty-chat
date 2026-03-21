@@ -2,7 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-import 'api_config.dart';
+import '../../config/api_config.dart';
 
 /// Model for a group member returned by GET /group/{id}/members.
 class _Member {
@@ -56,12 +56,12 @@ class _GroupMembersPageState extends State<GroupMembersPage> {
     try {
       final uri = Uri.parse('$apiBaseUrl/group/${widget.chatId}/members');
       final response = await http.get(uri, headers: apiHeaders);
-      print("res: ${response.body}");
       if (response.statusCode != 200) {
         throw Exception('Failed to load members: ${response.statusCode}');
       }
       final dynamic body = jsonDecode(response.body);
-      final list = body is List ? body : (body['members'] as List<dynamic>? ?? []);
+      final list =
+          body is List ? body : (body['members'] as List<dynamic>? ?? []);
       if (!mounted) return;
       setState(() {
         _members = list
@@ -120,7 +120,8 @@ class _GroupMembersPageState extends State<GroupMembersPage> {
                   itemBuilder: (context, index) {
                     final member = _members[index];
                     final name = member.username ?? 'User ${member.uid}';
-                    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+                    final initial =
+                        name.isNotEmpty ? name[0].toUpperCase() : '?';
                     final isAdmin = member.role.toLowerCase() == 'admin';
                     return Padding(
                       padding: const EdgeInsets.symmetric(
@@ -151,7 +152,8 @@ class _GroupMembersPageState extends State<GroupMembersPage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(name, style: const TextStyle(fontSize: 16)),
+                                Text(name,
+                                    style: const TextStyle(fontSize: 16)),
                                 Text(
                                   member.role,
                                   style: TextStyle(
@@ -159,7 +161,8 @@ class _GroupMembersPageState extends State<GroupMembersPage> {
                                     color: isAdmin
                                         ? CupertinoColors.activeBlue
                                         : CupertinoColors.secondaryLabel,
-                                    fontWeight: isAdmin ? FontWeight.w600 : null,
+                                    fontWeight:
+                                        isAdmin ? FontWeight.w600 : null,
                                   ),
                                 ),
                               ],
@@ -171,7 +174,6 @@ class _GroupMembersPageState extends State<GroupMembersPage> {
                   },
                 ),
         ),
-        // Add Member button
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
           child: SizedBox(
