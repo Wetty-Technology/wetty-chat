@@ -96,7 +96,7 @@ class ListMessagesResponse {
   factory ListMessagesResponse.fromJson(Map<String, dynamic> json) {
     final list = json['messages'] as List<dynamic>? ?? [];
     return ListMessagesResponse(
-      messages: list
+      messages: list.reversed
           .map((e) => MessageItem.fromJson(e as Map<String, dynamic>))
           .toList(),
       nextCursor: json['next_cursor']?.toString(),

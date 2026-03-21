@@ -5,36 +5,12 @@ import '../data/models/message_models.dart';
 // ---------------------------------------------------------------------------
 
 class MessageRange {
-  BigInt start; // Oldest message ID
-  BigInt end; // Newest message ID
-  final List<MessageItem> messages = []; // Sorted newest→oldest (desc by ID)
+  final List<MessageItem> messages;
 
-  MessageRange({required this.start, required this.end});
+  MessageRange({required this.messages});
 
-  // /// Binary-search insert: keeps descending order, skips duplicates.
-  // bool insertSorted(MessageItem msg) {
-  //   int lo = 0, hi = messages.length;
-  //   while (lo < hi) {
-  //     final mid = (lo + hi) >> 1;
-  //     final c = cmp(messages[mid].id, msg.id);
-  //     if (c == 0) return false; // duplicate
-  //     if (c > 0) {
-  //       lo = mid + 1; // messages[mid] is newer → go right
-  //     } else {
-  //       hi = mid; // messages[mid] is older → go left
-  //     }
-  //   }
-  //   messages.insert(lo, msg);
-  //   _updateBounds();
-  //   return true;
-  // }
-
-  // /// Bulk insert.
-  // void insertAll(List<MessageItem> items) {
-  //   for (final m in items) {
-  //     insertSorted(m);
-  //   }
-  // }
+  int get start => int.parse(messages.first.id);
+  int get end => int.parse(messages.last.id);
 
   // void _updateBounds() {
   //   if (messages.isEmpty) return;
@@ -51,29 +27,19 @@ class MessageStore {
   void addMessages(List<MessageItem> items) {
     if (items.isEmpty) return;
 
-    // Sort newest→oldest (descending by ID as BigInt)
-    items.sort((a, b) {
-      return BigInt.parse(b.id).compareTo(BigInt.parse(a.id));
-    });
-
     // new message range
-    final newest = BigInt.parse(items.first.id);
-    final oldest = BigInt.parse(items.last.id);
-    final range = MessageRange(start: oldest, end: newest);
+    final range = MessageRange(messages: items);
 
-    // TODO: change this when have overlaped ranges
-    range.messages.addAll(items);
-    // Binary-search insert to keep ranges sorted desc by end
-    int lo = 0, hi = messageRanges.length;
-    while (lo < hi) {
-      final mid = (lo + hi) >> 1;
-      if (messageRanges[mid].end.compareTo(newest) > 0) {
-        lo = mid + 1;
-      } else {
-        hi = mid;
+    // TODO: change this when have overlapped ranges
+    // Linear search to insert range sorted descending by end
+    int insertAt = messageRanges.length;
+    for (int i = 0; i < messageRanges.length; i++) {
+      if (range.end >= messageRanges[i].end) {
+        insertAt = i;
+        break;
       }
     }
-    messageRanges.insert(lo, range);
+    messageRanges.insert(insertAt, range);
 
     // // Find all existing ranges that overlap with [oldest, newest]
     // final overlapping = <int>[];
@@ -106,19 +72,15 @@ class MessageStore {
     //   // Insert the new items
     //   target.insertAll(items);
     // }
-
-    // // Keep ranges sorted desc by end
-    // ranges.sort((a, b) => MessageRange.cmp(b.end, a.end));
   }
 
-  /// Flatten all sorted ranges into one list (newest→oldest).
+  /// Flatten all sorted ranges into one list
   List<MessageItem> buildDisplayItems() {
     // Put all messages together
     final all = <MessageItem>[];
     for (final r in messageRanges) {
       all.addAll(r.messages);
     }
-    all.sort((a, b) => b.id.compareTo(a.id));
     return all;
   }
 
