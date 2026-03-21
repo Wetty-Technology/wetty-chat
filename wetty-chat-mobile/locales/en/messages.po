@@ -20,6 +20,7 @@ msgstr "[Attachment]"
 #: src/components/chat/ChatList.tsx
 #: src/components/chat/messagePreview.ts
 #: src/pages/chat-thread.tsx
+#: src/pages/chat-thread.tsx
 msgid "[Deleted]"
 msgstr "[Deleted]"
 
@@ -69,6 +70,7 @@ msgid "Attach image"
 msgstr "Attach image"
 
 #: src/components/chat/ChatBubble.tsx
+#: src/components/chat/MessageOverlay.tsx
 msgid "Attachment"
 msgstr "Attachment"
 
@@ -98,7 +100,6 @@ msgstr "Blocked"
 #: src/pages/chat-members.tsx
 #: src/pages/chat-members.tsx
 #: src/pages/chat-thread.tsx
-#: src/pages/chat-thread.tsx
 msgid "Cancel"
 msgstr "Cancel"
 
@@ -125,17 +126,22 @@ msgstr "Chat {0}"
 msgid "Chats"
 msgstr "Chats"
 
-#: src/pages/settings.tsx
+#: src/components/settings/CheckForUpdateItem.tsx
 msgid "Check for Update"
 msgstr "Check for Update"
 
 #: src/components/chat/ImageViewer.tsx
+#: src/components/chat/UserProfileModal.tsx
 msgid "Close"
 msgstr "Close"
 
 #: src/components/chat/ImageViewer.tsx
 msgid "Close viewer"
 msgstr "Close viewer"
+
+#: src/pages/chat-thread.tsx
+msgid "Copy"
+msgstr "Copy"
 
 #: src/pages/chat-thread.tsx
 #: src/pages/chat-thread.tsx
@@ -191,6 +197,7 @@ msgid "Edit message"
 msgstr "Edit message"
 
 #: src/components/chat/ChatBubble.tsx
+#: src/components/chat/MessageOverlay.tsx
 msgid "Edited"
 msgstr "Edited"
 
@@ -400,7 +407,7 @@ msgstr "No members found."
 msgid "No messages yet"
 msgstr "No messages yet"
 
-#: src/pages/settings.tsx
+#: src/components/settings/CheckForUpdateItem.tsx
 msgid "No service worker registered"
 msgstr "No service worker registered"
 
@@ -621,11 +628,11 @@ msgstr "Turn On Push Notifications"
 msgid "Unread"
 msgstr "Unread"
 
-#: src/pages/settings.tsx
+#: src/components/settings/CheckForUpdateItem.tsx
 msgid "Update check complete"
 msgstr "Update check complete"
 
-#: src/pages/settings.tsx
+#: src/components/settings/CheckForUpdateItem.tsx
 msgid "Update check failed"
 msgstr "Update check failed"
 

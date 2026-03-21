@@ -20,6 +20,7 @@ msgstr "[附件]"
 #: src/components/chat/ChatList.tsx
 #: src/components/chat/messagePreview.ts
 #: src/pages/chat-thread.tsx
+#: src/pages/chat-thread.tsx
 msgid "[Deleted]"
 msgstr "[已刪除]"
 
@@ -69,6 +70,7 @@ msgid "Attach image"
 msgstr "附加圖片"
 
 #: src/components/chat/ChatBubble.tsx
+#: src/components/chat/MessageOverlay.tsx
 msgid "Attachment"
 msgstr "附件"
 
@@ -98,7 +100,6 @@ msgstr "已封鎖"
 #: src/pages/chat-members.tsx
 #: src/pages/chat-members.tsx
 #: src/pages/chat-thread.tsx
-#: src/pages/chat-thread.tsx
 msgid "Cancel"
 msgstr "取消"
 
@@ -125,17 +126,22 @@ msgstr "聊天 {0}"
 msgid "Chats"
 msgstr "聊天"
 
-#: src/pages/settings.tsx
+#: src/components/settings/CheckForUpdateItem.tsx
 msgid "Check for Update"
 msgstr "檢查更新"
 
 #: src/components/chat/ImageViewer.tsx
+#: src/components/chat/UserProfileModal.tsx
 msgid "Close"
 msgstr "關閉"
 
 #: src/components/chat/ImageViewer.tsx
 msgid "Close viewer"
 msgstr "關閉檢視器"
+
+#: src/pages/chat-thread.tsx
+msgid "Copy"
+msgstr "複製"
 
 #: src/pages/chat-thread.tsx
 #: src/pages/chat-thread.tsx
@@ -191,6 +197,7 @@ msgid "Edit message"
 msgstr "編輯訊息"
 
 #: src/components/chat/ChatBubble.tsx
+#: src/components/chat/MessageOverlay.tsx
 msgid "Edited"
 msgstr "已編輯"
 
@@ -400,7 +407,7 @@ msgstr "找不到成員。"
 msgid "No messages yet"
 msgstr "暫無訊息"
 
-#: src/pages/settings.tsx
+#: src/components/settings/CheckForUpdateItem.tsx
 msgid "No service worker registered"
 msgstr "未註冊 Service Worker"
 
@@ -621,11 +628,11 @@ msgstr "開啟推播通知"
 msgid "Unread"
 msgstr "標記未讀"
 
-#: src/pages/settings.tsx
+#: src/components/settings/CheckForUpdateItem.tsx
 msgid "Update check complete"
 msgstr "更新檢查完成"
 
-#: src/pages/settings.tsx
+#: src/components/settings/CheckForUpdateItem.tsx
 msgid "Update check failed"
 msgstr "更新檢查失敗"
 
