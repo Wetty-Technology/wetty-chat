@@ -65,6 +65,7 @@ diesel::table! {
         role -> GroupRole,
         joined_at -> Timestamptz,
         last_read_message_id -> Nullable<Int8>,
+        muted_until -> Nullable<Timestamptz>,
     }
 }
 

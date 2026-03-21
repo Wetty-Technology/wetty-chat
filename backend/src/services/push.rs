@@ -237,17 +237,23 @@ async fn process_push_job(
     use crate::schema::group_membership;
     use crate::schema::group_membership::dsl as gm_dsl;
 
-    // 1. Get all member UIDs for the chat.
-    let member_uids: Vec<i32> = group_membership::table
+    // 1. Get all member UIDs and their mute state for the chat.
+    let members: Vec<(i32, Option<chrono::DateTime<chrono::Utc>>)> = group_membership::table
         .filter(gm_dsl::chat_id.eq(job.chat_id))
-        .select(group_membership::uid)
+        .select((group_membership::uid, group_membership::muted_until))
         .load(&mut conn)
         .map_err(|e| format!("Failed to load member UIDs: {:?}", e))?;
 
-    // 2. Filter out the sender and users with fresh active app presence.
-    let target_uids: Vec<i32> = member_uids
+    // 2. Filter out the sender, muted users, and users with fresh active app presence.
+    let now = chrono::Utc::now();
+    let target_uids: Vec<i32> = members
         .into_iter()
-        .filter(|&uid| uid != job.sender_uid)
+        .filter(|(uid, _)| *uid != job.sender_uid)
+        .filter(|(_, muted_until)| {
+            // Not muted, or mute has expired
+            muted_until.map_or(true, |t| t <= now)
+        })
+        .map(|(uid, _)| uid)
         .filter(|&uid| {
             let suppress = ws_registry.should_suppress_push(uid, PUSH_SUPPRESSION_FRESHNESS_SECS);
             if suppress {

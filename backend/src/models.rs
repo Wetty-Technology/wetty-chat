@@ -69,6 +69,7 @@ pub struct GroupMembership {
     pub role: GroupRole,
     pub joined_at: DateTime<Utc>,
     pub last_read_message_id: Option<i64>,
+    pub muted_until: Option<DateTime<Utc>>,
 }
 
 /// For inserting a membership. Use `"member"` and `Utc::now()` for `role` and `joined_at` to match DB defaults.

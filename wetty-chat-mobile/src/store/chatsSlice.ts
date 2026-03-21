@@ -18,6 +18,7 @@ interface ChatListMeta {
   unread_count?: number;
   last_message?: MessageResponse | null;
   in_list?: boolean;
+  muted_until?: string | null;
 }
 
 interface ChatStateEntry {
@@ -97,8 +98,16 @@ const chatsSlice = createSlice({
           last_message_at: chat.last_message_at,
           unread_count: chat.unread_count,
           in_list: true,
+          muted_until: chat.muted_until,
         };
       }
+    },
+    setChatMutedUntil(state, action: PayloadAction<{ chatId: string; mutedUntil: string | null }>) {
+      const entry = getChatEntry(state, action.payload.chatId);
+      entry.liveProjection = {
+        ...entry.liveProjection,
+        muted_until: action.payload.mutedUntil,
+      };
     },
     projectChatMessageAdded(
       state,
@@ -206,6 +215,7 @@ export const {
   setChatMeta,
   setChatsMeta,
   setChatsList,
+  setChatMutedUntil,
   projectChatMessageAdded,
   projectChatMessageConfirmed,
   setChatUnreadCount,
@@ -218,6 +228,18 @@ export const selectChatMeta = (state: RootState, chatId: string): ChatMeta | und
 export const selectChatName = (state: RootState, chatId: string): string | null =>
   state.chats.byId[chatId]?.details.name ?? null;
 
+export function selectIsChatMuted(state: RootState, chatId: string): boolean {
+  const entry = state.chats.byId[chatId];
+  const mutedUntil = entry?.liveProjection?.muted_until ?? entry?.listSnapshot?.muted_until;
+  if (!mutedUntil) return false;
+  return new Date(mutedUntil) > new Date();
+}
+
+export function selectChatMutedUntil(state: RootState, chatId: string): string | null {
+  const entry = state.chats.byId[chatId];
+  return entry?.liveProjection?.muted_until ?? entry?.listSnapshot?.muted_until ?? null;
+}
+
 const selectChatsById = (state: RootState) => state.chats.byId;
 
 export const selectAllChats = createSelector(
@@ -228,12 +250,13 @@ export const selectAllChats = createSelector(
       .map(([id, entry]) => {
         const listMeta = getEffectiveListMeta(entry);
         return {
-        id,
-        name: entry.details.name ?? null,
-        last_message_at: listMeta.last_message_at ?? null,
-        unread_count: listMeta.unread_count ?? 0,
-        last_message: listMeta.last_message ?? null,
-      };
+          id,
+          name: entry.details.name ?? null,
+          last_message_at: listMeta.last_message_at ?? null,
+          unread_count: listMeta.unread_count ?? 0,
+          last_message: listMeta.last_message ?? null,
+          muted_until: entry?.liveProjection?.muted_until ?? entry?.listSnapshot?.muted_until ?? null,
+        };
       })
       .sort((a, b) => {
         return compareMessageOrder(b.last_message, a.last_message);

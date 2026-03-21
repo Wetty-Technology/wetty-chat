@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   IonPage,
   IonHeader,
@@ -15,15 +15,17 @@ import {
   IonButton,
   IonButtons,
   IonSpinner,
+  IonListHeader,
   useIonToast,
+  useIonActionSheet,
 } from '@ionic/react';
 import { useParams, useHistory } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
-import { selectChatMeta, setChatMeta } from '@/store/chatsSlice';
+import { selectChatMeta, setChatMeta, selectChatMutedUntil, setChatMutedUntil } from '@/store/chatsSlice';
 import type { RootState } from '@/store/index';
-import { getGroupInfo, updateGroupInfo } from '@/api/group';
+import { getGroupInfo, updateGroupInfo, muteChat, unmuteChat } from '@/api/group';
 import { BackButton } from '@/components/BackButton';
 import type { BackAction } from '@/types/back-action';
 
@@ -51,8 +53,47 @@ function ChatSettingsSession({ chatId, backAction }: { chatId: string; backActio
   const history = useHistory();
   const dispatch = useDispatch();
   const [presentToast] = useIonToast();
+  const [presentActionSheet] = useIonActionSheet();
   const cachedMeta = useSelector((state: RootState) => selectChatMeta(state, chatId));
+  const mutedUntil = useSelector((state: RootState) => selectChatMutedUntil(state, chatId));
+  const isMuted = useMemo(() => mutedUntil ? new Date(mutedUntil) > new Date() : false, [mutedUntil]);
   const initialState = getInitialFormState(cachedMeta);
+
+  const handleMute = (durationSeconds: number | null) => {
+    muteChat(chatId, { duration_seconds: durationSeconds })
+      .then((res) => {
+        dispatch(setChatMutedUntil({ chatId, mutedUntil: res.data.muted_until }));
+        presentToast({ message: t`Notifications muted`, duration: 2000 });
+      })
+      .catch((err: Error) => {
+        presentToast({ message: err.message || t`Failed to mute`, duration: 3000 });
+      });
+  };
+
+  const handleUnmute = () => {
+    unmuteChat(chatId)
+      .then(() => {
+        dispatch(setChatMutedUntil({ chatId, mutedUntil: null }));
+        presentToast({ message: t`Notifications unmuted`, duration: 2000 });
+      })
+      .catch((err: Error) => {
+        presentToast({ message: err.message || t`Failed to unmute`, duration: 3000 });
+      });
+  };
+
+  const showMuteActionSheet = () => {
+    presentActionSheet({
+      header: t`Mute notifications`,
+      buttons: [
+        { text: t`30 minutes`, handler: () => handleMute(1800) },
+        { text: t`1 hour`, handler: () => handleMute(3600) },
+        { text: t`8 hours`, handler: () => handleMute(28800) },
+        { text: t`1 day`, handler: () => handleMute(86400) },
+        { text: t`7 days`, handler: () => handleMute(604800) },
+        { text: t`Cancel`, role: 'cancel' },
+      ],
+    });
+  };
 
   const [name, setName] = useState(initialState.name);
   const [description, setDescription] = useState(initialState.description);
@@ -68,9 +109,10 @@ function ChatSettingsSession({ chatId, backAction }: { chatId: string; backActio
 
     getGroupInfo(chatId)
       .then((res) => {
-        const { id, ...meta } = res.data;
+        const { id, muted_until, ...meta } = res.data;
         void id;
         dispatch(setChatMeta({ chatId, meta }));
+        dispatch(setChatMutedUntil({ chatId, mutedUntil: muted_until }));
         setName(meta.name || '');
         setDescription(meta.description || '');
         setAvatar(meta.avatar || '');
@@ -169,6 +211,25 @@ function ChatSettingsSession({ chatId, backAction }: { chatId: string; backActio
                 {saving ? <Trans>Saving...</Trans> : <Trans>Save Settings</Trans>}
               </IonButton>
             </div>
+            <IonList>
+              <IonListHeader><Trans>Notifications</Trans></IonListHeader>
+              {isMuted ? (
+                <IonItem button onClick={handleUnmute}>
+                  <IonLabel>
+                    <h2><Trans>Unmute This Group</Trans></h2>
+                    <p>
+                      {mutedUntil && new Date(mutedUntil).getFullYear() >= 9000
+                        ? <Trans>Muted indefinitely</Trans>
+                        : <Trans>Muted until {new Date(mutedUntil!).toLocaleString()}</Trans>}
+                    </p>
+                  </IonLabel>
+                </IonItem>
+              ) : (
+                <IonItem button onClick={showMuteActionSheet}>
+                  <IonLabel><Trans>Mute This Group</Trans></IonLabel>
+                </IonItem>
+              )}
+            </IonList>
           </>
         )}
       </IonContent>

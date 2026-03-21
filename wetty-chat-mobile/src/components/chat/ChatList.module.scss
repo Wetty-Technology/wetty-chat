@@ -40,6 +40,24 @@
   }
 }
 
+.chatsListTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chatsListTitleText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chatsListMutedIcon {
+  color: var(--ion-color-medium);
+  flex-shrink: 0;
+  font-size: 0.95em;
+}
+
 .chatsListPreview {
   display: block;
   width: 100%;
@@ -95,6 +113,10 @@
   }
 
   .chatsListTime {
+    color: rgba(var(--ion-color-primary-contrast-rgb), 0.8);
+  }
+
+  .chatsListMutedIcon {
     color: rgba(var(--ion-color-primary-contrast-rgb), 0.8);
   }
 }

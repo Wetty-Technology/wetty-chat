@@ -1,7 +1,7 @@
 //! WebSocket connection registry: maps user id to active connections, tracks app presence,
 //! supports broadcast and stale-connection pruning.
 
-use crate::handlers::ws::messages::ServerWsMessage;
+use crate::handlers::ws::messages::{PresenceUpdatePayload, ServerWsMessage};
 use crate::metrics::Metrics;
 use std::sync::atomic::{AtomicU64, AtomicU8, Ordering};
 use std::sync::Arc;
@@ -102,6 +102,7 @@ impl ConnectionRegistry {
         self.inner.entry(uid).or_default().push(entry.clone());
         self.metrics.record_ws_connection_open();
         self.update_metrics();
+        self.broadcast_presence_to_user(uid);
         (entry, rx)
     }
 
@@ -116,6 +117,7 @@ impl ConnectionRegistry {
             self.inner.remove(&uid);
         }
         self.update_metrics();
+        self.broadcast_presence_to_user(uid);
     }
 
     /// Broadcast a JSON string to all connections for the given user ids. Each uid may have multiple connections.
@@ -169,6 +171,7 @@ impl ConnectionRegistry {
                 uids_to_trim.push((uid, stale));
             }
         }
+        let mut pruned_uids: Vec<i32> = Vec::new();
         for (uid, conn_ids) in uids_to_trim {
             if let Some(mut vec) = self.inner.get_mut(&uid) {
                 vec.retain(|e| !conn_ids.contains(&e.conn_id));
@@ -177,8 +180,25 @@ impl ConnectionRegistry {
                     self.inner.remove(&uid);
                 }
             }
+            pruned_uids.push(uid);
         }
         self.update_metrics();
+        for uid in pruned_uids {
+            self.broadcast_presence_to_user(uid);
+        }
+    }
+
+    /// Notify all of a user's connections about the current connection count.
+    pub fn broadcast_presence_to_user(&self, uid: i32) {
+        if let Some(vec) = self.inner.get(&uid) {
+            let count = vec.len() as u32;
+            let msg = Arc::new(ServerWsMessage::PresenceUpdate(PresenceUpdatePayload {
+                active_connections: count,
+            }));
+            for entry in vec.iter() {
+                let _ = entry.tx.try_send(msg.clone());
+            }
+        }
     }
 
     pub fn refresh_metrics(&self) {

@@ -14,10 +14,12 @@ import {
   useIonAlert,
 } from '@ionic/react';
 import { useParams } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 import { addMember, getGroupInfo, getMembers, type GroupInfoResponse, type MemberResponse } from '@/api/group';
 import { FeatureGate } from '@/components/FeatureGate';
 import { BackButton } from '@/components/BackButton';
 import type { BackAction } from '@/types/back-action';
+import { setChatMeta, setChatMutedUntil } from '@/store/chatsSlice';
 
 function groupDisplayName(detail: GroupInfoResponse | null, id: string): string {
   if (detail?.name?.trim()) return detail.name.trim();
@@ -41,6 +43,7 @@ interface GroupDetailCoreProps {
 }
 
 function GroupDetailSession({ id, backAction }: { id: string; backAction?: BackAction }) {
+  const dispatch = useDispatch();
   const [presentToast] = useIonToast();
   const [presentAlert] = useIonAlert();
 
@@ -53,6 +56,10 @@ function GroupDetailSession({ id, backAction }: { id: string; backAction?: BackA
     Promise.all([getGroupInfo(id), getMembers(id, { limit: 20 })])
       .then(([chatRes, membersRes]) => {
         setDetail(chatRes.data);
+        const { id: groupId, muted_until, ...meta } = chatRes.data;
+        void groupId;
+        dispatch(setChatMeta({ chatId: id, meta }));
+        dispatch(setChatMutedUntil({ chatId: id, mutedUntil: muted_until }));
         setMembers(membersRes.data.members ?? []);
       })
       .catch((err: Error) => {
@@ -61,7 +68,7 @@ function GroupDetailSession({ id, backAction }: { id: string; backAction?: BackA
         presentToast({ message: msg, duration: 3000 });
       })
       .finally(() => setLoading(false));
-  }, [id, presentToast]);
+  }, [dispatch, id, presentToast]);
 
   const refreshMembers = () => {
     getMembers(id, { limit: 20 })

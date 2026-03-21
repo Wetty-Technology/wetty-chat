@@ -55,6 +55,7 @@ pub struct ChatListItem {
     last_message_at: Option<DateTime<Utc>>,
     unread_count: i64,
     last_message: Option<MessageResponse>,
+    muted_until: Option<DateTime<Utc>>,
 }
 
 #[derive(Serialize)]
@@ -110,6 +111,7 @@ async fn get_chats(
         Option<DateTime<Utc>>,
         i64,
         Option<crate::models::Message>,
+        Option<DateTime<Utc>>,
     );
 
     let rows: Vec<RowType> = match q.after {
@@ -120,6 +122,7 @@ async fn get_chats(
                 groups::last_message_at,
                 unread_count_sq.clone(),
                 messages::all_columns.nullable(),
+                group_membership::muted_until,
             ))
             .order_by((
                 groups::last_message_at.desc().nulls_last(),
@@ -163,6 +166,7 @@ async fn get_chats(
                         groups::last_message_at,
                         unread_count_sq.clone(),
                         messages::all_columns.nullable(),
+                        group_membership::muted_until,
                     ))
                     .filter(
                         groups::last_message_at
@@ -189,6 +193,7 @@ async fn get_chats(
                         groups::last_message_at,
                         unread_count_sq.clone(),
                         messages::all_columns.nullable(),
+                        group_membership::muted_until,
                     ))
                     .filter(
                         groups::last_message_at
@@ -214,7 +219,7 @@ async fn get_chats(
 
     let messages_to_process: Vec<crate::models::Message> = items_to_process
         .iter()
-        .filter_map(|(_, _, _, _, msg)| msg.clone())
+        .filter_map(|(_, _, _, _, msg, _)| msg.clone())
         .collect();
 
     let message_responses = attach_metadata(conn, messages_to_process, &state, uid).await;
@@ -227,7 +232,7 @@ async fn get_chats(
 
     let chats: Vec<ChatListItem> = items_to_process
         .into_iter()
-        .map(|(id, name, last_message_at, unread_count, msg)| {
+        .map(|(id, name, last_message_at, unread_count, msg, muted_until)| {
             let mr = msg.and_then(|m| message_response_map.remove(&m.id));
             ChatListItem {
                 id,
@@ -235,6 +240,7 @@ async fn get_chats(
                 last_message_at,
                 unread_count,
                 last_message: mr,
+                muted_until,
             }
         })
         .collect();

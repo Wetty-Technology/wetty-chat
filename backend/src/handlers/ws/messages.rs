@@ -12,6 +12,8 @@ pub enum ServerWsMessage {
     MessageDeleted(MessageResponse),
     #[serde(rename = "reaction_updated")]
     ReactionUpdated(ReactionUpdatePayload),
+    #[serde(rename = "presence_update")]
+    PresenceUpdate(PresenceUpdatePayload),
 }
 
 impl ServerWsMessage {
@@ -21,6 +23,7 @@ impl ServerWsMessage {
             Self::MessageUpdated(_) => "message_updated",
             Self::MessageDeleted(_) => "message_deleted",
             Self::ReactionUpdated(_) => "reaction_updated",
+            Self::PresenceUpdate(_) => "presence_update",
         }
     }
 }
@@ -32,4 +35,9 @@ pub struct ReactionUpdatePayload {
     #[serde(with = "crate::serde_i64_string")]
     pub chat_id: i64,
     pub reactions: Vec<ReactionSummary>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PresenceUpdatePayload {
+    pub active_connections: u32,
 }

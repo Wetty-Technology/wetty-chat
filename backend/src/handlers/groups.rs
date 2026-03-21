@@ -8,11 +8,20 @@ use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use serde::Serialize;
 
+use crate::handlers::members::check_membership;
 use crate::models::{GroupRole, GroupVisibility, NewGroup, NewGroupMembership, UpdateGroup};
 use crate::schema::{group_membership, groups};
 use crate::utils::auth::CurrentUid;
 use crate::utils::ids;
 use crate::AppState;
+
+/// Maximum mute duration: 7 days in seconds.
+const MAX_MUTE_DURATION_SECS: i64 = 7 * 24 * 3600;
+
+/// Far-future date used for "mute indefinitely".
+fn indefinite_mute_until() -> DateTime<Utc> {
+    DateTime::from_timestamp(253402300799, 0).unwrap() // 9999-12-31T23:59:59Z
+}
 
 #[derive(serde::Deserialize)]
 pub(super) struct CreateChatBody {
@@ -220,12 +229,96 @@ async fn patch_group(
     }))
 }
 
+#[derive(serde::Deserialize)]
+pub(super) struct MuteBody {
+    /// Duration in seconds, or null/absent for indefinite mute.
+    duration_seconds: Option<i64>,
+}
+
+#[derive(Serialize)]
+pub(super) struct MuteResponse {
+    muted_until: DateTime<Utc>,
+}
+
+/// PUT /group/:chat_id/mute — Mute notifications for a chat.
+async fn put_mute(
+    CurrentUid(uid): CurrentUid,
+    State(state): State<AppState>,
+    Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
+    Json(body): Json<MuteBody>,
+) -> Result<Json<MuteResponse>, (StatusCode, &'static str)> {
+    let conn = &mut state.db.get().map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Database connection failed",
+        )
+    })?;
+
+    check_membership(conn, chat_id, uid)?;
+
+    let muted_until = match body.duration_seconds {
+        Some(secs) if secs > 0 && secs <= MAX_MUTE_DURATION_SECS => {
+            Utc::now() + chrono::Duration::seconds(secs)
+        }
+        Some(secs) if secs > MAX_MUTE_DURATION_SECS => {
+            return Err((StatusCode::BAD_REQUEST, "Duration exceeds 7 day maximum"));
+        }
+        _ => indefinite_mute_until(),
+    };
+
+    use crate::schema::group_membership::dsl as gm_dsl;
+    diesel::update(
+        group_membership::table.filter(gm_dsl::chat_id.eq(chat_id).and(gm_dsl::uid.eq(uid))),
+    )
+    .set(gm_dsl::muted_until.eq(muted_until))
+    .execute(conn)
+    .map_err(|e| {
+        tracing::error!("set muted_until: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, "Failed to mute chat")
+    })?;
+
+    Ok(Json(MuteResponse { muted_until }))
+}
+
+/// DELETE /group/:chat_id/mute — Unmute notifications for a chat.
+async fn delete_mute(
+    CurrentUid(uid): CurrentUid,
+    State(state): State<AppState>,
+    Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
+) -> Result<StatusCode, (StatusCode, &'static str)> {
+    let conn = &mut state.db.get().map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Database connection failed",
+        )
+    })?;
+
+    check_membership(conn, chat_id, uid)?;
+
+    use crate::schema::group_membership::dsl as gm_dsl;
+    diesel::update(
+        group_membership::table.filter(gm_dsl::chat_id.eq(chat_id).and(gm_dsl::uid.eq(uid))),
+    )
+    .set(gm_dsl::muted_until.eq(None::<DateTime<Utc>>))
+    .execute(conn)
+    .map_err(|e| {
+        tracing::error!("clear muted_until: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, "Failed to unmute chat")
+    })?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
 pub fn router() -> axum::Router<crate::AppState> {
     axum::Router::new()
         .route("/", axum::routing::post(post_group))
         .route(
             "/{chat_id}",
             axum::routing::get(get_group).patch(patch_group),
+        )
+        .route(
+            "/{chat_id}/mute",
+            axum::routing::put(put_mute).delete(delete_mute),
         )
         .nest("/{chat_id}/members", crate::handlers::members::router())
 }

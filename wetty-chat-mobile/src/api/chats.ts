@@ -8,6 +8,7 @@ export interface ChatListItem {
   last_message_at: string | null;
   unread_count: number;
   last_message: MessageResponse | null;
+  muted_until: string | null;
 }
 
 interface ListChatsResponse {

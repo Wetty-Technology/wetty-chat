@@ -8,6 +8,7 @@ export interface GroupInfoResponse {
   avatar: string | null;
   visibility: string;
   created_at: string;
+  muted_until: string | null;
 }
 
 export interface UpdateGroupInfoBody {
@@ -65,4 +66,12 @@ export function removeMember(chatId: string | number, uid: number): Promise<Axio
 
 export function updateMemberRole(chatId: string | number, uid: number, body: UpdateMemberRoleBody): Promise<AxiosResponse<MemberResponse>> {
   return apiClient.patch(`/group/${chatId}/members/${uid}`, body);
+}
+
+export function muteChat(chatId: string | number, body: { duration_seconds?: number | null } = {}): Promise<AxiosResponse<{ muted_until: string }>> {
+  return apiClient.put(`/group/${chatId}/mute`, body);
+}
+
+export function unmuteChat(chatId: string | number): Promise<AxiosResponse<void>> {
+  return apiClient.delete(`/group/${chatId}/mute`);
 }

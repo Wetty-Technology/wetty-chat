@@ -14,7 +14,7 @@ import {
   type RefresherEventDetail,
 } from '@ionic/react';
 import { useDispatch, useSelector } from 'react-redux';
-import { mailUnreadOutline, checkmarkDone } from 'ionicons/icons';
+import { mailUnreadOutline, checkmarkDone, notificationsOffOutline } from 'ionicons/icons';
 import { getChats, getUnreadCount, type ChatListItem } from '@/api/chats';
 import { setChatsList, selectAllChats, markChatAsRead, setChatUnreadCount } from '@/store/chatsSlice';
 import { selectEffectiveLocale } from '@/store/settingsSlice';
@@ -66,6 +66,11 @@ function formatLastActivity(isoString: string | null, locale: string): string {
 function chatDisplayName(chat: ChatListItem): string {
   if (chat.name && chat.name.trim()) return chat.name;
   return t`Chat ${chat.id}`;
+}
+
+function isChatMuted(chat: ChatListItem): boolean {
+  if (!chat.muted_until) return false;
+  return new Date(chat.muted_until) > new Date();
 }
 
 function getMessagePreview(message: MessageResponse | null): ReactNode {
@@ -253,7 +258,12 @@ export function ChatList({ activeChatId, onChatSelect }: ChatListProps) {
                   {chat.name && chat.name.trim() ? chat.name.trim().charAt(0).toUpperCase() : '?'}
                 </div>
                 <IonLabel className={styles.chatsListLabel}>
-                  <h2>{chatDisplayName(chat)}</h2>
+                  <h2 className={styles.chatsListTitle}>
+                    <span className={styles.chatsListTitleText}>{chatDisplayName(chat)}</span>
+                    {isChatMuted(chat) ? (
+                      <IonIcon aria-hidden="true" icon={notificationsOffOutline} className={styles.chatsListMutedIcon} />
+                    ) : null}
+                  </h2>
                   <p className={styles.chatsListPreview}>{getMessagePreview(chat.last_message)}</p>
                 </IonLabel>
                 <div slot="end" className={styles.chatsListEndSlot}>

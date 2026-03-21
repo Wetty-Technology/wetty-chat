@@ -1,7 +1,7 @@
 import apiClient from '@/api/client';
 import { syncApp } from '@/api/sync';
 import type { MessageResponse, ReactionSummary } from '@/api/messages';
-import { setWsConnected } from '@/store/connectionSlice';
+import { setWsConnected, setActiveConnections } from '@/store/connectionSlice';
 import store from '@/store/index';
 import {
   messageAdded,
@@ -98,6 +98,10 @@ const MESSAGE_PREVIEW_MAX = 100;
 function showLocalNotification(message: MessageResponse): void {
   if (currentAppState !== 'inactive') return;
 
+  // Skip notification if user is active on another connection
+  const { activeConnections } = store.getState().connection;
+  if (activeConnections > 1) return;
+
   const currentUid = store.getState().user.uid;
   if (currentUid != null && message.sender.uid === currentUid) return;
   if (message.is_deleted) return;
@@ -105,6 +109,11 @@ function showLocalNotification(message: MessageResponse): void {
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
 
   const chatEntry = store.getState().chats.byId[message.chat_id];
+
+  // Skip notification for muted chats
+  const mutedUntil = chatEntry?.liveProjection?.muted_until ?? chatEntry?.listSnapshot?.muted_until;
+  if (mutedUntil && new Date(mutedUntil) > new Date()) return;
+
   const chatName = chatEntry?.details?.name ?? 'New Message';
 
   let body: string;
@@ -339,6 +348,12 @@ async function connectWebSocket(): Promise<void> {
               reactions: payload.reactions ?? [],
             }));
           }
+          return;
+        }
+
+        if (message.type === 'presence_update' && message.payload != null) {
+          const payload = message.payload as { active_connections: number };
+          store.dispatch(setActiveConnections(payload.active_connections));
         }
       } catch {
         // ignore malformed websocket messages

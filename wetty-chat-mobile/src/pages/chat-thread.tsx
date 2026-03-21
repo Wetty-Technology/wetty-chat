@@ -16,7 +16,18 @@ import {
   useIonAlert,
 } from '@ionic/react';
 import { useParams, useHistory } from 'react-router-dom';
-import { settings, chevronDown, people, arrowUndo, chatbubbles, createOutline, copyOutline, trashOutline } from 'ionicons/icons';
+import {
+  settings,
+  chevronDown,
+  people,
+  arrowUndo,
+  chatbubbles,
+  createOutline,
+  copyOutline,
+  trashOutline,
+  notificationsOffOutline,
+  informationCircleOutline,
+} from 'ionicons/icons';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   getMessages,
@@ -31,7 +42,7 @@ import {
   type Attachment,
   type Sender,
 } from '@/api/messages';
-import { selectChatName, setChatMeta, markChatAsRead } from '@/store/chatsSlice';
+import { selectChatName, selectIsChatMuted, setChatMeta, setChatMutedUntil, markChatAsRead } from '@/store/chatsSlice';
 import {
   selectMessagesForChat,
   selectNextCursorForChat,
@@ -123,15 +134,17 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   const currentUserAvatarUrl = useSelector((state: RootState) => state.user.avatar_url);
   const wsConnected = useSelector((state: RootState) => state.connection.wsConnected);
   const storedName = useSelector((state: RootState) => selectChatName(state, chatId));
+  const isMuted = useSelector((state: RootState) => selectIsChatMuted(state, chatId));
   const chatName = threadId ? t`Thread` : (storedName ?? t`Loading...`);
 
   useEffect(() => {
     if (!chatId || storedName != null) return;
     getGroupInfo(chatId)
       .then((res) => {
-        const { id, ...meta } = res.data;
+        const { id, muted_until, ...meta } = res.data;
         void id;
         dispatch(setChatMeta({ chatId: chatId, meta }));
+        dispatch(setChatMutedUntil({ chatId, mutedUntil: muted_until }));
       })
       .catch(() => { });
   }, [chatId, storedName, dispatch]);
@@ -311,7 +324,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
       optimistic = existing
         .map(r => r.emoji === emoji ? { ...r, count: r.count - 1, reacted_by_me: false } : r)
         .filter(r => r.count > 0);
-      deleteReaction(chatId, msg.id, emoji).catch(() => {});
+      deleteReaction(chatId, msg.id, emoji).catch(() => { });
     } else {
       const found = existing.find(r => r.emoji === emoji);
       if (found) {
@@ -319,7 +332,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
       } else {
         optimistic = [...existing, { emoji, count: 1, reacted_by_me: true }];
       }
-      putReaction(chatId, msg.id, emoji).catch(() => {});
+      putReaction(chatId, msg.id, emoji).catch(() => { });
     }
     dispatch(reactionsUpdated({ chatId, messageId: msg.id, reactions: optimistic }));
   }, [chatId, dispatch]);
@@ -588,6 +601,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
     if (msg.reactions?.length) {
       actions.push({
         key: 'reaction-details',
+        icon: informationCircleOutline,
         label: t`Reaction Details`,
         handler: () => {
           setReactionDetail({ messageId: msg.id });
@@ -604,7 +618,12 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
           <IonButtons slot="start">
             {backAction && <BackButton action={backAction} />}
           </IonButtons>
-          <IonTitle>{chatName}</IonTitle>
+          <IonTitle>
+            <span className="chat-thread-title">
+              <span>{chatName}</span>
+              {isMuted && !threadId ? <IonIcon aria-hidden="true" icon={notificationsOffOutline} className="chat-thread-title__icon" /> : null}
+            </span>
+          </IonTitle>
           <IonButtons slot="end">
             <IonButton onClick={() => history.push(`/chats/chat/${chatId}/members`)}>
               <IonIcon slot="icon-only" icon={people} />

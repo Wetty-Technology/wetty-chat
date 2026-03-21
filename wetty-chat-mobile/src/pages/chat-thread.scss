@@ -5,6 +5,18 @@
   position: relative;
 }
 
+.chat-thread-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chat-thread-title__icon {
+  font-size: 0.95em;
+  color: var(--ion-color-medium);
+  flex-shrink: 0;
+}
+
 /* Scroll-to-bottom FAB */
 .scroll-to-bottom-fab {
   opacity: 1;
