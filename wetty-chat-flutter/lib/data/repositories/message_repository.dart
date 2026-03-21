@@ -10,10 +10,8 @@ class MessageRepository {
   final MessageStore store = MessageStore();
   String? nextCursor;
 
-  MessageRepository({
-    required this.chatId,
-    MessageService? service,
-  }) : _service = service ?? MessageService();
+  MessageRepository({required this.chatId, MessageService? service})
+    : _service = service ?? MessageService();
 
   /// Load the initial set of messages.
   Future<void> loadMessages() async {
@@ -58,6 +56,6 @@ class MessageRepository {
     store.removeById(messageId);
   }
 
-  /// Get display items (flattened sorted messages).
+  /// Get display items
   List<MessageItem> get displayItems => store.buildDisplayItems();
 }
