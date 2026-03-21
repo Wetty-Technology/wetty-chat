@@ -1,4 +1,4 @@
-// Shared API config to avoid circular imports (main, chats, messages).
+// Shared API config.
 // TODO: replace with actual auth when available.
 const int curUserId = 1;
 const String apiBaseUrl = 'http://10.42.3.100:3000';
