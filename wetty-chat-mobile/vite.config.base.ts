@@ -18,10 +18,7 @@ export default defineConfig({
     }
   },
   plugins: [
-    patchCssModules({
-      generateSourceTypes: true,
-      declarationMap: true,
-    }),
+    patchCssModules(),
     react({
       babel: {
         plugins: ["@lingui/babel-plugin-lingui-macro"],

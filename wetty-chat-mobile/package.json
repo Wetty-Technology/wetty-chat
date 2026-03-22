@@ -4,6 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "clean:css-module-types": "find src \\( -name '*.module.scss.d.ts' -o -name '*.module.css.d.ts' \\) -exec rm -f {} +",
+    "predev": "npm run clean:css-module-types",
+    "prebuild": "npm run clean:css-module-types",
+    "pretypecheck": "npm run clean:css-module-types",
     "dev": "vite -c vite.config.dev.ts",
     "build": "tsc -b && vite build -c vite.config.staging.ts",
     "build-prod": "tsc -b && vite build --base=/chat/ --outDir prod-dist -c vite.config.prod.ts",
