@@ -444,8 +444,12 @@ msgid "No chats yet"
 msgstr "No chats yet"
 
 #: src/components/settings/AppVersionItem.tsx
-msgid "No device token available"
-msgstr "No device token available"
+#~ msgid "No device token available"
+#~ msgstr "No device token available"
+
+#: src/components/settings/AppVersionItem.tsx
+msgid "No JWT token available"
+msgstr "No JWT token available"
 
 #: src/pages/chat-members.tsx
 msgid "No members found."

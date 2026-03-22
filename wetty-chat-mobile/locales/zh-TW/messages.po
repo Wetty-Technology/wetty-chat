@@ -444,8 +444,12 @@ msgid "No chats yet"
 msgstr "暫無聊天"
 
 #: src/components/settings/AppVersionItem.tsx
-msgid "No device token available"
-msgstr "沒有可用的裝置權杖"
+#~ msgid "No device token available"
+#~ msgstr "沒有可用的裝置權杖"
+
+#: src/components/settings/AppVersionItem.tsx
+msgid "No JWT token available"
+msgstr "沒有可用的 JWT 權杖"
 
 #: src/pages/chat-members.tsx
 msgid "No members found."
