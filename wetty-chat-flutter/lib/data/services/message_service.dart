@@ -11,11 +11,13 @@ class MessageService {
     int? max,
     String? before,
     String? after,
+    String? around,
   }) async {
     final query = <String, String>{};
     if (max != null) query['max'] = max.toString();
     if (before != null && before.isNotEmpty) query['before'] = before;
     if (after != null && after.isNotEmpty) query['after'] = after;
+    if (around != null && around.isNotEmpty) query['around'] = around;
     final uri = Uri.parse(
       '$apiBaseUrl/chats/$chatId/messages',
     ).replace(queryParameters: query.isEmpty ? null : query);
@@ -31,13 +33,9 @@ class MessageService {
   }
 
   /// Fetches messages around [messageId] for deep linking.
-  Future<List<MessageItem>> fetchAround(
-    String chatId,
-    String messageId,
-  ) async {
-    final resBefore = await fetchMessages(chatId, max: 15, before: messageId);
-    final resAfter = await fetchMessages(chatId, max: 15, after: messageId);
-    return [...resBefore.messages, ...resAfter.messages];
+  Future<List<MessageItem>> fetchAround(String chatId, String messageId) async {
+    final res = await fetchMessages(chatId, around: messageId);
+    return res.messages;
   }
 
   Future<MessageItem> sendMessage(

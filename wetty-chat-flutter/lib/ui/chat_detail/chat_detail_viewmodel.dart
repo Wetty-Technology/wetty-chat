@@ -32,7 +32,7 @@ class ChatDetailViewModel extends ChangeNotifier {
   final String chatId;
 
   ChatDetailViewModel({required this.chatId, MessageRepository? repository})
-      : _repository = repository ?? MessageRepository(chatId: chatId);
+    : _repository = repository ?? MessageRepository(chatId: chatId);
 
   List<MessageItem> _displayItems = [];
   List<MessageItem> get displayItems => _displayItems;
@@ -127,6 +127,9 @@ class ChatDetailViewModel extends ChangeNotifier {
 
   Future<bool> jumpToMessage(String messageId) async {
     int idx = _displayItems.indexWhere((m) => m.id == messageId);
+
+    print("idx: $idx, messageId: $messageId");
+
     if (idx >= 0) {
       _highlightedMessageId = messageId;
       notifyListeners();
@@ -141,6 +144,10 @@ class ChatDetailViewModel extends ChangeNotifier {
       _isLoadingMore = false;
       _rebuildDisplay();
       idx = _displayItems.indexWhere((m) => m.id == messageId);
+      for (var i = 0; i < _displayItems.length; i++) {
+        print("displayItems[$i]: ${_displayItems[i].id}");
+      }
+      print("new idx: $idx");
       if (idx >= 0) {
         _highlightedMessageId = messageId;
         notifyListeners();
