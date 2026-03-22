@@ -12,7 +12,6 @@ import {
     IonTitle,
     IonToolbar,
 } from '@ionic/react';
-import Cookies from 'js-cookie';
 import {type ReactNode, useEffect, useState} from 'react';
 import {
     ellipsisHorizontal,
@@ -24,6 +23,7 @@ import {
 } from 'ionicons/icons';
 import './landing.scss';
 import { useLocation } from 'react-router';
+import { syncJwtTokenFromLanding } from '@/utils/jwtToken';
 
 type PlatformId = 'android' | 'ios' | 'windows' | 'macos' | 'linux';
 
@@ -83,11 +83,7 @@ export default function LandingPage() {
     const location = useLocation();
 
     useEffect(() => {
-        const queryParams = new URLSearchParams(location.search);
-        const token = queryParams.get('token');
-        if (queryParams && token) {
-            Cookies.set('device_token', token, { path: '/', expires: 365 });
-        }
+        syncJwtTokenFromLanding(location.search);
     }, [location]);
 
     return (

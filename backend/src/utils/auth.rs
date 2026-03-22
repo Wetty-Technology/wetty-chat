@@ -36,8 +36,8 @@ pub struct AuthContext {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AuthClaims {
     pub uid: i32,
-    pub client_id: String,
-    pub generation: i32,
+    pub cid: String,
+    pub gen: i32,
 }
 
 impl fmt::Display for CurrentUid {
@@ -130,7 +130,7 @@ pub fn extract_auth_context(
         let claims = decode_auth_token(token, &state.jwt_signing_key)?;
         return Ok(AuthContext {
             uid: claims.uid,
-            client_id: Some(claims.client_id),
+            client_id: Some(claims.cid),
             source: AuthSource::Jwt,
         });
     }
@@ -342,8 +342,8 @@ mod tests {
     fn auth_token_round_trip_preserves_claims() {
         let claims = AuthClaims {
             uid: 42,
-            client_id: "client_123".to_string(),
-            generation: 0,
+            cid: "client_123".to_string(),
+            gen: 0,
         };
 
         let token = encode_auth_token(&claims, b"01234567890123456789012345678901").unwrap();
@@ -356,8 +356,8 @@ mod tests {
     fn auth_token_rejects_wrong_key() {
         let claims = AuthClaims {
             uid: 42,
-            client_id: "client_123".to_string(),
-            generation: 0,
+            cid: "client_123".to_string(),
+            gen: 0,
         };
 
         let token = encode_auth_token(&claims, b"01234567890123456789012345678901").unwrap();

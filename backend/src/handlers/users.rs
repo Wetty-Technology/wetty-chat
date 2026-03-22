@@ -73,8 +73,8 @@ async fn get_auth_token(
     let token = encode_auth_token(
         &AuthClaims {
             uid: auth.uid,
-            client_id,
-            generation: 0,
+            cid: client_id,
+            gen: 0,
         },
         &state.jwt_signing_key,
     )?;

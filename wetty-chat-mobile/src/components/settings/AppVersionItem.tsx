@@ -8,7 +8,7 @@ const TAP_RESET_TIMEOUT_MS = 2000;
 const REQUIRED_TAP_COUNT = 5;
 
 export function AppVersionItem() {
-  const deviceToken = useDeviceToken();
+  const jwtToken = useDeviceToken();
   const [presentToast] = useIonToast();
   const tapCountRef = useRef(0);
   const timeoutIdRef = useRef<number | null>(null);
@@ -45,7 +45,7 @@ export function AppVersionItem() {
 
     if (tapCountRef.current >= REQUIRED_TAP_COUNT) {
       presentToast({
-        message: deviceToken || t`No device token available`,
+        message: jwtToken || t`No JWT token available`,
         duration: 4000,
         position: 'bottom',
       });

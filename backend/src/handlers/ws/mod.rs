@@ -31,8 +31,8 @@ async fn get_ws_ticket(
 ) -> Result<Json<TicketResponse>, (axum::http::StatusCode, &'static str)> {
     let claims = AuthClaims {
         uid,
-        client_id,
-        generation: 0,
+        cid: client_id,
+        gen: 0,
     };
     let ticket = encode_auth_token(&claims, &state.jwt_signing_key)?;
 

@@ -9,7 +9,6 @@ import { useDispatch } from 'react-redux';
 import { useEffect } from 'react';
 import type { AppDispatch } from '@/store/index';
 import { fetchCurrentUser, setUser } from '@/store/userSlice';
-import Cookies from 'js-cookie';
 
 import './app.scss';
 import { getCurrentUserId } from './js/current-user';
@@ -23,7 +22,7 @@ import { DesktopSplitLayout } from './layouts/DesktopSplitLayout';
 import OobePage from '@/pages/oobe';
 import LandingPage from './pages/landing';
 import { initWebSocket } from '@/api/ws';
-import { useDeviceToken } from './hooks/useDeviceToken';
+import { syncStoredJwtToken } from '@/utils/jwtToken';
 
 setupIonicReact({
   mode: 'ios',
@@ -52,20 +51,12 @@ function AppRouter({ isDesktop }: { isDesktop: boolean }) {
 
 function AppShell() {
   const dispatch = useDispatch<AppDispatch>();
-  const deviceToken = useDeviceToken();
   const isDesktop = useIsDesktop();
   useAppLifecycle();
   const { needRefresh, setNeedRefresh, updateServiceWorker } = useAppUpdate();
 
-  // Refresh token on app launch
   useEffect(() => {
-    const storedDeviceToken = Cookies.get('device_token');
-    if (storedDeviceToken === deviceToken && deviceToken !== '') {
-      Cookies.set('device_token', deviceToken, {path: '/', expires: 365});
-    }
-  }, [deviceToken, document.cookie]);
-
-  useEffect(() => {
+    syncStoredJwtToken();
     initWebSocket();
     if (import.meta.env.DEV) {
       dispatch(setUser({ uid: getCurrentUserId(), username: 'Development User', avatar_url: null }));

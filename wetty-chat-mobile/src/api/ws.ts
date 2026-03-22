@@ -10,6 +10,7 @@ import {
   reactionsUpdated,
 } from '@/store/messageEvents';
 import { setAppBadgeCount } from '@/utils/badges';
+import { getStoredJwtToken } from '@/utils/jwtToken';
 
 const WS_PATH = import.meta.env.BASE_URL + '_api/ws';
 const PING_INTERVAL_MS = 10_000;
@@ -275,7 +276,7 @@ async function connectWebSocket(): Promise<void> {
   const generation = ++connectGeneration;
 
   try {
-    const ticket = await requestWsTicket();
+    const ticket = getStoredJwtToken() || await requestWsTicket();
     if (generation !== connectGeneration || !isInitialized || !networkOnline) {
       isConnecting = false;
       return;
