@@ -146,42 +146,64 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     final found = await _viewModel.jumpToMessage(messageId);
     if (!found || !mounted) return;
 
-    // Step 1: Wait for one frame to ensure the ScrollablePositionedList
-    // has rebuilt with the updated displayItems (new items count).
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) return;
-      final idx = _viewModel.displayItems.indexWhere((m) => m.id == messageId);
-      if (idx < 0) return;
+    final idx = _viewModel.displayItems.indexWhere((m) => m.id == messageId);
+    if (idx < 0) return;
 
-      // Step 2: Perform the initial jump. This brings the item into the 
-      // viewport so it can be physically measured in the next frame.
-      _itemScrollController.jumpTo(index: idx, alignment: 0.5);
-
-      // Step 3: Yield to the event loop to ensure ItemPositionsListener
-      // has processed the new layout/positions after the jump.
-      // Some items (especially nearby ones) need a micro-delay to be reported.
-      await Future.delayed(Duration.zero);
-      if (!mounted) return;
-
+    // Helper for precise centering scroll.
+    void performRefinedScroll(int targetIdx) {
       final positions = _itemPositionsListener.itemPositions.value;
-      var targetPos = positions.where((p) => p.index == idx).toList();
-
-      // Simple retry if not measured yet (very rare but possible).
-      if (targetPos.isEmpty) {
-        await Future.delayed(const Duration(milliseconds: 16)); // ~1 frame
-        if (!mounted) return;
-        targetPos = _itemPositionsListener.itemPositions.value
-            .where((p) => p.index == idx)
-            .toList();
-      }
-
+      final targetPos = positions.where((p) => p.index == targetIdx).toList();
       if (targetPos.isNotEmpty) {
         final pos = targetPos.first;
         final h = pos.itemTrailingEdge - pos.itemLeadingEdge;
-
-        // Step 4: Final precise alignment (First line at center).
         _itemScrollController.scrollTo(
-          index: idx,
+          index: targetIdx,
+          alignment: 0.5 - h,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    }
+
+    // Step 1: If the item is already visible, center it immediately.
+    final currentVisible = _itemPositionsListener.itemPositions.value
+        .where((p) => p.index == idx)
+        .toList();
+    if (currentVisible.isNotEmpty) {
+      performRefinedScroll(idx);
+      return;
+    }
+
+    // Step 2: Item not visible. Wait for a frame to ensure SPL recognizes the new data.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final idx2 = _viewModel.displayItems.indexWhere((m) => m.id == messageId);
+      if (idx2 < 0) return;
+
+      // Bring item into viewport.
+      _itemScrollController.jumpTo(index: idx2, alignment: 0.5);
+
+      // Yield to let the layout engine report new positions.
+      await Future.delayed(Duration.zero);
+      if (!mounted) return;
+
+      var p = _itemPositionsListener.itemPositions.value
+          .where((pos) => pos.index == idx2)
+          .toList();
+      
+      // Retry if layout is slow (rare).
+      if (p.isEmpty) {
+        await Future.delayed(const Duration(milliseconds: 16));
+        if (!mounted) return;
+        p = _itemPositionsListener.itemPositions.value
+            .where((pos) => pos.index == idx2)
+            .toList();
+      }
+
+      if (p.isNotEmpty) {
+        final h = p.first.itemTrailingEdge - p.first.itemLeadingEdge;
+        _itemScrollController.scrollTo(
+          index: idx2,
           alignment: 0.5 - h,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
