@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 import '../../config/api_config.dart';
 import '../../data/models/message_models.dart';
@@ -25,7 +26,8 @@ class ChatDetailPage extends StatefulWidget {
 
 class _ChatDetailPageState extends State<ChatDetailPage> {
   late final ChatDetailViewModel _viewModel;
-  late ScrollController _scrollController;
+  final ItemScrollController _itemScrollController = ItemScrollController();
+  final ItemPositionsListener _itemPositionsListener = ItemPositionsListener.create();
   final ScrollController _inputScrollController = ScrollController();
   final TextEditingController _textController = TextEditingController();
   static const double _titleBarHeight = 70.0;
@@ -35,7 +37,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     super.initState();
     _viewModel = ChatDetailViewModel(chatId: widget.chatId);
     _viewModel.addListener(_onViewModelChanged);
-    _scrollController = ScrollController()..addListener(_onScroll);
+    _itemPositionsListener.itemPositions.addListener(_onItemPositionsChanged);
     _viewModel.loadMessages();
     final draft = _viewModel.loadDraft();
     if (draft != null) _textController.text = draft;
@@ -46,8 +48,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     _saveDraft();
     _viewModel.removeListener(_onViewModelChanged);
     _viewModel.dispose();
-    _scrollController.removeListener(_onScroll);
-    _scrollController.dispose();
+    _itemPositionsListener.itemPositions.removeListener(_onItemPositionsChanged);
     _inputScrollController.dispose();
     _textController.dispose();
     super.dispose();
@@ -61,25 +62,33 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     _viewModel.saveDraft(_textController.text);
   }
 
-  void _onScroll() {
-    final pos = _scrollController.position;
-    // Show jump-to-bottom button when scrolled away from newest messages.
-    _viewModel.updateScrollToBottom(pos.pixels > 300);
-
+  void _onItemPositionsChanged() {
     if (_viewModel.isLoadingMore ||
         _viewModel.isLoading ||
         _viewModel.displayItems.isEmpty) {
       return;
     }
-    if (pos.pixels >= pos.maxScrollExtent - 200) {
+
+    final positions = _itemPositionsListener.itemPositions.value;
+    if (positions.isEmpty) return;
+
+    // Show jump-to-bottom button when scrolled away from newest messages.
+    // In reverse mode, index 0 is at the bottom.
+    final isBottomVisible = positions.any((p) => p.index == 0);
+    _viewModel.updateScrollToBottom(!isBottomVisible);
+
+    // Load more when reaching the end (highest index)
+    final maxIndex = positions.map((p) => p.index).reduce((a, b) => a > b ? a : b);
+    final totalCount = _viewModel.displayItems.length + (_viewModel.hasMoreMessages ? 1 : 0);
+    
+    if (maxIndex >= totalCount - 5) {
       _viewModel.loadMoreMessages();
     }
   }
 
   void _scrollToBottom() {
-    if (!_scrollController.hasClients) return;
-    _scrollController.animateTo(
-      0,
+    _itemScrollController.scrollTo(
+      index: 0,
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOut,
     );
@@ -128,13 +137,21 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   Future<void> _jumpToMessage(String messageId) async {
     final found = await _viewModel.jumpToMessage(messageId);
     if (!found || !mounted) return;
-    final idx = _viewModel.displayItems.indexWhere((m) => m.id == messageId);
-    if (idx < 0) return;
-    _scrollController.animateTo(
-      idx * 80.0,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOut,
-    );
+
+    // Use a post-frame callback to ensure the ScrollablePositionedList has 
+    // rebuilt with the new items before we attempt to scroll to an index.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final idx = _viewModel.displayItems.indexWhere((m) => m.id == messageId);
+      if (idx < 0) return;
+
+      _itemScrollController.scrollTo(
+        index: idx,
+        alignment: 0.5,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   void _showErrorDialog(String message) {
@@ -426,8 +443,10 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         _viewModel.nextCursor != null && _viewModel.isLoadingMore;
     final items = _viewModel.displayItems;
     final itemCount = items.length + (showTopLoader ? 1 : 0);
-    return ListView.builder(
-      controller: _scrollController,
+
+    return ScrollablePositionedList.builder(
+      itemScrollController: _itemScrollController,
+      itemPositionsListener: _itemPositionsListener,
       reverse: true,
       padding: const EdgeInsets.only(top: _titleBarHeight),
       itemCount: itemCount,
