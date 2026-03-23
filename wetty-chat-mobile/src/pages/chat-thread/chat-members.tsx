@@ -1,28 +1,28 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  IonPage,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
-  IonContent,
   IonButton,
   IonButtons,
-  IonSpinner,
+  IonContent,
+  IonHeader,
+  IonPage,
   IonSearchbar,
-  useIonToast,
-  useIonAlert,
+  IonSpinner,
+  IonTitle,
+  IonToolbar,
   useIonActionSheet,
+  useIonAlert,
+  useIonToast,
 } from '@ionic/react';
 import { useParams } from 'react-router-dom';
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import {
-  getMembers,
   addMember,
-  removeMember,
-  updateMemberRole,
+  getMembers,
   type MemberResponse,
   type MemberSearchMode,
+  removeMember,
+  updateMemberRole,
 } from '@/api/group';
 import { Virtuoso } from 'react-virtuoso';
 import { useSelector } from 'react-redux';
@@ -92,9 +92,12 @@ export default function ChatMembersCore({ chatId: propChatId, backAction }: Chat
   const latestInitialLoadRef = useRef(0);
   const activeSearchKeyRef = useRef(getSearchKey(null));
 
-  const showToast = useCallback((msg: string, duration = 3000) => {
-    presentToast({ message: msg, duration });
-  }, [presentToast]);
+  const showToast = useCallback(
+    (msg: string, duration = 3000) => {
+      presentToast({ message: msg, duration });
+    },
+    [presentToast],
+  );
 
   useEffect(() => {
     activeSearchKeyRef.current = getSearchKey(activeSearch);
@@ -304,9 +307,7 @@ export default function ChatMembersCore({ chatId: propChatId, backAction }: Chat
     const displayName = member.username || t`User ${member.uid}`;
     presentAlert({
       header: isPromoting ? t`Promote Member` : t`Demote Member`,
-      message: isPromoting
-        ? t`Promote ${displayName} to admin?`
-        : t`Demote ${displayName} to member?`,
+      message: isPromoting ? t`Promote ${displayName} to admin?` : t`Demote ${displayName} to member?`,
       buttons: [
         { text: t`Cancel`, role: 'cancel' },
         {
@@ -368,10 +369,10 @@ export default function ChatMembersCore({ chatId: propChatId, backAction }: Chat
     <div className="ion-page">
       <IonHeader>
         <IonToolbar>
-          <IonButtons slot="start">
-            {backAction && <BackButton action={backAction} />}
-          </IonButtons>
-          <IonTitle><Trans>Group Members</Trans></IonTitle>
+          <IonButtons slot="start">{backAction && <BackButton action={backAction} />}</IonButtons>
+          <IonTitle>
+            <Trans>Group Members</Trans>
+          </IonTitle>
         </IonToolbar>
         <IonToolbar>
           <IonSearchbar

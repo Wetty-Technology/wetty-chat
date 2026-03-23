@@ -1,17 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  IonPage,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
+  IonButtons,
   IonContent,
-  IonList,
+  IonHeader,
   IonItem,
   IonLabel,
-  IonButtons,
+  IonList,
+  IonPage,
   IonSpinner,
-  useIonToast,
+  IonTitle,
+  IonToolbar,
   useIonAlert,
+  useIonToast,
 } from '@ionic/react';
 import { useParams } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
@@ -106,7 +106,7 @@ function GroupDetailSession({ id, backAction }: { id: string; backAction?: BackA
                     ? 'User is already a member.'
                     : err?.response?.status === 404
                       ? 'User or chat not found.'
-                      : err?.message ?? 'Failed to add member';
+                      : (err?.message ?? 'Failed to add member');
                 presentToast({ message: msg, duration: 3000 });
               });
           },
@@ -120,9 +120,7 @@ function GroupDetailSession({ id, backAction }: { id: string; backAction?: BackA
       <div className="ion-page">
         <IonHeader>
           <IonToolbar>
-            <IonButtons slot="start">
-              {backAction && <BackButton action={backAction} />}
-            </IonButtons>
+            <IonButtons slot="start">{backAction && <BackButton action={backAction} />}</IonButtons>
             <IonTitle>Group</IonTitle>
           </IonToolbar>
         </IonHeader>
@@ -140,9 +138,7 @@ function GroupDetailSession({ id, backAction }: { id: string; backAction?: BackA
     <div className="ion-page">
       <IonHeader>
         <IonToolbar>
-          <IonButtons slot="start">
-            {backAction && <BackButton action={backAction} />}
-          </IonButtons>
+          <IonButtons slot="start">{backAction && <BackButton action={backAction} />}</IonButtons>
           <IonTitle>Group</IonTitle>
         </IonToolbar>
       </IonHeader>
@@ -162,11 +158,7 @@ function GroupDetailSession({ id, backAction }: { id: string; backAction?: BackA
             <div style={{ padding: '16px' }}>
               <h3 style={{ margin: '0 0 8px' }}>Group avatar</h3>
               {avatar ? (
-                <img
-                  src={avatar}
-                  alt=""
-                  style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover' }}
-                />
+                <img src={avatar} alt="" style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover' }} />
               ) : (
                 <div
                   style={{
@@ -230,9 +222,7 @@ export default function GroupDetailCore({ chatId: propChatId, backAction }: Grou
       <div className="ion-page">
         <IonHeader>
           <IonToolbar>
-            <IonButtons slot="start">
-              {backAction && <BackButton action={backAction} />}
-            </IonButtons>
+            <IonButtons slot="start">{backAction && <BackButton action={backAction} />}</IonButtons>
             <IonTitle>Group</IonTitle>
           </IonToolbar>
         </IonHeader>

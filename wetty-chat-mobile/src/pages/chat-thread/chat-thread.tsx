@@ -1,69 +1,69 @@
-import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  IonPage,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
-  IonProgressBar,
-  IonContent,
-  IonFooter,
-  IonButtons,
   IonButton,
-  IonIcon,
+  IonButtons,
+  IonContent,
   IonFab,
   IonFabButton,
-  useIonToast,
+  IonFooter,
+  IonHeader,
+  IonIcon,
+  IonPage,
+  IonProgressBar,
+  IonTitle,
+  IonToolbar,
   useIonAlert,
+  useIonToast,
 } from '@ionic/react';
-import { useParams, useHistory } from 'react-router-dom';
+import { useHistory, useParams } from 'react-router-dom';
 import {
-  chevronDown,
-  people,
   arrowUndo,
   chatbubbles,
-  createOutline,
+  chevronDown,
   copyOutline,
-  trashOutline,
-  notificationsOffOutline,
+  createOutline,
   informationCircleOutline,
+  notificationsOffOutline,
+  people,
+  trashOutline,
 } from 'ionicons/icons';
 import { useDispatch, useSelector } from 'react-redux';
 import {
+  type Attachment,
+  deleteMessage,
+  deleteReaction,
   getMessages,
+  markMessagesAsRead,
+  type MessageResponse,
+  putReaction,
+  type Sender,
   sendMessage,
   sendThreadMessage,
   updateMessage,
-  deleteMessage,
-  putReaction,
-  deleteReaction,
-  markMessagesAsRead,
-  type MessageResponse,
-  type Attachment,
-  type Sender,
 } from '@/api/messages';
-import { selectChatName, selectIsChatMuted, setChatMeta, setChatMutedUntil, markChatAsRead } from '@/store/chatsSlice';
+import { markChatAsRead, selectChatName, selectIsChatMuted, setChatMeta, setChatMutedUntil } from '@/store/chatsSlice';
 import {
+  appendMessages,
+  prependMessages,
+  pushWindow,
+  refreshLatest,
+  resetChat,
+  selectChatGeneration,
   selectMessagesForChat,
   selectNextCursorForChat,
   selectPrevCursorForChat,
-  resetChat,
-  refreshLatest,
-  pushWindow,
-  appendMessages,
-  prependMessages,
-  selectChatGeneration,
 } from '@/store/messagesSlice';
 import { messageAdded, messageConfirmed, messagePatched, reactionsUpdated } from '@/store/messageEvents';
-import store from '@/store/index';
 import type { RootState } from '@/store/index';
+import store from '@/store/index';
 import { VirtualScroll } from '@/components/chat/VirtualScroll';
 import { ChatBubble } from '@/components/chat/ChatBubble';
 import {
-  MessageComposeBar,
-  type ComposeUploadInput,
   type ComposeSendPayload,
   type ComposeUploadedAttachment,
+  type ComposeUploadInput,
   type EditingMessage,
+  MessageComposeBar,
 } from '@/components/chat/MessageComposeBar';
 import './chat-thread.scss';
 import { t } from '@lingui/core/macro';
@@ -85,9 +85,10 @@ function areAttachmentIdsEqual(left: string[], right: string[]): boolean {
   return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
-function buildOptimisticUploadedAttachments(
-  uploadedAttachments: ComposeUploadedAttachment[],
-): { attachments: Attachment[]; revoke: () => void } {
+function buildOptimisticUploadedAttachments(uploadedAttachments: ComposeUploadedAttachment[]): {
+  attachments: Attachment[];
+  revoke: () => void;
+} {
   const previewUrls: string[] = [];
   const attachments = uploadedAttachments.map((attachment) => {
     const previewUrl = URL.createObjectURL(attachment.file);
@@ -144,13 +145,10 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
         dispatch(setChatMeta({ chatId: chatId, meta }));
         dispatch(setChatMutedUntil({ chatId, mutedUntil: muted_until }));
       })
-      .catch(() => { });
+      .catch(() => {});
   }, [chatId, storedName, dispatch]);
   const messages = useSelector((state: RootState) => selectMessagesForChat(state, storeChatId));
-  const messageLookup = useMemo(
-    () => new Map(messages.map((message) => [message.id, message])),
-    [messages],
-  );
+  const messageLookup = useMemo(() => new Map(messages.map((message) => [message.id, message])), [messages]);
 
   const formatDateSeparator = useCallback((iso: string) => {
     if (!iso) return '';
@@ -158,9 +156,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
     const now = new Date();
 
     const isSameDay = (d1: Date, d2: Date) =>
-      d1.getFullYear() === d2.getFullYear() &&
-      d1.getMonth() === d2.getMonth() &&
-      d1.getDate() === d2.getDate();
+      d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
 
     if (isSameDay(date, now)) return t`Today`;
 
@@ -171,7 +167,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
     return date.toLocaleDateString(undefined, {
       year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
     });
   }, []);
 
@@ -181,7 +177,9 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   const loadingMoreRef = useRef(false);
   const loadingNewerRef = useRef(false);
   const [prependedCount, setPrependedCount] = useState(0);
-  const pendingPrependRef = useRef<{ messages: MessageResponse[]; nextCursor: string | null; gen: number } | null>(null);
+  const pendingPrependRef = useRef<{ messages: MessageResponse[]; nextCursor: string | null; gen: number } | null>(
+    null,
+  );
   const isScrollIdleRef = useRef(true);
   const [windowKey, setWindowKey] = useState(0);
   const [initialScrollIndex, setInitialScrollIndex] = useState<number | undefined>(undefined);
@@ -192,14 +190,16 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   const [reactionDetail, setReactionDetail] = useState<{ messageId: string; emoji?: string } | null>(null);
   const [editingSession, setEditingSession] = useState<EditSession | null>(null);
 
-
   const [presentToast] = useIonToast();
   const [presentAlert] = useIonAlert();
   const [overlayMessage, setOverlayMessage] = useState<{ message: MessageResponse; sourceRect: DOMRect } | null>(null);
 
-  const showToast = useCallback((text: string, duration = 3000) => {
-    presentToast({ message: text, duration, position: 'bottom' });
-  }, [presentToast]);
+  const showToast = useCallback(
+    (text: string, duration = 3000) => {
+      presentToast({ message: text, duration, position: 'bottom' });
+    },
+    [presentToast],
+  );
 
   const lastReportedReadId = useRef<string | null>(null);
 
@@ -230,10 +230,17 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
     getMessages(chatId, threadId ? { thread_id: threadId } : undefined)
       .then((res) => {
         const list = res.data.messages ?? [];
-        dispatch(refreshLatest({ chatId: storeChatId, messages: list, nextCursor: res.data.next_cursor ?? null, prevCursor: null }));
+        dispatch(
+          refreshLatest({
+            chatId: storeChatId,
+            messages: list,
+            nextCursor: res.data.next_cursor ?? null,
+            prevCursor: null,
+          }),
+        );
         setPrependedCount(0);
         pendingPrependRef.current = null;
-        setWindowKey(k => k + 1);
+        setWindowKey((k) => k + 1);
         setInitialScrollIndex(undefined);
       })
       .catch((err: Error) => {
@@ -253,7 +260,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
     pendingPrependRef.current = null;
     if (selectChatGeneration(store.getState(), storeChatId) !== pending.gen) return;
     dispatch(prependMessages({ chatId: storeChatId, messages: pending.messages, nextCursor: pending.nextCursor }));
-    setPrependedCount(c => c + pending.messages.length);
+    setPrependedCount((c) => c + pending.messages.length);
     loadingMoreRef.current = false;
     setLoadingMore(false);
   }, [storeChatId, dispatch]);
@@ -279,7 +286,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
         if (isScrollIdleRef.current) {
           // Scroll already stopped — flush immediately
           dispatch(prependMessages({ chatId: storeChatId, messages: list, nextCursor: pending.nextCursor }));
-          setPrependedCount(c => c + list.length);
+          setPrependedCount((c) => c + list.length);
           loadingMoreRef.current = false;
           setLoadingMore(false);
         } else {
@@ -314,59 +321,67 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
       });
   }, [chatId, storeChatId, threadId, dispatch, showToast]);
 
-  const handleReactionToggle = useCallback((msg: MessageResponse, emoji: string, currentlyReacted: boolean) => {
-    // Optimistically update reactions locally
-    const existing = msg.reactions ?? [];
-    let optimistic: typeof existing;
-    if (currentlyReacted) {
-      optimistic = existing
-        .map(r => r.emoji === emoji ? { ...r, count: r.count - 1, reacted_by_me: false } : r)
-        .filter(r => r.count > 0);
-      deleteReaction(chatId, msg.id, emoji).catch(() => { });
-    } else {
-      const found = existing.find(r => r.emoji === emoji);
-      if (found) {
-        optimistic = existing.map(r => r.emoji === emoji ? { ...r, count: r.count + 1, reacted_by_me: true } : r);
+  const handleReactionToggle = useCallback(
+    (msg: MessageResponse, emoji: string, currentlyReacted: boolean) => {
+      // Optimistically update reactions locally
+      const existing = msg.reactions ?? [];
+      let optimistic: typeof existing;
+      if (currentlyReacted) {
+        optimistic = existing
+          .map((r) => (r.emoji === emoji ? { ...r, count: r.count - 1, reacted_by_me: false } : r))
+          .filter((r) => r.count > 0);
+        deleteReaction(chatId, msg.id, emoji).catch(() => {});
       } else {
-        optimistic = [...existing, { emoji, count: 1, reacted_by_me: true }];
+        const found = existing.find((r) => r.emoji === emoji);
+        if (found) {
+          optimistic = existing.map((r) => (r.emoji === emoji ? { ...r, count: r.count + 1, reacted_by_me: true } : r));
+        } else {
+          optimistic = [...existing, { emoji, count: 1, reacted_by_me: true }];
+        }
+        putReaction(chatId, msg.id, emoji).catch(() => {});
       }
-      putReaction(chatId, msg.id, emoji).catch(() => { });
-    }
-    dispatch(reactionsUpdated({ chatId, messageId: msg.id, reactions: optimistic }));
-  }, [chatId, dispatch]);
+      dispatch(reactionsUpdated({ chatId, messageId: msg.id, reactions: optimistic }));
+    },
+    [chatId, dispatch],
+  );
 
-  const jumpToMessage = useCallback((messageId: string) => {
-    const state = store.getState();
-    const currentMessages = selectMessagesForChat(state, storeChatId);
-    const idx = currentMessages.findIndex((m) => m.id === messageId);
-    if (idx !== -1) {
-      scrollToIndexRef.current?.(idx, 'smooth');
-      return;
-    }
-    // Message not in current window — fetch centered window
-    getMessages(chatId, { around: messageId, max: 50, thread_id: threadId })
-      .then((res) => {
-        const list = res.data.messages ?? [];
-        dispatch(pushWindow({ chatId: storeChatId, messages: list, nextCursor: res.data.next_cursor ?? null, prevCursor: res.data.prev_cursor ?? null }));
-        const idx = list.findIndex((m) => m.id === messageId);
-        setInitialScrollIndex(idx !== -1 ? idx : undefined);
-        setWindowKey(k => k + 1);
-        setPrependedCount(0);
-        pendingPrependRef.current = null;
-      })
-      .catch((err: Error) => {
-        showToast(err.message || t`Failed to jump to message`);
-      });
-  }, [chatId, storeChatId, threadId, dispatch, showToast]);
+  const jumpToMessage = useCallback(
+    (messageId: string) => {
+      const state = store.getState();
+      const currentMessages = selectMessagesForChat(state, storeChatId);
+      const idx = currentMessages.findIndex((m) => m.id === messageId);
+      if (idx !== -1) {
+        scrollToIndexRef.current?.(idx, 'smooth');
+        return;
+      }
+      // Message not in current window — fetch centered window
+      getMessages(chatId, { around: messageId, max: 50, thread_id: threadId })
+        .then((res) => {
+          const list = res.data.messages ?? [];
+          dispatch(
+            pushWindow({
+              chatId: storeChatId,
+              messages: list,
+              nextCursor: res.data.next_cursor ?? null,
+              prevCursor: res.data.prev_cursor ?? null,
+            }),
+          );
+          const idx = list.findIndex((m) => m.id === messageId);
+          setInitialScrollIndex(idx !== -1 ? idx : undefined);
+          setWindowKey((k) => k + 1);
+          setPrependedCount(0);
+          pendingPrependRef.current = null;
+        })
+        .catch((err: Error) => {
+          showToast(err.message || t`Failed to jump to message`);
+        });
+    },
+    [chatId, storeChatId, threadId, dispatch, showToast],
+  );
 
   const prevCursor = useSelector((state: RootState) => selectPrevCursorForChat(state, storeChatId));
 
-  const uploadAttachment = useCallback(async ({
-    file,
-    dimensions,
-    onProgress,
-    signal,
-  }: ComposeUploadInput) => {
+  const uploadAttachment = useCallback(async ({ file, dimensions, onProgress, signal }: ComposeUploadInput) => {
     const res = await requestUploadUrl({
       filename: file.name,
       content_type: file.type || 'application/octet-stream',
@@ -380,142 +395,166 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
     return { attachmentId: attachment_id };
   }, []);
 
-  const handleSend = useCallback((payload: ComposeSendPayload) => {
-    if (!chatId) return;
-    const { text, attachmentIds, existingAttachments, uploadedAttachments } = payload;
-    const { attachments: optimisticUploadedAttachments, revoke } = buildOptimisticUploadedAttachments(uploadedAttachments);
+  const handleSend = useCallback(
+    (payload: ComposeSendPayload) => {
+      if (!chatId) return;
+      const { text, attachmentIds, existingAttachments, uploadedAttachments } = payload;
+      const { attachments: optimisticUploadedAttachments, revoke } =
+        buildOptimisticUploadedAttachments(uploadedAttachments);
 
-    if (!text.trim() && attachmentIds.length === 0) {
-      revoke();
-      return;
-    }
-
-    // Edit flow
-    if (editingSession) {
-      const originalAttachmentIds = (editingSession.attachments ?? []).map((attachment) => attachment.id);
       if (!text.trim() && attachmentIds.length === 0) {
         revoke();
-        showToast(t`Message cannot be empty`);
-        return;
-      }
-      if (text.trim() === editingSession.text.trim() && areAttachmentIdsEqual(attachmentIds, originalAttachmentIds)) {
-        revoke();
         return;
       }
 
-      const messageId = editingSession.messageId;
-      const currentMessage = messageLookup.get(messageId) ?? editingSession.originalMessage;
-      const optimisticMsg = {
-        ...currentMessage,
+      // Edit flow
+      if (editingSession) {
+        const originalAttachmentIds = (editingSession.attachments ?? []).map((attachment) => attachment.id);
+        if (!text.trim() && attachmentIds.length === 0) {
+          revoke();
+          showToast(t`Message cannot be empty`);
+          return;
+        }
+        if (text.trim() === editingSession.text.trim() && areAttachmentIdsEqual(attachmentIds, originalAttachmentIds)) {
+          revoke();
+          return;
+        }
+
+        const messageId = editingSession.messageId;
+        const currentMessage = messageLookup.get(messageId) ?? editingSession.originalMessage;
+        const optimisticMsg = {
+          ...currentMessage,
+          message: text,
+          attachments: [...existingAttachments, ...optimisticUploadedAttachments],
+          has_attachments: attachmentIds.length > 0,
+          is_edited: true,
+        };
+
+        // Optimistic update
+        dispatch(messagePatched({ chatId, messageId, message: optimisticMsg }));
+        setEditingSession(null);
+
+        updateMessage(chatId, messageId, { message: text, attachment_ids: attachmentIds })
+          .then((res) => {
+            dispatch(messagePatched({ chatId, messageId, message: res.data }));
+          })
+          .catch((err: Error) => {
+            // Revert optimistic update
+            dispatch(messagePatched({ chatId, messageId, message: editingSession.originalMessage }));
+            showToast(err.message || t`Failed to edit message`);
+          })
+          .finally(() => {
+            revoke();
+          });
+        return;
+      }
+
+      const clientGeneratedId = generateClientId();
+
+      const optimistic: MessageResponse = {
+        id: clientGeneratedId,
         message: text,
-        attachments: [...existingAttachments, ...optimisticUploadedAttachments],
+        message_type: 'text',
+        reply_root_id: threadId ?? null,
+        reply_to_message: replyingTo
+          ? {
+              id: replyingTo.id,
+              message: replyingTo.message,
+              sender: replyingTo.sender,
+              is_deleted: replyingTo.is_deleted,
+              attachments: replyingTo.attachments,
+            }
+          : undefined,
+        client_generated_id: clientGeneratedId,
+        sender: {
+          uid: currentUserId || 0,
+          name: currentUserName,
+          avatar_url: currentUserAvatarUrl || undefined,
+        },
+        chat_id: chatId,
+        created_at: new Date().toISOString(),
+        is_edited: false,
+        is_deleted: false,
         has_attachments: attachmentIds.length > 0,
-        is_edited: true,
+        attachments: optimisticUploadedAttachments,
+        thread_info: undefined,
+      };
+      dispatch(
+        messageAdded({
+          chatId,
+          storeChatId,
+          message: optimistic,
+          origin: 'optimistic',
+          scope: threadId ? 'thread' : 'main',
+        }),
+      );
+      setReplyingTo(null);
+      setTimeout(() => scrollToBottomRef.current?.(), 50);
+
+      const messagePayload = {
+        message: text,
+        message_type: 'text',
+        client_generated_id: clientGeneratedId,
+        reply_to_id: replyingTo?.id,
+        attachment_ids: attachmentIds,
       };
 
-      // Optimistic update
-      dispatch(messagePatched({ chatId, messageId, message: optimisticMsg }));
-      setEditingSession(null);
+      const sendPromise = threadId
+        ? sendThreadMessage(chatId, threadId, messagePayload)
+        : sendMessage(chatId, messagePayload);
 
-      updateMessage(chatId, messageId, { message: text, attachment_ids: attachmentIds })
+      sendPromise
         .then((res) => {
-          dispatch(messagePatched({ chatId, messageId, message: res.data }));
+          const postResponse = res.data;
+          const confirmed: MessageResponse = {
+            ...postResponse,
+            reply_to_message: postResponse.reply_to_message
+              ? {
+                  ...optimistic.reply_to_message,
+                  ...postResponse.reply_to_message,
+                  attachments: postResponse.reply_to_message.attachments ?? optimistic.reply_to_message?.attachments,
+                }
+              : optimistic.reply_to_message,
+          };
+          dispatch(
+            messageConfirmed({
+              chatId,
+              storeChatId,
+              clientGeneratedId,
+              message: confirmed,
+              origin: 'api_confirm',
+              scope: threadId ? 'thread' : 'main',
+            }),
+          );
         })
         .catch((err: Error) => {
-          // Revert optimistic update
-          dispatch(messagePatched({ chatId, messageId, message: editingSession.originalMessage }));
-          showToast(err.message || t`Failed to edit message`);
+          showToast(err.message || t`Failed to send`);
+          dispatch(
+            messagePatched({
+              chatId,
+              messageId: clientGeneratedId,
+              message: { ...optimistic, is_deleted: true },
+            }),
+          );
         })
         .finally(() => {
           revoke();
         });
-      return;
-    }
-
-    const clientGeneratedId = generateClientId();
-
-    const optimistic: MessageResponse = {
-      id: clientGeneratedId,
-      message: text,
-      message_type: 'text',
-      reply_root_id: threadId ?? null,
-      reply_to_message: replyingTo ? {
-        id: replyingTo.id,
-        message: replyingTo.message,
-        sender: replyingTo.sender,
-        is_deleted: replyingTo.is_deleted,
-        attachments: replyingTo.attachments,
-      } : undefined,
-      client_generated_id: clientGeneratedId,
-      sender: {
-        uid: currentUserId || 0,
-        name: currentUserName,
-        avatar_url: currentUserAvatarUrl || undefined
-      },
-      chat_id: chatId,
-      created_at: new Date().toISOString(),
-      is_edited: false,
-      is_deleted: false,
-      has_attachments: attachmentIds.length > 0,
-      attachments: optimisticUploadedAttachments,
-      thread_info: undefined,
-    };
-    dispatch(messageAdded({
+    },
+    [
       chatId,
       storeChatId,
-      message: optimistic,
-      origin: 'optimistic',
-      scope: threadId ? 'thread' : 'main',
-    }));
-    setReplyingTo(null);
-    setTimeout(() => scrollToBottomRef.current?.(), 50);
-
-    const messagePayload = {
-      message: text,
-      message_type: 'text',
-      client_generated_id: clientGeneratedId,
-      reply_to_id: replyingTo?.id,
-      attachment_ids: attachmentIds,
-    };
-
-    const sendPromise = threadId
-      ? sendThreadMessage(chatId, threadId, messagePayload)
-      : sendMessage(chatId, messagePayload);
-
-    sendPromise
-      .then((res) => {
-        const postResponse = res.data;
-        const confirmed: MessageResponse = {
-          ...postResponse,
-          reply_to_message: postResponse.reply_to_message
-            ? {
-              ...optimistic.reply_to_message,
-              ...postResponse.reply_to_message,
-              attachments: postResponse.reply_to_message.attachments ?? optimistic.reply_to_message?.attachments,
-            }
-            : optimistic.reply_to_message,
-        };
-        dispatch(messageConfirmed({
-          chatId,
-          storeChatId,
-          clientGeneratedId,
-          message: confirmed,
-          origin: 'api_confirm',
-          scope: threadId ? 'thread' : 'main',
-        }));
-      })
-      .catch((err: Error) => {
-        showToast(err.message || t`Failed to send`);
-        dispatch(messagePatched({
-          chatId,
-          messageId: clientGeneratedId,
-          message: { ...optimistic, is_deleted: true }
-        }));
-      })
-      .finally(() => {
-        revoke();
-      });
-  }, [chatId, storeChatId, threadId, dispatch, showToast, replyingTo, editingSession, currentUserId, currentUserName, currentUserAvatarUrl, messageLookup]);
+      threadId,
+      dispatch,
+      showToast,
+      replyingTo,
+      editingSession,
+      currentUserId,
+      currentUserName,
+      currentUserAvatarUrl,
+      messageLookup,
+    ],
+  );
 
   const onClickChatItem = (messageIndex: number, sourceRect: DOMRect) => {
     const msg = messages[messageIndex];
@@ -582,16 +621,18 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
             buttons: [
               { text: t`Cancel`, role: 'cancel' as const },
               {
-                text: t`Delete`, role: 'destructive' as const, handler: () => {
+                text: t`Delete`,
+                role: 'destructive' as const,
+                handler: () => {
                   const deletedOptimistic = { ...msg, is_deleted: true };
                   dispatch(messagePatched({ chatId, messageId: msg.id, message: deletedOptimistic }));
                   deleteMessage(chatId, msg.id).catch((e: any) => {
                     dispatch(messagePatched({ chatId, messageId: msg.id, message: msg }));
                     showToast(e.message || t`Failed to delete message`);
                   });
-                }
-              }
-            ]
+                },
+              },
+            ],
           });
         },
       });
@@ -613,13 +654,13 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
     <div className="ion-page chat-thread-page">
       <IonHeader>
         <IonToolbar>
-          <IonButtons slot="start">
-            {backAction && <BackButton action={backAction} />}
-          </IonButtons>
+          <IonButtons slot="start">{backAction && <BackButton action={backAction} />}</IonButtons>
           <IonTitle>
             <span className="chat-thread-title">
               <span>{chatName}</span>
-              {isMuted && !threadId ? <IonIcon aria-hidden="true" icon={notificationsOffOutline} className="chat-thread-title__icon" /> : null}
+              {isMuted && !threadId ? (
+                <IonIcon aria-hidden="true" icon={notificationsOffOutline} className="chat-thread-title__icon" />
+              ) : null}
             </span>
           </IonTitle>
           <IonButtons slot="end">
@@ -651,7 +692,6 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
           initialScrollIndex={initialScrollIndex}
           onAtBottomChange={setAtBottom}
           onScrollIdle={handleScrollIdle}
-
           renderItem={(index: number) => {
             const msg = messages[index];
             const prevMsg = index > 0 ? messages[index - 1] : null;
@@ -666,7 +706,11 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
             } else if (prevMsg) {
               const d1 = new Date(msg.created_at);
               const d2 = new Date(prevMsg.created_at);
-              if (d1.getFullYear() !== d2.getFullYear() || d1.getMonth() !== d2.getMonth() || d1.getDate() !== d2.getDate()) {
+              if (
+                d1.getFullYear() !== d2.getFullYear() ||
+                d1.getMonth() !== d2.getMonth() ||
+                d1.getDate() !== d2.getDate()
+              ) {
                 showDateSeparator = true;
               }
             }
@@ -675,7 +719,11 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
             if (!isLastInGroup && nextMsg) {
               const d1 = new Date(msg.created_at);
               const d2 = new Date(nextMsg.created_at);
-              if (d1.getFullYear() !== d2.getFullYear() || d1.getMonth() !== d2.getMonth() || d1.getDate() !== d2.getDate()) {
+              if (
+                d1.getFullYear() !== d2.getFullYear() ||
+                d1.getMonth() !== d2.getMonth() ||
+                d1.getDate() !== d2.getDate()
+              ) {
                 isLastInGroup = true;
               }
             }
@@ -695,7 +743,11 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
                   isSent={msg.sender.uid === currentUserId}
                   avatarUrl={msg.sender.avatar_url}
                   onReply={() => setReplyingTo(msg)}
-                  onReplyTap={msg.reply_to_message && !msg.reply_to_message?.is_deleted ? () => jumpToMessage(msg.reply_to_message!.id) : undefined}
+                  onReplyTap={
+                    msg.reply_to_message && !msg.reply_to_message?.is_deleted
+                      ? () => jumpToMessage(msg.reply_to_message!.id)
+                      : undefined
+                  }
                   onLongPress={(rect) => onClickChatItem(index, rect)}
                   showName={prevSender !== msg.sender.uid || showDateSeparator}
                   showAvatar={isLastInGroup}
@@ -708,12 +760,17 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
                   isConfirmed={!msg.id.startsWith('cg_')}
                   reactions={msg.reactions}
                   onReactionToggle={(emoji, currentlyReacted) => handleReactionToggle(msg, emoji, currentlyReacted)}
-                  replyTo={msg.reply_to_message ? {
-                    senderName: msg.reply_to_message.sender.name ?? `User ${msg.reply_to_message.sender.uid}`,
-                    message: msg.reply_to_message.message,
-                    attachments: messageLookup.get(msg.reply_to_message.id)?.attachments ?? msg.reply_to_message.attachments,
-                    isDeleted: msg.reply_to_message.is_deleted,
-                  } : undefined}
+                  replyTo={
+                    msg.reply_to_message
+                      ? {
+                          senderName: msg.reply_to_message.sender.name ?? `User ${msg.reply_to_message.sender.uid}`,
+                          message: msg.reply_to_message.message,
+                          attachments:
+                            messageLookup.get(msg.reply_to_message.id)?.attachments ?? msg.reply_to_message.attachments,
+                          isDeleted: msg.reply_to_message.is_deleted,
+                        }
+                      : undefined
+                  }
                 />
               </>
             );
@@ -724,13 +781,16 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
           horizontal="end"
           className={`scroll-to-bottom-fab ${atBottom ? 'scroll-to-bottom-fab--hidden' : ''}`}
         >
-          <IonFabButton size="small" onClick={() => {
-            if (prevCursor != null) {
-              fetchLatestWindow();
-            } else {
-              scrollToBottomRef.current?.();
-            }
-          }}>
+          <IonFabButton
+            size="small"
+            onClick={() => {
+              if (prevCursor != null) {
+                fetchLatestWindow();
+              } else {
+                scrollToBottomRef.current?.();
+              }
+            }}
+          >
             <IonIcon icon={chevronDown} />
           </IonFabButton>
         </IonFab>
@@ -740,23 +800,23 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
         <MessageComposeBar
           onSend={handleSend}
           uploadAttachment={uploadAttachment}
-          replyTo={replyingTo ? {
-            messageId: replyingTo.id,
-            username: replyingTo.sender.name ?? `User ${replyingTo.sender.uid}`,
-            text: replyingTo.message,
-            attachments: replyingTo.attachments,
-            isDeleted: replyingTo.is_deleted,
-          } : undefined}
+          replyTo={
+            replyingTo
+              ? {
+                  messageId: replyingTo.id,
+                  username: replyingTo.sender.name ?? `User ${replyingTo.sender.uid}`,
+                  text: replyingTo.message,
+                  attachments: replyingTo.attachments,
+                  isDeleted: replyingTo.is_deleted,
+                }
+              : undefined
+          }
           onCancelReply={() => setReplyingTo(null)}
           editing={editingSession ?? undefined}
           onCancelEdit={() => setEditingSession(null)}
         />
       </IonFooter>
-      <UserProfileModal
-        key={profileSender?.uid}
-        sender={profileSender}
-        onDismiss={() => setProfileSender(null)}
-      />
+      <UserProfileModal key={profileSender?.uid} sender={profileSender} onDismiss={() => setProfileSender(null)} />
       <ReactionDetailsModal
         chatId={chatId}
         messageId={reactionDetail?.messageId ?? null}
@@ -773,12 +833,18 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
           edited={overlayMessage.message.is_edited}
           isConfirmed={!overlayMessage.message.id.startsWith('cg_')}
           attachments={overlayMessage.message.attachments}
-          replyTo={overlayMessage.message.reply_to_message ? {
-            senderName: overlayMessage.message.reply_to_message.sender.name ?? `User ${overlayMessage.message.reply_to_message.sender.uid}`,
-            message: overlayMessage.message.reply_to_message.message,
-            attachments: overlayMessage.message.reply_to_message.attachments,
-            isDeleted: overlayMessage.message.reply_to_message.is_deleted,
-          } : undefined}
+          replyTo={
+            overlayMessage.message.reply_to_message
+              ? {
+                  senderName:
+                    overlayMessage.message.reply_to_message.sender.name ??
+                    `User ${overlayMessage.message.reply_to_message.sender.uid}`,
+                  message: overlayMessage.message.reply_to_message.message,
+                  attachments: overlayMessage.message.reply_to_message.attachments,
+                  isDeleted: overlayMessage.message.reply_to_message.is_deleted,
+                }
+              : undefined
+          }
           sourceRect={overlayMessage.sourceRect}
           actions={overlayActions}
           reactions={{
@@ -787,7 +853,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
               handleReactionToggle(
                 overlayMessage.message,
                 emoji,
-                !!overlayMessage.message.reactions?.some(r => r.emoji === emoji && r.reacted_by_me),
+                !!overlayMessage.message.reactions?.some((r) => r.emoji === emoji && r.reacted_by_me),
               );
             },
           }}

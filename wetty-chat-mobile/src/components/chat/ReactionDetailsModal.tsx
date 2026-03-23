@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { IonModal, IonContent, IonIcon } from '@ionic/react';
+import { useEffect, useState } from 'react';
+import { IonContent, IonIcon, IonModal } from '@ionic/react';
 import { close } from 'ionicons/icons';
 import { t } from '@lingui/core/macro';
 import { getReactionDetails, type ReactionReactor } from '@/api/messages';
@@ -32,7 +32,7 @@ export function ReactionDetailsModal({ chatId, messageId, initialEmoji, onDismis
     setLoading(true);
     setSelectedEmoji(initialEmoji);
     getReactionDetails(chatId, messageId)
-      .then(res => {
+      .then((res) => {
         setGroups(res.data.reactions);
         if (!initialEmoji && res.data.reactions.length > 0) {
           setSelectedEmoji(res.data.reactions[0].emoji);
@@ -42,7 +42,7 @@ export function ReactionDetailsModal({ chatId, messageId, initialEmoji, onDismis
       .finally(() => setLoading(false));
   }, [chatId, messageId, initialEmoji]);
 
-  const activeGroup = groups.find(g => g.emoji === selectedEmoji) ?? groups[0];
+  const activeGroup = groups.find((g) => g.emoji === selectedEmoji) ?? groups[0];
 
   return (
     <IonModal
@@ -55,10 +55,19 @@ export function ReactionDetailsModal({ chatId, messageId, initialEmoji, onDismis
           onClick={onDismiss}
           aria-label={t`Close`}
           style={{
-            position: 'absolute', top: 12, right: 12,
-            background: 'var(--ion-color-light)', border: 'none', borderRadius: '50%',
-            width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', zIndex: 1,
+            position: 'absolute',
+            top: 12,
+            right: 12,
+            background: 'var(--ion-color-light)',
+            border: 'none',
+            borderRadius: '50%',
+            width: 32,
+            height: 32,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            zIndex: 1,
           }}
         >
           <IonIcon icon={close} style={{ fontSize: 20 }} />
@@ -66,14 +75,17 @@ export function ReactionDetailsModal({ chatId, messageId, initialEmoji, onDismis
 
         {/* Emoji tabs */}
         <div style={{ display: 'flex', gap: 8, paddingTop: 8, paddingBottom: 16, flexWrap: 'wrap' }}>
-          {groups.map(g => (
+          {groups.map((g) => (
             <button
               key={g.emoji}
               onClick={() => setSelectedEmoji(g.emoji)}
               style={{
                 padding: '4px 12px',
                 borderRadius: 16,
-                border: g.emoji === activeGroup?.emoji ? '2px solid var(--ion-color-primary)' : '1px solid var(--ion-color-light-shade)',
+                border:
+                  g.emoji === activeGroup?.emoji
+                    ? '2px solid var(--ion-color-primary)'
+                    : '1px solid var(--ion-color-light-shade)',
                 background: g.emoji === activeGroup?.emoji ? 'rgba(var(--ion-color-primary-rgb), 0.1)' : 'transparent',
                 cursor: 'pointer',
                 fontSize: 18,
@@ -89,15 +101,11 @@ export function ReactionDetailsModal({ chatId, messageId, initialEmoji, onDismis
           <p style={{ textAlign: 'center', opacity: 0.6 }}>{t`Loading...`}</p>
         ) : activeGroup ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {activeGroup.reactors.map(reactor => {
+            {activeGroup.reactors.map((reactor) => {
               const displayName = reactor.name ?? `User ${reactor.uid}`;
               return (
                 <div key={reactor.uid} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <UserAvatar
-                    name={displayName}
-                    avatarUrl={reactor.avatar_url}
-                    size={36}
-                  />
+                  <UserAvatar name={displayName} avatarUrl={reactor.avatar_url} size={36} />
                   <span style={{ fontSize: 15 }}>{displayName}</span>
                 </div>
               );

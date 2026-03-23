@@ -1,8 +1,4 @@
-import {
-  IonApp,
-  IonToast,
-  setupIonicReact,
-} from '@ionic/react';
+import { IonApp, IonToast, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
 import { Redirect, useRouteMatch } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
@@ -83,13 +79,13 @@ function AppShell() {
           {
             text: t`Update Now`,
             role: 'info',
-            handler: () => updateServiceWorker(true)
+            handler: () => updateServiceWorker(true),
           },
           {
             text: t`Dismiss`,
             role: 'cancel',
-            handler: () => setNeedRefresh(false)
-          }
+            handler: () => setNeedRefresh(false),
+          },
         ]}
       />
       <div className="app-router-shell">

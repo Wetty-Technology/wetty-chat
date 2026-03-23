@@ -19,23 +19,13 @@ function getDisplayName(chatId: string, name?: string | null): string {
   return `Chat ${chatId}`;
 }
 
-export function GroupProfile({
-  chatId,
-  name,
-  description,
-  avatarUrl,
-}: GroupProfileProps) {
+export function GroupProfile({ chatId, name, description, avatarUrl }: GroupProfileProps) {
   const displayName = getDisplayName(chatId, name);
   const trimmedDescription = description?.trim() || null;
 
   return (
     <section className={styles.card}>
-      <UserAvatar
-        name={displayName}
-        avatarUrl={avatarUrl}
-        size={80}
-        className={styles.avatar}
-      />
+      <UserAvatar name={displayName} avatarUrl={avatarUrl} size={80} className={styles.avatar} />
       <h2 className={styles.title}>{displayName}</h2>
       <p className={trimmedDescription ? styles.description : styles.descriptionMuted}>
         {trimmedDescription ?? <Trans>No group description yet.</Trans>}

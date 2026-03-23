@@ -19,12 +19,7 @@ import { Trans } from '@lingui/react/macro';
 import { i18n } from '@/i18n';
 import { BackButton } from '@/components/BackButton';
 import { ChatBubble } from '@/components/chat/ChatBubble';
-import {
-  chatFontSizeOptions,
-  selectLocale,
-  selectMessageFontSize,
-  setMessageFontSize,
-} from '@/store/settingsSlice';
+import { chatFontSizeOptions, selectLocale, selectMessageFontSize, setMessageFontSize } from '@/store/settingsSlice';
 import type { BackAction } from '@/types/back-action';
 import styles from './GeneralSettings.module.scss';
 
@@ -61,21 +56,27 @@ export function GeneralSettingsCore({ backAction, onOpenLanguage }: GeneralSetti
           <IonButtons slot="start">
             {backAction ? <BackButton action={backAction} /> : <IonBackButton defaultHref="/settings" />}
           </IonButtons>
-          <IonTitle><Trans>General</Trans></IonTitle>
+          <IonTitle>
+            <Trans>General</Trans>
+          </IonTitle>
         </IonToolbar>
       </IonHeader>
       <IonContent color="light" className="ion-no-padding">
         <IonList inset>
           <IonItem button detail={true} onClick={handleOpenLanguage}>
-            <IonLabel><Trans>Language</Trans></IonLabel>
+            <IonLabel>
+              <Trans>Language</Trans>
+            </IonLabel>
             <IonLabel slot="end" color="medium">
-              {locale ? localeLabels[locale] ?? locale : t`Auto`}
+              {locale ? (localeLabels[locale] ?? locale) : t`Auto`}
             </IonLabel>
           </IonItem>
         </IonList>
 
         <IonListHeader>
-          <IonLabel><Trans>Messages Font Size</Trans></IonLabel>
+          <IonLabel>
+            <Trans>Messages Font Size</Trans>
+          </IonLabel>
         </IonListHeader>
         <IonList inset>
           <IonItem>

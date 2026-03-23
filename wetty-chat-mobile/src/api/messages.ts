@@ -89,7 +89,7 @@ export interface CreateMessageBody {
 
 export function getMessages(
   chatId: string | number,
-  params?: { before?: string; around?: string; after?: string; max?: number; thread_id?: string }
+  params?: { before?: string; around?: string; after?: string; max?: number; thread_id?: string },
 ): Promise<AxiosResponse<ListMessagesResponse>> {
   const query: Record<string, string | number> = {};
   if (params?.before != null) query.before = params.before;
@@ -100,17 +100,14 @@ export function getMessages(
   return apiClient.get(`/chats/${chatId}/messages`, { params: query });
 }
 
-export function sendMessage(
-  chatId: string | number,
-  body: CreateMessageBody
-): Promise<AxiosResponse<MessageResponse>> {
+export function sendMessage(chatId: string | number, body: CreateMessageBody): Promise<AxiosResponse<MessageResponse>> {
   return apiClient.post(`/chats/${chatId}/messages`, body);
 }
 
 export function sendThreadMessage(
   chatId: string | number,
   threadId: string | number,
-  body: CreateMessageBody
+  body: CreateMessageBody,
 ): Promise<AxiosResponse<MessageResponse>> {
   return apiClient.post(`/chats/${chatId}/threads/${threadId}/messages`, body);
 }
@@ -123,37 +120,27 @@ export interface UpdateMessageBody {
 export function updateMessage(
   chatId: string | number,
   messageId: string,
-  body: UpdateMessageBody
+  body: UpdateMessageBody,
 ): Promise<AxiosResponse<MessageResponse>> {
   return apiClient.patch(`/chats/${chatId}/messages/${messageId}`, body);
 }
 
-export function deleteMessage(
-  chatId: string | number,
-  messageId: string
-): Promise<AxiosResponse<void>> {
+export function deleteMessage(chatId: string | number, messageId: string): Promise<AxiosResponse<void>> {
   return apiClient.delete(`/chats/${chatId}/messages/${messageId}`);
 }
 
-export function getMessage(
-  chatId: string | number,
-  messageId: string
-): Promise<AxiosResponse<MessageResponse>> {
+export function getMessage(chatId: string | number, messageId: string): Promise<AxiosResponse<MessageResponse>> {
   return apiClient.get(`/chats/${chatId}/messages/${messageId}`);
 }
 
-export function putReaction(
-  chatId: string | number,
-  messageId: string,
-  emoji: string
-): Promise<AxiosResponse<void>> {
+export function putReaction(chatId: string | number, messageId: string, emoji: string): Promise<AxiosResponse<void>> {
   return apiClient.put(`/chats/${chatId}/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`);
 }
 
 export function deleteReaction(
   chatId: string | number,
   messageId: string,
-  emoji: string
+  emoji: string,
 ): Promise<AxiosResponse<void>> {
   return apiClient.delete(`/chats/${chatId}/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`);
 }
@@ -165,9 +152,6 @@ export function getReactionDetails(
   return apiClient.get(`/chats/${chatId}/messages/${messageId}/reactions`);
 }
 
-export function markMessagesAsRead(
-  chatId: string | number,
-  messageId: string | number
-): Promise<AxiosResponse<void>> {
+export function markMessagesAsRead(chatId: string | number, messageId: string | number): Promise<AxiosResponse<void>> {
   return apiClient.post(`/chats/${chatId}/read`, { message_id: messageId.toString() });
 }

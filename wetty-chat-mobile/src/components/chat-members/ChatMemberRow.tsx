@@ -12,33 +12,14 @@ interface ChatMemberRowProps {
   onSelect: (member: MemberResponse) => void;
 }
 
-export function ChatMemberRow({
-  member,
-  isAdmin,
-  isCurrentUser,
-  onSelect,
-}: ChatMemberRowProps) {
+export function ChatMemberRow({ member, isAdmin, isCurrentUser, onSelect }: ChatMemberRowProps) {
   const displayName = member.username || t`User ${member.uid}`;
   return (
-    <IonItem
-      className={styles.row}
-      button={isAdmin && !isCurrentUser}
-      detail={false}
-      onClick={() => onSelect(member)}
-    >
-      <UserAvatar
-        name={displayName}
-        avatarUrl={member.avatar_url}
-        size={40}
-        className={styles.avatar}
-      />
+    <IonItem className={styles.row} button={isAdmin && !isCurrentUser} detail={false} onClick={() => onSelect(member)}>
+      <UserAvatar name={displayName} avatarUrl={member.avatar_url} size={40} className={styles.avatar} />
       <IonLabel>{displayName}</IonLabel>
       <FeatureGate>
-        <IonChip
-          className={styles.roleChip}
-          color={member.role === 'admin' ? 'primary' : 'medium'}
-          slot="end"
-        >
+        <IonChip className={styles.roleChip} color={member.role === 'admin' ? 'primary' : 'medium'} slot="end">
           {member.role}
         </IonChip>
       </FeatureGate>

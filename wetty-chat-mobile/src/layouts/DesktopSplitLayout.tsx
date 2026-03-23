@@ -1,4 +1,4 @@
-import { useCallback, useRef, type ReactNode } from 'react';
+import { type ReactNode, useCallback, useRef } from 'react';
 import { matchPath, useHistory, useLocation } from 'react-router-dom';
 import { Trans } from '@lingui/react/macro';
 import { IonButton, IonButtons, IonHeader, IonIcon, IonModal, IonTitle, IonToolbar } from '@ionic/react';
@@ -65,10 +65,13 @@ function getDesktopRouteMatches(pathname: string): DesktopRouteMatches {
     path: '/settings/general',
     exact: true,
   });
-  const globalSettings = !!matchPath(pathname, {
-    path: '/settings',
-    exact: true,
-  }) || generalSettings || languageSettings;
+  const globalSettings =
+    !!matchPath(pathname, {
+      path: '/settings',
+      exact: true,
+    }) ||
+    generalSettings ||
+    languageSettings;
 
   return {
     activeChatId:
@@ -101,10 +104,7 @@ function ChatModal({
 }) {
   const history = useHistory();
   return (
-    <IonModal
-      isOpen={chatId != null}
-      onDidDismiss={() => history.push(`/chats/chat/${activeChatId}`)}
-    >
+    <IonModal isOpen={chatId != null} onDidDismiss={() => history.push(`/chats/chat/${activeChatId}`)}>
       {chatId != null &&
         children(chatId, {
           type: 'close',
@@ -120,22 +120,16 @@ export function DesktopSplitLayout() {
   const skipNextGlobalSettingsDismiss = useRef(false);
   const currentRoute = getDesktopRouteMatches(location.pathname);
   const backgroundPath = location.state?.backgroundPath ?? '/chats';
-  const baseRoute = currentRoute.globalSettings
-    ? getDesktopRouteMatches(backgroundPath)
-    : currentRoute;
-  const {
-    activeChatId,
-    threadMatch,
-    settingsMatch,
-    membersMatch,
-    detailsMatch,
-    isNewChat,
-  } = baseRoute;
+  const baseRoute = currentRoute.globalSettings ? getDesktopRouteMatches(backgroundPath) : currentRoute;
+  const { activeChatId, threadMatch, settingsMatch, membersMatch, detailsMatch, isNewChat } = baseRoute;
   const globalSettingsOpen = currentRoute.globalSettings;
 
-  const handleChatSelect = useCallback((chatId: string) => {
-    history.replace(`/chats/chat/${chatId}`);
-  }, [history]);
+  const handleChatSelect = useCallback(
+    (chatId: string) => {
+      history.replace(`/chats/chat/${chatId}`);
+    },
+    [history],
+  );
 
   const openSettingsModal = useCallback(() => {
     history.push({
@@ -187,11 +181,7 @@ export function DesktopSplitLayout() {
   } else if (detailsMatch) {
     const { id } = detailsMatch;
     subPageOverlay = (
-      <GroupDetailCore
-        key={id}
-        chatId={id}
-        backAction={{ type: 'callback', onBack: () => history.go(-1) }}
-      />
+      <GroupDetailCore key={id} chatId={id} backAction={{ type: 'callback', onBack: () => history.go(-1) }} />
     );
   }
 
@@ -205,7 +195,9 @@ export function DesktopSplitLayout() {
                 <IonIcon slot="icon-only" icon={settings} />
               </IonButton>
             </IonButtons>
-            <IonTitle><Trans>Chats</Trans></IonTitle>
+            <IonTitle>
+              <Trans>Chats</Trans>
+            </IonTitle>
             <IonButtons slot="end">
               <FeatureGate>
                 <IonButton routerLink="/chats/new">
@@ -215,28 +207,18 @@ export function DesktopSplitLayout() {
             </IonButtons>
           </IonToolbar>
         </IonHeader>
-        <ChatList
-          activeChatId={activeChatId}
-          onChatSelect={handleChatSelect}
-        />
+        <ChatList activeChatId={activeChatId} onChatSelect={handleChatSelect} />
       </div>
       <div className={styles.desktopSplitRight}>
         {/* Base layer: always render ChatThreadCore when a chat is selected */}
         {activeChatId && !isNewChat && (
-          <div
-            style={{ display: subPageOverlay ? 'none' : undefined }}
-            className={styles.desktopSplitPane}
-          >
+          <div style={{ display: subPageOverlay ? 'none' : undefined }} className={styles.desktopSplitPane}>
             <ChatThreadCore key={activeChatId} chatId={activeChatId} />
           </div>
         )}
 
         {/* Overlay layer: sub-page (details, thread) */}
-        {subPageOverlay && (
-          <div className={styles.desktopSplitPane}>
-            {subPageOverlay}
-          </div>
-        )}
+        {subPageOverlay && <div className={styles.desktopSplitPane}>{subPageOverlay}</div>}
 
         {/* Settings modal */}
         <ChatModal chatId={settingsMatch?.id ?? null} activeChatId={activeChatId}>
@@ -253,19 +235,23 @@ export function DesktopSplitLayout() {
           {currentRoute.languageSettings ? (
             <LanguagePageCore
               backAction={{
-                type: 'callback', onBack: () => history.push({
-                  pathname: '/settings/general',
-                  state: { backgroundPath },
-                })
+                type: 'callback',
+                onBack: () =>
+                  history.push({
+                    pathname: '/settings/general',
+                    state: { backgroundPath },
+                  }),
               }}
             />
           ) : currentRoute.generalSettings ? (
             <GeneralSettingsCore
               backAction={{
-                type: 'callback', onBack: () => history.push({
-                  pathname: '/settings',
-                  state: { backgroundPath },
-                })
+                type: 'callback',
+                onBack: () =>
+                  history.push({
+                    pathname: '/settings',
+                    state: { backgroundPath },
+                  }),
               }}
               onOpenLanguage={openLanguageSettings}
             />
@@ -280,9 +266,7 @@ export function DesktopSplitLayout() {
         {/* Create chat page */}
         {isNewChat && (
           <div className={styles.desktopSplitPane}>
-            <CreateChatCore
-              backAction={{ type: 'close', onClose: () => history.replace('/chats') }}
-            />
+            <CreateChatCore backAction={{ type: 'close', onClose: () => history.replace('/chats') }} />
           </div>
         )}
 

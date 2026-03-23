@@ -1,18 +1,13 @@
 import apiClient from '@/api/client';
 import { syncApp } from '@/api/sync';
 import type { MessageResponse, ReactionSummary } from '@/api/messages';
-import { setWsConnected, setActiveConnections } from '@/store/connectionSlice';
+import { setActiveConnections, setWsConnected } from '@/store/connectionSlice';
 import store from '@/store/index';
-import {
-  messageAdded,
-  messageConfirmed,
-  messagePatched,
-  reactionsUpdated,
-} from '@/store/messageEvents';
+import { messageAdded, messageConfirmed, messagePatched, reactionsUpdated } from '@/store/messageEvents';
 import { setAppBadgeCount } from '@/utils/badges';
 import { getStoredJwtToken } from '@/utils/jwtToken';
 
-const WS_PATH = (__API_BASE__ ?? (import.meta.env.BASE_URL + '_api')) + '/ws';
+const WS_PATH = (__API_BASE__ ?? import.meta.env.BASE_URL + '_api') + '/ws';
 const PING_INTERVAL_MS = 10_000;
 const MAX_RECONNECT_DELAY_MS = 30_000;
 const RETRY_BASE_DELAY_MS = 1_000;
@@ -88,10 +83,7 @@ function clearReconnectTimeout(): void {
 function getReconnectDelayMs(): number {
   if (retryAttempt === 0) return 0;
 
-  const exponential = Math.min(
-    RETRY_BASE_DELAY_MS * 2 ** (retryAttempt - 1),
-    MAX_RECONNECT_DELAY_MS,
-  );
+  const exponential = Math.min(RETRY_BASE_DELAY_MS * 2 ** (retryAttempt - 1), MAX_RECONNECT_DELAY_MS);
   const jitter = Math.round(exponential * RETRY_JITTER_RATIO * Math.random());
   return Math.min(exponential + jitter, MAX_RECONNECT_DELAY_MS);
 }
@@ -106,7 +98,7 @@ function normalizePayload(payload: unknown): MessageResponse | null {
 function allMessagesForChat(chatId: string): MessageResponse[] {
   const chat = store.getState().messages.chats[chatId];
   if (!chat) return [];
-  return chat.windows.flatMap(window => window.messages);
+  return chat.windows.flatMap((window) => window.messages);
 }
 
 const MESSAGE_PREVIEW_MAX = 100;
@@ -127,18 +119,20 @@ function showLocalNotification(message: MessageResponse): void {
   const chatEntry = store.getState().chats.byId[message.chat_id];
 
   // Skip notification for muted chats
-  const mutedUntil = chatEntry?.liveProjection && Object.prototype.hasOwnProperty.call(chatEntry.liveProjection, 'muted_until')
-    ? (chatEntry.liveProjection.muted_until ?? null)
-    : (chatEntry?.listSnapshot?.muted_until ?? null);
+  const mutedUntil =
+    chatEntry?.liveProjection && Object.prototype.hasOwnProperty.call(chatEntry.liveProjection, 'muted_until')
+      ? (chatEntry.liveProjection.muted_until ?? null)
+      : (chatEntry?.listSnapshot?.muted_until ?? null);
   if (mutedUntil && new Date(mutedUntil) > new Date()) return;
 
   const chatName = chatEntry?.details?.name ?? 'New Message';
 
   let body: string;
   if (message.message) {
-    const preview = message.message.length > MESSAGE_PREVIEW_MAX
-      ? message.message.slice(0, MESSAGE_PREVIEW_MAX) + '…'
-      : message.message;
+    const preview =
+      message.message.length > MESSAGE_PREVIEW_MAX
+        ? message.message.slice(0, MESSAGE_PREVIEW_MAX) + '…'
+        : message.message;
     body = `${message.sender.name ?? 'Someone'}: ${preview}`;
   } else {
     body = `${message.sender.name ?? 'Someone'} sent a message`;
@@ -147,37 +141,38 @@ function showLocalNotification(message: MessageResponse): void {
   const tag = `msg_${message.id}`;
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.ready.then(registration => {
-      registration.showNotification(chatName, {
-        body,
-        icon: '/icon/pwa-192x192.png',
-        badge: '/icon/pwa-64x64.png',
-        tag,
-        data: {
-          type: 'new_message',
-          chat_id: message.chat_id,
-          message_id: message.id,
-        },
-      });
+    navigator.serviceWorker.ready
+      .then((registration) => {
+        registration.showNotification(chatName, {
+          body,
+          icon: '/icon/pwa-192x192.png',
+          badge: '/icon/pwa-64x64.png',
+          tag,
+          data: {
+            type: 'new_message',
+            chat_id: message.chat_id,
+            message_id: message.id,
+          },
+        });
 
-      // Inform the SW of the notified message so it can skip stale push notifications
-      registration.active?.postMessage({
-        type: 'NOTIFIED',
-        chatId: message.chat_id,
-        messageId: message.id,
+        // Inform the SW of the notified message so it can skip stale push notifications
+        registration.active?.postMessage({
+          type: 'NOTIFIED',
+          chatId: message.chat_id,
+          messageId: message.id,
+        });
+      })
+      .catch(() => {
+        /* SW not available */
       });
-    }).catch(() => { /* SW not available */ });
   }
 
   if ('setAppBadge' in navigator) {
-    const totalUnread = Object.values(store.getState().chats.byId)
-      .reduce((sum, entry) => {
-        const unread = entry.liveProjection?.unread_count
-          ?? entry.listSnapshot?.unread_count
-          ?? 0;
-        return sum + unread;
-      }, 0);
-    setAppBadgeCount(navigator, totalUnread)?.catch(() => { });
+    const totalUnread = Object.values(store.getState().chats.byId).reduce((sum, entry) => {
+      const unread = entry.liveProjection?.unread_count ?? entry.listSnapshot?.unread_count ?? 0;
+      return sum + unread;
+    }, 0);
+    setAppBadgeCount(navigator, totalUnread)?.catch(() => {});
   }
 }
 
@@ -185,14 +180,10 @@ function handleWsMessage(payload: unknown): void {
   const message = normalizePayload(payload);
   if (!message) return;
 
-  const storeChatId = message.reply_root_id
-    ? `${message.chat_id}_thread_${message.reply_root_id}`
-    : message.chat_id;
+  const storeChatId = message.reply_root_id ? `${message.chat_id}_thread_${message.reply_root_id}` : message.chat_id;
   const all = allMessagesForChat(storeChatId);
   const pending = all.find(
-    current =>
-      current.client_generated_id === message.client_generated_id &&
-      current.id.startsWith('cg_'),
+    (current) => current.client_generated_id === message.client_generated_id && current.id.startsWith('cg_'),
   );
 
   if (pending) {
@@ -204,22 +195,22 @@ function handleWsMessage(payload: unknown): void {
         message,
         origin: 'ws',
         scope: message.reply_root_id ? 'thread' : 'main',
-      })
+      }),
     );
   } else {
     const exists = all.some(
-      current =>
-        current.id === message.id ||
-        current.client_generated_id === message.client_generated_id,
+      (current) => current.id === message.id || current.client_generated_id === message.client_generated_id,
     );
     if (!exists) {
-      store.dispatch(messageAdded({
-        chatId: message.chat_id,
-        storeChatId,
-        message,
-        origin: 'ws',
-        scope: message.reply_root_id ? 'thread' : 'main',
-      }));
+      store.dispatch(
+        messageAdded({
+          chatId: message.chat_id,
+          storeChatId,
+          message,
+          origin: 'ws',
+          scope: message.reply_root_id ? 'thread' : 'main',
+        }),
+      );
       showLocalNotification(message);
     }
   }
@@ -293,7 +284,7 @@ async function connectWebSocket(): Promise<void> {
   const generation = ++connectGeneration;
 
   try {
-    const ticket = getStoredJwtToken() || await requestWsTicket();
+    const ticket = getStoredJwtToken() || (await requestWsTicket());
     if (generation !== connectGeneration || !isInitialized || !networkOnline) {
       isConnecting = false;
       return;
@@ -322,7 +313,7 @@ async function connectWebSocket(): Promise<void> {
       }, PING_INTERVAL_MS);
     };
 
-    socket.onmessage = event => {
+    socket.onmessage = (event) => {
       if (typeof event.data !== 'string') return;
 
       try {
@@ -336,17 +327,16 @@ async function connectWebSocket(): Promise<void> {
           return;
         }
 
-        if (
-          (message.type === 'message_deleted' || message.type === 'message_updated') &&
-          message.payload != null
-        ) {
+        if ((message.type === 'message_deleted' || message.type === 'message_updated') && message.payload != null) {
           const payload = normalizePayload(message.payload);
           if (!payload) return;
-          store.dispatch(messagePatched({
-            chatId: payload.chat_id,
-            messageId: payload.id,
-            message: payload,
-          }));
+          store.dispatch(
+            messagePatched({
+              chatId: payload.chat_id,
+              messageId: payload.id,
+              message: payload,
+            }),
+          );
           return;
         }
 
@@ -357,11 +347,13 @@ async function connectWebSocket(): Promise<void> {
             reactions: ReactionSummary[];
           };
           if (payload.message_id && payload.chat_id) {
-            store.dispatch(reactionsUpdated({
-              chatId: payload.chat_id,
-              messageId: payload.message_id,
-              reactions: payload.reactions ?? [],
-            }));
+            store.dispatch(
+              reactionsUpdated({
+                chatId: payload.chat_id,
+                messageId: payload.message_id,
+                reactions: payload.reactions ?? [],
+              }),
+            );
           }
           return;
         }

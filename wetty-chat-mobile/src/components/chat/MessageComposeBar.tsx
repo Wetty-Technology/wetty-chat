@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState, useCallback, useLayoutEffect } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { IonButton, IonIcon } from '@ionic/react';
 import { t } from '@lingui/core/macro';
-import { addCircleOutline, happyOutline, send, closeCircle } from 'ionicons/icons';
+import { addCircleOutline, closeCircle, happyOutline, send } from 'ionicons/icons';
 import styles from './MessageComposeBar.module.scss';
-import { UploadPreview, type ImageUploadDraft } from './UploadPreview';
+import { type ImageUploadDraft, UploadPreview } from './UploadPreview';
 import type { Attachment } from '@/api/messages';
 import { getMessagePreviewText } from './messagePreview';
 import { FeatureGate } from '../FeatureGate';
@@ -67,9 +67,7 @@ interface MessageComposeBarProps {
   onCancelEdit?: () => void;
 }
 
-const isAbortError = (error: unknown) => (
-  error instanceof DOMException && error.name === 'AbortError'
-);
+const isAbortError = (error: unknown) => error instanceof DOMException && error.name === 'AbortError';
 
 const createDraftId = () => {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -109,10 +107,13 @@ export function MessageComposeBar({
     URL.revokeObjectURL(draft.draft.previewUrl);
   }, []);
 
-  const clearDrafts = useCallback((currentDrafts: DraftUploadRecord[]) => {
-    currentDrafts.forEach(cleanupDraft);
-    setDrafts([]);
-  }, [cleanupDraft]);
+  const clearDrafts = useCallback(
+    (currentDrafts: DraftUploadRecord[]) => {
+      currentDrafts.forEach(cleanupDraft);
+      setDrafts([]);
+    },
+    [cleanupDraft],
+  );
 
   useEffect(() => {
     draftsRef.current = drafts;
@@ -148,9 +149,12 @@ export function MessageComposeBar({
     resizeTextarea();
   }, [resizeTextarea, text]);
 
-  useEffect(() => () => {
-    draftsRef.current.forEach(cleanupDraft);
-  }, [cleanupDraft]);
+  useEffect(
+    () => () => {
+      draftsRef.current.forEach(cleanupDraft);
+    },
+    [cleanupDraft],
+  );
 
   const getImageDimensions = (file: File): Promise<{ width?: number; height?: number }> => {
     return new Promise((resolve) => {
@@ -172,128 +176,144 @@ export function MessageComposeBar({
     });
   };
 
-  const startUpload = useCallback(async (localId: string, file: File) => {
-    const abortController = new AbortController();
+  const startUpload = useCallback(
+    async (localId: string, file: File) => {
+      const abortController = new AbortController();
 
-    setDrafts((prev) => prev.map((draftRecord) => (
-      draftRecord.draft.localId === localId
-        ? {
-          ...draftRecord,
-          abortController,
-          draft: {
-            ...draftRecord.draft,
-            status: 'uploading',
-            progress: 0,
-            errorMessage: undefined,
-            attachmentId: undefined,
-          },
-        }
-        : draftRecord
-    )));
-
-    try {
-      const dimensions = await getImageDimensions(file);
-      setDrafts((prev) => prev.map((draftRecord) => (
-        draftRecord.draft.localId === localId
-          ? {
-            ...draftRecord,
-            draft: {
-              ...draftRecord.draft,
-              width: dimensions.width,
-              height: dimensions.height,
-            },
-          }
-          : draftRecord
-      )));
-      const result = await uploadAttachment({
-        file,
-        dimensions,
-        signal: abortController.signal,
-        onProgress: (progress) => {
-          setDrafts((prev) => prev.map((draftRecord) => (
-            draftRecord.draft.localId === localId
-              ? {
+      setDrafts((prev) =>
+        prev.map((draftRecord) =>
+          draftRecord.draft.localId === localId
+            ? {
                 ...draftRecord,
+                abortController,
                 draft: {
                   ...draftRecord.draft,
-                  progress,
+                  status: 'uploading',
+                  progress: 0,
+                  errorMessage: undefined,
+                  attachmentId: undefined,
                 },
               }
-              : draftRecord
-          )));
-        },
-      });
+            : draftRecord,
+        ),
+      );
 
-      setDrafts((prev) => prev.map((draftRecord) => (
-        draftRecord.draft.localId === localId
-          ? {
-            ...draftRecord,
-            abortController: undefined,
-            draft: {
-              ...draftRecord.draft,
-              status: 'uploaded',
-              progress: 100,
-              attachmentId: result.attachmentId,
-              errorMessage: undefined,
-            },
-          }
-          : draftRecord
-      )));
-    } catch (error) {
-      if (isAbortError(error) || abortController.signal.aborted) {
-        return;
+      try {
+        const dimensions = await getImageDimensions(file);
+        setDrafts((prev) =>
+          prev.map((draftRecord) =>
+            draftRecord.draft.localId === localId
+              ? {
+                  ...draftRecord,
+                  draft: {
+                    ...draftRecord.draft,
+                    width: dimensions.width,
+                    height: dimensions.height,
+                  },
+                }
+              : draftRecord,
+          ),
+        );
+        const result = await uploadAttachment({
+          file,
+          dimensions,
+          signal: abortController.signal,
+          onProgress: (progress) => {
+            setDrafts((prev) =>
+              prev.map((draftRecord) =>
+                draftRecord.draft.localId === localId
+                  ? {
+                      ...draftRecord,
+                      draft: {
+                        ...draftRecord.draft,
+                        progress,
+                      },
+                    }
+                  : draftRecord,
+              ),
+            );
+          },
+        });
+
+        setDrafts((prev) =>
+          prev.map((draftRecord) =>
+            draftRecord.draft.localId === localId
+              ? {
+                  ...draftRecord,
+                  abortController: undefined,
+                  draft: {
+                    ...draftRecord.draft,
+                    status: 'uploaded',
+                    progress: 100,
+                    attachmentId: result.attachmentId,
+                    errorMessage: undefined,
+                  },
+                }
+              : draftRecord,
+          ),
+        );
+      } catch (error) {
+        if (isAbortError(error) || abortController.signal.aborted) {
+          return;
+        }
+
+        console.error('Failed to upload attachment:', error);
+        setDrafts((prev) =>
+          prev.map((draftRecord) =>
+            draftRecord.draft.localId === localId
+              ? {
+                  ...draftRecord,
+                  abortController: undefined,
+                  draft: {
+                    ...draftRecord.draft,
+                    status: 'error',
+                    progress: 0,
+                    attachmentId: undefined,
+                    errorMessage: t`Upload failed`,
+                  },
+                }
+              : draftRecord,
+          ),
+        );
+      } finally {
+        if (fileInputRef.current) fileInputRef.current.value = '';
       }
+    },
+    [uploadAttachment],
+  );
 
-      console.error('Failed to upload attachment:', error);
-      setDrafts((prev) => prev.map((draftRecord) => (
-        draftRecord.draft.localId === localId
-          ? {
-            ...draftRecord,
-            abortController: undefined,
-            draft: {
-              ...draftRecord.draft,
-              status: 'error',
-              progress: 0,
-              attachmentId: undefined,
-              errorMessage: t`Upload failed`,
-            },
-          }
-          : draftRecord
-      )));
-    } finally {
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  }, [uploadAttachment]);
+  const queueFiles = useCallback(
+    (files: File[]) => {
+      const imageFiles = files.filter((file) => file.type.startsWith('image/'));
+      if (imageFiles.length === 0) return;
 
-  const queueFiles = useCallback((files: File[]) => {
-    const imageFiles = files.filter((file) => file.type.startsWith('image/'));
-    if (imageFiles.length === 0) return;
+      const queuedDrafts = imageFiles.map((file) => ({
+        file,
+        draft: {
+          localId: createDraftId(),
+          kind: 'image' as const,
+          name: file.name,
+          previewUrl: URL.createObjectURL(file),
+          mimeType: file.type || 'application/octet-stream',
+          size: file.size,
+          progress: 0,
+          status: 'uploading' as const,
+        },
+      }));
 
-    const queuedDrafts = imageFiles.map((file) => ({
-      file,
-      draft: {
-        localId: createDraftId(),
-        kind: 'image' as const,
-        name: file.name,
-        previewUrl: URL.createObjectURL(file),
-        mimeType: file.type || 'application/octet-stream',
-        size: file.size,
-        progress: 0,
-        status: 'uploading' as const,
-      },
-    }));
-
-    setDrafts((prev) => [...prev, ...queuedDrafts]);
-    queuedDrafts.forEach(({ draft, file }) => {
-      void startUpload(draft.localId, file);
-    });
-  }, [startUpload]);
+      setDrafts((prev) => [...prev, ...queuedDrafts]);
+      queuedDrafts.forEach(({ draft, file }) => {
+        void startUpload(draft.localId, file);
+      });
+    },
+    [startUpload],
+  );
 
   const handleSend = useCallback(() => {
     const trimmed = text.trim();
-    const uploadedDrafts = drafts.filter((draftRecord) => (
-      draftRecord.draft.status === 'uploaded' && Boolean(draftRecord.draft.attachmentId)
-    ));
+    const uploadedDrafts = drafts.filter(
+      (draftRecord) => draftRecord.draft.status === 'uploaded' && Boolean(draftRecord.draft.attachmentId),
+    );
     const attachmentIds = [
       ...existingAttachments.map((attachment) => attachment.id),
       ...uploadedDrafts.map((draftRecord) => draftRecord.draft.attachmentId!),
@@ -372,21 +392,27 @@ export function MessageComposeBar({
     return () => document.removeEventListener('paste', handleGlobalPaste);
   }, [queueFiles]);
 
-  const removeDraft = useCallback((localId: string) => {
-    setDrafts((prev) => {
-      const draftToRemove = prev.find((draftRecord) => draftRecord.draft.localId === localId);
-      if (draftToRemove) {
-        cleanupDraft(draftToRemove);
-      }
-      return prev.filter((draftRecord) => draftRecord.draft.localId !== localId);
-    });
-  }, [cleanupDraft]);
+  const removeDraft = useCallback(
+    (localId: string) => {
+      setDrafts((prev) => {
+        const draftToRemove = prev.find((draftRecord) => draftRecord.draft.localId === localId);
+        if (draftToRemove) {
+          cleanupDraft(draftToRemove);
+        }
+        return prev.filter((draftRecord) => draftRecord.draft.localId !== localId);
+      });
+    },
+    [cleanupDraft],
+  );
 
-  const retryDraft = useCallback((localId: string) => {
-    const file = draftsRef.current.find((draftRecord) => draftRecord.draft.localId === localId)?.file;
-    if (!file) return;
-    void startUpload(localId, file);
-  }, [startUpload]);
+  const retryDraft = useCallback(
+    (localId: string) => {
+      const file = draftsRef.current.find((draftRecord) => draftRecord.draft.localId === localId)?.file;
+      if (!file) return;
+      void startUpload(localId, file);
+    },
+    [startUpload],
+  );
 
   const removeExistingAttachment = useCallback((localId: string) => {
     const attachmentId = localId.replace(/^existing-/, '');
@@ -406,14 +432,13 @@ export function MessageComposeBar({
   const trimmedText = text.trim();
   const originalEditText = editing?.text.trim() ?? '';
   const originalAttachmentIds = editing?.attachments?.map((attachment) => attachment.id) ?? [];
-  const isUnchangedEdit = editing != null
-    && trimmedText === originalEditText
-    && currentAttachmentIds.length === originalAttachmentIds.length
-    && currentAttachmentIds.every((attachmentId, index) => attachmentId === originalAttachmentIds[index]);
-  const canSend = !hasUploadingDraft
-    && !hasFailedDraft
-    && (trimmedText.length > 0 || hasAttachment)
-    && !isUnchangedEdit;
+  const isUnchangedEdit =
+    editing != null &&
+    trimmedText === originalEditText &&
+    currentAttachmentIds.length === originalAttachmentIds.length &&
+    currentAttachmentIds.every((attachmentId, index) => attachmentId === originalAttachmentIds[index]);
+  const canSend =
+    !hasUploadingDraft && !hasFailedDraft && (trimmedText.length > 0 || hasAttachment) && !isUnchangedEdit;
   const previewItems = [
     ...existingAttachments.map((attachment) => ({
       itemType: 'existing' as const,
@@ -462,11 +487,13 @@ export function MessageComposeBar({
           <div className={styles.replyPreview}>
             <div className={styles.replyText}>
               <span className={styles.replyUsername}>{t`Replying to ${replyTo.username}`}</span>
-              <span className={styles.replySnippet}>{getMessagePreviewText({
-                message: replyTo.text,
-                attachments: replyTo.attachments,
-                isDeleted: replyTo.isDeleted,
-              })}</span>
+              <span className={styles.replySnippet}>
+                {getMessagePreviewText({
+                  message: replyTo.text,
+                  attachments: replyTo.attachments,
+                  isDeleted: replyTo.isDeleted,
+                })}
+              </span>
             </div>
             <button type="button" className={styles.replyClose} aria-label={t`Cancel reply`} onClick={onCancelReply}>
               <IonIcon icon={closeCircle} />
@@ -505,17 +532,17 @@ export function MessageComposeBar({
               <IonIcon icon={happyOutline} />
             </button>
           </FeatureGate>
-      <IonButton
-        fill="solid"
-        color="primary"
-        size="small"
-        className={`${styles.sendBtn}${!canSend ? ` ${styles.disabled}` : ''}`}
-        onClick={handleSend}
-        aria-label={t`Send message`}
-        disabled={!canSend}
-      >
-        <IonIcon slot="icon-only" icon={send} />
-      </IonButton>
+          <IonButton
+            fill="solid"
+            color="primary"
+            size="small"
+            className={`${styles.sendBtn}${!canSend ? ` ${styles.disabled}` : ''}`}
+            onClick={handleSend}
+            aria-label={t`Send message`}
+            disabled={!canSend}
+          >
+            <IonIcon slot="icon-only" icon={send} />
+          </IonButton>
         </div>
       </div>
     </div>

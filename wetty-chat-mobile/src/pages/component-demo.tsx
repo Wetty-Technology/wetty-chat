@@ -1,11 +1,5 @@
-import {
-  IonPage,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
-  IonContent,
-} from '@ionic/react';
-import { MessageComposeBar, type ComposeUploadInput } from '../components/chat/MessageComposeBar';
+import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar } from '@ionic/react';
+import { type ComposeUploadInput, MessageComposeBar } from '../components/chat/MessageComposeBar';
 
 const demoUploadAttachment = async ({ onProgress, signal }: ComposeUploadInput) => {
   await new Promise<void>((resolve, reject) => {
@@ -48,13 +42,15 @@ const ComponentDemoPage: React.FC = () => {
           <MessageComposeBar
             onSend={(t) => console.log('send2:', t)}
             uploadAttachment={demoUploadAttachment}
-            replyTo={{ messageId: '123', username: 'Alice', text: 'Hey, did you see the new update? It looks really great and I think we should...' }}
+            replyTo={{
+              messageId: '123',
+              username: 'Alice',
+              text: 'Hey, did you see the new update? It looks really great and I think we should...',
+            }}
             onCancelReply={() => console.log('cancel reply')}
           />
         </div>
-        <div>
-
-        </div>
+        <div></div>
       </IonContent>
     </IonPage>
   );

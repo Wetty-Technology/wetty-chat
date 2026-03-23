@@ -18,7 +18,7 @@ import '@ionic/react/css/palettes/dark.system.css';
 import { createRoot } from 'react-dom/client';
 import { Provider } from 'react-redux';
 import { I18nProvider } from '@lingui/react';
-import { i18n, activateDetectedLocale } from '@/i18n';
+import { activateDetectedLocale, i18n } from '@/i18n';
 import store from '@/store/index';
 import { initializeClientId } from '@/utils/clientId';
 import App from './App';
@@ -38,5 +38,5 @@ createRoot(document.getElementById('root')!).render(
     <I18nProvider i18n={i18n}>
       <App />
     </I18nProvider>
-  </Provider>
+  </Provider>,
 );

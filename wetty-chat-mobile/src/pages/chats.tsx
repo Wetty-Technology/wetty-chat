@@ -1,4 +1,4 @@
-import { IonPage, IonHeader, IonToolbar, IonButtons, IonButton, IonIcon } from '@ionic/react';
+import { IonButton, IonButtons, IonHeader, IonIcon, IonPage, IonToolbar } from '@ionic/react';
 import { Trans } from '@lingui/react/macro';
 import { useHistory } from 'react-router-dom';
 import { createOutline } from 'ionicons/icons';

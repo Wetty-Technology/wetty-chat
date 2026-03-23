@@ -4,7 +4,7 @@ import { useSelector } from 'react-redux';
 import { arrowUndo, chatbubbles, checkmarkCircle, checkmarkCircleOutline, documentOutline } from 'ionicons/icons';
 import { t } from '@lingui/core/macro';
 import styles from './ChatBubble.module.scss';
-import type {Attachment, ReactionSummary, UserGroupInfo} from '@/api/messages';
+import type { Attachment, ReactionSummary, UserGroupInfo } from '@/api/messages';
 import { ImageViewer } from './ImageViewer';
 import { getMessagePreviewText } from './messagePreview';
 import { selectChatFontSizeStyle } from '@/store/settingsSlice';
@@ -29,7 +29,9 @@ export function renderMessageWithLinks(message: string): React.ReactNode[] {
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-          >{trimmed}</a>
+          >
+            {trimmed}
+          </a>
           {suffix}
         </span>
       );
@@ -80,7 +82,7 @@ const SWIPE_MAX = 80;
 function getImageLayoutStyle(
   width: number | null | undefined,
   height: number | null | undefined,
-  maxImageHeight: number
+  maxImageHeight: number,
 ): React.CSSProperties | undefined {
   if (!width || !height || width <= 0 || height <= 0) {
     return undefined;
@@ -205,14 +207,18 @@ export function ChatBubble({
 
   const progress = Math.min(offset / SWIPE_THRESHOLD, 1);
 
-  const imageAttachments = attachments?.filter(att => att.kind.startsWith('image')) ?? [];
+  const imageAttachments = attachments?.filter((att) => att.kind.startsWith('image')) ?? [];
   const chatFontSizeStyle = useSelector(selectChatFontSizeStyle);
 
   return (
     <div className={styles.swipeContainer}>
       <div
         className={styles.replyIcon}
-        style={{ opacity: progress, transform: `scale(${0.5 + progress * 0.5})`, [swipeDirection === 'left' ? 'right' : 'left']: 16 }}
+        style={{
+          opacity: progress,
+          transform: `scale(${0.5 + progress * 0.5})`,
+          [swipeDirection === 'left' ? 'right' : 'left']: 16,
+        }}
       >
         <IonIcon icon={arrowUndo} />
       </div>
@@ -238,18 +244,34 @@ export function ChatBubble({
             <div className={styles.avatarSpacer} />
           )}
           <div ref={bubbleRef} className={styles.bubble} style={{ fontSize: chatFontSizeStyle }}>
-            {showName && <div className={styles.senderName}>{senderName} {senderGender === 2 ? <span className={styles.gender2}>♀</span> : <span className={styles.gender1}>♂</span>} {senderGroup && <span className={styles.senderGroup} color={senderGroup.chat_group_color!}>{senderGroup.name}</span>}</div>}
+            {showName && (
+              <div className={styles.senderName}>
+                {senderName}{' '}
+                {senderGender === 2 ? (
+                  <span className={styles.gender2}>♀</span>
+                ) : (
+                  <span className={styles.gender1}>♂</span>
+                )}{' '}
+                {senderGroup && (
+                  <span className={styles.senderGroup} color={senderGroup.chat_group_color!}>
+                    {senderGroup.name}
+                  </span>
+                )}
+              </div>
+            )}
             {replyTo && (
               <div
                 className={`${styles.replyPreview} ${onReplyTap ? styles.replyPreviewTappable : ''}`}
                 onClick={onReplyTap}
               >
                 <div className={styles.replyPreviewName}>{replyTo.senderName}</div>
-                <div className={styles.replyPreviewText}>{getMessagePreviewText({
-                  message: replyTo.message,
-                  attachments: replyTo.attachments,
-                  isDeleted: replyTo.isDeleted,
-                })}</div>
+                <div className={styles.replyPreviewText}>
+                  {getMessagePreviewText({
+                    message: replyTo.message,
+                    attachments: replyTo.attachments,
+                    isDeleted: replyTo.isDeleted,
+                  })}
+                </div>
               </div>
             )}
             {attachments && attachments.length > 0 && (
@@ -282,7 +304,7 @@ export function ChatBubble({
                       className={styles.attachmentImageButton}
                       style={imageContainerStyle}
                       onClick={() => {
-                        const imageIndex = imageAttachments.findIndex(image => image.id === att.id);
+                        const imageIndex = imageAttachments.findIndex((image) => image.id === att.id);
                         setViewingAttachmentIndex(imageIndex >= 0 ? imageIndex : 0);
                       }}
                     >
@@ -302,7 +324,8 @@ export function ChatBubble({
               <span className={styles.timestampSpacer} />
               {timestamp && (
                 <span className={styles.timestamp}>
-                  {formatTime(timestamp)}{edited && ` (${t`Edited`})`}
+                  {formatTime(timestamp)}
+                  {edited && ` (${t`Edited`})`}
                   {isSent && (
                     <IonIcon
                       icon={isConfirmed ? checkmarkCircle : checkmarkCircleOutline}
@@ -315,12 +338,14 @@ export function ChatBubble({
             {threadInfo && (
               <div className={styles.threadIndicator} onClick={onThreadClick}>
                 <IonIcon icon={chatbubbles} />
-                <span>{threadInfo.reply_count} {threadInfo.reply_count === 1 ? t`reply` : t`replies`}</span>
+                <span>
+                  {threadInfo.reply_count} {threadInfo.reply_count === 1 ? t`reply` : t`replies`}
+                </span>
               </div>
             )}
             {reactions && reactions.length > 0 && (
               <div className={styles.reactions}>
-                {reactions.map(r => (
+                {reactions.map((r) => (
                   <button
                     key={r.emoji}
                     type="button"
@@ -361,7 +386,7 @@ export function ChatBubble({
       </div>
       {viewingAttachmentIndex !== null && imageAttachments.length > 0 && (
         <ImageViewer
-          images={imageAttachments.map(image => ({
+          images={imageAttachments.map((image) => ({
             id: image.id,
             src: image.url,
             fileName: image.file_name,
@@ -372,6 +397,6 @@ export function ChatBubble({
           onClose={() => setViewingAttachmentIndex(null)}
         />
       )}
-    </div >
+    </div>
   );
 }

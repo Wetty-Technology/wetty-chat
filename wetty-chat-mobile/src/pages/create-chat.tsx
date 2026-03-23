@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import {
-  IonPage,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
-  IonContent,
-  IonList,
-  IonItem,
-  IonLabel,
-  IonInput,
   IonButton,
   IonButtons,
+  IonContent,
+  IonHeader,
+  IonInput,
+  IonItem,
+  IonLabel,
+  IonList,
+  IonPage,
+  IonTitle,
+  IonToolbar,
   useIonAlert,
 } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
@@ -51,9 +51,7 @@ export default function CreateChatCore({ backAction }: CreateChatCoreProps) {
     <div className="ion-page">
       <IonHeader>
         <IonToolbar>
-          <IonButtons slot="start">
-            {backAction && <BackButton action={backAction} />}
-          </IonButtons>
+          <IonButtons slot="start">{backAction && <BackButton action={backAction} />}</IonButtons>
           <IonTitle>New Chat</IonTitle>
         </IonToolbar>
       </IonHeader>

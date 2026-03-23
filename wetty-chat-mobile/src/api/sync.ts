@@ -1,4 +1,4 @@
-import { getChats, getUnreadCount, type ChatListItem } from '@/api/chats';
+import { type ChatListItem, getChats, getUnreadCount } from '@/api/chats';
 import { getMessages } from '@/api/messages';
 import { setChatsList } from '@/store/chatsSlice';
 import { appendMessages } from '@/store/messagesSlice';
@@ -82,22 +82,26 @@ export async function syncApp() {
           const messagesRes = await getMessages(apiChatId, {
             after: lastMsg.id,
             max: 50,
-            thread_id: threadId
+            thread_id: threadId,
           });
 
           if (messagesRes.data.messages && messagesRes.data.messages.length > 0) {
-            store.dispatch(appendMessages({
-              chatId: storeChatId,
-              messages: messagesRes.data.messages,
-              prevCursor: messagesRes.data.prev_cursor ?? null
-            }));
+            store.dispatch(
+              appendMessages({
+                chatId: storeChatId,
+                messages: messagesRes.data.messages,
+                prevCursor: messagesRes.data.prev_cursor ?? null,
+              }),
+            );
           } else if (messagesRes.data.prev_cursor !== undefined) {
             // No new messages, but update the prev cursor just in case
-            store.dispatch(appendMessages({
-              chatId: storeChatId,
-              messages: [],
-              prevCursor: messagesRes.data.prev_cursor ?? null
-            }));
+            store.dispatch(
+              appendMessages({
+                chatId: storeChatId,
+                messages: [],
+                prevCursor: messagesRes.data.prev_cursor ?? null,
+              }),
+            );
           }
         } catch (err) {
           console.error(`Failed to sync messages for ${storeChatId}`, err);

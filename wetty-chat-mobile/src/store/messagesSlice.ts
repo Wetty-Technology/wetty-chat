@@ -1,4 +1,4 @@
-import { createSlice, createSelector } from '@reduxjs/toolkit';
+import { createSelector, createSlice } from '@reduxjs/toolkit';
 import type { MessageResponse } from '@/api/messages';
 import { messageAdded, messageConfirmed, messagePatched, reactionsUpdated } from './messageEvents';
 
@@ -6,8 +6,8 @@ const MAX_WINDOWS = 5;
 
 export interface MessageWindow {
   messages: MessageResponse[];
-  nextCursor: string | null;  // cursor to load older messages (top)
-  prevCursor: string | null;  // cursor to load newer messages (bottom)
+  nextCursor: string | null; // cursor to load older messages (top)
+  prevCursor: string | null; // cursor to load newer messages (bottom)
 }
 
 export interface ChatMessageState {
@@ -25,8 +25,8 @@ const initialState: MessagesState = {
 };
 
 function dedup(existing: MessageResponse[], incoming: MessageResponse[]): MessageResponse[] {
-  const ids = new Set(existing.map(m => m.id));
-  return incoming.filter(m => !ids.has(m.id));
+  const ids = new Set(existing.map((m) => m.id));
+  return incoming.filter((m) => !ids.has(m.id));
 }
 
 function getChat(state: MessagesState, chatId: string): ChatMessageState {
@@ -47,7 +47,7 @@ function addMessageToWindow(state: MessagesState, chatId: string, message: Messa
     chat.activeWindowIndex = 0;
   }
   const lastWin = chat.windows[chat.windows.length - 1];
-  if (lastWin.messages.some(m => m.id === message.id)) return;
+  if (lastWin.messages.some((m) => m.id === message.id)) return;
   lastWin.messages.push(message);
 }
 
@@ -60,7 +60,7 @@ function confirmPendingInWindows(
   const chat = state.chats[chatId];
   if (!chat) return;
   for (const win of chat.windows) {
-    const idx = win.messages.findIndex(m => m.client_generated_id === clientGeneratedId);
+    const idx = win.messages.findIndex((m) => m.client_generated_id === clientGeneratedId);
     if (idx !== -1) {
       win.messages[idx] = message;
       return;
@@ -79,7 +79,7 @@ function patchMessageInWindows(
 
     for (const win of chat.windows) {
       if (message.is_deleted) {
-        win.messages = win.messages.filter(m => m.id !== messageId);
+        win.messages = win.messages.filter((m) => m.id !== messageId);
       }
 
       for (let i = 0; i < win.messages.length; i++) {
@@ -104,7 +104,12 @@ const messagesSlice = createSlice({
   name: 'messages',
   initialState,
   reducers: {
-    resetChat(state, action: { payload: { chatId: string; messages: MessageResponse[]; nextCursor: string | null; prevCursor: string | null } }) {
+    resetChat(
+      state,
+      action: {
+        payload: { chatId: string; messages: MessageResponse[]; nextCursor: string | null; prevCursor: string | null };
+      },
+    ) {
       const { chatId, messages, nextCursor, prevCursor } = action.payload;
       const prevGen = state.chats[chatId]?.generation ?? 0;
       state.chats[chatId] = {
@@ -114,7 +119,12 @@ const messagesSlice = createSlice({
       };
     },
 
-    pushWindow(state, action: { payload: { chatId: string; messages: MessageResponse[]; nextCursor: string | null; prevCursor: string | null } }) {
+    pushWindow(
+      state,
+      action: {
+        payload: { chatId: string; messages: MessageResponse[]; nextCursor: string | null; prevCursor: string | null };
+      },
+    ) {
       const { chatId, messages, nextCursor, prevCursor } = action.payload;
       const chat = getChat(state, chatId);
       const newWin: MessageWindow = { messages, nextCursor, prevCursor };
@@ -142,7 +152,10 @@ const messagesSlice = createSlice({
       }
     },
 
-    prependMessages(state, action: { payload: { chatId: string; messages: MessageResponse[]; nextCursor?: string | null } }) {
+    prependMessages(
+      state,
+      action: { payload: { chatId: string; messages: MessageResponse[]; nextCursor?: string | null } },
+    ) {
       const { chatId, messages } = action.payload;
       const chat = getChat(state, chatId);
       const win = getActiveWindow(chat);
@@ -154,7 +167,10 @@ const messagesSlice = createSlice({
       }
     },
 
-    appendMessages(state, action: { payload: { chatId: string; messages: MessageResponse[]; prevCursor?: string | null } }) {
+    appendMessages(
+      state,
+      action: { payload: { chatId: string; messages: MessageResponse[]; prevCursor?: string | null } },
+    ) {
       const { chatId, messages } = action.payload;
       const chat = getChat(state, chatId);
       const win = getActiveWindow(chat);
@@ -207,7 +223,12 @@ const messagesSlice = createSlice({
       if (win) win.prevCursor = cursor;
     },
 
-    refreshLatest(state, action: { payload: { chatId: string; messages: MessageResponse[]; nextCursor: string | null; prevCursor: string | null } }) {
+    refreshLatest(
+      state,
+      action: {
+        payload: { chatId: string; messages: MessageResponse[]; nextCursor: string | null; prevCursor: string | null };
+      },
+    ) {
       const { chatId, messages, nextCursor, prevCursor } = action.payload;
       const chat = state.chats[chatId];
 
@@ -225,12 +246,12 @@ const messagesSlice = createSlice({
       // Check the last window (most recent chronologically) for overlap
       const lastWinIdx = chat.windows.length - 1;
       const lastWin = chat.windows[lastWinIdx];
-      const fetchedIds = new Set(messages.map(m => m.id));
-      const hasOverlap = lastWin.messages.some(m => fetchedIds.has(m.id));
+      const fetchedIds = new Set(messages.map((m) => m.id));
+      const hasOverlap = lastWin.messages.some((m) => fetchedIds.has(m.id));
 
       if (hasOverlap) {
         // Merge: keep existing messages not in fetched set, then append fetched
-        const older = lastWin.messages.filter(m => !fetchedIds.has(m.id));
+        const older = lastWin.messages.filter((m) => !fetchedIds.has(m.id));
         lastWin.messages = [...older, ...messages];
         // Preserve nextCursor from existing window (allows loading older),
         // use prevCursor from API response
@@ -244,7 +265,7 @@ const messagesSlice = createSlice({
       chat.generation++;
     },
   },
-  extraReducers: builder => {
+  extraReducers: (builder) => {
     builder
       .addCase(messageAdded, (state, action) => {
         addMessageToWindow(state, action.payload.storeChatId, action.payload.message);
@@ -258,12 +279,7 @@ const messagesSlice = createSlice({
         );
       })
       .addCase(messagePatched, (state, action) => {
-        patchMessageInWindows(
-          state,
-          action.payload.chatId,
-          action.payload.messageId,
-          action.payload.message,
-        );
+        patchMessageInWindows(state, action.payload.chatId, action.payload.messageId, action.payload.message);
       })
       .addCase(reactionsUpdated, (state, action) => {
         const { chatId, messageId, reactions } = action.payload;
@@ -273,8 +289,8 @@ const messagesSlice = createSlice({
             for (let i = 0; i < win.messages.length; i++) {
               if (win.messages[i].id === messageId) {
                 const existing = win.messages[i].reactions ?? [];
-                const merged = reactions.map(r => {
-                  const prev = existing.find(e => e.emoji === r.emoji);
+                const merged = reactions.map((r) => {
+                  const prev = existing.find((e) => e.emoji === r.emoji);
                   return { ...r, reacted_by_me: r.reacted_by_me ?? prev?.reacted_by_me };
                 });
                 win.messages[i] = { ...win.messages[i], reactions: merged };
@@ -303,37 +319,25 @@ const EMPTY_ARRAY: MessageResponse[] = [];
 const selectMessagesChats = (state: { messages: MessagesState }) => state.messages.chats;
 
 export const selectMessagesForChat = createSelector(
-  [
-    selectMessagesChats,
-    (_state: { messages: MessagesState }, chatId: string) => chatId
-  ],
+  [selectMessagesChats, (_state: { messages: MessagesState }, chatId: string) => chatId],
   (chats, chatId): MessageResponse[] => {
     const chat = chats[chatId];
     if (!chat || chat.windows.length === 0) return EMPTY_ARRAY;
     return chat.windows[chat.activeWindowIndex]?.messages ?? EMPTY_ARRAY;
-  }
+  },
 );
 
-export function selectNextCursorForChat(
-  state: { messages: MessagesState },
-  chatId: string
-): string | null {
+export function selectNextCursorForChat(state: { messages: MessagesState }, chatId: string): string | null {
   const chat = state.messages.chats[chatId];
   if (!chat || chat.windows.length === 0) return null;
   return chat.windows[chat.activeWindowIndex]?.nextCursor ?? null;
 }
 
-export function selectChatGeneration(
-  state: { messages: MessagesState },
-  chatId: string
-): number {
+export function selectChatGeneration(state: { messages: MessagesState }, chatId: string): number {
   return state.messages.chats[chatId]?.generation ?? 0;
 }
 
-export function selectPrevCursorForChat(
-  state: { messages: MessagesState },
-  chatId: string
-): string | null {
+export function selectPrevCursorForChat(state: { messages: MessagesState }, chatId: string): string | null {
   const chat = state.messages.chats[chatId];
   if (!chat || chat.windows.length === 0) return null;
   return chat.windows[chat.activeWindowIndex]?.prevCursor ?? null;

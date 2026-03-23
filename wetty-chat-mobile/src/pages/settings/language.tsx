@@ -1,22 +1,22 @@
 import {
-  IonPage,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
+  IonBackButton,
+  IonButtons,
   IonContent,
-  IonList,
+  IonHeader,
+  IonIcon,
   IonItem,
   IonLabel,
-  IonIcon,
-  IonButtons,
-  IonBackButton,
+  IonList,
+  IonPage,
+  IonTitle,
+  IonToolbar,
 } from '@ionic/react';
 import { checkmark } from 'ionicons/icons';
-import { useSelector, useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import { Trans } from '@lingui/react/macro';
 import { selectLocale, setLocale } from '@/store/settingsSlice';
-import { dynamicActivate, activateDetectedLocale } from '@/i18n';
+import { activateDetectedLocale, dynamicActivate } from '@/i18n';
 import { BackButton } from '@/components/BackButton';
 import type { BackAction } from '@/types/back-action';
 
@@ -54,23 +54,23 @@ export function LanguagePageCore({ backAction }: LanguageCoreProps) {
           <IonButtons slot="start">
             {backAction ? <BackButton action={backAction} /> : <IonBackButton defaultHref="/settings/general" />}
           </IonButtons>
-          <IonTitle><Trans>Language</Trans></IonTitle>
+          <IonTitle>
+            <Trans>Language</Trans>
+          </IonTitle>
         </IonToolbar>
       </IonHeader>
       <IonContent>
         <IonList>
           <IonItem button detail={false} onClick={handleSelectAuto}>
-            <IonLabel><Trans>Auto</Trans></IonLabel>
-            {currentLocale === null && (
-              <IonIcon icon={checkmark} slot="end" color="primary" />
-            )}
+            <IonLabel>
+              <Trans>Auto</Trans>
+            </IonLabel>
+            {currentLocale === null && <IonIcon icon={checkmark} slot="end" color="primary" />}
           </IonItem>
           {locales.map(({ code, label }) => (
             <IonItem key={code} button detail={false} onClick={() => handleSelect(code)}>
               <IonLabel>{label}</IonLabel>
-              {currentLocale === code && (
-                <IonIcon icon={checkmark} slot="end" color="primary" />
-              )}
+              {currentLocale === code && <IonIcon icon={checkmark} slot="end" color="primary" />}
             </IonItem>
           ))}
         </IonList>

@@ -1,19 +1,19 @@
 import { useState } from 'react';
 import {
-  IonPage,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
+  IonButtons,
   IonContent,
-  IonList,
+  IonHeader,
+  IonIcon,
+  IonInput,
   IonItem,
   IonLabel,
-  IonInput,
-  useIonToast,
+  IonList,
   IonListHeader,
-  IonIcon,
   IonNote,
-  IonButtons,
+  IonPage,
+  IonTitle,
+  IonToolbar,
+  useIonToast,
 } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
 import { useSelector } from 'react-redux';
@@ -24,9 +24,9 @@ import { FeatureGate } from '@/components/FeatureGate';
 import { CheckForUpdateItem } from '@/components/settings/CheckForUpdateItem';
 import { AppVersionItem } from '@/components/settings/AppVersionItem';
 
-import { usePushNotifications, type PushNotificationErrorCode } from '@/hooks/usePushNotifications';
+import { type PushNotificationErrorCode, usePushNotifications } from '@/hooks/usePushNotifications';
 import { t } from '@lingui/core/macro';
-import { cog, codeWorking, notifications, logIn, logOut } from 'ionicons/icons';
+import { codeWorking, cog, logIn, logOut, notifications } from 'ionicons/icons';
 import { BackButton } from '@/components/BackButton';
 import type { BackAction } from '@/types/back-action';
 
@@ -114,20 +114,24 @@ export function SettingsCore({ backAction, onOpenGeneral }: SettingsCoreProps) {
     <IonPage>
       <IonHeader>
         <IonToolbar>
-          <IonButtons slot="start">
-            {backAction && <BackButton action={backAction} />}
-          </IonButtons>
-          <IonTitle><Trans>Settings</Trans></IonTitle>
+          <IonButtons slot="start">{backAction && <BackButton action={backAction} />}</IonButtons>
+          <IonTitle>
+            <Trans>Settings</Trans>
+          </IonTitle>
         </IonToolbar>
       </IonHeader>
       <IonContent color="light" className="ion-no-padding">
         <IonListHeader>
-          <IonLabel><Trans>General</Trans></IonLabel>
+          <IonLabel>
+            <Trans>General</Trans>
+          </IonLabel>
         </IonListHeader>
         <IonList inset>
           <IonItem button detail={true} onClick={handleOpenGeneral}>
             <IonIcon aria-hidden="true" icon={cog} slot="start" color="primary" />
-            <IonLabel><Trans>General</Trans></IonLabel>
+            <IonLabel>
+              <Trans>General</Trans>
+            </IonLabel>
           </IonItem>
         </IonList>
 
@@ -154,37 +158,51 @@ export function SettingsCore({ backAction, onOpenGeneral }: SettingsCoreProps) {
         </FeatureGate>
 
         <IonListHeader>
-          <IonLabel><Trans>Push Notifications</Trans></IonLabel>
+          <IonLabel>
+            <Trans>Push Notifications</Trans>
+          </IonLabel>
         </IonListHeader>
         <IonList inset={true}>
           <IonItem>
             <IonIcon aria-hidden="true" icon={notifications} slot="start" color="tertiary" />
-            <IonLabel><Trans>Status</Trans></IonLabel>
+            <IonLabel>
+              <Trans>Status</Trans>
+            </IonLabel>
             <IonNote slot="end" color="medium">
               {isSubscribed ? t`Subscribed` : t`Not subscribed`}
             </IonNote>
           </IonItem>
           {permission !== 'granted' && (
             <IonItem>
-              <IonLabel><Trans>Permission</Trans></IonLabel>
-              <IonNote slot="end" color="medium">{getPermissionLabel(permission)}</IonNote>
+              <IonLabel>
+                <Trans>Permission</Trans>
+              </IonLabel>
+              <IonNote slot="end" color="medium">
+                {getPermissionLabel(permission)}
+              </IonNote>
             </IonItem>
           )}
           {!isSubscribed ? (
             <IonItem button detail={false} onClick={handleSubscribeToPush} disabled={loading || isSubscribed}>
               <IonIcon aria-hidden="true" icon={logIn} slot="start" color="primary" />
-              <IonLabel color="primary"><Trans>Turn On Push Notifications</Trans></IonLabel>
+              <IonLabel color="primary">
+                <Trans>Turn On Push Notifications</Trans>
+              </IonLabel>
             </IonItem>
           ) : (
             <IonItem button detail={false} onClick={handleUnsubscribeFromPush} disabled={loading || !isSubscribed}>
               <IonIcon aria-hidden="true" icon={logOut} slot="start" color="danger" />
-              <IonLabel color="danger"><Trans>Turn Off Push Notifications</Trans></IonLabel>
+              <IonLabel color="danger">
+                <Trans>Turn Off Push Notifications</Trans>
+              </IonLabel>
             </IonItem>
           )}
         </IonList>
 
         <IonListHeader>
-          <IonLabel><Trans>About</Trans></IonLabel>
+          <IonLabel>
+            <Trans>About</Trans>
+          </IonLabel>
         </IonListHeader>
         <IonList inset={true}>
           <CheckForUpdateItem />

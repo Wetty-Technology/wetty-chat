@@ -19,7 +19,9 @@ export function TitleWithConnectionStatus({ children }: TitleWithConnectionStatu
       ) : (
         <span className={styles.reconnecting} role="status" aria-live="polite">
           <IonSpinner name="lines-small" />
-          <span><Trans>Reconnecting...</Trans></span>
+          <span>
+            <Trans>Reconnecting...</Trans>
+          </span>
         </span>
       )}
     </IonTitle>

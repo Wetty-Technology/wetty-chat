@@ -83,7 +83,7 @@
 
 .landing-steps li::before {
   counter-increment: step-counter;
-  content: counter(step-counter) ". ";
+  content: counter(step-counter) '. ';
   position: absolute;
   left: 0;
   color: var(--ion-color-medium);

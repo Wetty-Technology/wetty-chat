@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
 import {
+  IonButtons,
+  IonContent,
+  IonHeader,
   IonIcon,
   IonInput,
   IonItem,
@@ -9,21 +12,18 @@ import {
   IonPage,
   IonSelect,
   IonSelectOption,
-  IonHeader,
-  IonToolbar,
+  IonSpinner,
   IonTextarea,
   IonTitle,
-  IonContent,
-  IonButtons,
-  IonSpinner,
+  IonToolbar,
   useIonToast,
 } from '@ionic/react';
-import { useParams, useHistory } from 'react-router-dom';
+import { useHistory, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import { documentText, eye, image, people, save } from 'ionicons/icons';
-import { selectChatMeta, setChatMeta, selectChatMutedUntil, setChatMutedUntil } from '@/store/chatsSlice';
+import { selectChatMeta, selectChatMutedUntil, setChatMeta, setChatMutedUntil } from '@/store/chatsSlice';
 import type { RootState } from '@/store/index';
 import { getGroupInfo, updateGroupInfo } from '@/api/group';
 import { BackButton } from '@/components/BackButton';
@@ -92,7 +92,9 @@ function ChatSettingsContent({
       />
 
       <IonListHeader>
-        <IonLabel><Trans>Notifications</Trans></IonLabel>
+        <IonLabel>
+          <Trans>Notifications</Trans>
+        </IonLabel>
       </IonListHeader>
       <IonList inset>
         <ChatMuteSettingItem chatId={chatId} mutedUntil={mutedUntil} />
@@ -100,12 +102,16 @@ function ChatSettingsContent({
 
       <FeatureGate>
         <IonListHeader>
-          <IonLabel><Trans>Group</Trans></IonLabel>
+          <IonLabel>
+            <Trans>Group</Trans>
+          </IonLabel>
         </IonListHeader>
         <IonList inset>
           <IonItem>
             <IonIcon aria-hidden="true" icon={people} slot="start" color="primary" />
-            <IonLabel position="stacked"><Trans>Group Name</Trans></IonLabel>
+            <IonLabel position="stacked">
+              <Trans>Group Name</Trans>
+            </IonLabel>
             <IonInput
               value={formState.name}
               placeholder={t`Enter group name`}
@@ -114,7 +120,9 @@ function ChatSettingsContent({
           </IonItem>
           <IonItem>
             <IonIcon aria-hidden="true" icon={documentText} slot="start" color="tertiary" />
-            <IonLabel position="stacked"><Trans>Description</Trans></IonLabel>
+            <IonLabel position="stacked">
+              <Trans>Description</Trans>
+            </IonLabel>
             <IonTextarea
               value={formState.description}
               placeholder={t`Enter group description`}
@@ -124,7 +132,9 @@ function ChatSettingsContent({
           </IonItem>
           <IonItem>
             <IonIcon aria-hidden="true" icon={image} slot="start" color="medium" />
-            <IonLabel position="stacked"><Trans>Avatar URL</Trans></IonLabel>
+            <IonLabel position="stacked">
+              <Trans>Avatar URL</Trans>
+            </IonLabel>
             <IonInput
               type="url"
               value={formState.avatar}
@@ -134,20 +144,24 @@ function ChatSettingsContent({
           </IonItem>
           <IonItem>
             <IonIcon aria-hidden="true" icon={eye} slot="start" color="secondary" />
-            <IonLabel><Trans>Visibility</Trans></IonLabel>
+            <IonLabel>
+              <Trans>Visibility</Trans>
+            </IonLabel>
             <IonSelect
               value={formState.visibility}
               onIonChange={(event) => onVisibilityChange(event.detail.value as 'public' | 'private')}
             >
-              <IonSelectOption value="public"><Trans>Public</Trans></IonSelectOption>
-              <IonSelectOption value="private"><Trans>Private</Trans></IonSelectOption>
+              <IonSelectOption value="public">
+                <Trans>Public</Trans>
+              </IonSelectOption>
+              <IonSelectOption value="private">
+                <Trans>Private</Trans>
+              </IonSelectOption>
             </IonSelect>
           </IonItem>
           <IonItem button detail={false} disabled={saving} onClick={onSave}>
             <IonIcon aria-hidden="true" icon={save} slot="start" color="primary" />
-            <IonLabel color="primary">
-              {saving ? <Trans>Saving...</Trans> : <Trans>Save Settings</Trans>}
-            </IonLabel>
+            <IonLabel color="primary">{saving ? <Trans>Saving...</Trans> : <Trans>Save Settings</Trans>}</IonLabel>
           </IonItem>
         </IonList>
       </FeatureGate>
@@ -198,14 +212,17 @@ function ChatSettingsSession({ chatId, backAction }: { chatId: string; backActio
       visibility: formState.visibility,
     })
       .then(() => {
-        dispatch(setChatMeta({
-          chatId, meta: {
-            name: name || null,
-            description: description || null,
-            avatar: avatar || null,
-            visibility: formState.visibility,
-          }
-        }));
+        dispatch(
+          setChatMeta({
+            chatId,
+            meta: {
+              name: name || null,
+              description: description || null,
+              avatar: avatar || null,
+              visibility: formState.visibility,
+            },
+          }),
+        );
         presentToast({ message: t`Settings saved`, duration: 2000 });
         history.goBack();
       })
@@ -223,10 +240,10 @@ function ChatSettingsSession({ chatId, backAction }: { chatId: string; backActio
     <IonPage>
       <IonHeader>
         <IonToolbar>
-          <IonButtons slot="start">
-            {backAction && <BackButton action={backAction} />}
-          </IonButtons>
-          <IonTitle><Trans>Group Settings</Trans></IonTitle>
+          <IonButtons slot="start">{backAction && <BackButton action={backAction} />}</IonButtons>
+          <IonTitle>
+            <Trans>Group Settings</Trans>
+          </IonTitle>
         </IonToolbar>
       </IonHeader>
       <IonContent color="light" className="ion-no-padding">

@@ -1,13 +1,5 @@
 import React from 'react';
-import {
-  IonPage,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
-  IonContent,
-  IonBackButton,
-  IonButtons,
-} from '@ionic/react';
+import { IonBackButton, IonButtons, IonContent, IonHeader, IonPage, IonTitle, IonToolbar } from '@ionic/react';
 
 const NotFoundPage: React.FC = () => (
   <IonPage>

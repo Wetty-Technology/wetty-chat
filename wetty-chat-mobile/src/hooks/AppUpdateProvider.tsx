@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { AppUpdateContext, type CheckForUpdateResult } from './appUpdateContext';
 
 function waitForServiceWorkerUpdate(
   registration: ServiceWorkerRegistration,
   hasPendingUpdate: () => boolean,
-  timeoutMs = 5000
+  timeoutMs = 5000,
 ): Promise<boolean> {
   if (registration.waiting || hasPendingUpdate()) {
     return Promise.resolve(true);
@@ -100,10 +100,7 @@ export function AppUpdateProvider({ children }: { children: ReactNode }) {
         return 'update-found';
       }
 
-      const updateFoundPromise = waitForServiceWorkerUpdate(
-        registration,
-        () => needRefreshRef.current
-      );
+      const updateFoundPromise = waitForServiceWorkerUpdate(registration, () => needRefreshRef.current);
 
       await registration.update();
 

@@ -3,12 +3,11 @@
   gap: 10px;
   overflow-x: auto;
   padding: 10px 12px 6px;
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--ion-background-color) 92%, var(--ion-background-color-step-100) 8%) 0%,
-      color-mix(in srgb, var(--ion-background-color) 84%, var(--ion-background-color-step-150) 16%) 100%
-    );
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--ion-background-color) 92%, var(--ion-background-color-step-100) 8%) 0%,
+    color-mix(in srgb, var(--ion-background-color) 84%, var(--ion-background-color-step-150) 16%) 100%
+  );
   border-bottom: 1px solid var(--ion-background-color-step-150, #e2e8f0);
   scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch;

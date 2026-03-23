@@ -16,7 +16,7 @@ import {
 import { useHistory } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/store';
-import { usePushNotifications, type PushNotificationErrorCode } from '@/hooks/usePushNotifications';
+import { type PushNotificationErrorCode, usePushNotifications } from '@/hooks/usePushNotifications';
 import { t } from '@lingui/core/macro';
 import { UserAvatar } from '@/components/UserAvatar';
 import './oobe.scss';
@@ -77,12 +77,7 @@ export default function OobePage() {
       <IonContent fullscreen={true}>
         <div className="oobe-shell">
           <div className="oobe-card">
-            <UserAvatar
-              name={username ?? 'W'}
-              avatarUrl={avatar_url}
-              size={88}
-              className="oobe-avatar"
-            />
+            <UserAvatar name={username ?? 'W'} avatarUrl={avatar_url} size={88} className="oobe-avatar" />
 
             <IonText>
               <h1 className="oobe-title">欢迎，{username ?? 'Wetty 用户'}</h1>

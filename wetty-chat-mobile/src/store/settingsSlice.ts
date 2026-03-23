@@ -1,11 +1,11 @@
-import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
+import { createSlice } from '@reduxjs/toolkit';
 import type { RootState } from './index';
 
-export const supportedLocales = ["en", "zh-CN", "zh-TW"];
-export const defaultLocale = "en";
+export const supportedLocales = ['en', 'zh-CN', 'zh-TW'];
+export const defaultLocale = 'en';
 export const chatFontSizeOptions = ['small', 'mediumSmall', 'medium', 'mediumLarge', 'large'] as const;
-export type ChatFontSizeOption = typeof chatFontSizeOptions[number];
+export type ChatFontSizeOption = (typeof chatFontSizeOptions)[number];
 export const defaultChatFontSize: ChatFontSizeOption = 'medium';
 
 const chatFontSizeStyles: Record<ChatFontSizeOption, string> = {
@@ -21,8 +21,8 @@ export function detectLocale(): string {
     // Exact match (e.g. "zh-CN")
     if (supportedLocales.includes(lang)) return lang;
     // Base language match (e.g. "zh" -> "zh-CN")
-    const base = lang.split("-")[0];
-    const match = supportedLocales.find((l) => l.split("-")[0] === base);
+    const base = lang.split('-')[0];
+    const match = supportedLocales.find((l) => l.split('-')[0] === base);
     if (match) return match;
   }
   return defaultLocale;

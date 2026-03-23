@@ -47,7 +47,7 @@
   user-select: none;
   overflow: hidden;
 
-  &>img {
+  & > img {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -150,7 +150,7 @@
 }
 
 .senderGroup {
-  background: #AAAAAA70;
+  background: #aaaaaa70;
   padding: 0 5px;
   border-radius: 2px;
   font-size: 10px !important;

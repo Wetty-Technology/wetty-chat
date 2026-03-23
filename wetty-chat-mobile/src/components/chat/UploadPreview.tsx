@@ -68,10 +68,7 @@ export function UploadPreview({ items, onRemove, onRetry }: UploadPreviewProps) 
                 <>
                   <div className={styles.progressRing} aria-hidden="true">
                     <svg viewBox="0 0 36 36">
-                      <path
-                        className={styles.progressTrack}
-                        d="M18 2.5a15.5 15.5 0 1 1 0 31a15.5 15.5 0 1 1 0-31"
-                      />
+                      <path className={styles.progressTrack} d="M18 2.5a15.5 15.5 0 1 1 0 31a15.5 15.5 0 1 1 0-31" />
                       <path
                         className={styles.progressValue}
                         d="M18 2.5a15.5 15.5 0 1 1 0 31a15.5 15.5 0 1 1 0-31"
@@ -86,11 +83,7 @@ export function UploadPreview({ items, onRemove, onRetry }: UploadPreviewProps) 
                 <>
                   <IonIcon icon={alertCircleOutline} className={styles.errorIcon} />
                   <span className={styles.statusText}>{item.errorMessage ?? t`Upload failed`}</span>
-                  <button
-                    type="button"
-                    className={styles.retryButton}
-                    onClick={() => onRetry(item.localId)}
-                  >
+                  <button type="button" className={styles.retryButton} onClick={() => onRetry(item.localId)}>
                     <IonIcon icon={refreshOutline} />
                     {t`Retry`}
                   </button>

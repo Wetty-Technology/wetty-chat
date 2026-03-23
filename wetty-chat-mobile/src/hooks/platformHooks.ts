@@ -32,9 +32,7 @@ export function useIsDarkMode(): boolean {
 }
 
 export function useIsPWA(): boolean {
-  const [isPWA, setIsPWA] = useState(() => (
-    typeof window !== 'undefined' ? isPlatform('pwa') : false
-  ));
+  const [isPWA, setIsPWA] = useState(() => (typeof window !== 'undefined' ? isPlatform('pwa') : false));
 
   useEffect(() => {
     if (typeof window === 'undefined' || window.matchMedia == null) {

@@ -19,7 +19,7 @@ function colorForUser(name: string): string {
     hash = (hash << 5) - hash + char.charCodeAt(0);
     hash |= 0;
   }
-  const hue = ((hash * 137) % 360 + 360) % 360;
+  const hue = (((hash * 137) % 360) + 360) % 360;
   return `hsl(${hue}, 55%, 50%)`;
 }
 
@@ -34,11 +34,7 @@ export function UserAvatar({ name, avatarUrl, size = 36, className, style, onCli
   if (avatarUrl) {
     return (
       <div className={classes} style={base} onClick={onClick}>
-        <img
-          src={avatarUrl}
-          alt=""
-          className={styles.image}
-        />
+        <img src={avatarUrl} alt="" className={styles.image} />
       </div>
     );
   }

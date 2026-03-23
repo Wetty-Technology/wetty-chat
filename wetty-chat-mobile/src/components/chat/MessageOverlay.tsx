@@ -84,9 +84,7 @@ export function MessageOverlay({
     let top = sourceRect.top - bubbleOffsetTop;
 
     // For sent messages, align right edge to source right edge
-    let left = isSent
-      ? sourceRect.right - contentRect.width
-      : sourceRect.left;
+    let left = isSent ? sourceRect.right - contentRect.width : sourceRect.left;
 
     // Clamp vertically: ensure the entire content (reactions + bubble + actions) fits
     if (top + contentRect.height > vh - pad) {
@@ -191,14 +189,7 @@ export function MessageOverlay({
                     </div>
                   );
                 }
-                return (
-                  <img
-                    key={att.id}
-                    src={att.url}
-                    alt={t`Attachment`}
-                    className={styles.attachmentImage}
-                  />
-                );
+                return <img key={att.id} src={att.url} alt={t`Attachment`} className={styles.attachmentImage} />;
               })}
             </div>
           )}
@@ -207,7 +198,8 @@ export function MessageOverlay({
             <span className={styles.timestampSpacer} />
             {timestamp && (
               <span className={styles.timestamp}>
-                {formatTime(timestamp)}{edited && ` (${t`Edited`})`}
+                {formatTime(timestamp)}
+                {edited && ` (${t`Edited`})`}
                 {isSent && (
                   <IonIcon
                     icon={isConfirmed ? checkmarkCircle : checkmarkCircleOutline}

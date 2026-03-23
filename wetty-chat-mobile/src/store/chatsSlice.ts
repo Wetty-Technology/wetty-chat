@@ -1,5 +1,5 @@
-import { createSlice, createSelector } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
+import { createSelector, createSlice } from '@reduxjs/toolkit';
 import type { RootState } from './index';
 import type { MessageResponse } from '@/api/messages';
 import type { ChatListItem } from '@/api/chats';
@@ -119,7 +119,7 @@ const chatsSlice = createSlice({
     },
     projectChatMessageAdded(
       state,
-      action: PayloadAction<{ chatId: string; message: MessageResponse; incrementUnread: boolean }>
+      action: PayloadAction<{ chatId: string; message: MessageResponse; incrementUnread: boolean }>,
     ) {
       const { chatId, message, incrementUnread } = action.payload;
       const entry = getChatEntry(state, chatId);
@@ -142,7 +142,7 @@ const chatsSlice = createSlice({
     },
     projectChatMessageConfirmed(
       state,
-      action: PayloadAction<{ chatId: string; clientGeneratedId: string; message: MessageResponse }>
+      action: PayloadAction<{ chatId: string; clientGeneratedId: string; message: MessageResponse }>,
     ) {
       const { chatId, clientGeneratedId, message } = action.payload;
       const entry = getChatEntry(state, chatId);
@@ -176,7 +176,12 @@ const chatsSlice = createSlice({
     },
     projectChatMessagePatched(
       state,
-      action: PayloadAction<{ chatId: string; messageId: string; message: MessageResponse; fallbackMessage: MessageResponse | null }>
+      action: PayloadAction<{
+        chatId: string;
+        messageId: string;
+        message: MessageResponse;
+        fallbackMessage: MessageResponse | null;
+      }>,
     ) {
       const { chatId, messageId, message, fallbackMessage } = action.payload;
       const entry = state.byId[chatId];
@@ -197,8 +202,7 @@ const chatsSlice = createSlice({
 
       if (message.is_deleted) {
         entry.liveProjection.last_message = fallbackMessage;
-        entry.liveProjection.last_message_at =
-          fallbackMessage?.created_at ?? null;
+        entry.liveProjection.last_message_at = fallbackMessage?.created_at ?? null;
         return;
       }
 
@@ -250,26 +254,23 @@ export function selectChatMutedUntil(state: RootState, chatId: string): string |
 
 const selectChatsById = (state: RootState) => state.chats.byId;
 
-export const selectAllChats = createSelector(
-  [selectChatsById],
-  (byId): ChatListItem[] => {
-    return Object.entries(byId)
-      .filter(([, entry]) => getEffectiveListMeta(entry).in_list)
-      .map(([id, entry]) => {
-        const listMeta = getEffectiveListMeta(entry);
-        return {
-          id,
-          name: entry.details.name ?? null,
-          last_message_at: listMeta.last_message_at ?? null,
-          unread_count: listMeta.unread_count ?? 0,
-          last_message: listMeta.last_message ?? null,
-          muted_until: resolveMutedUntil(entry?.listSnapshot, entry?.liveProjection),
-        };
-      })
-      .sort((a, b) => {
-        return compareMessageOrder(b.last_message, a.last_message);
-      });
-  }
-);
+export const selectAllChats = createSelector([selectChatsById], (byId): ChatListItem[] => {
+  return Object.entries(byId)
+    .filter(([, entry]) => getEffectiveListMeta(entry).in_list)
+    .map(([id, entry]) => {
+      const listMeta = getEffectiveListMeta(entry);
+      return {
+        id,
+        name: entry.details.name ?? null,
+        last_message_at: listMeta.last_message_at ?? null,
+        unread_count: listMeta.unread_count ?? 0,
+        last_message: listMeta.last_message ?? null,
+        muted_until: resolveMutedUntil(entry?.listSnapshot, entry?.liveProjection),
+      };
+    })
+    .sort((a, b) => {
+      return compareMessageOrder(b.last_message, a.last_message);
+    });
+});
 
 export default chatsSlice.reducer;

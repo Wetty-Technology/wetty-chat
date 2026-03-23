@@ -1,7 +1,7 @@
 /* App-wide custom styles */
 
 :root {
-  --ion-color-primary: #2B7ACD;
+  --ion-color-primary: #2b7acd;
   --ion-color-primary-rgb: 43, 122, 205;
   --ion-color-primary-contrast: #ffffff;
   --ion-color-primary-contrast-rgb: 255, 255, 255;
@@ -22,11 +22,15 @@ ion-tab-bar {
 }
 
 ion-app {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'WenQuanYi Micro Hei', sans-serif;
 }
 
 textarea {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'WenQuanYi Micro Hei', sans-serif;
 }
 
 .desktop-overlay {

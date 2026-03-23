@@ -49,7 +49,10 @@ export function getGroupInfo(chatId: string | number): Promise<AxiosResponse<Gro
   return apiClient.get(`/group/${chatId}`);
 }
 
-export function updateGroupInfo(chatId: string | number, body: UpdateGroupInfoBody): Promise<AxiosResponse<GroupInfoResponse>> {
+export function updateGroupInfo(
+  chatId: string | number,
+  body: UpdateGroupInfoBody,
+): Promise<AxiosResponse<GroupInfoResponse>> {
   return apiClient.patch(`/group/${chatId}`, body);
 }
 
@@ -68,11 +71,18 @@ export function removeMember(chatId: string | number, uid: number): Promise<Axio
   return apiClient.delete(`/group/${chatId}/members/${uid}`);
 }
 
-export function updateMemberRole(chatId: string | number, uid: number, body: UpdateMemberRoleBody): Promise<AxiosResponse<MemberResponse>> {
+export function updateMemberRole(
+  chatId: string | number,
+  uid: number,
+  body: UpdateMemberRoleBody,
+): Promise<AxiosResponse<MemberResponse>> {
   return apiClient.patch(`/group/${chatId}/members/${uid}`, body);
 }
 
-export function muteChat(chatId: string | number, body: { duration_seconds?: number | null } = {}): Promise<AxiosResponse<{ muted_until: string }>> {
+export function muteChat(
+  chatId: string | number,
+  body: { duration_seconds?: number | null } = {},
+): Promise<AxiosResponse<{ muted_until: string }>> {
   return apiClient.put(`/group/${chatId}/mute`, body);
 }
 

@@ -38,19 +38,13 @@ export function compareMessageOrder(
   return 0;
 }
 
-export function isSameMessage(
-  a: MessageResponse | null | undefined,
-  b: MessageResponse | null | undefined,
-): boolean {
+export function isSameMessage(a: MessageResponse | null | undefined, b: MessageResponse | null | undefined): boolean {
   if (!a || !b) return false;
   if (a.id === b.id) return true;
   return !!a.client_generated_id && a.client_generated_id === b.client_generated_id;
 }
 
-export function isEligibleRootPreviewMessage(
-  message: MessageResponse,
-  excludeMessageId?: string,
-): boolean {
+export function isEligibleRootPreviewMessage(message: MessageResponse, excludeMessageId?: string): boolean {
   if (message.reply_root_id != null) return false;
   if (message.is_deleted) return false;
   if (excludeMessageId && message.id === excludeMessageId) return false;

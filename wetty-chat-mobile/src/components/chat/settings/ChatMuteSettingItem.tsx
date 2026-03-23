@@ -1,11 +1,4 @@
-import {
-  IonIcon,
-  IonItem,
-  IonLabel,
-  IonNote,
-  useIonActionSheet,
-  useIonToast,
-} from '@ionic/react';
+import { IonIcon, IonItem, IonLabel, IonNote, useIonActionSheet, useIonToast } from '@ionic/react';
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import { notifications, notificationsOff } from 'ionicons/icons';
@@ -134,7 +127,9 @@ export function ChatMuteSettingItem({ chatId, mutedUntil }: ChatMuteSettingItemP
   return (
     <IonItem button detail={false} onClick={showMuteActionSheet}>
       <IonIcon aria-hidden="true" icon={notifications} slot="start" color="danger" />
-      <IonLabel color="primary"><Trans>Mute This Group</Trans></IonLabel>
+      <IonLabel color="primary">
+        <Trans>Mute This Group</Trans>
+      </IonLabel>
     </IonItem>
   );
 }

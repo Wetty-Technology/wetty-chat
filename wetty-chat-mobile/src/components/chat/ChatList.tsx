@@ -1,25 +1,25 @@
-import { useState, useEffect, type ReactNode, useCallback } from 'react';
+import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import {
+  IonBadge,
   IonContent,
-  IonList,
-  IonItem,
-  IonLabel,
   IonIcon,
+  IonItem,
+  IonItemOption,
+  IonItemOptions,
+  IonItemSliding,
+  IonLabel,
+  IonList,
   IonRefresher,
   IonRefresherContent,
-  IonBadge,
-  IonItemSliding,
-  IonItemOptions,
-  IonItemOption,
   type RefresherEventDetail,
 } from '@ionic/react';
 import { useDispatch, useSelector } from 'react-redux';
-import { mailUnreadOutline, checkmarkDone, notificationsOffOutline } from 'ionicons/icons';
-import { getChats, getUnreadCount, type ChatListItem } from '@/api/chats';
-import { setChatsList, selectAllChats, markChatAsRead, setChatUnreadCount } from '@/store/chatsSlice';
+import { checkmarkDone, mailUnreadOutline, notificationsOffOutline } from 'ionicons/icons';
+import { type ChatListItem, getChats, getUnreadCount } from '@/api/chats';
+import { markChatAsRead, selectAllChats, setChatsList, setChatUnreadCount } from '@/store/chatsSlice';
 import { selectEffectiveLocale } from '@/store/settingsSlice';
 import { Trans } from '@lingui/react/macro';
-import { type MessageResponse, markMessagesAsRead } from '@/api/messages';
+import { markMessagesAsRead, type MessageResponse } from '@/api/messages';
 import { t } from '@lingui/core/macro';
 import { clearAppBadgeCount, setAppBadgeCount } from '@/utils/badges';
 import styles from './ChatList.module.scss';
@@ -30,9 +30,7 @@ function formatLastActivity(isoString: string | null, locale: string): string {
   const now = new Date();
 
   const isSameDay =
-    date.getDate() === now.getDate() &&
-    date.getMonth() === now.getMonth() &&
-    date.getFullYear() === now.getFullYear();
+    date.getDate() === now.getDate() && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
 
   if (isSameDay) {
     const diffMs = now.getTime() - date.getTime();
@@ -236,15 +234,8 @@ export function ChatList({ activeChatId, onChatSelect }: ChatListProps) {
                     handleToggleRead(chat, slidingItem as HTMLIonItemSlidingElement | null);
                   }}
                 >
-                  <IonIcon
-                    slot="top"
-                    icon={chat.unread_count > 0 ? checkmarkDone : mailUnreadOutline}
-                  />
-                  {chat.unread_count > 0 ? (
-                    <Trans>Read</Trans>
-                  ) : (
-                    <Trans>Unread</Trans>
-                  )}
+                  <IonIcon slot="top" icon={chat.unread_count > 0 ? checkmarkDone : mailUnreadOutline} />
+                  {chat.unread_count > 0 ? <Trans>Read</Trans> : <Trans>Unread</Trans>}
                 </IonItemOption>
               </IonItemOptions>
               <IonItem
@@ -261,15 +252,17 @@ export function ChatList({ activeChatId, onChatSelect }: ChatListProps) {
                   <h2 className={styles.chatsListTitle}>
                     <span className={styles.chatsListTitleText}>{chatDisplayName(chat)}</span>
                     {isChatMuted(chat) ? (
-                      <IonIcon aria-hidden="true" icon={notificationsOffOutline} className={styles.chatsListMutedIcon} />
+                      <IonIcon
+                        aria-hidden="true"
+                        icon={notificationsOffOutline}
+                        className={styles.chatsListMutedIcon}
+                      />
                     ) : null}
                   </h2>
                   <p className={styles.chatsListPreview}>{getMessagePreview(chat.last_message)}</p>
                 </IonLabel>
                 <div slot="end" className={styles.chatsListEndSlot}>
-                  <div className={styles.chatsListTime}>
-                    {formatLastActivity(chat.last_message_at, locale)}
-                  </div>
+                  <div className={styles.chatsListTime}>{formatLastActivity(chat.last_message_at, locale)}</div>
                   <div className={styles.chatsListBadge}>
                     {chat.unread_count > 0 && (
                       <IonBadge mode="ios" color="primary">
