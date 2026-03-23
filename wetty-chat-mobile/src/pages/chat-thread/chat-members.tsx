@@ -8,6 +8,7 @@ import {
   IonButton,
   IonButtons,
   IonSpinner,
+  IonSearchbar,
   useIonToast,
   useIonAlert,
   useIonActionSheet,
@@ -15,7 +16,14 @@ import {
 import { useParams } from 'react-router-dom';
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
-import { getMembers, addMember, removeMember, updateMemberRole, type MemberResponse } from '@/api/group';
+import {
+  getMembers,
+  addMember,
+  removeMember,
+  updateMemberRole,
+  type MemberResponse,
+  type MemberSearchMode,
+} from '@/api/group';
 import { Virtuoso } from 'react-virtuoso';
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/store/index';
@@ -26,6 +34,7 @@ import { ChatMemberRow } from '@/components/chat-members/ChatMemberRow';
 import styles from './chat-members.module.scss';
 
 const MEMBERS_PAGE_SIZE = 50;
+const SEARCH_DEBOUNCE_MS = 250;
 
 function mergeMembers(existing: MemberResponse[], incoming: MemberResponse[]): MemberResponse[] {
   const seen = new Set(existing.map((member) => member.uid));
@@ -45,6 +54,23 @@ interface ChatMembersCoreProps {
   backAction?: BackAction;
 }
 
+interface MemberSearchState {
+  q: string;
+  mode: MemberSearchMode;
+}
+
+function normalizeSearchInput(value: string): string {
+  return value.trim();
+}
+
+function getSearchKey(search: MemberSearchState | null): string {
+  if (!search) {
+    return 'browse';
+  }
+
+  return `${search.mode}:${search.q}`;
+}
+
 export default function ChatMembersCore({ chatId: propChatId, backAction }: ChatMembersCoreProps) {
   const { id } = useParams<{ id: string }>();
   const chatId = propChatId ?? (id ? String(id) : '');
@@ -60,11 +86,59 @@ export default function ChatMembersCore({ chatId: propChatId, backAction }: Chat
   const [isAdmin, setIsAdmin] = useState(false);
   const [nextCursor, setNextCursor] = useState<number | null>(null);
   const [hasMore, setHasMore] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [activeSearch, setActiveSearch] = useState<MemberSearchState | null>(null);
   const loadingMoreRef = useRef(false);
+  const latestInitialLoadRef = useRef(0);
+  const activeSearchKeyRef = useRef(getSearchKey(null));
 
   const showToast = useCallback((msg: string, duration = 3000) => {
     presentToast({ message: msg, duration });
   }, [presentToast]);
+
+  useEffect(() => {
+    activeSearchKeyRef.current = getSearchKey(activeSearch);
+  }, [activeSearch]);
+
+  const updateActiveSearch = useCallback((nextSearch: MemberSearchState | null) => {
+    const nextKey = getSearchKey(nextSearch);
+    if (nextKey === activeSearchKeyRef.current) {
+      return;
+    }
+
+    setMembers([]);
+    setNextCursor(null);
+    setHasMore(false);
+    setActiveSearch(nextSearch);
+  }, []);
+
+  useEffect(() => {
+    const trimmed = normalizeSearchInput(searchText);
+    const timeoutId = window.setTimeout(() => {
+      updateActiveSearch(
+        trimmed
+          ? {
+              q: trimmed,
+              mode: 'autocomplete',
+            }
+          : null,
+      );
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [searchText, updateActiveSearch]);
+
+  const submitSearch = useCallback(() => {
+    const trimmed = normalizeSearchInput(searchText);
+    updateActiveSearch(
+      trimmed
+        ? {
+            q: trimmed,
+            mode: 'submitted',
+          }
+        : null,
+    );
+  }, [searchText, updateActiveSearch]);
 
   const loadInitialMembers = useCallback(() => {
     if (!chatId) {
@@ -74,53 +148,90 @@ export default function ChatMembersCore({ chatId: propChatId, backAction }: Chat
       setNextCursor(null);
       setHasMore(false);
       setIsAdmin(false);
+      setSearchText('');
+      setActiveSearch(null);
+      activeSearchKeyRef.current = getSearchKey(null);
       return Promise.resolve();
     }
 
+    const requestId = latestInitialLoadRef.current + 1;
+    latestInitialLoadRef.current = requestId;
     loadingMoreRef.current = false;
     setInitialLoading(true);
     setLoadingMore(false);
 
-    return getMembers(chatId, { limit: MEMBERS_PAGE_SIZE })
+    return getMembers(chatId, {
+      limit: MEMBERS_PAGE_SIZE,
+      q: activeSearch?.q,
+      mode: activeSearch?.mode,
+    })
       .then((res) => {
+        if (latestInitialLoadRef.current !== requestId) {
+          return;
+        }
+
         setMembers(res.data.members);
         setNextCursor(res.data.next_cursor);
         setHasMore(res.data.next_cursor != null);
         setIsAdmin(res.data.can_manage_members);
       })
       .catch((err: Error) => {
+        if (latestInitialLoadRef.current !== requestId) {
+          return;
+        }
+
         showToast(err.message || t`Failed to load members`);
         setMembers([]);
         setNextCursor(null);
         setHasMore(false);
         setIsAdmin(false);
       })
-      .finally(() => setInitialLoading(false));
-  }, [chatId, showToast]);
+      .finally(() => {
+        if (latestInitialLoadRef.current === requestId) {
+          setInitialLoading(false);
+        }
+      });
+  }, [activeSearch, chatId, showToast]);
 
   const loadMoreMembers = useCallback(() => {
     if (!chatId || !hasMore || nextCursor == null || loadingMoreRef.current) {
       return;
     }
 
+    const searchKey = activeSearchKeyRef.current;
     loadingMoreRef.current = true;
     setLoadingMore(true);
 
-    getMembers(chatId, { limit: MEMBERS_PAGE_SIZE, after: nextCursor })
+    getMembers(chatId, {
+      limit: MEMBERS_PAGE_SIZE,
+      after: nextCursor,
+      q: activeSearch?.q,
+      mode: activeSearch?.mode,
+    })
       .then((res) => {
+        if (activeSearchKeyRef.current !== searchKey) {
+          return;
+        }
+
         setMembers((current) => mergeMembers(current, res.data.members));
         setNextCursor(res.data.next_cursor);
         setHasMore(res.data.next_cursor != null);
         setIsAdmin(res.data.can_manage_members);
       })
       .catch((err: Error) => {
+        if (activeSearchKeyRef.current !== searchKey) {
+          return;
+        }
+
         showToast(err.message || t`Failed to load members`);
       })
       .finally(() => {
-        loadingMoreRef.current = false;
-        setLoadingMore(false);
+        if (activeSearchKeyRef.current === searchKey) {
+          loadingMoreRef.current = false;
+          setLoadingMore(false);
+        }
       });
-  }, [chatId, hasMore, nextCursor, showToast]);
+  }, [activeSearch, chatId, hasMore, nextCursor, showToast]);
 
   const resetAndReloadMembers = useCallback(() => {
     setMembers([]);
@@ -245,13 +356,13 @@ export default function ChatMembersCore({ chatId: propChatId, backAction }: Chat
     if (members.length === 0) {
       return (
         <div className={styles.emptyState}>
-          <Trans>No members found.</Trans>
+          {activeSearch ? <Trans>No matching members found.</Trans> : <Trans>No members found.</Trans>}
         </div>
       );
     }
 
     return null;
-  }, [loadingMore, members.length]);
+  }, [activeSearch, loadingMore, members.length]);
 
   return (
     <div className="ion-page">
@@ -261,6 +372,21 @@ export default function ChatMembersCore({ chatId: propChatId, backAction }: Chat
             {backAction && <BackButton action={backAction} />}
           </IonButtons>
           <IonTitle><Trans>Group Members</Trans></IonTitle>
+        </IonToolbar>
+        <IonToolbar>
+          <IonSearchbar
+            className={styles.searchbar}
+            value={searchText}
+            onIonInput={(event) => setSearchText(event.detail.value ?? '')}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                submitSearch();
+              }
+            }}
+            enterkeyhint="search"
+            placeholder={t`Search members`}
+            showClearButton="focus"
+          />
         </IonToolbar>
       </IonHeader>
       <IonContent scrollY={false}>

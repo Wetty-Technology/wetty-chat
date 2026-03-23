@@ -6,10 +6,14 @@ use axum::{
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use serde::Serialize;
+use std::collections::HashMap;
 
-use crate::models::{GroupRole, NewGroupMembership, UserGroupInfo};
+use crate::models::{GroupMembership, GroupRole, NewGroupMembership, UserGroupInfo};
 use crate::schema::{self, group_membership};
-use crate::services::user::{lookup_user_avatars, lookup_user_profiles};
+use crate::services::user::{
+    lookup_user_avatars, lookup_user_profiles, parse_user_search_query, search_group_member_uids,
+    UserSearchMode,
+};
 use crate::utils::auth::CurrentUid;
 use crate::{AppState, MAX_MEMBERS_LIMIT};
 
@@ -50,6 +54,8 @@ pub struct MemberResponse {
 struct ListMembersQuery {
     limit: Option<i64>,
     after: Option<i32>,
+    q: Option<String>,
+    mode: Option<UserSearchMode>,
 }
 
 #[derive(Serialize)]
@@ -57,6 +63,37 @@ struct ListMembersResponse {
     members: Vec<MemberResponse>,
     next_cursor: Option<i32>,
     can_manage_members: bool,
+}
+
+fn build_member_responses(
+    conn: &mut diesel::PgConnection,
+    state: &AppState,
+    page_rows: Vec<(i32, GroupRole, DateTime<Utc>)>,
+) -> Result<Vec<MemberResponse>, (StatusCode, &'static str)> {
+    let uids: Vec<i32> = page_rows.iter().map(|(uid, _, _)| *uid).collect();
+    let profiles = lookup_user_profiles(conn, &uids).map_err(|e| {
+        tracing::error!("load member profiles: {:?}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to load member profiles",
+        )
+    })?;
+    let mut avatars = lookup_user_avatars(state, &uids);
+
+    Ok(page_rows
+        .into_iter()
+        .map(|(uid, role, joined_at)| {
+            let profile = profiles.get(&uid);
+            MemberResponse {
+                avatar_url: avatars.remove(&uid).flatten(),
+                uid,
+                role,
+                joined_at,
+                username: profile.and_then(|profile| profile.username.clone()),
+                user_group: profile.and_then(|profile| profile.user_group.clone()),
+            }
+        })
+        .collect())
 }
 
 /// Check if user is a member of the chat; return 403 if not.
@@ -149,50 +186,41 @@ async fn get_members(
         .map(|l| std::cmp::min(l, MAX_MEMBERS_LIMIT))
         .unwrap_or(MAX_MEMBERS_LIMIT)
         .max(1);
+    let search_mode = q.mode.unwrap_or(UserSearchMode::Autocomplete);
+    let search = parse_user_search_query(q.q.as_deref(), search_mode);
 
-    let mut query = group_membership::table
-        .filter(gm_dsl::chat_id.eq(chat_id))
-        .into_boxed();
-
-    if let Some(after) = q.after {
-        query = query.filter(gm_dsl::uid.gt(after));
-    }
-
-    let rows: Vec<(i32, GroupRole, DateTime<Utc>)> = query
-        .order_by(gm_dsl::uid.asc())
-        .select((gm_dsl::uid, gm_dsl::role, gm_dsl::joined_at))
-        .limit(limit + 1)
-        .load(conn)
+    let member_uids = search_group_member_uids(conn, chat_id, q.after, limit + 1, search.as_ref())
         .map_err(|e| {
-            tracing::error!("list members: {:?}", e);
+            tracing::error!("search group members: {:?}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, "Failed to list members")
         })?;
 
-    let has_more = rows.len() as i64 > limit;
-    let page_rows: Vec<_> = rows.into_iter().take(limit as usize).collect();
-    let uids: Vec<i32> = page_rows.iter().map(|(uid, _, _)| *uid).collect();
-    let profiles = lookup_user_profiles(conn, &uids).map_err(|e| {
-        tracing::error!("load member profiles: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to load member profiles",
+    let has_more = member_uids.len() as i64 > limit;
+    let page_uids: Vec<i32> = member_uids.into_iter().take(limit as usize).collect();
+    let rows: Vec<GroupMembership> = group_membership::table
+        .filter(
+            gm_dsl::chat_id
+                .eq(chat_id)
+                .and(gm_dsl::uid.eq_any(&page_uids)),
         )
-    })?;
-    let mut avatars = lookup_user_avatars(&state, &uids);
-    let members: Vec<MemberResponse> = page_rows
+        .select(GroupMembership::as_select())
+        .load(conn)
+        .map_err(|e| {
+            tracing::error!("load member rows: {:?}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to list members")
+        })?;
+
+    let rows_by_uid: HashMap<i32, GroupMembership> =
+        rows.into_iter().map(|row| (row.uid, row)).collect();
+    let page_rows: Vec<(i32, GroupRole, DateTime<Utc>)> = page_uids
         .into_iter()
-        .map(|(uid, role, joined_at)| {
-            let profile = profiles.get(&uid);
-            MemberResponse {
-                avatar_url: avatars.remove(&uid).flatten(),
-                uid,
-                role,
-                joined_at,
-                username: profile.and_then(|profile| profile.username.clone()),
-                user_group: profile.and_then(|profile| profile.user_group.clone()),
-            }
+        .filter_map(|member_uid| {
+            rows_by_uid
+                .get(&member_uid)
+                .map(|row| (row.uid, row.role.clone(), row.joined_at))
         })
         .collect();
+    let members = build_member_responses(conn, &state, page_rows)?;
 
     let next_cursor = has_more
         .then(|| members.last().map(|member| member.uid))

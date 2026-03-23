@@ -34,6 +34,8 @@ export interface ListMembersResponse {
   can_manage_members: boolean;
 }
 
+export type MemberSearchMode = 'autocomplete' | 'submitted';
+
 export interface AddMemberBody {
   uid: number;
   role?: string;
@@ -53,7 +55,7 @@ export function updateGroupInfo(chatId: string | number, body: UpdateGroupInfoBo
 
 export function getMembers(
   chatId: string | number,
-  params: { limit?: number; after?: number } = {},
+  params: { q?: string; mode?: MemberSearchMode; limit?: number; after?: number } = {},
 ): Promise<AxiosResponse<ListMembersResponse>> {
   return apiClient.get(`/group/${chatId}/members`, { params });
 }
