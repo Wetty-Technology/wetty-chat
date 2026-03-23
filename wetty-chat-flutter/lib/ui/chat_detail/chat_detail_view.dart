@@ -27,7 +27,8 @@ class ChatDetailPage extends StatefulWidget {
 class _ChatDetailPageState extends State<ChatDetailPage> {
   late final ChatDetailViewModel _viewModel;
   final ItemScrollController _itemScrollController = ItemScrollController();
-  final ItemPositionsListener _itemPositionsListener = ItemPositionsListener.create();
+  final ItemPositionsListener _itemPositionsListener =
+      ItemPositionsListener.create();
   final ScrollController _inputScrollController = ScrollController();
   final TextEditingController _textController = TextEditingController();
   static const double _titleBarHeight = 70.0;
@@ -48,7 +49,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     _saveDraft();
     _viewModel.removeListener(_onViewModelChanged);
     _viewModel.dispose();
-    _itemPositionsListener.itemPositions.removeListener(_onItemPositionsChanged);
+    _itemPositionsListener.itemPositions.removeListener(
+      _onItemPositionsChanged,
+    );
     _inputScrollController.dispose();
     _textController.dispose();
     super.dispose();
@@ -78,9 +81,12 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     _viewModel.updateScrollToBottom(!isBottomVisible);
 
     // Load more when reaching the end (highest index)
-    final maxIndex = positions.map((p) => p.index).reduce((a, b) => a > b ? a : b);
-    final totalCount = _viewModel.displayItems.length + (_viewModel.hasMoreMessages ? 1 : 0);
-    
+    final maxIndex = positions
+        .map((p) => p.index)
+        .reduce((a, b) => a > b ? a : b);
+    final totalCount =
+        _viewModel.displayItems.length + (_viewModel.hasMoreMessages ? 1 : 0);
+
     if (maxIndex >= totalCount - 5) {
       _viewModel.loadMoreMessages();
     }
@@ -119,6 +125,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         _viewModel.clearDraft();
         try {
           await _viewModel.sendMessage(text, replyToId: message.id);
+          _scrollToBottom();
         } catch (e) {
           if (mounted) _showErrorDialog('$e');
         }
@@ -128,6 +135,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         _viewModel.clearDraft();
         try {
           await _viewModel.sendMessage(text);
+          _scrollToBottom();
         } catch (e) {
           if (mounted) _showErrorDialog('$e');
         }
@@ -138,19 +146,47 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     final found = await _viewModel.jumpToMessage(messageId);
     if (!found || !mounted) return;
 
-    // Use a post-frame callback to ensure the ScrollablePositionedList has 
-    // rebuilt with the new items before we attempt to scroll to an index.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    // Step 1: Wait for one frame to ensure the ScrollablePositionedList
+    // has rebuilt with the updated displayItems (new items count).
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       final idx = _viewModel.displayItems.indexWhere((m) => m.id == messageId);
       if (idx < 0) return;
 
-      _itemScrollController.scrollTo(
-        index: idx,
-        alignment: 0.5,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
+      // Step 2: Perform the initial jump. This brings the item into the 
+      // viewport so it can be physically measured in the next frame.
+      _itemScrollController.jumpTo(index: idx, alignment: 0.5);
+
+      // Step 3: Yield to the event loop to ensure ItemPositionsListener
+      // has processed the new layout/positions after the jump.
+      // Some items (especially nearby ones) need a micro-delay to be reported.
+      await Future.delayed(Duration.zero);
+      if (!mounted) return;
+
+      final positions = _itemPositionsListener.itemPositions.value;
+      var targetPos = positions.where((p) => p.index == idx).toList();
+
+      // Simple retry if not measured yet (very rare but possible).
+      if (targetPos.isEmpty) {
+        await Future.delayed(const Duration(milliseconds: 16)); // ~1 frame
+        if (!mounted) return;
+        targetPos = _itemPositionsListener.itemPositions.value
+            .where((p) => p.index == idx)
+            .toList();
+      }
+
+      if (targetPos.isNotEmpty) {
+        final pos = targetPos.first;
+        final h = pos.itemTrailingEdge - pos.itemLeadingEdge;
+
+        // Step 4: Final precise alignment (First line at center).
+        _itemScrollController.scrollTo(
+          index: idx,
+          alignment: 0.5 - h,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
     });
   }
 
