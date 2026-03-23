@@ -1,7 +1,3 @@
 RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^ index.html [QSA,L]
-
-<IfModule mod_headers.c>
-    Header always set Access-Control-Allow-Origin "https://chahua.app" "expr=%{REQUEST_URI} =~ m#^/chahua/assets/#"
-</IfModule>
