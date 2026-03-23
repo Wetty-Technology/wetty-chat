@@ -186,7 +186,7 @@ export default function LandingPage() {
                             <IonCardContent>
                                 <ol className="landing-steps">
                                     <li>使用 <IconText icon={logoApple}>Safari 浏览器</IconText> 访问本页</li>
-                                    <li>点击 <IconText icon={ellipsisHorizontal}>共享</IconText></li>
+                                    <li>点击 <IconText icon={shareOutline}>共享</IconText></li>
                                     <li>选择“添加到程序坞”</li>
                                     <li>确认添加，之后即可从程序坞或“App”中打开</li>
                                 </ol>
