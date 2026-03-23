@@ -133,7 +133,7 @@ class ChatDetailViewModel extends ChangeNotifier {
     if (idx >= 0) {
       _highlightedMessageId = messageId;
       notifyListeners();
-      _clearHighlightAfterDelay();
+      // _clearHighlightAfterDelay();
       return true;
     }
 
@@ -151,7 +151,7 @@ class ChatDetailViewModel extends ChangeNotifier {
       if (idx >= 0) {
         _highlightedMessageId = messageId;
         notifyListeners();
-        _clearHighlightAfterDelay();
+        // _clearHighlightAfterDelay();
         return true;
       }
     } catch (e) {
