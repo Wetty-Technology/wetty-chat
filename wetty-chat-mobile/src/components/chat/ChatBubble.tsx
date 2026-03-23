@@ -4,7 +4,7 @@ import { useSelector } from 'react-redux';
 import { arrowUndo, chatbubbles, checkmarkCircle, checkmarkCircleOutline, documentOutline } from 'ionicons/icons';
 import { t } from '@lingui/core/macro';
 import styles from './ChatBubble.module.scss';
-import type { Attachment, ReactionSummary } from '@/api/messages';
+import type {Attachment, ReactionSummary, UserGroupInfo} from '@/api/messages';
 import { ImageViewer } from './ImageViewer';
 import { getMessagePreviewText } from './messagePreview';
 import { selectChatFontSizeStyle } from '@/store/settingsSlice';
@@ -40,6 +40,8 @@ export function renderMessageWithLinks(message: string): React.ReactNode[] {
 
 interface ChatBubbleProps {
   senderName: string;
+  senderGender: number;
+  senderGroup?: UserGroupInfo | null;
   message: string;
   isSent: boolean;
   avatarUrl?: string;
@@ -100,6 +102,8 @@ function getImageLayoutStyle(
 
 export function ChatBubble({
   senderName,
+  senderGender,
+  senderGroup,
   message,
   isSent,
   avatarUrl,
@@ -234,7 +238,7 @@ export function ChatBubble({
             <div className={styles.avatarSpacer} />
           )}
           <div ref={bubbleRef} className={styles.bubble} style={{ fontSize: chatFontSizeStyle }}>
-            {showName && <div className={styles.senderName}>{senderName}</div>}
+            {showName && <div className={styles.senderName}>{senderName} {senderGender === 2 ? <span className={styles.gender2}>♀</span> : <span className={styles.gender1}>♂</span>} {senderGroup && <span className={styles.senderGroup} color={senderGroup.chat_group_color!}>{senderGroup.name}</span>}</div>}
             {replyTo && (
               <div
                 className={`${styles.replyPreview} ${onReplyTap ? styles.replyPreviewTappable : ''}`}

@@ -27,6 +27,7 @@ export default mergeConfig(baseConfig, defineConfig({
       '/_api/ws': {
         target: API_PROXY_TARGET,
         ws: true,
+        secure: false,
         rewrite: (p) => p.replace(/^\/_api/, ''),
       },
       '^/_api/': {
