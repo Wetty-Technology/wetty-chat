@@ -1,0 +1,16 @@
+meta {
+  name: Fetch User Token
+  type: http
+  seq: 4
+}
+
+options {
+  url: {{baseURL}}/users/auth-token
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

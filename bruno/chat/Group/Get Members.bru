@@ -1,0 +1,20 @@
+meta {
+  name: Get Members
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseURL}}/group/:chat_id/members
+  body: none
+  auth: inherit
+}
+
+params:path {
+  chat_id: 116143034872496128
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

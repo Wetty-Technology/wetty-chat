@@ -1,4 +1,9 @@
 meta {
   name: chat
-  type: collection
+}
+
+headers {
+  Cookie: {{cookie_prefix}}_auth={{auth}}; {{cookie_prefix}}_saltkey={{saltkey}};
+  X-User-Id: 1
+  X-Client-Id: BrunoClient1
 }
