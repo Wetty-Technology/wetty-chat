@@ -154,21 +154,33 @@ export function MessageComposeBar({
 
   const getImageDimensions = (file: File): Promise<{ width?: number; height?: number }> => {
     return new Promise((resolve) => {
-      if (!file.type.startsWith('image/')) {
+      if (file.type.startsWith('image/')) {
+        const img = new Image();
+        const objectUrl = URL.createObjectURL(file);
+        img.onload = () => {
+          URL.revokeObjectURL(objectUrl);
+          resolve({ width: img.width, height: img.height });
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(objectUrl);
+          resolve({});
+        };
+        img.src = objectUrl;
+      }else if (file.type.startsWith("video/")) {
+        const video = document.createElement("video");
+        const url = URL.createObjectURL(file);
+        video.onloadedmetadata = () => {
+          URL.revokeObjectURL(url);
+          resolve({ width: video.videoWidth, height: video.videoHeight });
+        };
+        video.onerror = () => {
+          URL.revokeObjectURL(url);
+          resolve({});
+        };
+        video.src = url;
+      } else  {
         resolve({});
-        return;
       }
-      const img = new Image();
-      const objectUrl = URL.createObjectURL(file);
-      img.onload = () => {
-        resolve({ width: img.width, height: img.height });
-        URL.revokeObjectURL(objectUrl);
-      };
-      img.onerror = () => {
-        resolve({});
-        URL.revokeObjectURL(objectUrl);
-      };
-      img.src = objectUrl;
     });
   };
 
@@ -266,14 +278,14 @@ export function MessageComposeBar({
   }, [uploadAttachment]);
 
   const queueFiles = useCallback((files: File[]) => {
-    const imageFiles = files.filter((file) => file.type.startsWith('image/'));
+    const imageFiles = files.filter((file) => file.type.startsWith('image/') || file.type.startsWith('video/'));
     if (imageFiles.length === 0) return;
 
     const queuedDrafts = imageFiles.map((file) => ({
       file,
       draft: {
         localId: createDraftId(),
-        kind: 'image' as const,
+        kind: file.type.startsWith('image/') ? 'image' : 'video' as 'image' | 'video',
         name: file.name,
         previewUrl: URL.createObjectURL(file),
         mimeType: file.type || 'application/octet-stream',
@@ -354,7 +366,7 @@ export function MessageComposeBar({
       const files: File[] = [];
 
       for (let i = 0; i < items.length; i++) {
-        if (items[i].type.startsWith('image/')) {
+        if (items[i].type.startsWith('image/') || items[i].type.startsWith('video/')) {
           const file = items[i].getAsFile();
           if (file) {
             files.push(file);
@@ -433,7 +445,7 @@ export function MessageComposeBar({
     <div className={styles.bar}>
       <input
         type="file"
-        accept="image/*"
+        accept="image/*,video/*"
         multiple
         style={{ display: 'none' }}
         ref={fileInputRef}

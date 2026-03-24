@@ -7,7 +7,7 @@ export type ComposeUploadDraftStatus = 'uploading' | 'uploaded' | 'error';
 
 export interface ImageUploadDraft {
   localId: string;
-  kind: 'image';
+  kind: 'image' | 'video';
   name: string;
   previewUrl: string;
   mimeType: string;
@@ -46,7 +46,8 @@ export function UploadPreview({ items, onRemove, onRetry }: UploadPreviewProps) 
       {items.map((item) => (
         <article key={item.localId} className={styles.card}>
           {item.previewUrl ? (
-            <img src={item.previewUrl} alt={item.name} className={styles.previewImage} />
+              item.kind == 'image' ? <img src={item.previewUrl} alt={item.name} className={styles.previewImage} /> :
+                  <video src={item.previewUrl} autoPlay className={styles.previewImage} />
           ) : (
             <div className={styles.fileCard}>
               <IonIcon icon={documentOutline} className={styles.fileCardIcon} />
