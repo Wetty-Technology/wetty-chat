@@ -17,7 +17,6 @@ msgstr ""
 msgid "[Attachment]"
 msgstr "[附件]"
 
-#: src/components/chat/ChatList.tsx
 #: src/components/chat/messagePreview.ts
 #: src/pages/chat-thread/chat-thread.tsx
 #: src/pages/chat-thread/chat-thread.tsx
@@ -37,8 +36,8 @@ msgid "1 hour"
 msgstr "1 小時"
 
 #: src/components/chat/settings/ChatMuteSettingItem.tsx
-msgid "30 minutes"
-msgstr "30 分鐘"
+#~ msgid "30 minutes"
+#~ msgstr "30 分鐘"
 
 #: src/components/chat/settings/ChatMuteSettingItem.tsx
 msgid "7 days"
@@ -331,6 +330,10 @@ msgstr "取消靜音失敗"
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Failed to update role"
 msgstr "更新角色失敗"
+
+#: src/components/chat/settings/ChatMuteSettingItem.tsx
+msgid "Forever"
+msgstr "永久"
 
 #: src/pages/settings.tsx
 #: src/pages/settings.tsx
@@ -660,8 +663,8 @@ msgid "Subscribed"
 msgstr "已訂閱"
 
 #: src/components/chat/ChatList.tsx
-msgid "Text message"
-msgstr "文字訊息"
+#~ msgid "Text message"
+#~ msgstr "文字訊息"
 
 #: src/pages/settings/general.tsx
 msgid "This is how your messages will look in chat."

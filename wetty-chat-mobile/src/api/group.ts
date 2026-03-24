@@ -46,6 +46,10 @@ export interface UpdateMemberRoleBody {
   role: string;
 }
 
+export interface MuteChatBody {
+  duration_seconds?: number | null;
+}
+
 export function getGroupInfo(chatId: string | number): Promise<AxiosResponse<GroupInfoResponse>> {
   return apiClient.get(`/group/${chatId}`);
 }
@@ -82,7 +86,7 @@ export function updateMemberRole(
 
 export function muteChat(
   chatId: string | number,
-  body: { duration_seconds?: number | null } = {},
+  body: MuteChatBody = {},
 ): Promise<AxiosResponse<{ muted_until: string }>> {
   return apiClient.put(`/group/${chatId}/mute`, body);
 }

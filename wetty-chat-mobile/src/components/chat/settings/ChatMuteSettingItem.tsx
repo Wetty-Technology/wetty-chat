@@ -74,7 +74,7 @@ export function ChatMuteSettingItem({ chatId, mutedUntil }: ChatMuteSettingItemP
   const [presentActionSheet] = useIonActionSheet();
   const muted = isChatMuted(mutedUntil);
 
-  const handleMute = (durationSeconds: number) => {
+  const handleMute = (durationSeconds: number | null) => {
     muteChat(chatId, { duration_seconds: durationSeconds })
       .then((response) => {
         dispatch(setChatMutedUntil({ chatId, mutedUntil: response.data.muted_until }));
@@ -100,11 +100,11 @@ export function ChatMuteSettingItem({ chatId, mutedUntil }: ChatMuteSettingItemP
     presentActionSheet({
       header: t`Mute notifications`,
       buttons: [
-        { text: t`30 minutes`, handler: () => handleMute(1800) },
         { text: t`1 hour`, handler: () => handleMute(3600) },
         { text: t`8 hours`, handler: () => handleMute(28800) },
         { text: t`1 day`, handler: () => handleMute(86400) },
         { text: t`7 days`, handler: () => handleMute(604800) },
+        { text: t`Forever`, handler: () => handleMute(null), role: 'destructive' },
         { text: t`Cancel`, role: 'cancel' },
       ],
     });
