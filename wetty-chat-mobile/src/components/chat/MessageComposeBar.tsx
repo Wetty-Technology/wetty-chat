@@ -65,6 +65,7 @@ interface MessageComposeBarProps {
   onCancelReply?: () => void;
   editing?: EditingMessage;
   onCancelEdit?: () => void;
+  onRequestEditLastMessage?: () => boolean;
 }
 
 const isAbortError = (error: unknown) => error instanceof DOMException && error.name === 'AbortError';
@@ -84,6 +85,7 @@ export function MessageComposeBar({
   onCancelReply,
   editing,
   onCancelEdit,
+  onRequestEditLastMessage,
 }: MessageComposeBarProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -358,6 +360,28 @@ export function MessageComposeBar({
     handleSendRef.current = handleSend;
   }, [handleSend]);
 
+  const hasUploadingDraft = drafts.some((draftRecord) => draftRecord.draft.status === 'uploading');
+  const hasFailedDraft = drafts.some((draftRecord) => draftRecord.draft.status === 'error');
+  const uploadedDrafts = drafts.filter((draftRecord) => draftRecord.draft.status === 'uploaded');
+  const currentAttachmentIds = [
+    ...existingAttachments.map((attachment) => attachment.id),
+    ...uploadedDrafts
+      .map((draftRecord) => draftRecord.draft.attachmentId)
+      .filter((attachmentId): attachmentId is string => Boolean(attachmentId)),
+  ];
+  const hasAttachment = currentAttachmentIds.length > 0;
+  const trimmedText = text.trim();
+  const originalEditText = editing?.text.trim() ?? '';
+  const originalAttachmentIds = editing?.attachments?.map((attachment) => attachment.id) ?? [];
+  const isUnchangedEdit =
+    editing != null &&
+    trimmedText === originalEditText &&
+    currentAttachmentIds.length === originalAttachmentIds.length &&
+    currentAttachmentIds.every((attachmentId, index) => attachmentId === originalAttachmentIds[index]);
+  const canSend =
+    !hasUploadingDraft && !hasFailedDraft && (trimmedText.length > 0 || hasAttachment) && !isUnchangedEdit;
+  const canRequestRecentEdit = !editing && !replyTo && text.length === 0 && !hasAttachment && drafts.length === 0;
+
   useEffect(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -367,11 +391,25 @@ export function MessageComposeBar({
       if (e.key === 'Enter' && !e.shiftKey && !isImeConfirm) {
         e.preventDefault();
         handleSendRef.current();
+        return;
+      }
+
+      if (e.key === 'ArrowUp' && canRequestRecentEdit) {
+        const didStartEdit = onRequestEditLastMessage?.() ?? false;
+        if (didStartEdit) {
+          e.preventDefault();
+        }
+        return;
+      }
+
+      if (e.key === 'Escape' && editing && isUnchangedEdit) {
+        e.preventDefault();
+        onCancelEdit?.();
       }
     };
     textarea.addEventListener('keydown', onKeyDown);
     return () => textarea.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [canRequestRecentEdit, editing, isUnchangedEdit, onCancelEdit, onRequestEditLastMessage]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -430,27 +468,6 @@ export function MessageComposeBar({
     const attachmentId = localId.replace(/^existing-/, '');
     setExistingAttachments((prev) => prev.filter((attachment) => attachment.id !== attachmentId));
   }, []);
-
-  const hasUploadingDraft = drafts.some((draftRecord) => draftRecord.draft.status === 'uploading');
-  const hasFailedDraft = drafts.some((draftRecord) => draftRecord.draft.status === 'error');
-  const uploadedDrafts = drafts.filter((draftRecord) => draftRecord.draft.status === 'uploaded');
-  const currentAttachmentIds = [
-    ...existingAttachments.map((attachment) => attachment.id),
-    ...uploadedDrafts
-      .map((draftRecord) => draftRecord.draft.attachmentId)
-      .filter((attachmentId): attachmentId is string => Boolean(attachmentId)),
-  ];
-  const hasAttachment = currentAttachmentIds.length > 0;
-  const trimmedText = text.trim();
-  const originalEditText = editing?.text.trim() ?? '';
-  const originalAttachmentIds = editing?.attachments?.map((attachment) => attachment.id) ?? [];
-  const isUnchangedEdit =
-    editing != null &&
-    trimmedText === originalEditText &&
-    currentAttachmentIds.length === originalAttachmentIds.length &&
-    currentAttachmentIds.every((attachmentId, index) => attachmentId === originalAttachmentIds[index]);
-  const canSend =
-    !hasUploadingDraft && !hasFailedDraft && (trimmedText.length > 0 || hasAttachment) && !isUnchangedEdit;
   const previewItems = [
     ...existingAttachments.map((attachment) => ({
       itemType: 'existing' as const,

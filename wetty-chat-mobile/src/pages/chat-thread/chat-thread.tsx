@@ -194,6 +194,32 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   const [presentAlert] = useIonAlert();
   const [overlayMessage, setOverlayMessage] = useState<{ message: MessageResponse; sourceRect: DOMRect } | null>(null);
 
+  const startEditingMessage = useCallback((message: MessageResponse) => {
+    setReplyingTo(null);
+    setEditingSession({
+      messageId: message.id,
+      text: message.message ?? '',
+      attachments: message.attachments,
+      originalMessage: { ...message },
+    });
+  }, []);
+
+  const requestEditLastOwnMessage = useCallback(() => {
+    if (editingSession || replyingTo) return false;
+
+    const recentMessages = messages.slice(-30);
+    const lastOwnMessage = [...recentMessages]
+      .reverse()
+      .find((message) => message.sender.uid === currentUserId && !message.is_deleted);
+
+    if (!lastOwnMessage) {
+      return false;
+    }
+
+    startEditingMessage(lastOwnMessage);
+    return true;
+  }, [currentUserId, editingSession, messages, replyingTo, startEditingMessage]);
+
   const showToast = useCallback(
     (text: string, duration = 3000) => {
       presentToast({ message: text, duration, position: 'bottom' });
@@ -599,15 +625,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
         key: 'edit',
         label: t`Edit`,
         icon: createOutline,
-        handler: () => {
-          setReplyingTo(null);
-          setEditingSession({
-            messageId: msg.id,
-            text: msg.message ?? '',
-            attachments: msg.attachments,
-            originalMessage: { ...msg },
-          });
-        },
+        handler: () => startEditingMessage(msg),
       });
       actions.push({
         key: 'delete',
@@ -648,7 +666,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
       });
     }
     return actions;
-  }, [overlayMessage, currentUserId, threadId, chatId, history, dispatch, showToast, presentAlert]);
+  }, [overlayMessage, currentUserId, threadId, chatId, history, dispatch, showToast, presentAlert, startEditingMessage]);
 
   return (
     <div className="ion-page chat-thread-page">
@@ -814,6 +832,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
           onCancelReply={() => setReplyingTo(null)}
           editing={editingSession ?? undefined}
           onCancelEdit={() => setEditingSession(null)}
+          onRequestEditLastMessage={requestEditLastOwnMessage}
         />
       </IonFooter>
       <UserProfileModal key={profileSender?.uid} sender={profileSender} onDismiss={() => setProfileSender(null)} />
