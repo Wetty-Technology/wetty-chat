@@ -194,6 +194,7 @@ export function MessageOverlay({
                   return <video
                       autoPlay
                       loop
+                      muted
                       key={att.id}
                       src={att.url}
                       className={styles.attachmentImage}
