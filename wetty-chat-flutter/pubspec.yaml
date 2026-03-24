@@ -38,6 +38,7 @@ dependencies:
   url_launcher: ^6.2.0
   shared_preferences: ^2.2.0
   scrollable_positioned_list: ^0.3.8
+  web_socket_channel: ^3.0.3
 
 dev_dependencies:
   flutter_test:

@@ -165,7 +165,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       }
     }
 
-    // Step 1: If the item is already visible, center it immediately.
+    // If the item is already visible, center it immediately.
     final currentVisible = _itemPositionsListener.itemPositions.value
         .where((p) => p.index == idx)
         .toList();
@@ -174,7 +174,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       return;
     }
 
-    // Step 2: Item not visible. Wait for a frame to ensure SPL recognizes the new data.
+    // Item not visible. Wait for a frame to ensure SPL recognizes the new data.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       final idx2 = _viewModel.displayItems.indexWhere((m) => m.id == messageId);
@@ -190,7 +190,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       var p = _itemPositionsListener.itemPositions.value
           .where((pos) => pos.index == idx2)
           .toList();
-      
+
       // Retry if layout is slow (rare).
       if (p.isEmpty) {
         await Future.delayed(const Duration(milliseconds: 16));

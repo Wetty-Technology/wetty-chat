@@ -32,7 +32,15 @@ class ChatDetailViewModel extends ChangeNotifier {
   final String chatId;
 
   ChatDetailViewModel({required this.chatId, MessageRepository? repository})
-    : _repository = repository ?? MessageRepository(chatId: chatId);
+    : _repository = repository ?? MessageRepository(chatId: chatId) {
+    _repository.store.addListener(_rebuildDisplay);
+  }
+
+  @override
+  void dispose() {
+    _repository.store.removeListener(_rebuildDisplay);
+    super.dispose();
+  }
 
   List<MessageItem> _displayItems = [];
   List<MessageItem> get displayItems => _displayItems;

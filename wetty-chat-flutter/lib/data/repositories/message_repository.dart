@@ -1,5 +1,6 @@
 import '../models/message_models.dart';
 import '../services/message_service.dart';
+import '../services/websocket_service.dart';
 import '../../domain/message_store.dart';
 
 /// Source of truth for messages in a single chat.
@@ -11,7 +12,31 @@ class MessageRepository {
   String? nextCursor;
 
   MessageRepository({required this.chatId, MessageService? service})
-    : _service = service ?? MessageService();
+    : _service = service ?? MessageService() {
+    _initRealTime();
+  }
+
+  void _initRealTime() {
+    WebSocketService.instance.events.listen((event) {
+      final type = event['type'];
+      final payload = event['payload'];
+      if (payload == null) return;
+
+      // Filter by chatId
+      final eventChatId = payload['chat_id']?.toString();
+      if (eventChatId != chatId) return;
+
+      final msg = MessageItem.fromJson(payload as Map<String, dynamic>);
+
+      if (type == 'message') {
+        store.addMessages([msg]);
+      } else if (type == 'message_updated') {
+        store.replaceWhere((m) => m.id == msg.id, msg);
+      } else if (type == 'message_deleted') {
+        store.removeById(msg.id);
+      }
+    });
+  }
 
   /// Load the initial set of messages.
   Future<void> loadMessages() async {

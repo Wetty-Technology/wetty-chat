@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../data/models/message_models.dart';
 
 // ---------------------------------------------------------------------------
@@ -19,7 +20,7 @@ class MessageRange {
   // }
 }
 
-class MessageStore {
+class MessageStore extends ChangeNotifier {
   // ranges will be inserted in order
   final List<MessageRange> messageRanges = [];
 
@@ -40,38 +41,7 @@ class MessageStore {
       }
     }
     messageRanges.insert(insertAt, range);
-
-    // // Find all existing ranges that overlap with [oldest, newest]
-    // final overlapping = <int>[];
-    // for (int i = 0; i < ranges.length; i++) {
-    //   final r = ranges[i];
-    //   // Overlap if: newOldest <= rangeNewest AND newNewest >= rangeOldest
-    //   if (MessageRange.cmp(oldest, r.end) <= 0 &&
-    //       MessageRange.cmp(newest, r.start) >= 0) {
-    //     overlapping.add(i);
-    //   }
-    // }
-
-    // if (overlapping.isEmpty) {
-    //   // No overlap — create a new range
-    //   final range = MessageRange(start: oldest, end: newest);
-    //   range.insertAll(items);
-    //   ranges.add(range);
-    // } else {
-    //   // Merge: pick the first overlapping range as target, absorb others + new items
-    //   final targetIdx = overlapping.first;
-    //   final target = ranges[targetIdx];
-
-    //   // Absorb messages from all other overlapping ranges
-    //   for (int i = overlapping.length - 1; i >= 1; i--) {
-    //     final otherIdx = overlapping[i];
-    //     target.insertAll(ranges[otherIdx].messages);
-    //     ranges.removeAt(otherIdx);
-    //   }
-
-    //   // Insert the new items
-    //   target.insertAll(items);
-    // }
+    notifyListeners();
   }
 
   /// Flatten all sorted ranges into one list
@@ -86,6 +56,7 @@ class MessageStore {
 
   void clear() {
     messageRanges.clear();
+    notifyListeners();
   }
 
   /// Remove a message by ID from whichever range contains it.
@@ -95,6 +66,7 @@ class MessageStore {
       final removed = r.messages.where((m) => m.id == id).isNotEmpty;
       if (removed) {
         r.messages.removeWhere((m) => m.id == id);
+        notifyListeners();
         break;
       }
     }
@@ -106,6 +78,7 @@ class MessageStore {
       final idx = r.messages.indexWhere(test);
       if (idx >= 0) {
         r.messages[idx] = replacement;
+        notifyListeners();
         return;
       }
     }
@@ -113,8 +86,16 @@ class MessageStore {
 
   /// Remove messages matching a test from all ranges.
   void removeWhere(bool Function(MessageItem) test) {
+    bool changed = false;
     for (final r in messageRanges) {
+      final initialCount = r.messages.length;
       r.messages.removeWhere(test);
+      if (r.messages.length != initialCount) {
+        changed = true;
+      }
+    }
+    if (changed) {
+      notifyListeners();
     }
   }
 
