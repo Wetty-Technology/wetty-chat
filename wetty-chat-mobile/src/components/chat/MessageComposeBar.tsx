@@ -421,7 +421,7 @@ export function MessageComposeBar({
       attachmentId: attachment.id,
       kind: attachment.kind,
       name: attachment.file_name,
-      previewUrl: attachment.kind.startsWith('image') ? attachment.url : undefined,
+      previewUrl: attachment.kind.startsWith('image/') ? attachment.url : undefined,
     })),
     ...drafts.map((draftRecord) => ({
       itemType: 'draft' as const,

@@ -16,7 +16,7 @@ export function getMessagePreviewText({ message, attachments, isDeleted }: Previ
     return message;
   }
 
-  if (attachments?.some((attachment) => attachment.kind.startsWith('image'))) {
+  if (attachments?.some((attachment) => attachment.kind.startsWith('image/'))) {
     return t`[Image]`;
   }
 

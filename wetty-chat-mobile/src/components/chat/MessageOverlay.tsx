@@ -183,7 +183,7 @@ export function MessageOverlay({
           {attachments && attachments.length > 0 && (
             <div className={styles.attachmentsContainer}>
               {attachments.map((att) => {
-                if (!att.kind.startsWith('image')) {
+                if (!att.kind.startsWith('image/')) {
                   return (
                     <div key={att.id} className={styles.filePlaceholder}>
                       <IonIcon icon={documentOutline} className={styles.fileIcon} />
