@@ -19,6 +19,7 @@ const SWIPE_THRESHOLD = 56;
 
 interface ImageViewerItem {
   src: string;
+  kind: string;
   fileName?: string;
   width?: number | null;
   height?: number | null;
@@ -591,40 +592,79 @@ export function ImageViewer({ images, initialIndex = 0, onClose }: ImageViewerPr
           )}
 
           <div className={styles.canvas} onClick={handleDismissClick}>
-            <img
-              key={activeImage.id || activeImage.src}
-              src={activeImage.src}
-              className={styles.image}
-              alt={activeImage.fileName || t`Attachment large view`}
-              draggable={false}
-              onLoad={event => {
-                const nextSize = {
-                  width: event.currentTarget.naturalWidth,
-                  height: event.currentTarget.naturalHeight,
-                };
+            {activeImage.kind.startsWith('image/')
+                ? <img
+                    key={activeImage.id || activeImage.src}
+                    src={activeImage.src}
+                    className={styles.image}
+                    alt={activeImage.fileName || t`Attachment large view`}
+                    draggable={false}
+                    onLoad={event => {
+                      const nextSize = {
+                        width: event.currentTarget.naturalWidth,
+                        height: event.currentTarget.naturalHeight,
+                      };
 
-                setImageSizes(prev => {
-                  const current = prev[activeIndex];
-                  if (
-                    current?.width === nextSize.width &&
-                    current?.height === nextSize.height
-                  ) {
-                    return prev;
-                  }
+                      setImageSizes(prev => {
+                        const current = prev[activeIndex];
+                        if (
+                            current?.width === nextSize.width &&
+                            current?.height === nextSize.height
+                        ) {
+                          return prev;
+                        }
 
-                  return {
-                    ...prev,
-                    [activeIndex]: nextSize,
-                  };
-                });
-              }}
-              style={{
-                width: activeImageSize?.width,
-                height: activeImageSize?.height,
-                opacity: isImageReadyForInitialRender ? 1 : 0,
-                transform: `translate(${translate.x}px, ${translate.y}px) scale(${effectiveScale})`,
-              }}
-            />
+                        return {
+                          ...prev,
+                          [activeIndex]: nextSize,
+                        };
+                      });
+                    }}
+                    style={{
+                      width: activeImageSize?.width,
+                      height: activeImageSize?.height,
+                      opacity: isImageReadyForInitialRender ? 1 : 0,
+                      transform: `translate(${translate.x}px, ${translate.y}px) scale(${effectiveScale})`,
+                    }}
+                />
+
+                : <video
+                    autoPlay
+                    loop
+                    controls
+                    key={activeImage.id || activeImage.src}
+                    src={activeImage.src}
+                    className={styles.image}
+                    draggable={false}
+                    onLoad={event => {
+                      const nextSize = {
+                        width: event.currentTarget.videoWidth,
+                        height: event.currentTarget.videoHeight,
+                      };
+
+                      setImageSizes(prev => {
+                        const current = prev[activeIndex];
+                        if (
+                            current?.width === nextSize.width &&
+                            current?.height === nextSize.height
+                        ) {
+                          return prev;
+                        }
+
+                        return {
+                          ...prev,
+                          [activeIndex]: nextSize,
+                        };
+                      });
+                    }}
+                    style={{
+                      width: activeImageSize?.width,
+                      height: activeImageSize?.height,
+                      opacity: isImageReadyForInitialRender ? 1 : 0,
+                      transform: `translate(${translate.x}px, ${translate.y}px) scale(${effectiveScale})`,
+                    }}
+                />
+            }
           </div>
         </div>
 

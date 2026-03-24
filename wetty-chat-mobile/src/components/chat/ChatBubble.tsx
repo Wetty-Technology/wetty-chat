@@ -201,7 +201,7 @@ export function ChatBubble({
 
   const progress = Math.min(offset / SWIPE_THRESHOLD, 1);
 
-  const imageAttachments = attachments?.filter(att => att.kind.startsWith('image/')) ?? [];
+  const imageAttachments = attachments?.filter(att => att.kind.startsWith('image/') || att.kind.startsWith('video/')) ?? [];
   const chatFontSizeStyle = useSelector(selectChatFontSizeStyle);
 
   return (
@@ -284,14 +284,16 @@ export function ChatBubble({
                           ...(imageLayoutStyle ?? {}),
                       };
                       return (
-                           <a
+                           <button
                               key={att.id}
-                              href={att.url}
-                              target="_blank"
+                              type="button"
                               rel="noopener noreferrer"
                               className={styles.attachmentImageButton}
                               style={imageContainerStyle}
-                              onClick={(e) => e.stopPropagation()}
+                              onClick={() => {
+                                const imageIndex = imageAttachments.findIndex(image => image.id === att.id);
+                                setViewingAttachmentIndex(imageIndex >= 0 ? imageIndex : 0);
+                              }}
                           >
                               <video
                                   autoPlay
@@ -301,7 +303,7 @@ export function ChatBubble({
                                   className={styles.attachmentImage}
                                   style={imageLayoutStyle ? undefined : {maxHeight: maxImageHeight}}
                               />
-                          </a>
+                          </button>
                       );
                   }else{
                     return (
@@ -387,6 +389,7 @@ export function ChatBubble({
         <ImageViewer
           images={imageAttachments.map(image => ({
             id: image.id,
+            kind: image.kind,
             src: image.url,
             fileName: image.file_name,
             width: image.width,
