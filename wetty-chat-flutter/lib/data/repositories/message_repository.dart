@@ -39,7 +39,7 @@ class MessageRepository {
   }
 
   /// Load the initial set of messages.
-  Future<void> loadMessages() async {
+  Future<void> initLoadMessages() async {
     final res = await _service.fetchMessages(chatId);
     store.clear();
     store.addMessages(res.messages);
@@ -61,24 +61,29 @@ class MessageRepository {
     store.addMessages(msgs);
   }
 
+  /// Mark message as read on the server.
+  Future<void> markAsRead(String messageId) async {
+    try {
+      await _service.markAsRead(chatId, messageId);
+    } catch (e) {
+      // Log error but don't block
+      print("Failed to sync markAsRead to server: $e");
+    }
+  }
+
   /// Send a new message.
   Future<MessageItem> sendMessage(String text, {String? replyToId}) async {
-    final res = await _service.sendMessage(chatId, text, replyToId: replyToId);
-    store.addMessages([res]);
-    return res;
+    return await _service.sendMessage(chatId, text, replyToId: replyToId);
   }
 
   /// Edit an existing message.
   Future<MessageItem> editMessage(String messageId, String newText) async {
-    final updated = await _service.editMessage(chatId, messageId, newText);
-    store.replaceWhere((m) => m.id == messageId, updated);
-    return updated;
+    return await _service.editMessage(chatId, messageId, newText);
   }
 
   /// Delete a message.
   Future<void> deleteMessage(String messageId) async {
     await _service.deleteMessage(chatId, messageId);
-    store.removeById(messageId);
   }
 
   /// Get display items

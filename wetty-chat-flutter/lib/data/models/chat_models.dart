@@ -27,6 +27,23 @@ class ChatListItem {
           : null,
     );
   }
+
+  /// Create a copy of the object with the given fields replaced.
+  ChatListItem copyWith({
+    String? id,
+    String? name,
+    String? lastMessageAt,
+    int? unreadCount,
+    MessageItem? lastMessage,
+  }) {
+    return ChatListItem(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      lastMessageAt: lastMessageAt ?? this.lastMessageAt,
+      unreadCount: unreadCount ?? this.unreadCount,
+      lastMessage: lastMessage ?? this.lastMessage,
+    );
+  }
 }
 
 class ListChatsResponse {

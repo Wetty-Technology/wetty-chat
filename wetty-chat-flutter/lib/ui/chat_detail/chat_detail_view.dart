@@ -15,10 +15,12 @@ class ChatDetailPage extends StatefulWidget {
     super.key,
     required this.chatId,
     required this.chatName,
+    this.unreadCount = 0,
   });
 
   final String chatId;
   final String chatName;
+  final int unreadCount;
 
   @override
   State<ChatDetailPage> createState() => _ChatDetailPageState();
@@ -36,7 +38,10 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   @override
   void initState() {
     super.initState();
-    _viewModel = ChatDetailViewModel(chatId: widget.chatId);
+    _viewModel = ChatDetailViewModel(
+      chatId: widget.chatId,
+      unreadCount: widget.unreadCount,
+    );
     _viewModel.addListener(_onViewModelChanged);
     _itemPositionsListener.itemPositions.addListener(_onItemPositionsChanged);
     _viewModel.loadMessages();
@@ -57,8 +62,22 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     super.dispose();
   }
 
+  String? _lastJumpedId;
+
   void _onViewModelChanged() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    
+    // Check if we need to jump to the first unread message
+    if (_viewModel.firstUnreadMessageId != null && 
+        _viewModel.firstUnreadMessageId != _lastJumpedId) {
+      _lastJumpedId = _viewModel.firstUnreadMessageId;
+      // We wait for a bit to ensure the list is rendered
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _jumpToMessage(_lastJumpedId!);
+      });
+    }
+
+    setState(() {});
   }
 
   void _saveDraft() {
@@ -89,6 +108,18 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
     if (maxIndex >= totalCount - 5) {
       _viewModel.loadMoreMessages();
+    }
+
+    // Track read status
+    for (final pos in positions) {
+      // If at least 50% of the message is visible (simplified)
+      if (pos.itemLeadingEdge < 0.9 && pos.itemTrailingEdge > 0.1) {
+        final idx = pos.index;
+        if (idx < _viewModel.displayItems.length) {
+          final msg = _viewModel.displayItems[idx];
+          _viewModel.onMessageVisible(msg.id);
+        }
+      }
     }
   }
 
@@ -535,7 +566,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           }
         }
 
-        return MessageRow(
+        final isFirstUnread = _viewModel.firstUnreadMessageId == msg.id;
+
+        final messageRow = MessageRow(
           key: ValueKey(msg.id),
           message: msg,
           isHighlighted: isHighlighted,
@@ -547,7 +580,46 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           showSenderName: showSenderName,
           showAvatar: showAvatar,
         );
+
+        if (isFirstUnread) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildUnreadDivider(),
+              messageRow,
+            ],
+          );
+        }
+
+        return messageRow;
       },
+    );
+  }
+
+  Widget _buildUnreadDivider() {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 16),
+      child: Row(
+        children: [
+          const Expanded(child: Divider(color: CupertinoColors.systemGrey4)),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: CupertinoColors.systemGrey4.resolveFrom(context),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Text(
+              'Unread Messages',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: CupertinoColors.white,
+              ),
+            ),
+          ),
+          const Expanded(child: Divider(color: CupertinoColors.systemGrey4)),
+        ],
+      ),
     );
   }
 

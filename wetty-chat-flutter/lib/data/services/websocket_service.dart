@@ -50,6 +50,7 @@ class WebSocketService {
           try {
             final Map<String, dynamic> msg = jsonDecode(data as String);
             print("msg: $msg");
+            print("msg unread: ${msg['unread_count']}");
             if (msg['type'] == 'pong') {
               // Handle pong if needed
               return;
@@ -69,7 +70,7 @@ class WebSocketService {
         },
       );
 
-      // 5. Start ping loop (every 30 seconds)
+      // Start ping loop (every 30 seconds)
       _pingTimer?.cancel();
       _pingTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
         if (_channel != null) {

@@ -75,8 +75,8 @@ class _MessageRowState extends State<MessageRow>
     final bubbleColor = _isMe
         ? CupertinoColors.activeBlue
         : (isDark
-            ? CupertinoColors.systemGrey5.darkColor
-            : const Color(0xfff0f0f0));
+              ? CupertinoColors.systemGrey5.darkColor
+              : const Color(0xfff0f0f0));
     final textColor = _isMe
         ? CupertinoColors.white
         : CupertinoColors.label.resolveFrom(context);
@@ -113,8 +113,9 @@ class _MessageRowState extends State<MessageRow>
     )..layout(maxWidth: double.infinity);
     final timeSpacerWidth = timePainter.width + 8;
 
-    final linkColor =
-        _isMe ? CupertinoColors.white : CupertinoColors.activeBlue;
+    final linkColor = _isMe
+        ? CupertinoColors.white
+        : CupertinoColors.activeBlue;
 
     Widget bubbleContent = Stack(
       children: [
@@ -210,8 +211,9 @@ class _MessageRowState extends State<MessageRow>
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         child: Row(
-          mainAxisAlignment:
-              _isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+          mainAxisAlignment: _isMe
+              ? MainAxisAlignment.end
+              : MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: _isMe
               ? [
@@ -275,17 +277,17 @@ class _MessageRowState extends State<MessageRow>
 
   Widget _buildReplyQuote(BuildContext context, ReplyToMessage reply) {
     final replySender = reply.sender.name ?? 'User ${reply.sender.uid}';
-    final replyText =
-        reply.isDeleted ? 'Message deleted' : (reply.message ?? '');
+    final replyText = reply.isDeleted
+        ? 'Message deleted'
+        : (reply.message ?? '');
 
     final isDark = MediaQuery.platformBrightnessOf(context) == Brightness.dark;
 
     final quoteBackgroundColor = _isMe
-        ? Color.lerp(
-            CupertinoColors.activeBlue, const Color(0xFF000000), 0.15)!
+        ? Color.lerp(CupertinoColors.activeBlue, const Color(0xFF000000), 0.15)!
         : (isDark
-            ? CupertinoColors.systemGrey4.darkColor
-            : CupertinoColors.systemGrey5.color);
+              ? CupertinoColors.systemGrey4.darkColor
+              : CupertinoColors.systemGrey5.color);
     final quoteBorderColor = _isMe
         ? CupertinoColors.white.withAlpha(150)
         : CupertinoColors.activeBlue;
@@ -335,6 +337,7 @@ class _MessageRowState extends State<MessageRow>
     caseSensitive: false,
   );
 
+  /// Build a list of inline spans for the given text, with URLs converted to tappable links.
   List<InlineSpan> _buildLinkedSpans(
     String text,
     TextStyle baseStyle,

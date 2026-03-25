@@ -9,7 +9,15 @@ class ChatListViewModel extends ChangeNotifier {
   final ChatRepository _repository;
 
   ChatListViewModel({ChatRepository? repository})
-      : _repository = repository ?? ChatRepository();
+      : _repository = repository ?? ChatRepository() {
+    _repository.addListener(notifyListeners);
+  }
+
+  @override
+  void dispose() {
+    _repository.removeListener(notifyListeners);
+    super.dispose();
+  }
 
   List<ChatListItem> get chats => _repository.chats;
   bool get hasMore => _repository.hasMore;

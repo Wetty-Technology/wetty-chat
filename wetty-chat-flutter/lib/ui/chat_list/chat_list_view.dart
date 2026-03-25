@@ -172,6 +172,7 @@ class _ChatPageState extends State<ChatPage> {
                     builder: (_) => ChatDetailPage(
                       chatId: chat.id,
                       chatName: chat.name ?? 'Chat ${chat.id}',
+                      unreadCount: chat.unreadCount,
                     ),
                   ),
                 );

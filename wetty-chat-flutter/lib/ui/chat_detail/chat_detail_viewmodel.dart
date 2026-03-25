@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../../data/models/message_models.dart';
@@ -30,14 +31,24 @@ class InputEditing extends InputState {
 class ChatDetailViewModel extends ChangeNotifier {
   final MessageRepository _repository;
   final String chatId;
+  final int unreadCount;
 
-  ChatDetailViewModel({required this.chatId, MessageRepository? repository})
-    : _repository = repository ?? MessageRepository(chatId: chatId) {
+  Timer? _syncTimer;
+  String? _lastReadSyncId;
+  String? _currentReadId;
+
+  ChatDetailViewModel({
+    required this.chatId,
+    this.unreadCount = 0,
+    MessageRepository? repository,
+  }) : _repository = repository ?? MessageRepository(chatId: chatId) {
     _repository.store.addListener(_rebuildDisplay);
+    _startSyncTimer();
   }
 
   @override
   void dispose() {
+    _syncTimer?.cancel();
     _repository.store.removeListener(_rebuildDisplay);
     super.dispose();
   }
@@ -63,6 +74,9 @@ class ChatDetailViewModel extends ChangeNotifier {
   String? _highlightedMessageId;
   String? get highlightedMessageId => _highlightedMessageId;
 
+  String? _firstUnreadMessageId;
+  String? get firstUnreadMessageId => _firstUnreadMessageId;
+
   String? get nextCursor => _repository.nextCursor;
   bool get hasMoreMessages => _repository.nextCursor != null;
 
@@ -78,14 +92,43 @@ class ChatDetailViewModel extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
     try {
-      await _repository.loadMessages();
+      await _repository.initLoadMessages();
       _isLoading = false;
       _errorMessage = null;
       _rebuildDisplay();
+
+      // Determine first unread and jump
+      await _handleInitialJump();
     } catch (e) {
       _isLoading = false;
       _errorMessage = e.toString();
       notifyListeners();
+    }
+  }
+
+  Future<void> _handleInitialJump() async {
+    if (unreadCount <= 0) return;
+
+    // Fetch more messages if unreadCount is larger than what we currently have
+    while (unreadCount > _displayItems.length && _repository.nextCursor != null) {
+      await _repository.loadMoreMessages();
+      _rebuildDisplay();
+    }
+
+    String? targetId;
+    if (_displayItems.isNotEmpty) {
+      if (unreadCount <= _displayItems.length) {
+        targetId = _displayItems[_displayItems.length - unreadCount].id;
+      } else {
+        // Even after fetching all, we don't have enough? Just jump to the oldest.
+        targetId = _displayItems.first.id;
+      }
+    }
+
+    if (targetId != null) {
+      _firstUnreadMessageId = targetId;
+      notifyListeners();
+      await jumpToMessage(targetId);
     }
   }
 
@@ -102,6 +145,34 @@ class ChatDetailViewModel extends ChangeNotifier {
     } catch (e) {
       _isLoadingMore = false;
       notifyListeners();
+    }
+  }
+
+  // ---- Read status sync ----
+
+  void onMessageVisible(String messageId) {
+    // Keep track of the highest message ID seen
+    if (_currentReadId == null || 
+        (int.tryParse(messageId) ?? 0) > (int.tryParse(_currentReadId!) ?? 0)) {
+      _currentReadId = messageId;
+    }
+  }
+
+  void _startSyncTimer() {
+    _syncTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      _syncReadStatus();
+    });
+  }
+
+  Future<void> _syncReadStatus() async {
+    if (_currentReadId == null || _currentReadId == _lastReadSyncId) return;
+    
+    final toSync = _currentReadId!;
+    try {
+      await _repository.markAsRead(toSync);
+      _lastReadSyncId = toSync;
+    } catch (e) {
+      print("Sync read status failed: $e");
     }
   }
 
@@ -136,12 +207,10 @@ class ChatDetailViewModel extends ChangeNotifier {
   Future<bool> jumpToMessage(String messageId) async {
     int idx = _displayItems.indexWhere((m) => m.id == messageId);
 
-    print("idx: $idx, messageId: $messageId");
-
     if (idx >= 0) {
       _highlightedMessageId = messageId;
       notifyListeners();
-      // _clearHighlightAfterDelay();
+      _clearHighlightAfterDelay();
       return true;
     }
 
@@ -152,14 +221,10 @@ class ChatDetailViewModel extends ChangeNotifier {
       _isLoadingMore = false;
       _rebuildDisplay();
       idx = _displayItems.indexWhere((m) => m.id == messageId);
-      for (var i = 0; i < _displayItems.length; i++) {
-        print("displayItems[$i]: ${_displayItems[i].id}");
-      }
-      print("new idx: $idx");
       if (idx >= 0) {
         _highlightedMessageId = messageId;
         notifyListeners();
-        // _clearHighlightAfterDelay();
+        _clearHighlightAfterDelay();
         return true;
       }
     } catch (e) {

@@ -97,4 +97,18 @@ class MessageService {
       );
     }
   }
+
+  Future<void> markAsRead(String chatId, String messageId) async {
+    final uri = Uri.parse('$apiBaseUrl/chats/$chatId/read');
+    final response = await http.post(
+      uri,
+      headers: apiHeaders,
+      body: jsonEncode({'message_id': messageId}),
+    );
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to mark as read: ${response.statusCode} ${response.body}',
+      );
+    }
+  }
 }
