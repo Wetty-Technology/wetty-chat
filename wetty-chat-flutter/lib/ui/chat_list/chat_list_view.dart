@@ -80,17 +80,17 @@ class _ChatPageState extends State<ChatPage> {
     final shouldLogout = await showCupertinoDialog<bool>(
       context: context,
       builder: (context) => CupertinoAlertDialog(
-        title: const Text('Log out?'),
-        content: const Text('This will remove the saved token on this device.'),
+        title: const Text('退出登录？'),
+        content: const Text('这会移除当前设备上保存的 token。'),
         actions: [
           CupertinoDialogAction(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: const Text('取消'),
           ),
           CupertinoDialogAction(
             isDestructiveAction: true,
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Log Out'),
+            child: const Text('退出登录'),
           ),
         ],
       ),

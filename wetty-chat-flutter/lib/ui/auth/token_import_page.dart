@@ -12,14 +12,14 @@ class SecurityQuestionOption {
 }
 
 const List<SecurityQuestionOption> securityQuestions = <SecurityQuestionOption>[
-  SecurityQuestionOption('0', 'No security question'),
-  SecurityQuestionOption('1', 'Mother name'),
-  SecurityQuestionOption('2', 'Grandfather name'),
-  SecurityQuestionOption('3', 'Father birth city'),
-  SecurityQuestionOption('4', 'One teacher name'),
-  SecurityQuestionOption('5', 'Personal computer model'),
-  SecurityQuestionOption('6', 'Favorite restaurant'),
-  SecurityQuestionOption('7', 'Driver license last four digits'),
+  SecurityQuestionOption('0', '安全提问(未设置请忽略)'),
+  SecurityQuestionOption('1', '母亲的名字'),
+  SecurityQuestionOption('2', '爷爷的名字'),
+  SecurityQuestionOption('3', '父亲出生的城市'),
+  SecurityQuestionOption('4', '您其中一位老师的名字'),
+  SecurityQuestionOption('5', '您个人计算机的型号'),
+  SecurityQuestionOption('6', '您最喜欢的餐馆名称'),
+  SecurityQuestionOption('7', '驾驶执照最后四位数字'),
 ];
 
 class TokenImportPage extends StatefulWidget {
@@ -38,9 +38,8 @@ class _TokenImportPageState extends State<TokenImportPage> {
 
   String _questionId = '0';
   bool _isLoggingIn = false;
-  String _statusTitle = 'Ready';
-  String _statusMessage =
-      'Sign in with Discuz to fetch and save a fresh token for this desktop client.';
+  String _statusTitle = '准备就绪';
+  String _statusMessage = '输入用户名、密码和安全问题后开始登录。';
   LoginResult? _lastLoginResult;
 
   @override
@@ -66,16 +65,16 @@ class _TokenImportPageState extends State<TokenImportPage> {
     final answer = _answerController.text.trim();
     if (username.isEmpty || password.isEmpty) {
       setState(() {
-        _statusTitle = 'Missing fields';
-        _statusMessage = 'Username and password are required.';
+        _statusTitle = '缺少字段';
+        _statusMessage = '用户名和密码为必填项。';
       });
       return;
     }
 
     setState(() {
       _isLoggingIn = true;
-      _statusTitle = 'Working';
-      _statusMessage = 'Signing in to Discuz and fetching token...';
+      _statusTitle = '处理中';
+      _statusMessage = '正在登录并请求 token...';
       _lastLoginResult = null;
     });
 
@@ -97,8 +96,8 @@ class _TokenImportPageState extends State<TokenImportPage> {
       setState(() {
         _isLoggingIn = false;
         _lastLoginResult = result;
-        _statusTitle = 'Success';
-        _statusMessage = 'Discuz login succeeded and the token has been saved.';
+        _statusTitle = '登录成功';
+        _statusMessage = '已拿到可复用 Cookie Header 和 token。';
       });
       if (widget.allowClose) {
         Navigator.pop(context, true);
@@ -109,7 +108,7 @@ class _TokenImportPageState extends State<TokenImportPage> {
       }
       setState(() {
         _isLoggingIn = false;
-        _statusTitle = 'Failed';
+        _statusTitle = '登录失败';
         _statusMessage = '$error';
       });
     } finally {
@@ -123,8 +122,8 @@ class _TokenImportPageState extends State<TokenImportPage> {
       return;
     }
     setState(() {
-      _statusTitle = 'Copied';
-      _statusMessage = '$label copied to clipboard.';
+      _statusTitle = '已复制';
+      _statusMessage = '$label 已复制。';
     });
   }
 
@@ -132,7 +131,7 @@ class _TokenImportPageState extends State<TokenImportPage> {
     await showCupertinoModalPopup<void>(
       context: context,
       builder: (context) => CupertinoActionSheet(
-        title: const Text('Security Question'),
+        title: const Text('安全问题'),
         actions: [
           for (final question in securityQuestions)
             CupertinoActionSheetAction(
@@ -147,7 +146,7 @@ class _TokenImportPageState extends State<TokenImportPage> {
         ],
         cancelButton: CupertinoActionSheetAction(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: const Text('取消'),
         ),
       ),
     );
@@ -163,42 +162,45 @@ class _TokenImportPageState extends State<TokenImportPage> {
             ? CupertinoButton(
                 padding: EdgeInsets.zero,
                 onPressed: () => Navigator.pop(context, false),
-                child: const Text('Close'),
+                child: const Text('关闭'),
               )
             : null,
-        middle: const Text('Discuz Login'),
+        middle: const Text('Discuz 登录'),
       ),
       child: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(24),
           children: [
             _InfoCard(
-              title: currentUid == null
-                  ? 'Login required'
-                  : 'Already signed in',
+              title: currentUid == null ? '登录信息' : '当前已登录',
               body: currentUid == null
-                  ? 'Use your Discuz credentials to fetch a fresh token for this desktop client.'
-                  : 'Current saved token belongs to uid $currentUid.',
+                  ? '站点固定为 https://www.shireyishunjian.com/main/。登录成功后自动带 cookie 请求 chahua.php，并从返回内容里提取 token。'
+                  : '当前保存的 token 对应 uid: $currentUid。',
             ),
             const SizedBox(height: 16),
             _SectionCard(
-              title: 'Discuz Login',
+              title: '登录信息',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Site: https://www.shireyishunjian.com/main/'),
+                  const Text('站点: https://www.shireyishunjian.com/main/'),
                   const SizedBox(height: 12),
                   CupertinoTextField(
                     controller: _usernameController,
-                    placeholder: 'Username',
+                    placeholder: '用户名',
                     padding: const EdgeInsets.all(14),
                   ),
                   const SizedBox(height: 12),
                   CupertinoTextField(
                     controller: _passwordController,
-                    placeholder: 'Password',
+                    placeholder: '密码',
                     obscureText: true,
                     padding: const EdgeInsets.all(14),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    '安全问题',
+                    style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 12),
                   GestureDetector(
@@ -215,11 +217,7 @@ class _TokenImportPageState extends State<TokenImportPage> {
                       ),
                       child: Row(
                         children: [
-                          Expanded(
-                            child: Text(
-                              'Security question: ${_selectedQuestion.label}',
-                            ),
-                          ),
+                          Expanded(child: Text(_selectedQuestion.label)),
                           const Icon(CupertinoIcons.chevron_down),
                         ],
                       ),
@@ -228,14 +226,14 @@ class _TokenImportPageState extends State<TokenImportPage> {
                   const SizedBox(height: 12),
                   CupertinoTextField(
                     controller: _answerController,
-                    placeholder: 'Security answer (optional)',
+                    placeholder: '答案',
                     padding: const EdgeInsets.all(14),
                   ),
                   if (currentUid == null) ...[
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
                     CupertinoButton.filled(
                       onPressed: _isLoggingIn ? null : _submitDiscuzLogin,
-                      child: Text(_isLoggingIn ? 'Signing in...' : 'Sign In'),
+                      child: Text(_isLoggingIn ? '登录中...' : '开始登录'),
                     ),
                   ],
                   if (_lastLoginResult != null) ...[
@@ -248,15 +246,15 @@ class _TokenImportPageState extends State<TokenImportPage> {
                           padding: EdgeInsets.zero,
                           onPressed: () =>
                               _copyText(_lastLoginResult!.token, 'Token'),
-                          child: const Text('Copy Token'),
+                          child: const Text('复制 Token'),
                         ),
                         CupertinoButton(
                           padding: EdgeInsets.zero,
                           onPressed: () => _copyText(
                             _lastLoginResult!.cookieHeader,
-                            'Cookie header',
+                            'Cookie Header',
                           ),
-                          child: const Text('Copy Cookie Header'),
+                          child: const Text('复制 Cookie Header'),
                         ),
                       ],
                     ),
