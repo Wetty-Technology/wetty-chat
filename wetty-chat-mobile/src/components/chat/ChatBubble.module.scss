@@ -69,7 +69,7 @@
 
 .sent .bubble {
   background: var(--ion-color-primary);
-  color: var(--ion-color-primary-contrast, #fff);
+  color: var(--ion-color-primary-contrast);
   border-radius: 18px 18px 4px 18px;
 }
 
@@ -139,12 +139,12 @@
   margin-bottom: 4px;
   width: 100%;
   color: inherit;
-  opacity: 0.85;
   display: flex;
   flex-direction: row;
   gap: 8px;
 
   .senderName {
+    opacity: 0.85;
     flex-grow: 1;
   }
 
@@ -155,6 +155,7 @@
     font-size: 10px;
     display: inline-flex;
     align-items: center;
+    opacity: 0.85;
   }
 
   .gender {
