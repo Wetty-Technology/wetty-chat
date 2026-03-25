@@ -373,7 +373,7 @@ export function ChatBubble({
                             src={reactor.avatar_url ?? undefined}
                             alt=""
                             className={styles.reactorAvatar}
-                            style={{ marginLeft: i > 0 ? -8 : 0, zIndex: 5 - i }}
+                            style={{ marginLeft: i > 0 ? -9 : 0, zIndex: 5 - i }}
                           />
                         ))}
                         {r.count > 5 && <span className={styles.reactorOverflow}>+{r.count - 5}</span>}

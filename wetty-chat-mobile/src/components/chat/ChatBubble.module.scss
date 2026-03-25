@@ -305,6 +305,7 @@
   align-items: center;
   border-radius: 12px;
   background: var(--ion-color-light-shade);
+  color: var(--ion-color-light-shade);
   font-size: 21px;
   line-height: 1;
   cursor: pointer;
@@ -317,20 +318,22 @@
 
 .reactionPillActive {
   background: var(--ion-color-primary-tint);
+  color: var(--ion-color-primary-tint);
 }
 
 .sent .reactionPill {
   background: var(--ion-color-primary-tint);
+  color: var(--ion-color-primary-tint);
 }
 
 .sent .reactionPillActive {
   background: var(--ion-color-primary-shade);
-
+  color: var(--ion-color-primary-shade);
 }
 
 .reactionEmoji {
-  margin-left: 6px;
-  font-size: 19px;
+  margin: 0.5px 0 0.5px 6px;
+  font-size: 18.5px;
   line-height: 1;
 }
 
@@ -347,11 +350,14 @@
 }
 
 .reactorAvatar {
-  width: 1em;
-  height: 1em;
+  width: 23px;
+  height: 23px;
+
+  //width: 1em;
+  //height: 1em;
   border-radius: 50%;
   object-fit: cover;
-  //border: 1px solid rgba(255, 255, 255, 0.8);
+  border: 1px solid currentColor;
   position: relative;
 }
 
