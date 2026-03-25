@@ -7,7 +7,7 @@ import '../../data/models/message_models.dart';
 import '../shared/settings_store.dart';
 
 // ---------------------------------------------------------------------------
-// MessageRow — message bubble with avatar, inline time, reply quote,
+// MessageRow 鈥?message bubble with avatar, inline time, reply quote,
 // swipe-to-reply gesture
 // ---------------------------------------------------------------------------
 
@@ -41,7 +41,10 @@ class _MessageRowState extends State<MessageRow>
   bool _hasTriggeredReply = false;
   static const double _replyThreshold = 60;
 
-  bool get _isMe => widget.message.sender.uid == curUserId;
+  bool get _isMe {
+    final currentUserId = curUserId;
+    return currentUserId != null && widget.message.sender.uid == currentUserId;
+  }
 
   void _onHorizontalDragUpdate(DragUpdateDetails details) {
     setState(() {

@@ -6,6 +6,9 @@ import '../../data/models/message_models.dart';
 import '../../data/repositories/message_repository.dart';
 import '../shared/draft_store.dart';
 
+// ---------------------------------------------------------------------------
+// InputState 閳?the three mutually exclusive states for the input bar
+// ---------------------------------------------------------------------------
 sealed class InputState {}
 
 enum ChatWindowMode { latest, aroundMessage, unreadBoundary }

@@ -43,3 +43,11 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Keep only the TTF files referenced by pubspec.yaml.
+/MiSans/MiSans/otf/
+/MiSans/MiSans/woff/
+/MiSans/MiSans/woff2/
+/MiSans/MiSans/*/MiSansVF.ttf
+/MiSans/MiSans/ttf/MiSans-Normal.ttf
+/MiSans/MiSans/ttf/MiSans-Semibold.ttf

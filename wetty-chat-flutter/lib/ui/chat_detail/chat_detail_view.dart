@@ -598,7 +598,8 @@ class _ChatDetailPageState extends State<ChatDetailPage>
 
   void _showMessageActions(MessageItem msg) {
     if (msg.isDeleted) return;
-    final isOwn = msg.sender.uid == curUserId;
+    final currentUserId = curUserId;
+    final isOwn = currentUserId != null && msg.sender.uid == currentUserId;
 
     showCupertinoModalPopup(
       context: context,
