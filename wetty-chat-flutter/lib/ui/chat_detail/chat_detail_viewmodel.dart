@@ -5,7 +5,7 @@ import '../../data/repositories/message_repository.dart';
 import '../shared/draft_store.dart';
 
 // ---------------------------------------------------------------------------
-// InputState – the three mutually exclusive states for the input bar
+// InputState 閳?the three mutually exclusive states for the input bar
 // ---------------------------------------------------------------------------
 
 sealed class InputState {}
@@ -128,12 +128,9 @@ class ChatDetailViewModel extends ChangeNotifier {
   Future<bool> jumpToMessage(String messageId) async {
     int idx = _displayItems.indexWhere((m) => m.id == messageId);
 
-    print("idx: $idx, messageId: $messageId");
-
     if (idx >= 0) {
       _highlightedMessageId = messageId;
       notifyListeners();
-      // _clearHighlightAfterDelay();
       return true;
     }
 
@@ -144,14 +141,9 @@ class ChatDetailViewModel extends ChangeNotifier {
       _isLoadingMore = false;
       _rebuildDisplay();
       idx = _displayItems.indexWhere((m) => m.id == messageId);
-      for (var i = 0; i < _displayItems.length; i++) {
-        print("displayItems[$i]: ${_displayItems[i].id}");
-      }
-      print("new idx: $idx");
       if (idx >= 0) {
         _highlightedMessageId = messageId;
         notifyListeners();
-        // _clearHighlightAfterDelay();
         return true;
       }
     } catch (e) {
@@ -160,13 +152,6 @@ class ChatDetailViewModel extends ChangeNotifier {
       notifyListeners();
     }
     return false;
-  }
-
-  void _clearHighlightAfterDelay() {
-    Future.delayed(const Duration(milliseconds: 2000), () {
-      _highlightedMessageId = null;
-      notifyListeners();
-    });
   }
 
   // ---- Send / Edit / Delete ----

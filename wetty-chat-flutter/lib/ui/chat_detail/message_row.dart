@@ -6,7 +6,7 @@ import '../../config/api_config.dart';
 import '../../data/models/message_models.dart';
 
 // ---------------------------------------------------------------------------
-// MessageRow — message bubble with avatar, inline time, reply quote,
+// MessageRow 鈥?message bubble with avatar, inline time, reply quote,
 // swipe-to-reply gesture
 // ---------------------------------------------------------------------------
 
@@ -40,7 +40,10 @@ class _MessageRowState extends State<MessageRow>
   bool _hasTriggeredReply = false;
   static const double _replyThreshold = 60;
 
-  bool get _isMe => widget.message.sender.uid == curUserId;
+  bool get _isMe {
+    final currentUserId = curUserId;
+    return currentUserId != null && widget.message.sender.uid == currentUserId;
+  }
 
   void _onHorizontalDragUpdate(DragUpdateDetails details) {
     setState(() {
@@ -75,8 +78,8 @@ class _MessageRowState extends State<MessageRow>
     final bubbleColor = _isMe
         ? CupertinoColors.activeBlue
         : (isDark
-            ? CupertinoColors.systemGrey5.darkColor
-            : const Color(0xfff0f0f0));
+              ? CupertinoColors.systemGrey5.darkColor
+              : const Color(0xfff0f0f0));
     final textColor = _isMe
         ? CupertinoColors.white
         : CupertinoColors.label.resolveFrom(context);
@@ -113,8 +116,9 @@ class _MessageRowState extends State<MessageRow>
     )..layout(maxWidth: double.infinity);
     final timeSpacerWidth = timePainter.width + 8;
 
-    final linkColor =
-        _isMe ? CupertinoColors.white : CupertinoColors.activeBlue;
+    final linkColor = _isMe
+        ? CupertinoColors.white
+        : CupertinoColors.activeBlue;
 
     Widget bubbleContent = Stack(
       children: [
@@ -210,8 +214,9 @@ class _MessageRowState extends State<MessageRow>
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         child: Row(
-          mainAxisAlignment:
-              _isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+          mainAxisAlignment: _isMe
+              ? MainAxisAlignment.end
+              : MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: _isMe
               ? [
@@ -275,17 +280,17 @@ class _MessageRowState extends State<MessageRow>
 
   Widget _buildReplyQuote(BuildContext context, ReplyToMessage reply) {
     final replySender = reply.sender.name ?? 'User ${reply.sender.uid}';
-    final replyText =
-        reply.isDeleted ? 'Message deleted' : (reply.message ?? '');
+    final replyText = reply.isDeleted
+        ? 'Message deleted'
+        : (reply.message ?? '');
 
     final isDark = MediaQuery.platformBrightnessOf(context) == Brightness.dark;
 
     final quoteBackgroundColor = _isMe
-        ? Color.lerp(
-            CupertinoColors.activeBlue, const Color(0xFF000000), 0.15)!
+        ? Color.lerp(CupertinoColors.activeBlue, const Color(0xFF000000), 0.15)!
         : (isDark
-            ? CupertinoColors.systemGrey4.darkColor
-            : CupertinoColors.systemGrey5.color);
+              ? CupertinoColors.systemGrey4.darkColor
+              : CupertinoColors.systemGrey5.color);
     final quoteBorderColor = _isMe
         ? CupertinoColors.white.withAlpha(150)
         : CupertinoColors.activeBlue;

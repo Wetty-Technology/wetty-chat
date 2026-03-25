@@ -10,7 +10,7 @@ import '../chat_detail/chat_detail_view.dart';
 import 'chat_list_viewmodel.dart';
 import 'new_chat_view.dart';
 
-/// Chat list screen — displays all chats with pagination.
+/// Chat list screen displays all chats with pagination.
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
 
@@ -44,7 +44,9 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   void _onScroll() {
-    if (!_viewModel.hasMore || _viewModel.isLoadingMore || _viewModel.isLoading) {
+    if (!_viewModel.hasMore ||
+        _viewModel.isLoadingMore ||
+        _viewModel.isLoading) {
       return;
     }
     final pos = _scrollController.position;
@@ -294,8 +296,9 @@ class _ChatPageState extends State<ChatPage> {
                     text: draft,
                     style: TextStyle(
                       fontSize: 13,
-                      color: CupertinoColors.secondaryLabel
-                          .resolveFrom(context),
+                      color: CupertinoColors.secondaryLabel.resolveFrom(
+                        context,
+                      ),
                     ),
                   ),
                 ],
@@ -326,8 +329,7 @@ class _ChatPageState extends State<ChatPage> {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 13,
-                    color: CupertinoColors.secondaryLabel
-                        .resolveFrom(context),
+                    color: CupertinoColors.secondaryLabel.resolveFrom(context),
                   ),
                 )
               : Text(
@@ -336,8 +338,7 @@ class _ChatPageState extends State<ChatPage> {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 13,
-                    color: CupertinoColors.secondaryLabel
-                        .resolveFrom(context),
+                    color: CupertinoColors.secondaryLabel.resolveFrom(context),
                   ),
                 ),
         ),
@@ -358,7 +359,7 @@ class _ChatPageState extends State<ChatPage> {
         '$count',
         style: const TextStyle(
           color: CupertinoColors.white,
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -366,48 +367,24 @@ class _ChatPageState extends State<ChatPage> {
   }
 }
 
-/// Simple animated toast widget.
-class _ToastWidget extends StatefulWidget {
+class _ToastWidget extends StatelessWidget {
   const _ToastWidget({required this.message, required this.onDismiss});
+
   final String message;
   final VoidCallback onDismiss;
 
   @override
-  State<_ToastWidget> createState() => _ToastWidgetState();
-}
-
-class _ToastWidgetState extends State<_ToastWidget> {
-  double _opacity = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    Future.microtask(() {
-      if (mounted) setState(() => _opacity = 1);
-    });
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) setState(() => _opacity = 0);
-      Future.delayed(const Duration(milliseconds: 300), widget.onDismiss);
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: AnimatedOpacity(
-        opacity: _opacity,
-        duration: const Duration(milliseconds: 300),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: CupertinoColors.systemGrey.withAlpha(230),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Text(
-            widget.message,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: CupertinoColors.white, fontSize: 14),
-          ),
+    Future<void>.delayed(const Duration(seconds: 2), onDismiss);
+    return CupertinoPopupSurface(
+      isSurfacePainted: true,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        color: CupertinoColors.systemGrey6.resolveFrom(context),
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 14),
         ),
       ),
     );
