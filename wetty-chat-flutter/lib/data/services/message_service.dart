@@ -42,6 +42,7 @@ class MessageService {
     String chatId,
     String text, {
     String? replyToId,
+    List<String>? attachmentIds,
   }) async {
     final uri = Uri.parse('$apiBaseUrl/chats/$chatId/messages');
     final clientGeneratedId =
@@ -52,6 +53,9 @@ class MessageService {
       'client_generated_id': clientGeneratedId,
     };
     if (replyToId != null) body['reply_to_id'] = int.parse(replyToId);
+    if (attachmentIds != null && attachmentIds.isNotEmpty) {
+      body['attachment_ids'] = attachmentIds;
+    }
     final response = await http.post(
       uri,
       headers: apiHeaders,
@@ -94,6 +98,20 @@ class MessageService {
     if (response.statusCode != 204) {
       throw Exception(
         'Failed to delete message: ${response.statusCode} ${response.body}',
+      );
+    }
+  }
+
+  Future<void> markMessagesAsRead(String chatId, String messageId) async {
+    final uri = Uri.parse('$apiBaseUrl/chats/$chatId/read');
+    final response = await http.post(
+      uri,
+      headers: apiHeaders,
+      body: jsonEncode({'message_id': messageId}),
+    );
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to mark as read: ${response.statusCode} ${response.body}',
       );
     }
   }

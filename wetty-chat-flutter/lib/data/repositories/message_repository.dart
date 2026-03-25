@@ -37,8 +37,17 @@ class MessageRepository {
   }
 
   /// Send a new message.
-  Future<MessageItem> sendMessage(String text, {String? replyToId}) async {
-    final res = await _service.sendMessage(chatId, text, replyToId: replyToId);
+  Future<MessageItem> sendMessage(
+    String text, {
+    String? replyToId,
+    List<String>? attachmentIds,
+  }) async {
+    final res = await _service.sendMessage(
+      chatId,
+      text,
+      replyToId: replyToId,
+      attachmentIds: attachmentIds,
+    );
     store.addMessages([res]);
     return res;
   }
@@ -58,4 +67,9 @@ class MessageRepository {
 
   /// Get display items
   List<MessageItem> get displayItems => store.buildDisplayItems();
+
+  /// Mark messages as read up to [messageId].
+  Future<void> markAsRead(String messageId) async {
+    await _service.markMessagesAsRead(chatId, messageId);
+  }
 }

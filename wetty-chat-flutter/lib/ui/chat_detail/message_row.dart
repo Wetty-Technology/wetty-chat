@@ -67,6 +67,8 @@ class _MessageRowState extends State<MessageRow>
     final message = widget.message;
     final screenWidth = MediaQuery.of(context).size.width;
     final msgText = message.message ?? '';
+    final attachments = message.attachments;
+    final hasAttachments = attachments.isNotEmpty;
     final senderName = message.sender.name ?? 'User ${message.sender.uid}';
     final timeStr = _formatTime(message.createdAt);
 
@@ -116,23 +118,33 @@ class _MessageRowState extends State<MessageRow>
     final linkColor =
         _isMe ? CupertinoColors.white : CupertinoColors.activeBlue;
 
-    Widget bubbleContent = Stack(
-      children: [
-        Text.rich(
-          TextSpan(
-            children: [
-              ..._buildLinkedSpans(
-                msgText,
-                TextStyle(color: textColor, fontSize: 15),
-                linkColor,
-              ),
-              WidgetSpan(child: SizedBox(width: timeSpacerWidth, height: 14)),
-            ],
+    Widget bubbleContent;
+    if (msgText.isNotEmpty) {
+      bubbleContent = Stack(
+        children: [
+          Text.rich(
+            TextSpan(
+              children: [
+                ..._buildLinkedSpans(
+                  msgText,
+                  TextStyle(color: textColor, fontSize: 15),
+                  linkColor,
+                ),
+                WidgetSpan(
+                  child: SizedBox(width: timeSpacerWidth, height: 14),
+                ),
+              ],
+            ),
           ),
-        ),
-        Positioned(right: 0, bottom: 0, child: timeWidget),
-      ],
-    );
+          Positioned(right: 0, bottom: 0, child: timeWidget),
+        ],
+      );
+    } else {
+      bubbleContent = Align(
+        alignment: Alignment.centerRight,
+        child: timeWidget,
+      );
+    }
 
     Widget fullContent = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,6 +166,11 @@ class _MessageRowState extends State<MessageRow>
           GestureDetector(
             onTap: widget.onTapReply,
             child: _buildReplyQuote(context, message.replyToMessage!),
+          ),
+        if (hasAttachments)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: _buildAttachments(context, attachments, maxBubbleWidth),
           ),
         bubbleContent,
       ],
@@ -326,6 +343,107 @@ class _MessageRowState extends State<MessageRow>
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildAttachments(
+    BuildContext context,
+    List<Attachment> attachments,
+    double maxBubbleWidth,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final attachment in attachments)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: _buildAttachmentItem(
+              context,
+              attachment,
+              maxBubbleWidth,
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildAttachmentItem(
+    BuildContext context,
+    Attachment attachment,
+    double maxBubbleWidth,
+  ) {
+    final borderRadius = BorderRadius.circular(10);
+    if (attachment.isImage && attachment.url.isNotEmpty) {
+      final maxHeight = maxBubbleWidth * 0.75;
+      return GestureDetector(
+        onTap: () => _openUrl(attachment.url),
+        child: ClipRRect(
+          borderRadius: borderRadius,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: maxBubbleWidth,
+              maxHeight: maxHeight,
+            ),
+            child: Image.network(
+              attachment.url,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                width: maxBubbleWidth,
+                height: 120,
+                color: CupertinoColors.systemGrey5.resolveFrom(context),
+                alignment: Alignment.center,
+                child: const Icon(CupertinoIcons.photo),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return GestureDetector(
+      onTap: () => _openUrl(attachment.url),
+      child: Container(
+        constraints: BoxConstraints(maxWidth: maxBubbleWidth),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: CupertinoColors.systemGrey5.resolveFrom(context),
+          borderRadius: borderRadius,
+          border: Border.all(
+            color: CupertinoColors.systemGrey4.resolveFrom(context),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              CupertinoIcons.doc,
+              size: 20,
+              color: CupertinoColors.activeBlue.resolveFrom(context),
+            ),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                attachment.fileName.isNotEmpty
+                    ? attachment.fileName
+                    : 'Attachment',
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: CupertinoColors.label.resolveFrom(context),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openUrl(String url) {
+    if (url.isEmpty) return;
+    launchUrl(
+      Uri.parse(url),
+      mode: LaunchMode.externalApplication,
     );
   }
 

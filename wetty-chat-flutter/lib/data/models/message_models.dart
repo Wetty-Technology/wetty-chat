@@ -32,6 +32,40 @@ class ReplyToMessage {
   }
 }
 
+class Attachment {
+  final String id;
+  final String url;
+  final String kind;
+  final int size;
+  final String fileName;
+  final int? width;
+  final int? height;
+
+  Attachment({
+    required this.id,
+    required this.url,
+    required this.kind,
+    required this.size,
+    required this.fileName,
+    this.width,
+    this.height,
+  });
+
+  factory Attachment.fromJson(Map<String, dynamic> json) {
+    return Attachment(
+      id: json['id']?.toString() ?? '',
+      url: json['url'] as String? ?? '',
+      kind: json['kind'] as String? ?? '',
+      size: (json['size'] as num?)?.toInt() ?? 0,
+      fileName: json['file_name'] as String? ?? '',
+      width: (json['width'] as num?)?.toInt(),
+      height: (json['height'] as num?)?.toInt(),
+    );
+  }
+
+  bool get isImage => kind.startsWith('image/');
+}
+
 class MessageItem {
   final String id;
   final String? message;
@@ -44,6 +78,7 @@ class MessageItem {
   final String clientGeneratedId;
   final String? replyRootId;
   final bool hasAttachments;
+  final List<Attachment> attachments;
   final ReplyToMessage? replyToMessage;
 
   MessageItem({
@@ -58,11 +93,13 @@ class MessageItem {
     required this.clientGeneratedId,
     this.replyRootId,
     required this.hasAttachments,
+    required this.attachments,
     this.replyToMessage,
   });
 
   factory MessageItem.fromJson(Map<String, dynamic> json) {
     final replyJson = json['reply_to_message'] as Map<String, dynamic>?;
+    final attachmentsJson = json['attachments'] as List<dynamic>? ?? [];
     return MessageItem(
       id: json['id']?.toString() ?? '',
       message: json['message'] as String?,
@@ -75,6 +112,9 @@ class MessageItem {
       clientGeneratedId: json['client_generated_id'] as String? ?? '',
       replyRootId: json['reply_root_id']?.toString(),
       hasAttachments: json['has_attachments'] as bool? ?? false,
+      attachments: attachmentsJson
+          .map((e) => Attachment.fromJson(e as Map<String, dynamic>))
+          .toList(),
       replyToMessage: replyJson != null
           ? ReplyToMessage.fromJson(replyJson)
           : null,

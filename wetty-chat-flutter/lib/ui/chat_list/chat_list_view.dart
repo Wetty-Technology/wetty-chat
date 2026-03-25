@@ -4,6 +4,7 @@ import 'dart:convert';
 
 import '../../config/api_config.dart';
 import '../../data/models/chat_models.dart';
+import '../../data/models/message_models.dart';
 import '../shared/draft_store.dart';
 import '../shared/widgets.dart';
 import '../chat_detail/chat_detail_view.dart';
@@ -154,12 +155,7 @@ class _ChatPageState extends State<ChatPage> {
             dateText = chat.lastMessageAt;
           }
         }
-        final senderName = chat.lastMessage?.sender.name;
-        final lastMsg = chat.lastMessage?.message;
         final unreadCount = chat.unreadCount;
-        final hasMessage =
-            (senderName != null && senderName.isNotEmpty) &&
-            (lastMsg != null && lastMsg.isNotEmpty);
 
         return Column(
           mainAxisSize: MainAxisSize.min,
@@ -175,7 +171,9 @@ class _ChatPageState extends State<ChatPage> {
                     ),
                   ),
                 );
-                if (mounted) setState(() {});
+                if (mounted) {
+                  await _viewModel.loadChats();
+                }
               },
               behavior: HitTestBehavior.opaque,
               child: Padding(
@@ -238,9 +236,6 @@ class _ChatPageState extends State<ChatPage> {
                           _buildSubtitle(
                             context,
                             chat,
-                            senderName,
-                            lastMsg,
-                            hasMessage,
                             unreadCount,
                           ),
                         ],
@@ -269,9 +264,6 @@ class _ChatPageState extends State<ChatPage> {
   Widget _buildSubtitle(
     BuildContext context,
     ChatListItem chat,
-    String? senderName,
-    String? lastMsg,
-    bool hasMessage,
     int unreadCount,
   ) {
     final draft = DraftStore.instance.getDraft(chat.id);
@@ -308,18 +300,26 @@ class _ChatPageState extends State<ChatPage> {
         ],
       );
     }
+    final lastMessage = chat.lastMessage;
+    final previewText = _messagePreview(lastMessage);
+    final senderLabel = lastMessage == null
+        ? null
+        : (lastMessage.sender.name != null &&
+                lastMessage.sender.name!.trim().isNotEmpty
+            ? lastMessage.sender.name!.trim()
+            : 'User ${lastMessage.sender.uid}');
     return Row(
       children: [
         Expanded(
-          child: hasMessage
+          child: senderLabel != null
               ? Text.rich(
                   TextSpan(
                     children: [
                       TextSpan(
-                        text: '$senderName: ',
+                        text: '$senderLabel: ',
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      TextSpan(text: lastMsg),
+                      TextSpan(text: previewText),
                     ],
                   ),
                   maxLines: 1,
@@ -331,7 +331,7 @@ class _ChatPageState extends State<ChatPage> {
                   ),
                 )
               : Text(
-                  'No messages yet',
+                  previewText,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -344,6 +344,17 @@ class _ChatPageState extends State<ChatPage> {
         if (unreadCount > 0) _unreadBadge(unreadCount),
       ],
     );
+  }
+
+  String _messagePreview(MessageItem? message) {
+    if (message == null) return 'No messages yet';
+    if (message.isDeleted) return '[Deleted]';
+    final text = message.message?.trim();
+    if (text != null && text.isNotEmpty) return text;
+    if (message.hasAttachments || message.attachments.isNotEmpty) {
+      return '[Attachment]';
+    }
+    return 'New message';
   }
 
   Widget _unreadBadge(int count) {

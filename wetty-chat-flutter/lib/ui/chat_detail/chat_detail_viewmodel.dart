@@ -63,6 +63,32 @@ class ChatDetailViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  String? _latestMessageId() {
+    if (_repository.displayItems.isEmpty) return null;
+    BigInt? maxId;
+    for (final msg in _repository.displayItems) {
+      try {
+        final id = BigInt.parse(msg.id);
+        if (maxId == null || id > maxId!) {
+          maxId = id;
+        }
+      } catch (_) {
+        // Skip non-numeric IDs
+      }
+    }
+    return maxId?.toString();
+  }
+
+  Future<void> _markLatestAsRead() async {
+    final latestId = _latestMessageId();
+    if (latestId == null) return;
+    try {
+      await _repository.markAsRead(latestId);
+    } catch (_) {
+      // Non-blocking: unread count will refresh on next chat list fetch.
+    }
+  }
+
   // ---- Loading ----
 
   Future<void> loadMessages() async {
@@ -74,6 +100,7 @@ class ChatDetailViewModel extends ChangeNotifier {
       _isLoading = false;
       _errorMessage = null;
       _rebuildDisplay();
+      await _markLatestAsRead();
     } catch (e) {
       _isLoading = false;
       _errorMessage = e.toString();
@@ -171,10 +198,19 @@ class ChatDetailViewModel extends ChangeNotifier {
 
   // ---- Send / Edit / Delete ----
 
-  Future<void> sendMessage(String text, {String? replyToId}) async {
+  Future<void> sendMessage(
+    String text, {
+    String? replyToId,
+    List<String>? attachmentIds,
+  }) async {
     try {
-      await _repository.sendMessage(text, replyToId: replyToId);
+      await _repository.sendMessage(
+        text,
+        replyToId: replyToId,
+        attachmentIds: attachmentIds,
+      );
       _rebuildDisplay();
+      await _markLatestAsRead();
     } catch (e) {
       throw Exception('Failed to send: $e');
     }

@@ -1,8 +1,16 @@
+import 'dart:async';
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 import '../../config/api_config.dart';
 import '../../data/models/message_models.dart';
+import '../../data/services/attachment_service.dart';
 import '../shared/widgets.dart';
 import '../group_members/group_members_view.dart';
 import '../group_settings/group_settings_view.dart';
@@ -24,6 +32,22 @@ class ChatDetailPage extends StatefulWidget {
   State<ChatDetailPage> createState() => _ChatDetailPageState();
 }
 
+class _PendingAttachment {
+  final String id;
+  final String name;
+  final String mimeType;
+  final Uint8List? previewBytes;
+
+  _PendingAttachment({
+    required this.id,
+    required this.name,
+    required this.mimeType,
+    this.previewBytes,
+  });
+
+  bool get isImage => mimeType.startsWith('image/') && previewBytes != null;
+}
+
 class _ChatDetailPageState extends State<ChatDetailPage> {
   late final ChatDetailViewModel _viewModel;
   final ItemScrollController _itemScrollController = ItemScrollController();
@@ -32,6 +56,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   final ScrollController _inputScrollController = ScrollController();
   final TextEditingController _textController = TextEditingController();
   static const double _titleBarHeight = 70.0;
+  final AttachmentService _attachmentService = AttachmentService();
+  final List<_PendingAttachment> _pendingAttachments = [];
+  bool _isUploadingAttachment = false;
 
   @override
   void initState() {
@@ -105,12 +132,217 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     _viewModel.clearInputState();
   }
 
+  void _clearAttachments() {
+    if (_pendingAttachments.isEmpty) return;
+    if (!mounted) {
+      _pendingAttachments.clear();
+      return;
+    }
+    setState(() {
+      _pendingAttachments.clear();
+    });
+  }
+
+  String _guessContentType(String filename) {
+    final lower = filename.toLowerCase();
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) {
+      return 'image/jpeg';
+    }
+    if (lower.endsWith('.gif')) return 'image/gif';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    if (lower.endsWith('.bmp')) return 'image/bmp';
+    if (lower.endsWith('.heic')) return 'image/heic';
+    if (lower.endsWith('.pdf')) return 'application/pdf';
+    if (lower.endsWith('.txt')) return 'text/plain';
+    if (lower.endsWith('.json')) return 'application/json';
+    if (lower.endsWith('.zip')) return 'application/zip';
+    return 'application/octet-stream';
+  }
+
+  Future<(int? width, int? height)> _decodeImageSize(Uint8List bytes) async {
+    try {
+      final completer = Completer<ui.Image>();
+      ui.decodeImageFromList(bytes, (img) => completer.complete(img));
+      final img = await completer.future.timeout(
+        const Duration(seconds: 2),
+      );
+      final size = (img.width, img.height);
+      img.dispose();
+      return size;
+    } catch (_) {
+      return (null, null);
+    }
+  }
+
+  Future<void> _pickAttachment() async {
+    if (kIsWeb || !Platform.isWindows) {
+      _showErrorDialog('目前只实现了 Windows 上传逻辑');
+      return;
+    }
+    if (_isUploadingAttachment) return;
+
+    final file = await openFile();
+    if (file == null) return;
+
+    setState(() {
+      _isUploadingAttachment = true;
+    });
+
+    try {
+      final filename = file.name;
+      final contentType = _guessContentType(filename);
+      final size = await file.length();
+
+      Uint8List? previewBytes;
+      int? width;
+      int? height;
+
+      if (contentType.startsWith('image/')) {
+        final shouldPreview = size <= 8 * 1024 * 1024;
+        if (shouldPreview) {
+          previewBytes = await file.readAsBytes();
+          final dims = await _decodeImageSize(previewBytes);
+          width = dims.$1;
+          height = dims.$2;
+        }
+      }
+
+      final uploadInfo = await _attachmentService.requestUploadUrl(
+        filename: filename,
+        contentType: contentType,
+        size: size,
+        width: width,
+        height: height,
+      );
+
+      await _attachmentService.uploadFileToS3(
+        uploadUrl: uploadInfo.uploadUrl,
+        file: File(file.path),
+        contentType: contentType,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _pendingAttachments.add(
+          _PendingAttachment(
+            id: uploadInfo.attachmentId,
+            name: filename,
+            mimeType: contentType,
+            previewBytes: previewBytes,
+          ),
+        );
+      });
+    } catch (e) {
+      if (mounted) _showErrorDialog('上传失败: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingAttachment = false;
+        });
+      }
+    }
+  }
+
+  void _removeAttachmentAt(int index) {
+    setState(() {
+      _pendingAttachments.removeAt(index);
+    });
+  }
+
+  Widget _buildAttachmentPreview(BuildContext context) {
+    if (_pendingAttachments.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (int i = 0; i < _pendingAttachments.length; i++)
+            _buildAttachmentChip(context, _pendingAttachments[i], i),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAttachmentChip(
+    BuildContext context,
+    _PendingAttachment attachment,
+    int index,
+  ) {
+    final borderColor = CupertinoColors.systemGrey4.resolveFrom(context);
+    final bgColor = CupertinoColors.systemGrey5.resolveFrom(context);
+    final textColor = CupertinoColors.label.resolveFrom(context);
+
+    final thumb = attachment.isImage
+        ? ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: Image.memory(
+              attachment.previewBytes!,
+              width: 36,
+              height: 36,
+              fit: BoxFit.cover,
+            ),
+          )
+        : Icon(
+            CupertinoIcons.doc,
+            size: 28,
+            color: CupertinoColors.activeBlue.resolveFrom(context),
+          );
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          thumb,
+          const SizedBox(width: 6),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 140),
+            child: Text(
+              attachment.name,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 12, color: textColor),
+            ),
+          ),
+          const SizedBox(width: 6),
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            minimumSize: const Size(20, 20),
+            onPressed: () => _removeAttachmentAt(index),
+            child: Icon(
+              CupertinoIcons.xmark_circle_fill,
+              size: 18,
+              color: CupertinoColors.systemGrey2.resolveFrom(context),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _sendMessage() async {
     final text = _textController.text.trim();
-    if (text.isEmpty) return;
+    final attachmentIds = _pendingAttachments.map((a) => a.id).toList();
+    final hasAttachments = attachmentIds.isNotEmpty;
+    if (text.isEmpty && !hasAttachments) return;
+    if (_isUploadingAttachment) {
+      _showErrorDialog('文件正在上传，请稍后再发送');
+      return;
+    }
 
     switch (_viewModel.inputState) {
       case InputEditing(:final message):
+        if (hasAttachments) {
+          _showErrorDialog('编辑消息暂不支持附件');
+          return;
+        }
         if (text == message.message) return;
         try {
           await _viewModel.editMessage(message.id, text);
@@ -124,7 +356,12 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         _clearInputMessage();
         _viewModel.clearDraft();
         try {
-          await _viewModel.sendMessage(text, replyToId: message.id);
+          await _viewModel.sendMessage(
+            text,
+            replyToId: message.id,
+            attachmentIds: attachmentIds,
+          );
+          _clearAttachments();
           _scrollToBottom();
         } catch (e) {
           if (mounted) _showErrorDialog('$e');
@@ -134,7 +371,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         _clearInputMessage();
         _viewModel.clearDraft();
         try {
-          await _viewModel.sendMessage(text);
+          await _viewModel.sendMessage(text, attachmentIds: attachmentIds);
+          _clearAttachments();
           _scrollToBottom();
         } catch (e) {
           if (mounted) _showErrorDialog('$e');
@@ -248,6 +486,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
             CupertinoActionSheetAction(
               onPressed: () {
                 Navigator.pop(context);
+                _clearAttachments();
                 _viewModel.startEditing(msg);
                 _textController.text = msg.message ?? '';
               },
@@ -553,6 +792,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
   Widget _buildInput() {
     final hasPreview = _viewModel.inputState is! InputEmpty;
+    final isEditing = _viewModel.inputState is InputEditing;
+    final canAttach = !_isUploadingAttachment && !isEditing;
 
     return Column(
       children: [
@@ -566,15 +807,20 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 children: [
                   CupertinoButton(
                     padding: EdgeInsets.zero,
-                    onPressed: () {
-                      // TODO: implement attachment sheet
-                    },
+                    onPressed: canAttach ? _pickAttachment : null,
                     child: Icon(
                       CupertinoIcons.add_circled,
-                      color: CupertinoColors.activeBlue.resolveFrom(context),
+                      color: canAttach
+                          ? CupertinoColors.activeBlue.resolveFrom(context)
+                          : CupertinoColors.systemGrey2.resolveFrom(context),
                       size: 28,
                     ),
                   ),
+                  if (_isUploadingAttachment)
+                    const Padding(
+                      padding: EdgeInsets.only(left: 4, bottom: 2),
+                      child: CupertinoActivityIndicator(radius: 8),
+                    ),
                   const SizedBox(width: 4),
                   Expanded(
                     child: Container(
@@ -613,6 +859,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                                 context,
                               ),
                             ),
+                          _buildAttachmentPreview(context),
                           CupertinoScrollbar(
                             controller: _inputScrollController,
                             child: CupertinoTextField(
