@@ -233,9 +233,9 @@ export function ChatBubble({
                   </span>
                 )}
                 {senderGender === 2 ? (
-                  <IonIcon icon={femaleOutline} className={styles.gender2} />
+                  <IonIcon icon={femaleOutline} className={`${styles.gender} ${styles.gender2}`} />
                 ) : (
-                  <IonIcon icon={maleOutline} className={styles.gender1} />
+                  <IonIcon icon={maleOutline} className={`${styles.gender} ${styles.gender1}`} />
                 )}
               </div>
             )}
