@@ -9,7 +9,7 @@ class ChatListViewModel extends ChangeNotifier {
   final ChatRepository _repository;
 
   ChatListViewModel({ChatRepository? repository})
-      : _repository = repository ?? ChatRepository() {
+    : _repository = repository ?? ChatRepository() {
     _repository.addListener(notifyListeners);
   }
 
@@ -32,7 +32,7 @@ class ChatListViewModel extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   /// Load the first page of chats.
-  Future<void> loadChats() async {
+  Future<void> initLoadChats() async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -40,6 +40,13 @@ class ChatListViewModel extends ChangeNotifier {
       await _repository.loadChats();
       _isLoading = false;
       _errorMessage = null;
+
+      // Print unread counts for debugging
+      for (final chat in chats) {
+        print(
+          "Chat: ${chat.name ?? chat.id}, Unread Count: ${chat.unreadCount}",
+        );
+      }
     } catch (e) {
       _isLoading = false;
       _errorMessage = e.toString();
@@ -47,13 +54,19 @@ class ChatListViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Load the next page of chats for infinite scroll.
+  /// Load the more pages of chats after init.
   Future<void> loadMoreChats() async {
     if (!hasMore || _isLoadingMore || chats.isEmpty) return;
     _isLoadingMore = true;
     notifyListeners();
     try {
       await _repository.loadMoreChats();
+      // Print unread counts for newly fetched chats
+      for (final chat in chats) {
+        print(
+          "Chat: ${chat.name ?? chat.id}, Unread Count: ${chat.unreadCount}",
+        );
+      }
     } catch (_) {
       // Silently fail pagination
     }

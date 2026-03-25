@@ -566,7 +566,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           }
         }
 
-        final isFirstUnread = _viewModel.firstUnreadMessageId == msg.id;
+        final isFirstUnread = _viewModel.firstUnreadMessageId == msg.id && _viewModel.showUnreadDivider;
 
         final messageRow = MessageRow(
           key: ValueKey(msg.id),

@@ -77,6 +77,9 @@ class ChatDetailViewModel extends ChangeNotifier {
   String? _firstUnreadMessageId;
   String? get firstUnreadMessageId => _firstUnreadMessageId;
 
+  bool _showUnreadDivider = false;
+  bool get showUnreadDivider => _showUnreadDivider;
+
   String? get nextCursor => _repository.nextCursor;
   bool get hasMoreMessages => _repository.nextCursor != null;
 
@@ -109,14 +112,21 @@ class ChatDetailViewModel extends ChangeNotifier {
   Future<void> _handleInitialJump() async {
     if (unreadCount <= 0) return;
 
+    print("unread count: $unreadCount");
+
     // Fetch more messages if unreadCount is larger than what we currently have
-    while (unreadCount > _displayItems.length && _repository.nextCursor != null) {
+    while (unreadCount > _displayItems.length &&
+        _repository.nextCursor != null) {
       await _repository.loadMoreMessages();
       _rebuildDisplay();
     }
 
     String? targetId;
     if (_displayItems.isNotEmpty) {
+      print("item len: ${_displayItems.length}");
+      for (var i = 0; i < _displayItems.length; i++) {
+        print("message id: ${_displayItems[i].id}");
+      }
       if (unreadCount <= _displayItems.length) {
         targetId = _displayItems[_displayItems.length - unreadCount].id;
       } else {
@@ -127,6 +137,16 @@ class ChatDetailViewModel extends ChangeNotifier {
 
     if (targetId != null) {
       _firstUnreadMessageId = targetId;
+
+      // Only show divider if there's actually a "read" message boundary.
+      // If targetId is the oldest message and no more history, don't show divider.
+      final targetIdx = _displayItems.indexWhere((m) => m.id == targetId);
+      if (targetIdx < _displayItems.length - 1 || hasMoreMessages) {
+        _showUnreadDivider = true;
+      } else {
+        _showUnreadDivider = false;
+      }
+
       notifyListeners();
       await jumpToMessage(targetId);
     }
@@ -152,7 +172,7 @@ class ChatDetailViewModel extends ChangeNotifier {
 
   void onMessageVisible(String messageId) {
     // Keep track of the highest message ID seen
-    if (_currentReadId == null || 
+    if (_currentReadId == null ||
         (int.tryParse(messageId) ?? 0) > (int.tryParse(_currentReadId!) ?? 0)) {
       _currentReadId = messageId;
     }
@@ -166,7 +186,7 @@ class ChatDetailViewModel extends ChangeNotifier {
 
   Future<void> _syncReadStatus() async {
     if (_currentReadId == null || _currentReadId == _lastReadSyncId) return;
-    
+
     final toSync = _currentReadId!;
     try {
       await _repository.markAsRead(toSync);
@@ -206,7 +226,7 @@ class ChatDetailViewModel extends ChangeNotifier {
 
   Future<bool> jumpToMessage(String messageId) async {
     int idx = _displayItems.indexWhere((m) => m.id == messageId);
-
+    // if found, highlight the message
     if (idx >= 0) {
       _highlightedMessageId = messageId;
       notifyListeners();

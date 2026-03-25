@@ -35,7 +35,6 @@ class WebSocketService {
         throw Exception('Failed to fetch WS ticket: ${ticketRes.body}');
       }
       final ticket = jsonDecode(ticketRes.body)['ticket'];
-      print("ticket: $ticket");
 
       // create a WebSockeChannel
       final wsUrl = apiBaseUrl.replaceAll('http', 'ws') + '/ws';
@@ -49,7 +48,7 @@ class WebSocketService {
         (data) {
           try {
             final Map<String, dynamic> msg = jsonDecode(data as String);
-            print("msg: $msg");
+            // print("msg: $msg");
             print("msg unread: ${msg['unread_count']}");
             if (msg['type'] == 'pong') {
               // Handle pong if needed

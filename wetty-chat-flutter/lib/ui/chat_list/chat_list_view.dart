@@ -27,7 +27,7 @@ class _ChatPageState extends State<ChatPage> {
     super.initState();
     _scrollController = ScrollController()..addListener(_onScroll);
     _viewModel.addListener(_onViewModelChanged);
-    _viewModel.loadChats();
+    _viewModel.initLoadChats();
   }
 
   @override
@@ -44,7 +44,9 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   void _onScroll() {
-    if (!_viewModel.hasMore || _viewModel.isLoadingMore || _viewModel.isLoading) {
+    if (!_viewModel.hasMore ||
+        _viewModel.isLoadingMore ||
+        _viewModel.isLoading) {
       return;
     }
     final pos = _scrollController.position;
@@ -117,7 +119,7 @@ class _ChatPageState extends State<ChatPage> {
               Text(_viewModel.errorMessage!, textAlign: TextAlign.center),
               const SizedBox(height: 16),
               CupertinoButton.filled(
-                onPressed: _viewModel.loadChats,
+                onPressed: _viewModel.initLoadChats,
                 child: const Text('Retry'),
               ),
             ],
@@ -295,8 +297,9 @@ class _ChatPageState extends State<ChatPage> {
                     text: draft,
                     style: TextStyle(
                       fontSize: 13,
-                      color: CupertinoColors.secondaryLabel
-                          .resolveFrom(context),
+                      color: CupertinoColors.secondaryLabel.resolveFrom(
+                        context,
+                      ),
                     ),
                   ),
                 ],
@@ -327,8 +330,7 @@ class _ChatPageState extends State<ChatPage> {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 13,
-                    color: CupertinoColors.secondaryLabel
-                        .resolveFrom(context),
+                    color: CupertinoColors.secondaryLabel.resolveFrom(context),
                   ),
                 )
               : Text(
@@ -337,8 +339,7 @@ class _ChatPageState extends State<ChatPage> {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 13,
-                    color: CupertinoColors.secondaryLabel
-                        .resolveFrom(context),
+                    color: CupertinoColors.secondaryLabel.resolveFrom(context),
                   ),
                 ),
         ),
