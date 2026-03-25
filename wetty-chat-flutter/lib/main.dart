@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
+import 'package:media_kit/media_kit.dart';
 import 'config/auth_store.dart';
 import 'config/realtime_service.dart';
+import 'data/services/media_preview_cache.dart';
 import 'ui/auth/token_import_page.dart';
 import 'ui/shared/draft_store.dart';
 import 'ui/chat_list/chat_list_view.dart';
@@ -44,6 +48,8 @@ CupertinoTextThemeData _appTextTheme(BuildContext context) {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  MediaKit.ensureInitialized();
+  unawaited(Future<void>(MediaPreviewCache.instance.initialize));
   await AuthStore.instance.init();
   await DraftStore.instance.init();
   RealtimeService.instance.init();

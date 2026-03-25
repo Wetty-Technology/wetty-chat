@@ -524,31 +524,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                                 ),
                               ),
                             ),
-                          if (!_viewModel.isRealtimeConnected)
-                            Positioned(
-                              left: 16,
-                              right: 16,
-                              bottom: 0,
-                              child: Container(
-                                height: 2,
-                                decoration: BoxDecoration(
-                                  color: CupertinoColors.systemGrey4
-                                      .resolveFrom(context),
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                                child: FractionallySizedBox(
-                                  alignment: Alignment.centerLeft,
-                                  widthFactor: 0.35,
-                                  child: DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      color: CupertinoColors.activeBlue
-                                          .resolveFrom(context),
-                                      borderRadius: BorderRadius.circular(999),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
                         ],
                       ),
                     ),

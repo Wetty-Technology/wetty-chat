@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
@@ -6,7 +9,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/api_config.dart';
 import '../../data/models/message_models.dart';
+import '../../data/services/media_preview_cache.dart';
 import 'attachment_viewer_page.dart';
+import 'video_popup_player.dart';
 
 class MessageRow extends StatefulWidget {
   const MessageRow({
@@ -113,6 +118,12 @@ class _MessageRowState extends State<MessageRow>
           builder: (_) => AttachmentViewerPage(attachment: attachment),
         ),
       );
+      return;
+    }
+
+    if (attachment.isVideo) {
+      if (!mounted) return;
+      await showVideoPlayerPopup(context, attachment);
       return;
     }
 
@@ -452,14 +463,10 @@ class _MessageRowState extends State<MessageRow>
   Widget _buildAvatar(BuildContext context, String initial) {
     final avatarUrl = widget.message.sender.avatarUrl;
     if (avatarUrl != null && avatarUrl.isNotEmpty) {
-      return ClipOval(
-        child: Image.network(
-          avatarUrl,
-          width: 30,
-          height: 30,
-          fit: BoxFit.cover,
-          errorBuilder: (_, _, _) => _buildInitialAvatar(context, initial),
-        ),
+      return _CachedAvatar(
+        avatarUrl: avatarUrl,
+        initial: initial,
+        fallbackBuilder: () => _buildInitialAvatar(context, initial),
       );
     }
     return _buildInitialAvatar(context, initial);
@@ -493,20 +500,17 @@ class _MessageRowState extends State<MessageRow>
       spacing: 8,
       runSpacing: 8,
       children: attachments.map((attachment) {
-        if (attachment.isImage) {
-          return GestureDetector(
+        if (attachment.isVideo) {
+          return VideoAttachmentPreview(
+            attachment: attachment,
             onTap: () => _openAttachment(attachment),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                attachment.url,
-                width: 160,
-                height: 160,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) =>
-                    _buildFileAttachmentTile(context, attachment),
-              ),
-            ),
+          );
+        }
+        if (attachment.isImage) {
+          return _CachedImageAttachmentPreview(
+            attachment: attachment,
+            onTap: () => _openAttachment(attachment),
+            fallback: _buildFileAttachmentTile(context, attachment),
           );
         }
         return GestureDetector(
@@ -662,5 +666,298 @@ class _MessageRowState extends State<MessageRow>
     } catch (_) {
       return iso;
     }
+  }
+}
+
+class _CachedImageAttachmentPreview extends StatefulWidget {
+  const _CachedImageAttachmentPreview({
+    required this.attachment,
+    required this.onTap,
+    required this.fallback,
+  });
+
+  final AttachmentItem attachment;
+  final VoidCallback onTap;
+  final Widget fallback;
+
+  @override
+  State<_CachedImageAttachmentPreview> createState() =>
+      _CachedImageAttachmentPreviewState();
+}
+
+class _CachedImageAttachmentPreviewState
+    extends State<_CachedImageAttachmentPreview> {
+  static const int _maxDecodeRetries = 1;
+
+  late Future<File?> _thumbnailFuture;
+  int _decodeRetryCount = 0;
+  bool _disableCachePreview = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _thumbnailFuture = _loadThumbnail();
+  }
+
+  Future<File?> _loadThumbnail() {
+    return MediaPreviewCache.instance.loadImageThumbnail(widget.attachment.url);
+  }
+
+  void _handleDecodeError(File file) {
+    if (_decodeRetryCount >= _maxDecodeRetries) {
+      unawaited(
+        MediaPreviewCache.instance.invalidateImageThumbnail(
+          widget.attachment.url,
+          markFailure: true,
+        ),
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _disableCachePreview = true;
+      });
+      return;
+    }
+
+    _decodeRetryCount += 1;
+    unawaited(
+      MediaPreviewCache.instance.invalidateImageThumbnail(
+        widget.attachment.url,
+      ),
+    );
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _thumbnailFuture = _loadThumbnail();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: SizedBox(
+          width: 160,
+          height: 160,
+          child: _disableCachePreview
+              ? _RawAttachmentImage(
+                  url: widget.attachment.url,
+                  width: 160,
+                  height: 160,
+                  fallback: widget.fallback,
+                )
+              : FutureBuilder<File?>(
+                  future: _thumbnailFuture,
+                  builder: (context, snapshot) {
+                    final file = snapshot.data;
+                    if (file != null) {
+                      return Image.file(
+                        file,
+                        width: 160,
+                        height: 160,
+                        fit: BoxFit.cover,
+                        gaplessPlayback: true,
+                        errorBuilder: (_, _, _) {
+                          _handleDecodeError(file);
+                          return _RawAttachmentImage(
+                            url: widget.attachment.url,
+                            width: 160,
+                            height: 160,
+                            fallback: widget.fallback,
+                          );
+                        },
+                      );
+                    }
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: CupertinoColors.systemGrey5.resolveFrom(
+                            context,
+                          ),
+                        ),
+                        child: const Center(
+                          child: CupertinoActivityIndicator(),
+                        ),
+                      );
+                    }
+                    return _RawAttachmentImage(
+                      url: widget.attachment.url,
+                      width: 160,
+                      height: 160,
+                      fallback: widget.fallback,
+                    );
+                  },
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CachedAvatar extends StatefulWidget {
+  const _CachedAvatar({
+    required this.avatarUrl,
+    required this.initial,
+    required this.fallbackBuilder,
+  });
+
+  final String avatarUrl;
+  final String initial;
+  final Widget Function() fallbackBuilder;
+
+  @override
+  State<_CachedAvatar> createState() => _CachedAvatarState();
+}
+
+class _CachedAvatarState extends State<_CachedAvatar> {
+  static const int _maxDecodeRetries = 1;
+
+  late Future<File?> _avatarFuture;
+  int _decodeRetryCount = 0;
+  bool _disableCachePreview = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _avatarFuture = _loadAvatar();
+  }
+
+  Future<File?> _loadAvatar() {
+    return MediaPreviewCache.instance.loadAvatarThumbnail(widget.avatarUrl);
+  }
+
+  void _handleDecodeError(File file) {
+    if (_decodeRetryCount >= _maxDecodeRetries) {
+      unawaited(
+        MediaPreviewCache.instance.invalidateAvatarThumbnail(
+          widget.avatarUrl,
+          markFailure: true,
+        ),
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _disableCachePreview = true;
+      });
+      return;
+    }
+
+    _decodeRetryCount += 1;
+    unawaited(
+      MediaPreviewCache.instance.invalidateAvatarThumbnail(widget.avatarUrl),
+    );
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _avatarFuture = _loadAvatar();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_disableCachePreview) {
+      return _RawAvatar(
+        avatarUrl: widget.avatarUrl,
+        fallbackBuilder: widget.fallbackBuilder,
+      );
+    }
+
+    return FutureBuilder<File?>(
+      future: _avatarFuture,
+      builder: (context, snapshot) {
+        final file = snapshot.data;
+        if (file != null) {
+          return ClipOval(
+            child: Image.file(
+              file,
+              width: 30,
+              height: 30,
+              fit: BoxFit.cover,
+              gaplessPlayback: true,
+              errorBuilder: (_, _, _) {
+                _handleDecodeError(file);
+                return _RawAvatar(
+                  avatarUrl: widget.avatarUrl,
+                  fallbackBuilder: widget.fallbackBuilder,
+                );
+              },
+            ),
+          );
+        }
+        return _RawAvatar(
+          avatarUrl: widget.avatarUrl,
+          fallbackBuilder: widget.fallbackBuilder,
+        );
+      },
+    );
+  }
+}
+
+class _RawAttachmentImage extends StatelessWidget {
+  const _RawAttachmentImage({
+    required this.url,
+    required this.width,
+    required this.height,
+    required this.fallback,
+  });
+
+  final String url;
+  final double width;
+  final double height;
+  final Widget fallback;
+
+  @override
+  Widget build(BuildContext context) {
+    if (MediaPreviewCache.instance.isKnownInvalidImageUrl(url)) {
+      return fallback;
+    }
+
+    return Image.network(
+      url,
+      width: width,
+      height: height,
+      fit: BoxFit.cover,
+      gaplessPlayback: true,
+      headers: attachmentRequestHeadersForUrl(url),
+      errorBuilder: (_, _, _) {
+        MediaPreviewCache.instance.markInvalidImageUrl(url);
+        return fallback;
+      },
+    );
+  }
+}
+
+class _RawAvatar extends StatelessWidget {
+  const _RawAvatar({required this.avatarUrl, required this.fallbackBuilder});
+
+  final String avatarUrl;
+  final Widget Function() fallbackBuilder;
+
+  @override
+  Widget build(BuildContext context) {
+    if (MediaPreviewCache.instance.isKnownInvalidImageUrl(avatarUrl)) {
+      return fallbackBuilder();
+    }
+
+    return ClipOval(
+      child: Image.network(
+        avatarUrl,
+        width: 30,
+        height: 30,
+        fit: BoxFit.cover,
+        gaplessPlayback: true,
+        headers: attachmentRequestHeadersForUrl(avatarUrl),
+        errorBuilder: (_, _, _) {
+          MediaPreviewCache.instance.markInvalidImageUrl(avatarUrl);
+          return fallbackBuilder();
+        },
+      ),
+    );
   }
 }
