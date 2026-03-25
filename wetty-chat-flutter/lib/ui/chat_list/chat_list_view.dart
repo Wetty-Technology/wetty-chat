@@ -1,17 +1,16 @@
+import 'dart:convert';
+
 import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
 
 import '../../config/api_config.dart';
 import '../../config/auth_store.dart';
 import '../../data/models/chat_models.dart';
-import '../shared/draft_store.dart';
-import '../shared/widgets.dart';
 import '../chat_detail/chat_detail_view.dart';
+import '../shared/draft_store.dart';
 import 'chat_list_viewmodel.dart';
 import 'new_chat_view.dart';
 
-/// Chat list screen displays all chats with pagination.
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
 
@@ -21,7 +20,7 @@ class ChatPage extends StatefulWidget {
 
 class _ChatPageState extends State<ChatPage> {
   final ChatListViewModel _viewModel = ChatListViewModel();
-  late ScrollController _scrollController;
+  late final ScrollController _scrollController;
 
   @override
   void initState() {
@@ -41,7 +40,9 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   void _onViewModelChanged() {
-    if (mounted) setState(() {});
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void _onScroll() {
@@ -50,8 +51,9 @@ class _ChatPageState extends State<ChatPage> {
         _viewModel.isLoading) {
       return;
     }
-    final pos = _scrollController.position;
-    if (pos.pixels >= pos.maxScrollExtent - 200) {
+
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 200) {
       _viewModel.loadMoreChats();
     }
   }
@@ -62,7 +64,7 @@ class _ChatPageState extends State<ChatPage> {
       return http.post(
         url,
         headers: apiHeaders,
-        body: jsonEncode({"name": name}),
+        body: jsonEncode({'name': name}),
       );
     }
 
@@ -81,7 +83,7 @@ class _ChatPageState extends State<ChatPage> {
       context: context,
       builder: (context) => CupertinoAlertDialog(
         title: const Text('退出登录？'),
-        content: const Text('这会移除当前设备上保存的 token。'),
+        content: const Text('这会清除当前设备保存的登录状态。'),
         actions: [
           CupertinoDialogAction(
             onPressed: () => Navigator.pop(context, false),
@@ -103,7 +105,10 @@ class _ChatPageState extends State<ChatPage> {
 
   void _showToast(String message) {
     final overlay = Navigator.of(context).overlay;
-    if (overlay == null) return;
+    if (overlay == null) {
+      return;
+    }
+
     late OverlayEntry entry;
     entry = OverlayEntry(
       builder: (_) => Positioned(
@@ -148,7 +153,7 @@ class _ChatPageState extends State<ChatPage> {
     if (_viewModel.errorMessage != null) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -166,6 +171,7 @@ class _ChatPageState extends State<ChatPage> {
     if (_viewModel.chats.isEmpty) {
       return const Center(child: Text('No chats yet'));
     }
+
     return ListView.builder(
       controller: _scrollController,
       itemCount: _viewModel.chats.length,
@@ -192,6 +198,7 @@ class _ChatPageState extends State<ChatPage> {
             dateText = chat.lastMessageAt;
           }
         }
+
         final senderName = chat.lastMessage?.sender.name;
         final lastMsg = chat.lastMessage?.message;
         final unreadCount = chat.unreadCount;
@@ -203,6 +210,7 @@ class _ChatPageState extends State<ChatPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             GestureDetector(
+              behavior: HitTestBehavior.opaque,
               onTap: () async {
                 await Navigator.push(
                   context,
@@ -213,9 +221,10 @@ class _ChatPageState extends State<ChatPage> {
                     ),
                   ),
                 );
-                if (mounted) setState(() {});
+                if (mounted) {
+                  await _viewModel.loadChats();
+                }
               },
-              behavior: HitTestBehavior.opaque,
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -296,7 +305,10 @@ class _ChatPageState extends State<ChatPage> {
             ),
             Padding(
               padding: const EdgeInsets.only(left: 72),
-              child: Divider(height: 0.5, color: CupertinoColors.separator),
+              child: Container(
+                height: 0.5,
+                color: CupertinoColors.separator.resolveFrom(context),
+              ),
             ),
           ],
         );
@@ -347,6 +359,7 @@ class _ChatPageState extends State<ChatPage> {
         ],
       );
     }
+
     return Row(
       children: [
         Expanded(
@@ -420,7 +433,10 @@ class _ToastWidget extends StatelessWidget {
         child: Text(
           message,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 14),
+          style: TextStyle(
+            fontSize: 14,
+            color: CupertinoColors.label.resolveFrom(context),
+          ),
         ),
       ),
     );

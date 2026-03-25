@@ -1,11 +1,58 @@
 class Sender {
   final int uid;
   final String? name;
+  final String? avatarUrl;
+  final int gender;
 
-  Sender({required this.uid, this.name});
+  const Sender({
+    required this.uid,
+    this.name,
+    this.avatarUrl,
+    this.gender = 0,
+  });
 
   factory Sender.fromJson(Map<String, dynamic> json) {
-    return Sender(uid: json['uid'] as int? ?? 0, name: json['name'] as String?);
+    return Sender(
+      uid: json['uid'] as int? ?? 0,
+      name: json['name'] as String?,
+      avatarUrl: json['avatar_url'] as String?,
+      gender: json['gender'] as int? ?? 0,
+    );
+  }
+}
+
+class AttachmentItem {
+  final String id;
+  final String url;
+  final String kind;
+  final int size;
+  final String fileName;
+  final int? width;
+  final int? height;
+
+  const AttachmentItem({
+    required this.id,
+    required this.url,
+    required this.kind,
+    required this.size,
+    required this.fileName,
+    this.width,
+    this.height,
+  });
+
+  bool get isImage => kind.startsWith('image/');
+  bool get isVideo => kind.startsWith('video/');
+
+  factory AttachmentItem.fromJson(Map<String, dynamic> json) {
+    return AttachmentItem(
+      id: json['id']?.toString() ?? '',
+      url: json['url'] as String? ?? '',
+      kind: json['kind'] as String? ?? 'application/octet-stream',
+      size: json['size'] as int? ?? 0,
+      fileName: json['file_name'] as String? ?? '',
+      width: json['width'] as int?,
+      height: json['height'] as int?,
+    );
   }
 }
 
@@ -15,7 +62,7 @@ class ReplyToMessage {
   final Sender sender;
   final bool isDeleted;
 
-  ReplyToMessage({
+  const ReplyToMessage({
     required this.id,
     this.message,
     required this.sender,
@@ -32,6 +79,16 @@ class ReplyToMessage {
   }
 }
 
+class ThreadInfo {
+  final int replyCount;
+
+  const ThreadInfo({required this.replyCount});
+
+  factory ThreadInfo.fromJson(Map<String, dynamic> json) {
+    return ThreadInfo(replyCount: json['reply_count'] as int? ?? 0);
+  }
+}
+
 class MessageItem {
   final String id;
   final String? message;
@@ -45,8 +102,10 @@ class MessageItem {
   final String? replyRootId;
   final bool hasAttachments;
   final ReplyToMessage? replyToMessage;
+  final List<AttachmentItem> attachments;
+  final ThreadInfo? threadInfo;
 
-  MessageItem({
+  const MessageItem({
     required this.id,
     this.message,
     required this.messageType,
@@ -59,10 +118,15 @@ class MessageItem {
     this.replyRootId,
     required this.hasAttachments,
     this.replyToMessage,
+    this.attachments = const [],
+    this.threadInfo,
   });
 
   factory MessageItem.fromJson(Map<String, dynamic> json) {
     final replyJson = json['reply_to_message'] as Map<String, dynamic>?;
+    final attachmentList = json['attachments'] as List<dynamic>? ?? [];
+    final threadInfoJson = json['thread_info'] as Map<String, dynamic>?;
+
     return MessageItem(
       id: json['id']?.toString() ?? '',
       message: json['message'] as String?,
@@ -78,6 +142,12 @@ class MessageItem {
       replyToMessage: replyJson != null
           ? ReplyToMessage.fromJson(replyJson)
           : null,
+      attachments: attachmentList
+          .map((e) => AttachmentItem.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      threadInfo: threadInfoJson != null
+          ? ThreadInfo.fromJson(threadInfoJson)
+          : null,
     );
   }
 }
@@ -87,7 +157,7 @@ class ListMessagesResponse {
   final String? nextCursor;
   final String? prevCursor;
 
-  ListMessagesResponse({
+  const ListMessagesResponse({
     required this.messages,
     this.nextCursor,
     this.prevCursor,

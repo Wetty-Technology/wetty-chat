@@ -6,6 +6,7 @@ class ChatListItem {
   final String? lastMessageAt;
   final int unreadCount;
   final MessageItem? lastMessage;
+  final String? mutedUntil;
 
   ChatListItem({
     required this.id,
@@ -13,6 +14,7 @@ class ChatListItem {
     this.lastMessageAt,
     this.unreadCount = 0,
     this.lastMessage,
+    this.mutedUntil,
   });
 
   factory ChatListItem.fromJson(Map<String, dynamic> json) {
@@ -25,6 +27,7 @@ class ChatListItem {
       lastMessage: lastMsgJson != null
           ? MessageItem.fromJson(lastMsgJson)
           : null,
+      mutedUntil: json['muted_until'] as String?,
     );
   }
 }

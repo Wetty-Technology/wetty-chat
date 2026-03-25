@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import '../shared/widgets.dart';
 
-/// Group Settings page — edit group name, description, and save.
+/// Group Settings page 閳?edit group name, description, and save.
 class GroupSettingsPage extends StatefulWidget {
   const GroupSettingsPage({
     super.key,
@@ -19,6 +19,16 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
   late TextEditingController _nameController;
   late TextEditingController _descriptionController;
   final ScrollController _descScrollController = ScrollController();
+
+  TextStyle _inputStyle(BuildContext context) {
+    return TextStyle(color: CupertinoColors.label.resolveFrom(context));
+  }
+
+  TextStyle _placeholderStyle(BuildContext context) {
+    return TextStyle(
+      color: CupertinoColors.placeholderText.resolveFrom(context),
+    );
+  }
 
   @override
   void initState() {
@@ -62,6 +72,8 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
                 CupertinoTextField(
                   controller: _nameController,
                   placeholder: 'Group name',
+                  style: _inputStyle(context),
+                  placeholderStyle: _placeholderStyle(context),
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   decoration: null,
                 ),
@@ -78,6 +90,8 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
                     controller: _descriptionController,
                     scrollController: _descScrollController,
                     placeholder: 'Enter group description',
+                    style: _inputStyle(context),
+                    placeholderStyle: _placeholderStyle(context),
                     maxLines: 4,
                     minLines: 2,
                     padding: const EdgeInsets.symmetric(vertical: 8),

@@ -1,8 +1,13 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 import '../../config/api_config.dart';
 import '../../data/models/message_models.dart';
+import '../../data/services/attachment_service.dart';
 import '../shared/widgets.dart';
 import '../group_members/group_members_view.dart';
 import '../group_settings/group_settings_view.dart';
@@ -15,10 +20,12 @@ class ChatDetailPage extends StatefulWidget {
     super.key,
     required this.chatId,
     required this.chatName,
+    this.threadId,
   });
 
   final String chatId;
   final String chatName;
+  final String? threadId;
 
   @override
   State<ChatDetailPage> createState() => _ChatDetailPageState();
@@ -26,17 +33,33 @@ class ChatDetailPage extends StatefulWidget {
 
 class _ChatDetailPageState extends State<ChatDetailPage> {
   late final ChatDetailViewModel _viewModel;
+  final AttachmentService _attachmentService = AttachmentService();
   final ItemScrollController _itemScrollController = ItemScrollController();
   final ItemPositionsListener _itemPositionsListener =
       ItemPositionsListener.create();
   final ScrollController _inputScrollController = ScrollController();
   final TextEditingController _textController = TextEditingController();
   static const double _titleBarHeight = 70.0;
+  final List<_PendingAttachment> _pendingAttachments = <_PendingAttachment>[];
+  bool _isSubmitting = false;
+
+  TextStyle _inputStyle(BuildContext context) {
+    return TextStyle(color: CupertinoColors.label.resolveFrom(context));
+  }
+
+  TextStyle _placeholderStyle(BuildContext context) {
+    return TextStyle(
+      color: CupertinoColors.placeholderText.resolveFrom(context),
+    );
+  }
 
   @override
   void initState() {
     super.initState();
-    _viewModel = ChatDetailViewModel(chatId: widget.chatId);
+    _viewModel = ChatDetailViewModel(
+      chatId: widget.chatId,
+      threadId: widget.threadId,
+    );
     _viewModel.addListener(_onViewModelChanged);
     _itemPositionsListener.itemPositions.addListener(_onItemPositionsChanged);
     _viewModel.loadMessages();
@@ -79,6 +102,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     // In reverse mode, index 0 is at the bottom.
     final isBottomVisible = positions.any((p) => p.index == 0);
     _viewModel.updateScrollToBottom(!isBottomVisible);
+    if (isBottomVisible) {
+      unawaited(_viewModel.markAsReadUpToLatest());
+    }
 
     // Load more when reaching the end (highest index)
     final maxIndex = positions
@@ -100,53 +126,186 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     );
   }
 
+  int _visualIndexForMessageId(String messageId) {
+    final storageIndex = _viewModel.displayItems.indexWhere(
+      (message) => message.id == messageId,
+    );
+    if (storageIndex < 0) {
+      return -1;
+    }
+    return _viewModel.displayItems.length - 1 - storageIndex;
+  }
+
   void _clearInputMessage() {
     _textController.clear();
     _viewModel.clearInputState();
   }
 
+  Future<void> _pickAttachments() async {
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+      lockParentWindow: true,
+    );
+    if (result == null || result.files.isEmpty || !mounted) {
+      return;
+    }
+
+    setState(() {
+      for (final file in result.files) {
+        final path = file.path;
+        if (path == null || path.isEmpty) {
+          continue;
+        }
+        final exists = _pendingAttachments.any((item) => item.path == path);
+        if (exists) {
+          continue;
+        }
+        _pendingAttachments.add(
+          _PendingAttachment(
+            path: path,
+            fileName: file.name,
+            contentType: _inferContentType(path),
+          ),
+        );
+      }
+    });
+  }
+
+  void _removePendingAttachment(_PendingAttachment attachment) {
+    setState(() {
+      _pendingAttachments.removeWhere((item) => item.path == attachment.path);
+    });
+  }
+
+  Future<List<String>> _uploadPendingAttachments() async {
+    final attachmentIds = <String>[];
+    for (final attachment in _pendingAttachments) {
+      final file = File(attachment.path);
+      final upload = await _attachmentService.requestUploadUrl(
+        file,
+        contentType: attachment.contentType,
+      );
+      await _attachmentService.uploadFile(file, upload);
+      attachmentIds.add(upload.attachmentId);
+    }
+    return attachmentIds;
+  }
+
   Future<void> _sendMessage() async {
     final text = _textController.text.trim();
-    if (text.isEmpty) return;
+    final editingMessage = switch (_viewModel.inputState) {
+      InputEditing(:final message) => message,
+      _ => null,
+    };
+    final existingAttachmentIds =
+        editingMessage?.attachments
+            .map((attachment) => attachment.id)
+            .toList() ??
+        <String>[];
+    final hasAttachments =
+        _pendingAttachments.isNotEmpty || existingAttachmentIds.isNotEmpty;
+    if (text.isEmpty && !hasAttachments) return;
+    if (_isSubmitting) return;
+
+    setState(() {
+      _isSubmitting = true;
+    });
 
     switch (_viewModel.inputState) {
       case InputEditing(:final message):
-        if (text == message.message) return;
         try {
-          await _viewModel.editMessage(message.id, text);
+          final attachmentIds = <String>[
+            ...existingAttachmentIds,
+            ...await _uploadPendingAttachments(),
+          ];
+          if (text == (message.message ?? '').trim() &&
+              attachmentIds.length == existingAttachmentIds.length) {
+            return;
+          }
+          await _viewModel.editMessage(
+            message.id,
+            text,
+            attachmentIds: attachmentIds,
+          );
           if (!mounted) return;
           _clearInputMessage();
+          setState(() {
+            _pendingAttachments.clear();
+          });
         } catch (e) {
           if (mounted) _showErrorDialog('$e');
+        } finally {
+          if (mounted) {
+            setState(() {
+              _isSubmitting = false;
+            });
+          }
         }
 
       case InputReplying(:final message):
-        _clearInputMessage();
-        _viewModel.clearDraft();
         try {
-          await _viewModel.sendMessage(text, replyToId: message.id);
+          final attachmentIds = await _uploadPendingAttachments();
+          await _viewModel.sendMessage(
+            text,
+            replyToId: message.id,
+            attachmentIds: attachmentIds,
+          );
+          _clearInputMessage();
+          _viewModel.clearDraft();
+          setState(() {
+            _pendingAttachments.clear();
+          });
           _scrollToBottom();
         } catch (e) {
           if (mounted) _showErrorDialog('$e');
+        } finally {
+          if (mounted) {
+            setState(() {
+              _isSubmitting = false;
+            });
+          }
         }
 
       case InputEmpty():
-        _clearInputMessage();
-        _viewModel.clearDraft();
         try {
-          await _viewModel.sendMessage(text);
+          final attachmentIds = await _uploadPendingAttachments();
+          await _viewModel.sendMessage(text, attachmentIds: attachmentIds);
+          _clearInputMessage();
+          _viewModel.clearDraft();
+          setState(() {
+            _pendingAttachments.clear();
+          });
           _scrollToBottom();
         } catch (e) {
           if (mounted) _showErrorDialog('$e');
+        } finally {
+          if (mounted) {
+            setState(() {
+              _isSubmitting = false;
+            });
+          }
         }
     }
+  }
+
+  void _openThread(MessageItem message) {
+    Navigator.push(
+      context,
+      CupertinoPageRoute(
+        builder: (_) => ChatDetailPage(
+          chatId: widget.chatId,
+          chatName: widget.chatName,
+          threadId: message.id,
+        ),
+      ),
+    );
   }
 
   Future<void> _jumpToMessage(String messageId) async {
     final found = await _viewModel.jumpToMessage(messageId);
     if (!found || !mounted) return;
 
-    final idx = _viewModel.displayItems.indexWhere((m) => m.id == messageId);
+    final idx = _visualIndexForMessageId(messageId);
     if (idx < 0) return;
 
     // Helper for precise centering scroll.
@@ -177,7 +336,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     // Step 2: Item not visible. Wait for a frame to ensure SPL recognizes the new data.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-      final idx2 = _viewModel.displayItems.indexWhere((m) => m.id == messageId);
+      final idx2 = _visualIndexForMessageId(messageId);
       if (idx2 < 0) return;
 
       // Bring item into viewport.
@@ -233,6 +392,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     if (msg.isDeleted) return;
     final currentUserId = curUserId;
     final isOwn = currentUserId != null && msg.sender.uid == currentUserId;
+    final canOpenThread = widget.threadId == null;
 
     showCupertinoModalPopup(
       context: context,
@@ -245,6 +405,14 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
             },
             child: const Text('Reply'),
           ),
+          if (canOpenThread)
+            CupertinoActionSheetAction(
+              onPressed: () {
+                Navigator.pop(context);
+                _openThread(msg);
+              },
+              child: const Text('Thread'),
+            ),
           if (isOwn)
             CupertinoActionSheetAction(
               onPressed: () {
@@ -302,9 +470,10 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final chatName = widget.chatName.isEmpty
-        ? 'Chat ${widget.chatId}'
-        : widget.chatName;
+    final chatName = widget.threadId == null
+        ? (widget.chatName.isEmpty ? 'Chat ${widget.chatId}' : widget.chatName)
+        : 'Thread';
+
     return PopScope(
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) _saveDraft();
@@ -355,6 +524,31 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                                 ),
                               ),
                             ),
+                          if (!_viewModel.isRealtimeConnected)
+                            Positioned(
+                              left: 16,
+                              right: 16,
+                              bottom: 0,
+                              child: Container(
+                                height: 2,
+                                decoration: BoxDecoration(
+                                  color: CupertinoColors.systemGrey4
+                                      .resolveFrom(context),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: FractionallySizedBox(
+                                  alignment: Alignment.centerLeft,
+                                  widthFactor: 0.35,
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      color: CupertinoColors.activeBlue
+                                          .resolveFrom(context),
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -365,7 +559,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   ],
                 ),
               ),
-              // Gradient title bar overlay
               Positioned(
                 top: 0,
                 left: 0,
@@ -500,7 +693,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     }
     final showTopLoader =
         _viewModel.nextCursor != null && _viewModel.isLoadingMore;
-    final items = _viewModel.displayItems;
+    final items = _viewModel.displayItems.reversed.toList(growable: false);
     final itemCount = items.length + (showTopLoader ? 1 : 0);
 
     return ScrollablePositionedList.builder(
@@ -545,6 +738,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           onTapReply: msg.replyToMessage != null
               ? () => _jumpToMessage(msg.replyToMessage!.id)
               : null,
+          onOpenThread: widget.threadId == null ? () => _openThread(msg) : null,
           showSenderName: showSenderName,
           showAvatar: showAvatar,
         );
@@ -554,6 +748,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
   Widget _buildInput() {
     final hasPreview = _viewModel.inputState is! InputEmpty;
+    final hasPendingAttachments = _pendingAttachments.isNotEmpty;
 
     return Column(
       children: [
@@ -568,7 +763,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   CupertinoButton(
                     padding: EdgeInsets.zero,
                     onPressed: () {
-                      // TODO: implement attachment sheet
+                      _pickAttachments();
                     },
                     child: Icon(
                       CupertinoIcons.add_circled,
@@ -614,12 +809,23 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                                 context,
                               ),
                             ),
+                          if (hasPendingAttachments)
+                            _buildAttachmentPreviewTray(context),
+                          if (hasPendingAttachments)
+                            Container(
+                              height: 0.5,
+                              color: CupertinoColors.separator.resolveFrom(
+                                context,
+                              ),
+                            ),
                           CupertinoScrollbar(
                             controller: _inputScrollController,
                             child: CupertinoTextField(
                               controller: _textController,
                               scrollController: _inputScrollController,
                               placeholder: 'Message',
+                              style: _inputStyle(context),
+                              placeholderStyle: _placeholderStyle(context),
                               maxLines: 5,
                               minLines: 1,
                               padding: const EdgeInsets.symmetric(
@@ -635,7 +841,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   ),
                   const SizedBox(width: 8),
                   GestureDetector(
-                    onTap: _sendMessage,
+                    onTap: _isSubmitting ? null : _sendMessage,
                     child: Container(
                       width: 36,
                       height: 36,
@@ -643,11 +849,13 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                         color: CupertinoColors.activeBlue,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
-                        CupertinoIcons.paperplane_fill,
-                        size: 20,
-                        color: CupertinoColors.white,
-                      ),
+                      child: _isSubmitting
+                          ? const CupertinoActivityIndicator()
+                          : const Icon(
+                              CupertinoIcons.paperplane_fill,
+                              size: 20,
+                              color: CupertinoColors.white,
+                            ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -661,7 +869,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   }
 
   Widget _replyToMsg({required String title, required String body}) {
-    _textController.clear();
     return _buildPreviewBar(title: title, body: body);
   }
 
@@ -717,6 +924,135 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
               size: 20,
               color: CupertinoColors.systemGrey3.resolveFrom(context),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAttachmentPreviewTray(BuildContext context) {
+    return SizedBox(
+      height: 84,
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        scrollDirection: Axis.horizontal,
+        itemCount: _pendingAttachments.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final attachment = _pendingAttachments[index];
+          return Stack(
+            children: [
+              Container(
+                width: 84,
+                decoration: BoxDecoration(
+                  color: CupertinoColors.systemGrey6.resolveFrom(context),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: attachment.isImage
+                    ? Image.file(
+                        File(attachment.path),
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) =>
+                            _AttachmentPlaceholder(label: attachment.fileName),
+                      )
+                    : _AttachmentPlaceholder(label: attachment.fileName),
+              ),
+              Positioned(
+                top: 4,
+                right: 4,
+                child: GestureDetector(
+                  onTap: () => _removePendingAttachment(attachment),
+                  child: Container(
+                    width: 22,
+                    height: 22,
+                    decoration: const BoxDecoration(
+                      color: CupertinoColors.black,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      CupertinoIcons.clear_thick_circled,
+                      color: CupertinoColors.white,
+                      size: 18,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  String _inferContentType(String path) {
+    final ext = path.split('.').last.toLowerCase();
+    switch (ext) {
+      case 'png':
+        return 'image/png';
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'gif':
+        return 'image/gif';
+      case 'webp':
+        return 'image/webp';
+      case 'bmp':
+        return 'image/bmp';
+      case 'mp4':
+        return 'video/mp4';
+      case 'mov':
+        return 'video/quicktime';
+      case 'webm':
+        return 'video/webm';
+      case 'mkv':
+        return 'video/x-matroska';
+      case 'pdf':
+        return 'application/pdf';
+      case 'txt':
+        return 'text/plain';
+      default:
+        return 'application/octet-stream';
+    }
+  }
+}
+
+class _PendingAttachment {
+  final String path;
+  final String fileName;
+  final String contentType;
+
+  const _PendingAttachment({
+    required this.path,
+    required this.fileName,
+    required this.contentType,
+  });
+
+  bool get isImage => contentType.startsWith('image/');
+}
+
+class _AttachmentPlaceholder extends StatelessWidget {
+  const _AttachmentPlaceholder({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: CupertinoColors.systemGrey5.resolveFrom(context),
+      padding: const EdgeInsets.all(8),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(CupertinoIcons.doc, size: 24),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 11),
           ),
         ],
       ),

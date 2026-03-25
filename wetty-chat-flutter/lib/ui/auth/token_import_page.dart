@@ -42,6 +42,16 @@ class _TokenImportPageState extends State<TokenImportPage> {
   String _statusMessage = '输入用户名、密码和安全问题后开始登录。';
   LoginResult? _lastLoginResult;
 
+  TextStyle _inputStyle(BuildContext context) {
+    return TextStyle(color: CupertinoColors.label.resolveFrom(context));
+  }
+
+  TextStyle _placeholderStyle(BuildContext context) {
+    return TextStyle(
+      color: CupertinoColors.placeholderText.resolveFrom(context),
+    );
+  }
+
   @override
   void dispose() {
     _usernameController.dispose();
@@ -165,7 +175,7 @@ class _TokenImportPageState extends State<TokenImportPage> {
                 child: const Text('关闭'),
               )
             : null,
-        middle: const Text('Discuz 登录'),
+        middle: const Text('登录'),
       ),
       child: SafeArea(
         child: ListView(
@@ -174,7 +184,7 @@ class _TokenImportPageState extends State<TokenImportPage> {
             _InfoCard(
               title: currentUid == null ? '登录信息' : '当前已登录',
               body: currentUid == null
-                  ? '站点固定为 https://www.shireyishunjian.com/main/。登录成功后自动带 cookie 请求 chahua.php，并从返回内容里提取 token。'
+                  ? '输入用户名、密码和安全问题后开始登录。'
                   : '当前保存的 token 对应 uid: $currentUid。',
             ),
             const SizedBox(height: 16),
@@ -183,17 +193,19 @@ class _TokenImportPageState extends State<TokenImportPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('站点: https://www.shireyishunjian.com/main/'),
-                  const SizedBox(height: 12),
                   CupertinoTextField(
                     controller: _usernameController,
                     placeholder: '用户名',
+                    style: _inputStyle(context),
+                    placeholderStyle: _placeholderStyle(context),
                     padding: const EdgeInsets.all(14),
                   ),
                   const SizedBox(height: 12),
                   CupertinoTextField(
                     controller: _passwordController,
                     placeholder: '密码',
+                    style: _inputStyle(context),
+                    placeholderStyle: _placeholderStyle(context),
                     obscureText: true,
                     padding: const EdgeInsets.all(14),
                   ),
@@ -227,6 +239,8 @@ class _TokenImportPageState extends State<TokenImportPage> {
                   CupertinoTextField(
                     controller: _answerController,
                     placeholder: '答案',
+                    style: _inputStyle(context),
+                    placeholderStyle: _placeholderStyle(context),
                     padding: const EdgeInsets.all(14),
                   ),
                   if (currentUid == null) ...[
