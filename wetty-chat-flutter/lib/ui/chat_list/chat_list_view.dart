@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 import '../../config/api_config.dart';
+import '../../config/auth_store.dart';
 import '../../data/models/chat_models.dart';
 import '../../data/models/message_models.dart';
 import '../shared/draft_store.dart';
@@ -77,6 +78,31 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
+  Future<void> _confirmLogout() async {
+    final shouldLogout = await showCupertinoDialog<bool>(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text('Log out?'),
+        content: const Text('This will remove the saved token on this device.'),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Log Out'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout == true) {
+      await AuthStore.instance.clearToken();
+    }
+  }
+
   void _showToast(String message) {
     final overlay = Navigator.of(context).overlay;
     if (overlay == null) return;
@@ -105,10 +131,20 @@ class _ChatPageState extends State<ChatPage> {
           child: const Icon(CupertinoIcons.gear),
         ),
         middle: const Text('Chats'),
-        trailing: CupertinoButton(
-          padding: EdgeInsets.zero,
-          onPressed: _addChat,
-          child: const Icon(CupertinoIcons.square_pencil),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              onPressed: _confirmLogout,
+              child: const Icon(CupertinoIcons.square_arrow_right),
+            ),
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              onPressed: _addChat,
+              child: const Icon(CupertinoIcons.square_pencil),
+            ),
+          ],
         ),
       ),
       child: SafeArea(child: _buildBody()),
