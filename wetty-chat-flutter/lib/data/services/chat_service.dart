@@ -32,4 +32,17 @@ class ChatService {
       body: jsonEncode({"name": name}),
     );
   }
+
+  Future<int> fetchUnreadCount() async {
+    final uri = Uri.parse('$apiBaseUrl/chats/unread');
+    final response = await http.get(uri, headers: apiHeaders);
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to load unread count: ${response.statusCode} ${response.body}',
+      );
+    }
+
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    return decoded['unread_count'] as int? ?? 0;
+  }
 }

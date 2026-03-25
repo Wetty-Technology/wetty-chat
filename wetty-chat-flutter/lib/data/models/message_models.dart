@@ -8,11 +8,58 @@ int parseSnowflakeId(Object? value) {
 class Sender {
   final int uid;
   final String? name;
+  final String? avatarUrl;
+  final int gender;
 
-  Sender({required this.uid, this.name});
+  const Sender({
+    required this.uid,
+    this.name,
+    this.avatarUrl,
+    this.gender = 0,
+  });
 
   factory Sender.fromJson(Map<String, dynamic> json) {
-    return Sender(uid: json['uid'] as int? ?? 0, name: json['name'] as String?);
+    return Sender(
+      uid: json['uid'] as int? ?? 0,
+      name: json['name'] as String?,
+      avatarUrl: json['avatar_url'] as String?,
+      gender: json['gender'] as int? ?? 0,
+    );
+  }
+}
+
+class AttachmentItem {
+  final String id;
+  final String url;
+  final String kind;
+  final int size;
+  final String fileName;
+  final int? width;
+  final int? height;
+
+  const AttachmentItem({
+    required this.id,
+    required this.url,
+    required this.kind,
+    required this.size,
+    required this.fileName,
+    this.width,
+    this.height,
+  });
+
+  bool get isImage => kind.startsWith('image/');
+  bool get isVideo => kind.startsWith('video/');
+
+  factory AttachmentItem.fromJson(Map<String, dynamic> json) {
+    return AttachmentItem(
+      id: json['id']?.toString() ?? '',
+      url: json['url'] as String? ?? '',
+      kind: json['kind'] as String? ?? 'application/octet-stream',
+      size: (json['size'] as num?)?.toInt() ?? 0,
+      fileName: json['file_name'] as String? ?? '',
+      width: (json['width'] as num?)?.toInt(),
+      height: (json['height'] as num?)?.toInt(),
+    );
   }
 }
 
@@ -22,7 +69,7 @@ class ReplyToMessage {
   final Sender sender;
   final bool isDeleted;
 
-  ReplyToMessage({
+  const ReplyToMessage({
     required this.id,
     this.message,
     required this.sender,
@@ -39,38 +86,14 @@ class ReplyToMessage {
   }
 }
 
-class Attachment {
-  final String id;
-  final String url;
-  final String kind;
-  final int size;
-  final String fileName;
-  final int? width;
-  final int? height;
+class ThreadInfo {
+  final int replyCount;
 
-  Attachment({
-    required this.id,
-    required this.url,
-    required this.kind,
-    required this.size,
-    required this.fileName,
-    this.width,
-    this.height,
-  });
+  const ThreadInfo({required this.replyCount});
 
-  factory Attachment.fromJson(Map<String, dynamic> json) {
-    return Attachment(
-      id: json['id']?.toString() ?? '',
-      url: json['url'] as String? ?? '',
-      kind: json['kind'] as String? ?? '',
-      size: (json['size'] as num?)?.toInt() ?? 0,
-      fileName: json['file_name'] as String? ?? '',
-      width: (json['width'] as num?)?.toInt(),
-      height: (json['height'] as num?)?.toInt(),
-    );
+  factory ThreadInfo.fromJson(Map<String, dynamic> json) {
+    return ThreadInfo(replyCount: json['reply_count'] as int? ?? 0);
   }
-
-  bool get isImage => kind.startsWith('image/');
 }
 
 class MessageItem {
@@ -85,10 +108,11 @@ class MessageItem {
   final String clientGeneratedId;
   final int? replyRootId;
   final bool hasAttachments;
-  final List<Attachment> attachments;
   final ReplyToMessage? replyToMessage;
+  final List<AttachmentItem> attachments;
+  final ThreadInfo? threadInfo;
 
-  MessageItem({
+  const MessageItem({
     required this.id,
     this.message,
     required this.messageType,
@@ -100,13 +124,16 @@ class MessageItem {
     required this.clientGeneratedId,
     this.replyRootId,
     required this.hasAttachments,
-    required this.attachments,
     this.replyToMessage,
+    this.attachments = const [],
+    this.threadInfo,
   });
 
   factory MessageItem.fromJson(Map<String, dynamic> json) {
     final replyJson = json['reply_to_message'] as Map<String, dynamic>?;
-    final attachmentsJson = json['attachments'] as List<dynamic>? ?? [];
+    final attachmentList = json['attachments'] as List<dynamic>? ?? [];
+    final threadInfoJson = json['thread_info'] as Map<String, dynamic>?;
+
     return MessageItem(
       id: parseSnowflakeId(json['id']),
       message: json['message'] as String?,
@@ -121,11 +148,14 @@ class MessageItem {
           ? parseSnowflakeId(json['reply_root_id'])
           : null,
       hasAttachments: json['has_attachments'] as bool? ?? false,
-      attachments: attachmentsJson
-          .map((e) => Attachment.fromJson(e as Map<String, dynamic>))
-          .toList(),
       replyToMessage: replyJson != null
           ? ReplyToMessage.fromJson(replyJson)
+          : null,
+      attachments: attachmentList
+          .map((e) => AttachmentItem.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      threadInfo: threadInfoJson != null
+          ? ThreadInfo.fromJson(threadInfoJson)
           : null,
     );
   }
@@ -136,7 +166,7 @@ class ListMessagesResponse {
   final String? nextCursor;
   final String? prevCursor;
 
-  ListMessagesResponse({
+  const ListMessagesResponse({
     required this.messages,
     this.nextCursor,
     this.prevCursor,

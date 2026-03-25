@@ -5,7 +5,6 @@ import 'package:http/http.dart' as http;
 import '../../config/api_config.dart';
 import '../models/message_models.dart';
 
-/// Raw HTTP calls for message endpoints. No state.
 class MessageService {
   Future<ListMessagesResponse> fetchMessages(
     String chatId, {
@@ -13,12 +12,16 @@ class MessageService {
     int? before,
     int? after,
     int? around,
+    String? threadId,
   }) async {
     final query = <String, String>{};
     if (max != null) query['max'] = max.toString();
     if (before != null) query['before'] = before.toString();
     if (after != null) query['after'] = after.toString();
     if (around != null) query['around'] = around.toString();
+    if (threadId != null && threadId.isNotEmpty) {
+      query['thread_id'] = threadId;
+    }
 
     final uri = Uri.parse(
       '$apiBaseUrl/chats/$chatId/messages',
@@ -29,35 +32,40 @@ class MessageService {
         'Failed to load messages: ${response.statusCode} ${response.body}',
       );
     }
+
     return ListMessagesResponse.fromJson(
       jsonDecode(response.body) as Map<String, dynamic>,
     );
   }
 
-  /// Fetches messages around [messageId] for deep linking.
   Future<List<MessageItem>> fetchAround(String chatId, int messageId) async {
-    final res = await fetchMessages(chatId, around: messageId);
-    return res.messages;
+    final response = await fetchMessages(chatId, around: messageId);
+    return response.messages;
   }
 
   Future<MessageItem> sendMessage(
     String chatId,
     String text, {
     int? replyToId,
-    List<String>? attachmentIds,
+    String? threadId,
+    List<String> attachmentIds = const <String>[],
   }) async {
-    final uri = Uri.parse('$apiBaseUrl/chats/$chatId/messages');
+    final path = threadId == null
+        ? '$apiBaseUrl/chats/$chatId/messages'
+        : '$apiBaseUrl/chats/$chatId/threads/$threadId/messages';
+    final uri = Uri.parse(path);
     final clientGeneratedId =
         '${DateTime.now().millisecondsSinceEpoch}-${Uri.base.hashCode}';
     final body = <String, dynamic>{
       'message': text,
       'message_type': 'text',
       'client_generated_id': clientGeneratedId,
+      'attachment_ids': attachmentIds,
     };
-    if (replyToId != null) body['reply_to_id'] = replyToId;
-    if (attachmentIds != null && attachmentIds.isNotEmpty) {
-      body['attachment_ids'] = attachmentIds;
+    if (replyToId != null) {
+      body['reply_to_id'] = replyToId;
     }
+
     final response = await http.post(
       uri,
       headers: apiHeaders,
@@ -68,6 +76,7 @@ class MessageService {
         'Failed to send message: ${response.statusCode} ${response.body}',
       );
     }
+
     return MessageItem.fromJson(
       jsonDecode(response.body) as Map<String, dynamic>,
     );
@@ -76,19 +85,24 @@ class MessageService {
   Future<MessageItem> editMessage(
     String chatId,
     int messageId,
-    String newText,
-  ) async {
+    String newText, {
+    List<String> attachmentIds = const <String>[],
+  }) async {
     final uri = Uri.parse('$apiBaseUrl/chats/$chatId/messages/$messageId');
     final response = await http.patch(
       uri,
       headers: apiHeaders,
-      body: jsonEncode({'message': newText}),
+      body: jsonEncode(<String, dynamic>{
+        'message': newText,
+        'attachment_ids': attachmentIds,
+      }),
     );
     if (response.statusCode != 200) {
       throw Exception(
         'Failed to edit message: ${response.statusCode} ${response.body}',
       );
     }
+
     return MessageItem.fromJson(
       jsonDecode(response.body) as Map<String, dynamic>,
     );

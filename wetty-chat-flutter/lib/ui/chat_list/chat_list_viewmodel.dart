@@ -1,26 +1,27 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
+import '../../config/realtime_service.dart';
 import '../../data/models/chat_models.dart';
 import '../../data/repositories/chat_repository.dart';
 
-/// ViewModel for the chat list screen.
-/// Manages state and logic; the View just renders.
 class ChatListViewModel extends ChangeNotifier {
   final ChatRepository _repository;
+  late final StreamSubscription<RealtimeEvent> _realtimeSubscription;
+  Timer? _refreshTimer;
 
   ChatListViewModel({ChatRepository? repository})
     : _repository = repository ?? ChatRepository() {
     _repository.addListener(notifyListeners);
-  }
-
-  @override
-  void dispose() {
-    _repository.removeListener(notifyListeners);
-    super.dispose();
+    _realtimeSubscription = RealtimeService.instance.events.listen(
+      _handleRealtimeEvent,
+    );
   }
 
   List<ChatListItem> get chats => _repository.chats;
   bool get hasMore => _repository.hasMore;
+  bool get isRealtimeConnected => RealtimeService.instance.isConnected;
 
   bool _isLoading = true;
   bool get isLoading => _isLoading;
@@ -31,8 +32,14 @@ class ChatListViewModel extends ChangeNotifier {
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
 
-  /// Load the first page of chats.
-  Future<void> initLoadChats() async {
+  void _log(String message) {
+    if (kDebugMode) {
+      debugPrint('[ChatListVM] $message');
+    }
+  }
+
+  Future<void> loadChats() async {
+    _log('loadChats');
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -47,15 +54,17 @@ class ChatListViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Load the more pages of chats after init.
+  Future<void> initLoadChats() => loadChats();
+
   Future<void> loadMoreChats() async {
     if (!hasMore || _isLoadingMore || chats.isEmpty) return;
+    _log('loadMoreChats');
     _isLoadingMore = true;
     notifyListeners();
     try {
       await _repository.loadMoreChats();
     } catch (_) {
-      // Silently fail pagination
+      // Silently fail pagination.
     }
     _isLoadingMore = false;
     notifyListeners();
@@ -72,14 +81,41 @@ class ChatListViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Insert a newly created chat at the top.
   void insertChat(ChatListItem chat) {
     _repository.insertChat(chat);
     notifyListeners();
   }
 
-  /// Create a new chat.
   Future<ChatListItem?> createChat({String? name}) async {
     return _repository.createChat(name: name);
+  }
+
+  void _handleRealtimeEvent(RealtimeEvent event) {
+    switch (event) {
+      case RealtimeMessageReceived():
+      case RealtimeMessageUpdated():
+      case RealtimeMessageDeleted():
+        _scheduleRefresh();
+        break;
+      case RealtimeConnectionChanged():
+        notifyListeners();
+        break;
+    }
+  }
+
+  void _scheduleRefresh() {
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer(const Duration(milliseconds: 250), () {
+      if (_isLoading) return;
+      unawaited(loadChats());
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    _realtimeSubscription.cancel();
+    _repository.removeListener(notifyListeners);
+    super.dispose();
   }
 }

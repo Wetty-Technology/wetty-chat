@@ -8,13 +8,22 @@ import '../../config/api_config.dart';
 class UploadUrlResponse {
   final String attachmentId;
   final String uploadUrl;
+  final Map<String, String> uploadHeaders;
 
-  UploadUrlResponse({required this.attachmentId, required this.uploadUrl});
+  const UploadUrlResponse({
+    required this.attachmentId,
+    required this.uploadUrl,
+    this.uploadHeaders = const {},
+  });
 
   factory UploadUrlResponse.fromJson(Map<String, dynamic> json) {
+    final headers = json['upload_headers'] as Map<String, dynamic>? ?? {};
     return UploadUrlResponse(
       attachmentId: json['attachment_id']?.toString() ?? '',
       uploadUrl: json['upload_url'] as String? ?? '',
+      uploadHeaders: headers.map(
+        (key, value) => MapEntry(key, value.toString()),
+      ),
     );
   }
 }
@@ -51,10 +60,9 @@ class AttachmentService {
         'Failed to get upload URL: ${response.statusCode} ${response.body}',
       );
     }
-    final parsed = UploadUrlResponse.fromJson(
+    return UploadUrlResponse.fromJson(
       jsonDecode(response.body) as Map<String, dynamic>,
     );
-    return parsed;
   }
 
   Future<void> uploadFileToS3({
@@ -85,7 +93,6 @@ class AttachmentService {
           if (!_isSignatureMismatch(e)) {
             rethrow;
           }
-          // retry with next candidate
         }
       }
 
@@ -117,12 +124,7 @@ class AttachmentService {
 
   List<String?> _cacheControlCandidates(Set<String> signedHeaders) {
     if (!signedHeaders.contains('cache-control')) return [null];
-    final candidates = <String?>[];
-    candidates.add('');
-    candidates.add('max-age=0');
-    candidates.add('no-cache');
-    candidates.add('');
-    // de-dup while preserving order
+    final candidates = <String?>['', 'max-age=0', 'no-cache', ''];
     final seen = <String?>{};
     return candidates.where((c) => seen.add(c)).toList();
   }
@@ -148,8 +150,7 @@ class AttachmentService {
         request.headers.set(HttpHeaders.contentTypeHeader, contentType);
       }
       if (signedHeaders.contains('cache-control')) {
-        final configured = cacheControlValue ?? '';
-        request.headers.set('cache-control', configured);
+        request.headers.set('cache-control', cacheControlValue ?? '');
       }
       if (signedHeaders.contains('x-amz-acl')) {
         request.headers.set('x-amz-acl', 'public-read');
@@ -176,7 +177,7 @@ class AttachmentService {
         try {
           request.headers.set(HttpHeaders.hostHeader, uri.host);
         } catch (_) {
-          // ignore host header if not supported by client
+          // Ignore host header if unsupported by the client.
         }
       }
       final bytes = await file.readAsBytes();
@@ -194,5 +195,4 @@ class AttachmentService {
       httpClient.close(force: true);
     }
   }
-
 }

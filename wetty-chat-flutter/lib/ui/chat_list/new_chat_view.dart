@@ -17,6 +17,16 @@ class _NewChatPageState extends State<NewChatPage> {
   final _nameController = TextEditingController();
   bool _isCreating = false;
 
+  TextStyle _inputStyle(BuildContext context) {
+    return TextStyle(color: CupertinoColors.label.resolveFrom(context));
+  }
+
+  TextStyle _placeholderStyle(BuildContext context) {
+    return TextStyle(
+      color: CupertinoColors.placeholderText.resolveFrom(context),
+    );
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -91,6 +101,8 @@ class _NewChatPageState extends State<NewChatPage> {
                 CupertinoTextField(
                   controller: _nameController,
                   placeholder: 'Optional',
+                  style: _inputStyle(context),
+                  placeholderStyle: _placeholderStyle(context),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
                     vertical: 12,

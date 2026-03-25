@@ -60,8 +60,9 @@ class _GroupMembersPageState extends State<GroupMembersPage> {
         throw Exception('Failed to load members: ${response.statusCode}');
       }
       final dynamic body = jsonDecode(response.body);
-      final list =
-          body is List ? body : (body['members'] as List<dynamic>? ?? []);
+      final list = body is List
+          ? body
+          : (body['members'] as List<dynamic>? ?? []);
       if (!mounted) return;
       setState(() {
         _members = list
@@ -120,8 +121,9 @@ class _GroupMembersPageState extends State<GroupMembersPage> {
                   itemBuilder: (context, index) {
                     final member = _members[index];
                     final name = member.username ?? 'User ${member.uid}';
-                    final initial =
-                        name.isNotEmpty ? name[0].toUpperCase() : '?';
+                    final initial = name.isNotEmpty
+                        ? name[0].toUpperCase()
+                        : '?';
                     final isAdmin = member.role.toLowerCase() == 'admin';
                     return Padding(
                       padding: const EdgeInsets.symmetric(
@@ -152,17 +154,21 @@ class _GroupMembersPageState extends State<GroupMembersPage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(name,
-                                    style: const TextStyle(fontSize: 16)),
+                                Text(
+                                  name,
+                                  style: const TextStyle(fontSize: 16),
+                                ),
                                 Text(
                                   member.role,
                                   style: TextStyle(
                                     fontSize: 13,
                                     color: isAdmin
                                         ? CupertinoColors.activeBlue
-                                        : CupertinoColors.secondaryLabel,
-                                    fontWeight:
-                                        isAdmin ? FontWeight.w600 : null,
+                                        : CupertinoColors.secondaryLabel
+                                              .resolveFrom(context),
+                                    fontWeight: isAdmin
+                                        ? FontWeight.w600
+                                        : null,
                                   ),
                                 ),
                               ],

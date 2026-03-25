@@ -1,4 +1,4 @@
-﻿param(
+param(
   [switch]$Wait
 )
 
@@ -6,9 +6,8 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-$exeName = 'flutter_application_1.exe'
 $buildRoot = Join-Path $projectRoot 'build\windows'
-$exePath = Join-Path $projectRoot "build\windows\x64\runner\Debug\$exeName"
+$flutterArgs = @('run', '-d', 'windows', '--debug')
 
 Push-Location $projectRoot
 try {
@@ -17,26 +16,20 @@ try {
     Remove-Item -Recurse -Force $buildRoot
   }
 
-  Write-Host 'Building Windows debug artifact...' -ForegroundColor Cyan
-  flutter build windows --debug
-  if ($LASTEXITCODE -ne 0) {
-    throw "flutter build windows --debug failed with exit code $LASTEXITCODE"
-  }
-
-  if (-not (Test-Path $exePath)) {
-    throw "Windows debug executable not found: $exePath"
-  }
-
-  $workingDir = Split-Path -Parent $exePath
-  Write-Host "Starting $exeName" -ForegroundColor Green
-  Write-Host "Path: $exePath"
+  Write-Host 'Starting Flutter Windows app in debug mode...' -ForegroundColor Cyan
+  Write-Host ('Command: flutter ' + ($flutterArgs -join ' '))
 
   if ($Wait) {
-    & $exePath
+    & flutter @flutterArgs
     exit $LASTEXITCODE
   }
 
-  Start-Process -FilePath $exePath -WorkingDirectory $workingDir | Out-Null
+  $argList = @(
+    '-NoExit'
+    '-Command'
+    "Set-Location '$projectRoot'; flutter $($flutterArgs -join ' ')"
+  )
+  Start-Process -FilePath 'powershell.exe' -ArgumentList $argList | Out-Null
 }
 finally {
   Pop-Location

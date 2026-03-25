@@ -1,11 +1,12 @@
 import 'package:flutter/cupertino.dart';
 
 import 'config/auth_store.dart';
+import 'config/realtime_service.dart';
+import 'data/services/websocket_service.dart';
 import 'ui/auth/token_import_page.dart';
+import 'ui/chat_list/chat_list_view.dart';
 import 'ui/shared/draft_store.dart';
 import 'ui/shared/settings_store.dart';
-import 'ui/chat_list/chat_list_view.dart';
-import 'data/services/websocket_service.dart';
 
 const _miSansBaseTextStyle = TextStyle(
   fontFamily: 'MiSans',
@@ -37,6 +38,7 @@ void main() async {
   await AuthStore.instance.init();
   await DraftStore.instance.init();
   await SettingsStore.instance.init();
+  RealtimeService.instance.init();
   WebSocketService.instance.init();
   runApp(const MyApp());
 }
