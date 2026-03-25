@@ -11,10 +11,7 @@ export interface MountedWindowResult {
   bottomSpacerHeight: (core: CoreRange) => number;
 }
 
-export function useMountedWindow(
-  rowKeys: string[],
-  heightCache: HeightCache,
-): MountedWindowResult {
+export function useMountedWindow(rowKeys: string[], heightCache: HeightCache): MountedWindowResult {
   const mountedRef = useRef<MountedWindow | null>(null);
 
   const findUnmeasuredSpan = useCallback(

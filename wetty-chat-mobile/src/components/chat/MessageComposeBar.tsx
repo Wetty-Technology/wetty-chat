@@ -172,8 +172,8 @@ export function MessageComposeBar({
           resolve({});
         };
         img.src = objectUrl;
-      }else if (file.type.startsWith("video/")) {
-        const video = document.createElement("video");
+      } else if (file.type.startsWith('video/')) {
+        const video = document.createElement('video');
         const url = URL.createObjectURL(file);
         video.onloadedmetadata = () => {
           URL.revokeObjectURL(url);
@@ -184,7 +184,7 @@ export function MessageComposeBar({
           resolve({});
         };
         video.src = url;
-      } else  {
+      } else {
         resolve({});
       }
     });
@@ -305,15 +305,15 @@ export function MessageComposeBar({
         file,
         draft: {
           localId: createDraftId(),
-          kind: file.type.startsWith('image/') ? 'image' : 'video' as 'image' | 'video',
-        name: file.name,
-        previewUrl: URL.createObjectURL(file),
-        mimeType: file.type || 'application/octet-stream',
-        size: file.size,
-        progress: 0,
-        status: 'uploading' as const,
-      },
-    }));
+          kind: file.type.startsWith('image/') ? 'image' : ('video' as 'image' | 'video'),
+          name: file.name,
+          previewUrl: URL.createObjectURL(file),
+          mimeType: file.type || 'application/octet-stream',
+          size: file.size,
+          progress: 0,
+          status: 'uploading' as const,
+        },
+      }));
 
       setDrafts((prev) => [...prev, ...queuedDrafts]);
       queuedDrafts.forEach(({ draft, file }) => {

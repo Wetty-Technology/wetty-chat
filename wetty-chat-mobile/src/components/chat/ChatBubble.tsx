@@ -186,7 +186,8 @@ export function ChatBubble({
 
   const progress = Math.min(offset / SWIPE_THRESHOLD, 1);
 
-  const imageAttachments = attachments?.filter(att => att.kind.startsWith('image/') || att.kind.startsWith('video/')) ?? [];
+  const imageAttachments =
+    attachments?.filter((att) => att.kind.startsWith('image/') || att.kind.startsWith('video/')) ?? [];
   const chatFontSizeStyle = useSelector(selectChatFontSizeStyle);
 
   return (
@@ -264,67 +265,66 @@ export function ChatBubble({
                     };
 
                     return (
-                        <button
-                            key={att.id}
-                            type="button"
-                            className={styles.attachmentImageButton}
-                            style={imageContainerStyle}
-                            onClick={() => {
-                              const imageIndex = imageAttachments.findIndex(image => image.id === att.id);
-                              setViewingAttachmentIndex(imageIndex >= 0 ? imageIndex : 0);
-                            }}
-                        >
-                          <img
-                              src={att.url}
-                              alt={t`Attachment`}
-                              className={styles.attachmentImage}
-                              style={imageLayoutStyle ? undefined : {maxHeight: maxImageHeight}}
-                          />
-                        </button>
+                      <button
+                        key={att.id}
+                        type="button"
+                        className={styles.attachmentImageButton}
+                        style={imageContainerStyle}
+                        onClick={() => {
+                          const imageIndex = imageAttachments.findIndex((image) => image.id === att.id);
+                          setViewingAttachmentIndex(imageIndex >= 0 ? imageIndex : 0);
+                        }}
+                      >
+                        <img
+                          src={att.url}
+                          alt={t`Attachment`}
+                          className={styles.attachmentImage}
+                          style={imageLayoutStyle ? undefined : { maxHeight: maxImageHeight }}
+                        />
+                      </button>
                     );
-                  }else if (att.kind.startsWith('video/')){
-                      const imageLayoutStyle = getImageLayoutStyle(att.width, att.height, maxImageHeight);
-                      const imageContainerStyle: React.CSSProperties = {
-                          maxHeight: maxImageHeight,
-                          ...(imageLayoutStyle ?? {}),
-                      };
-                      return (
-                           <button
-                              key={att.id}
-                              type="button"
-                              rel="noopener noreferrer"
-                              className={styles.attachmentImageButton}
-                              style={imageContainerStyle}
-                              onClick={() => {
-                                const imageIndex = imageAttachments.findIndex(image => image.id === att.id);
-                                setViewingAttachmentIndex(imageIndex >= 0 ? imageIndex : 0);
-                              }}
-                          >
-                              <video
-                                  autoPlay
-                                  loop
-                                  muted
-                                  src={att.url}
-                                  className={styles.attachmentImage}
-                                  style={imageLayoutStyle ? undefined : {maxHeight: maxImageHeight}}
-                              />
-                          </button>
-                      );
-                  }else{
+                  } else if (att.kind.startsWith('video/')) {
+                    const imageLayoutStyle = getImageLayoutStyle(att.width, att.height, maxImageHeight);
+                    const imageContainerStyle: React.CSSProperties = {
+                      maxHeight: maxImageHeight,
+                      ...(imageLayoutStyle ?? {}),
+                    };
                     return (
-                        <a
-                            key={att.id}
-                            className={styles.filePlaceholder}
-                            href={att.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                        >
-                          <IonIcon icon={documentOutline} className={styles.fileIcon} />
-                          <span className={styles.fileName}>{att.file_name}</span>
-                        </a>
+                      <button
+                        key={att.id}
+                        type="button"
+                        rel="noopener noreferrer"
+                        className={styles.attachmentImageButton}
+                        style={imageContainerStyle}
+                        onClick={() => {
+                          const imageIndex = imageAttachments.findIndex((image) => image.id === att.id);
+                          setViewingAttachmentIndex(imageIndex >= 0 ? imageIndex : 0);
+                        }}
+                      >
+                        <video
+                          autoPlay
+                          loop
+                          muted
+                          src={att.url}
+                          className={styles.attachmentImage}
+                          style={imageLayoutStyle ? undefined : { maxHeight: maxImageHeight }}
+                        />
+                      </button>
+                    );
+                  } else {
+                    return (
+                      <a
+                        key={att.id}
+                        className={styles.filePlaceholder}
+                        href={att.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <IonIcon icon={documentOutline} className={styles.fileIcon} />
+                        <span className={styles.fileName}>{att.file_name}</span>
+                      </a>
                     );
                   }
-
                 })}
               </div>
             )}

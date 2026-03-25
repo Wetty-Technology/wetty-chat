@@ -147,7 +147,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
         dispatch(setChatMeta({ chatId: chatId, meta }));
         dispatch(setChatMutedUntil({ chatId, mutedUntil: muted_until }));
       })
-      .catch(() => { });
+      .catch(() => {});
   }, [chatId, storedName, dispatch]);
   const messages = useSelector((state: RootState) => selectMessagesForChat(state, storeChatId));
   const messageLookup = useMemo(() => new Map(messages.map((message) => [message.id, message])), [messages]);
@@ -192,7 +192,10 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   const [presentAlert] = useIonAlert();
   const [overlayMessage, setOverlayMessage] = useState<{ message: MessageResponse; sourceRect: DOMRect } | null>(null);
 
-  const getMessageKey = useCallback((message: MessageResponse) => `msg:${message.client_generated_id || message.id}`, []);
+  const getMessageKey = useCallback(
+    (message: MessageResponse) => `msg:${message.client_generated_id || message.id}`,
+    [],
+  );
 
   const startEditingMessage = useCallback((message: MessageResponse) => {
     setReplyingTo(null);
@@ -339,7 +342,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
         optimistic = existing
           .map((r) => (r.emoji === emoji ? { ...r, count: r.count - 1, reacted_by_me: false } : r))
           .filter((r) => r.count > 0);
-        deleteReaction(chatId, msg.id, emoji).catch(() => { });
+        deleteReaction(chatId, msg.id, emoji).catch(() => {});
       } else {
         const found = existing.find((r) => r.emoji === emoji);
         if (found) {
@@ -347,7 +350,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
         } else {
           optimistic = [...existing, { emoji, count: 1, reacted_by_me: true }];
         }
-        putReaction(chatId, msg.id, emoji).catch(() => { });
+        putReaction(chatId, msg.id, emoji).catch(() => {});
       }
       dispatch(reactionsUpdated({ chatId, messageId: msg.id, reactions: optimistic }));
     },
@@ -375,7 +378,11 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
               prevCursor: res.data.prev_cursor ?? null,
             }),
           );
-          setInitialAnchor((currentAnchor) => ({ type: 'item', key: `msg:${messageId}`, token: currentAnchor.token + 1 }));
+          setInitialAnchor((currentAnchor) => ({
+            type: 'item',
+            key: `msg:${messageId}`,
+            token: currentAnchor.token + 1,
+          }));
         })
         .catch((err: Error) => {
           showToast(err.message || t`Failed to jump to message`);
@@ -464,12 +471,12 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
         reply_root_id: threadId ?? null,
         reply_to_message: replyingTo
           ? {
-            id: replyingTo.id,
-            message: replyingTo.message,
-            sender: replyingTo.sender,
-            is_deleted: replyingTo.is_deleted,
-            attachments: replyingTo.attachments,
-          }
+              id: replyingTo.id,
+              message: replyingTo.message,
+              sender: replyingTo.sender,
+              is_deleted: replyingTo.is_deleted,
+              attachments: replyingTo.attachments,
+            }
           : undefined,
         client_generated_id: clientGeneratedId,
         sender: {
@@ -517,10 +524,10 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
             ...postResponse,
             reply_to_message: postResponse.reply_to_message
               ? {
-                ...optimistic.reply_to_message,
-                ...postResponse.reply_to_message,
-                attachments: postResponse.reply_to_message.attachments ?? optimistic.reply_to_message?.attachments,
-              }
+                  ...optimistic.reply_to_message,
+                  ...postResponse.reply_to_message,
+                  attachments: postResponse.reply_to_message.attachments ?? optimistic.reply_to_message?.attachments,
+                }
               : optimistic.reply_to_message,
           };
           dispatch(
@@ -646,7 +653,17 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
       });
     }
     return actions;
-  }, [overlayMessage, currentUserId, threadId, chatId, history, dispatch, showToast, presentAlert, startEditingMessage]);
+  }, [
+    overlayMessage,
+    currentUserId,
+    threadId,
+    chatId,
+    history,
+    dispatch,
+    showToast,
+    presentAlert,
+    startEditingMessage,
+  ]);
 
   const renderRow = useCallback(
     (row: ChatRow) => {
@@ -688,12 +705,12 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
           replyTo={
             msg.reply_to_message
               ? {
-                senderName: msg.reply_to_message.sender.name ?? `User ${msg.reply_to_message.sender.uid}`,
-                message: msg.reply_to_message.message,
-                attachments:
-                  messageLookup.get(msg.reply_to_message.id)?.attachments ?? msg.reply_to_message.attachments,
-                isDeleted: msg.reply_to_message.is_deleted,
-              }
+                  senderName: msg.reply_to_message.sender.name ?? `User ${msg.reply_to_message.sender.uid}`,
+                  message: msg.reply_to_message.message,
+                  attachments:
+                    messageLookup.get(msg.reply_to_message.id)?.attachments ?? msg.reply_to_message.attachments,
+                  isDeleted: msg.reply_to_message.is_deleted,
+                }
               : undefined
           }
         />
@@ -766,12 +783,12 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
           replyTo={
             replyingTo
               ? {
-                messageId: replyingTo.id,
-                username: replyingTo.sender.name ?? `User ${replyingTo.sender.uid}`,
-                text: replyingTo.message,
-                attachments: replyingTo.attachments,
-                isDeleted: replyingTo.is_deleted,
-              }
+                  messageId: replyingTo.id,
+                  username: replyingTo.sender.name ?? `User ${replyingTo.sender.uid}`,
+                  text: replyingTo.message,
+                  attachments: replyingTo.attachments,
+                  isDeleted: replyingTo.is_deleted,
+                }
               : undefined
           }
           onCancelReply={() => setReplyingTo(null)}
@@ -800,13 +817,13 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
           replyTo={
             overlayMessage.message.reply_to_message
               ? {
-                senderName:
-                  overlayMessage.message.reply_to_message.sender.name ??
-                  `User ${overlayMessage.message.reply_to_message.sender.uid}`,
-                message: overlayMessage.message.reply_to_message.message,
-                attachments: overlayMessage.message.reply_to_message.attachments,
-                isDeleted: overlayMessage.message.reply_to_message.is_deleted,
-              }
+                  senderName:
+                    overlayMessage.message.reply_to_message.sender.name ??
+                    `User ${overlayMessage.message.reply_to_message.sender.uid}`,
+                  message: overlayMessage.message.reply_to_message.message,
+                  attachments: overlayMessage.message.reply_to_message.attachments,
+                  isDeleted: overlayMessage.message.reply_to_message.is_deleted,
+                }
               : undefined
           }
           sourceRect={overlayMessage.sourceRect}

@@ -10,10 +10,7 @@ function isSameDate(a: string, b: string): boolean {
   return formatDateKey(a) === formatDateKey(b);
 }
 
-export function useChatRows(
-  messages: MessageResponse[],
-  formatDateSeparator: (iso: string) => string,
-): ChatRow[] {
+export function useChatRows(messages: MessageResponse[], formatDateSeparator: (iso: string) => string): ChatRow[] {
   return useMemo(() => {
     const rows: ChatRow[] = [];
     let prevSenderUid: number | string | null = null;
@@ -31,7 +28,10 @@ export function useChatRows(
       if (isFirstMessage || isDateBoundary) {
         rows.push({
           type: 'date',
-          key: isFirstMessage && !isDateBoundary ? `datefirst:${formatDateKey(msg.created_at)}` : `date:${formatDateKey(msg.created_at)}`,
+          key:
+            isFirstMessage && !isDateBoundary
+              ? `datefirst:${formatDateKey(msg.created_at)}`
+              : `date:${formatDateKey(msg.created_at)}`,
           dateLabel: formatDateSeparator(msg.created_at),
         });
         prevSenderUid = null;
@@ -41,9 +41,7 @@ export function useChatRows(
       const hasDateSeparator = isFirstMessage || isDateBoundary;
       const showName = msg.sender.uid !== prevSenderUid || hasDateSeparator;
       const isLastInGroup =
-        !nextMsg ||
-        nextMsg.sender.uid !== msg.sender.uid ||
-        !isSameDate(msg.created_at, nextMsg.created_at);
+        !nextMsg || nextMsg.sender.uid !== msg.sender.uid || !isSameDate(msg.created_at, nextMsg.created_at);
 
       rows.push({
         type: 'message',

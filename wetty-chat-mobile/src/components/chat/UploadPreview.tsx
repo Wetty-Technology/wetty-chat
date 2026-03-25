@@ -46,8 +46,11 @@ export function UploadPreview({ items, onRemove, onRetry }: UploadPreviewProps) 
       {items.map((item) => (
         <article key={item.localId} className={styles.card}>
           {item.previewUrl ? (
-              item.kind == 'image' ? <img src={item.previewUrl} alt={item.name} className={styles.previewImage} /> :
-                  <video src={item.previewUrl} autoPlay loop muted className={styles.previewImage} />
+            item.kind == 'image' ? (
+              <img src={item.previewUrl} alt={item.name} className={styles.previewImage} />
+            ) : (
+              <video src={item.previewUrl} autoPlay loop muted className={styles.previewImage} />
+            )
           ) : (
             <div className={styles.fileCard}>
               <IonIcon icon={documentOutline} className={styles.fileCardIcon} />

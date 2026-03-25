@@ -18,7 +18,9 @@ export function MeasuredRow({ rowKey, hidden = false, onMeasure, registerRow, ch
     const node = ref.current;
     if (!node) return;
     registerRow?.(rowKey, node);
-    return () => { registerRow?.(rowKey, null); };
+    return () => {
+      registerRow?.(rowKey, null);
+    };
   }, [rowKey, registerRow]);
 
   // ResizeObserver for height measurement stays in useEffect (doesn't need
@@ -35,7 +37,9 @@ export function MeasuredRow({ rowKey, hidden = false, onMeasure, registerRow, ch
     });
 
     ro.observe(node);
-    return () => { ro.disconnect(); };
+    return () => {
+      ro.disconnect();
+    };
   }, [rowKey, onMeasure]);
 
   return (

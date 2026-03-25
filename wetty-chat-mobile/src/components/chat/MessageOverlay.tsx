@@ -179,26 +179,16 @@ export function MessageOverlay({
             <div className={styles.attachmentsContainer}>
               {attachments.map((att) => {
                 if (att.kind.startsWith('image/')) {
-                  return <img
-                      key={att.id}
-                      src={att.url}
-                      alt={t`Attachment`}
-                      className={styles.attachmentImage}
-                  />
+                  return <img key={att.id} src={att.url} alt={t`Attachment`} className={styles.attachmentImage} />;
                 } else if (att.kind.startsWith('video/')) {
-                  return <video
-                      autoPlay
-                      loop
-                      muted
-                      key={att.id}
-                      src={att.url}
-                      className={styles.attachmentImage}
-                  />
-                }else {
-                  return <div key={att.id} className={styles.filePlaceholder}>
+                  return <video autoPlay loop muted key={att.id} src={att.url} className={styles.attachmentImage} />;
+                } else {
+                  return (
+                    <div key={att.id} className={styles.filePlaceholder}>
                       <IonIcon icon={documentOutline} className={styles.fileIcon} />
                       <span className={styles.fileName}>{att.file_name}</span>
-                    </div>;
+                    </div>
+                  );
                 }
               })}
             </div>

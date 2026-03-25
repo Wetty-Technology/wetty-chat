@@ -17,10 +17,7 @@ export interface CoreManagerResult {
   coreHeightAfter: (index: number) => number;
 }
 
-export function useCoreManager(
-  rowKeys: string[],
-  heightCache: HeightCache,
-): CoreManagerResult {
+export function useCoreManager(rowKeys: string[], heightCache: HeightCache): CoreManagerResult {
   const coreRef = useRef<CoreRange | null>(null);
 
   const expandCore = useCallback(

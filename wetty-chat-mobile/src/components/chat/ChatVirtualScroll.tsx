@@ -4,7 +4,16 @@ import { HeightCache } from './virtualScroll/heightCache';
 import { MeasuredRow } from './virtualScroll/MeasuredRow';
 import { FenwickTree } from './virtualScroll/fenwick';
 import { useStagingBatch } from './virtualScroll/useStagingBatch';
-import type { BatchDirection, ChatRow, ChatVirtualScrollProps, LayoutIntent, MountedWindow, MutationType, PendingBatch, Phase } from './virtualScroll/types';
+import type {
+  BatchDirection,
+  ChatRow,
+  ChatVirtualScrollProps,
+  LayoutIntent,
+  MountedWindow,
+  MutationType,
+  PendingBatch,
+  Phase,
+} from './virtualScroll/types';
 import {
   AT_BOTTOM_THRESHOLD_PX,
   BOOTSTRAP_BOTTOM_SEED,
@@ -164,7 +173,11 @@ export function ChatVirtualScroll({
     key: string;
     offsetTop: number;
   } | null>(null);
-  const mutationSnapshotRef = useRef<{ mutation: MutationType; anchor: { key: string; offsetTop: number } | null; rowCountDelta: number } | null>(null);
+  const mutationSnapshotRef = useRef<{
+    mutation: MutationType;
+    anchor: { key: string; offsetTop: number } | null;
+    rowCountDelta: number;
+  } | null>(null);
   const recenterTargetIndexRef = useRef<number | null>(null);
 
   const scrollIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -226,10 +239,13 @@ export function ChatVirtualScroll({
     [rowKeys.length],
   );
 
-  const isMeasured = useCallback((index: number) => {
-    const key = rowKeys[index];
-    return key ? heightCacheRef.current.has(key) : false;
-  }, [rowKeys]);
+  const isMeasured = useCallback(
+    (index: number) => {
+      const key = rowKeys[index];
+      return key ? heightCacheRef.current.has(key) : false;
+    },
+    [rowKeys],
+  );
 
   const allMeasured = useCallback(
     (start: number, end: number) => {
@@ -267,7 +283,11 @@ export function ChatVirtualScroll({
     (scrollTop: number, viewportHeight: number): MountedWindow | null => {
       const visible = deriveVisibleRange(scrollTop, viewportHeight);
       if (!visible) return null;
-      const desired = normalizeRange(visible.start - WINDOW_OVERSCAN, visible.end + WINDOW_OVERSCAN, rowKeys.length - 1);
+      const desired = normalizeRange(
+        visible.start - WINDOW_OVERSCAN,
+        visible.end + WINDOW_OVERSCAN,
+        rowKeys.length - 1,
+      );
       return desired ? capRange(desired, rowKeys.length - 1) : null;
     },
     [deriveVisibleRange, rowKeys.length],
@@ -317,7 +337,8 @@ export function ChatVirtualScroll({
     const container = containerRef.current;
     if (!container) return;
 
-    const visualBottom = container.scrollHeight - (container.scrollTop + container.clientHeight) <= AT_BOTTOM_THRESHOLD_PX;
+    const visualBottom =
+      container.scrollHeight - (container.scrollTop + container.clientHeight) <= AT_BOTTOM_THRESHOLD_PX;
     const atBottom = visualBottom && !loadNewer?.hasMore;
     if (atBottom !== isAtBottomRef.current) {
       isAtBottomRef.current = atBottom;
@@ -346,7 +367,9 @@ export function ChatVirtualScroll({
     const row = rowRefsMap.current.get(key);
     if (!container || !row) return;
 
-    const target = roundScrollValue(Math.max(0, Math.min(row.offsetTop, container.scrollHeight - container.clientHeight)));
+    const target = roundScrollValue(
+      Math.max(0, Math.min(row.offsetTop, container.scrollHeight - container.clientHeight)),
+    );
     if (behavior === 'auto' && !hasMeaningfulScrollDelta(container.scrollTop, target)) return;
     container.scrollTo({ top: target, behavior });
   }, []);
@@ -387,7 +410,7 @@ export function ChatVirtualScroll({
       const row = rowRefsMap.current.get(key);
       if (!key || !row) continue;
 
-       if (key.startsWith('msg:') && !firstMountedMessage) {
+      if (key.startsWith('msg:') && !firstMountedMessage) {
         firstMountedMessage = { key, offsetTop: roundScrollValue(row.offsetTop) };
       }
 
@@ -625,7 +648,12 @@ export function ChatVirtualScroll({
       }
 
       if (mounted.end >= rowKeys.length - 1) return false;
-      return queueRangeBatch(mounted.end + 1, Math.min(rowKeys.length - 1, mounted.end + STAGING_BATCH_SIZE), direction, reason);
+      return queueRangeBatch(
+        mounted.end + 1,
+        Math.min(rowKeys.length - 1, mounted.end + STAGING_BATCH_SIZE),
+        direction,
+        reason,
+      );
     },
     [pendingBatch, queueRangeBatch, rowKeys.length],
   );
@@ -651,10 +679,7 @@ export function ChatVirtualScroll({
     const desired = deriveDesiredRange(container.scrollTop, container.clientHeight);
     if (!desired) return;
 
-    if (
-      desired.start < mounted.start - RECENTER_ROW_THRESHOLD ||
-      desired.end > mounted.end + RECENTER_ROW_THRESHOLD
-    ) {
+    if (desired.start < mounted.start - RECENTER_ROW_THRESHOLD || desired.end > mounted.end + RECENTER_ROW_THRESHOLD) {
       const visible = deriveVisibleRange(container.scrollTop, container.clientHeight);
       const targetIndex = visible ? Math.floor((visible.start + visible.end) / 2) : desired.start;
       logVirtualScroll('recenter-trigger', {
@@ -1113,7 +1138,12 @@ export function ChatVirtualScroll({
 
     if (!mounted) {
       if (anchor.type === 'bottom') {
-        queueRangeBatch(Math.max(0, rowKeys.length - BOOTSTRAP_BOTTOM_SEED), rowKeys.length - 1, 'backward', 'bootstrap');
+        queueRangeBatch(
+          Math.max(0, rowKeys.length - BOOTSTRAP_BOTTOM_SEED),
+          rowKeys.length - 1,
+          'backward',
+          'bootstrap',
+        );
       } else {
         const anchorIndex = keyToIndex.get(anchor.key) ?? rowKeys.length - 1;
         queueRangeBatch(
@@ -1143,7 +1173,12 @@ export function ChatVirtualScroll({
     const anchorIndex = keyToIndex.get(anchor.key) ?? rowKeys.length - 1;
     const heightBelowAnchor = heightBetween(Math.max(anchorIndex + 1, mounted.start), mounted.end + 1);
     if (heightBelowAnchor < containerHeight && mounted.end < rowKeys.length - 1) {
-      queueRangeBatch(mounted.end + 1, Math.min(rowKeys.length - 1, mounted.end + STAGING_BATCH_SIZE), 'forward', 'bootstrap');
+      queueRangeBatch(
+        mounted.end + 1,
+        Math.min(rowKeys.length - 1, mounted.end + STAGING_BATCH_SIZE),
+        'forward',
+        'bootstrap',
+      );
       return;
     }
 
@@ -1409,9 +1444,7 @@ export function ChatVirtualScroll({
   const topSpacer = mounted ? topSpacerHeight() : phase === 'RECENTERING' ? totalHeight() : 0;
   const bottomSpacer = mounted ? bottomSpacerHeight() : 0;
   const showLoadingScrim =
-    phase === 'WAITING_VIEWPORT' ||
-    (phase === 'BOOTSTRAP' && !mounted) ||
-    (phase === 'RECENTERING' && !mounted);
+    phase === 'WAITING_VIEWPORT' || (phase === 'BOOTSTRAP' && !mounted) || (phase === 'RECENTERING' && !mounted);
   const showTopEdgeHint = loadOlder.hasMore || loadOlder.loading;
   const showBottomEdgeHint = !!loadNewer && (loadNewer.hasMore || loadNewer.loading);
   const topEdgeLabel = loadOlder.loading ? t`Loading…` : t`Earlier messages`;
@@ -1421,7 +1454,10 @@ export function ChatVirtualScroll({
 
   return (
     <div ref={containerRef} className={styles.container} onScroll={handleScroll}>
-      <div className={styles.flowContent} style={{ paddingTop: contentPaddingTop, paddingBottom: contentPaddingBottom }}>
+      <div
+        className={styles.flowContent}
+        style={{ paddingTop: contentPaddingTop, paddingBottom: contentPaddingBottom }}
+      >
         {header && <div ref={headerRef}>{header}</div>}
         {showTopEdgeHint && (
           <div className={`${styles.edgeHintRow} ${styles.edgeHintTop}`} style={{ height: EDGE_HINT_HEIGHT }}>

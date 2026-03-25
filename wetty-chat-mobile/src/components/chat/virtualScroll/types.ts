@@ -6,12 +6,12 @@ import type { MessageResponse } from '@/api/messages';
 export type ChatRow =
   | { type: 'date'; key: string; dateLabel: string }
   | {
-    type: 'message';
-    key: string;
-    message: MessageResponse;
-    showName: boolean;
-    showAvatar: boolean;
-  };
+      type: 'message';
+      key: string;
+      message: MessageResponse;
+      showName: boolean;
+      showAvatar: boolean;
+    };
 
 // Legacy compatibility for helper modules that still compile in-tree.
 export interface CoreRange {
@@ -55,9 +55,7 @@ export interface VirtualScrollHandle {
   scrollToItem: (key: string, behavior?: ScrollBehavior) => void;
 }
 
-export type VirtualScrollAnchor =
-  | { type: 'bottom'; token: number }
-  | { type: 'item'; key: string; token: number };
+export type VirtualScrollAnchor = { type: 'bottom'; token: number } | { type: 'item'; key: string; token: number };
 
 export interface LoadController {
   hasMore: boolean;
