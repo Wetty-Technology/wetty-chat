@@ -58,6 +58,8 @@ class MessageStore extends ChangeNotifier {
     return all;
   }
 
+  List<MessageItem> buildDisplayItems() => List.unmodifiable(displayItems);
+
   void _invalidateCache() {
     _cachedItems = null;
   }

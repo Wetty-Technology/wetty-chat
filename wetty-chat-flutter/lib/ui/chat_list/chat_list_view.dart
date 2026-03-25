@@ -4,6 +4,7 @@ import 'dart:convert';
 
 import '../../config/api_config.dart';
 import '../../data/models/chat_models.dart';
+import '../../data/models/message_models.dart';
 import '../shared/draft_store.dart';
 import '../shared/widgets.dart';
 import '../chat_detail/chat_detail_view.dart';
@@ -349,6 +350,17 @@ class _ChatPageState extends State<ChatPage> {
         if (unreadCount > 0) _unreadBadge(unreadCount),
       ],
     );
+  }
+
+  String _messagePreview(MessageItem? message) {
+    if (message == null) return 'No messages yet';
+    if (message.isDeleted) return '[Deleted]';
+    final text = message.message?.trim();
+    if (text != null && text.isNotEmpty) return text;
+    if (message.hasAttachments || message.attachments.isNotEmpty) {
+      return '[Attachment]';
+    }
+    return 'New message';
   }
 
   Widget _unreadBadge(int count) {

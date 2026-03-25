@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 
 import '../../config/api_config.dart';
@@ -18,6 +19,7 @@ class MessageService {
     if (before != null) query['before'] = before.toString();
     if (after != null) query['after'] = after.toString();
     if (around != null) query['around'] = around.toString();
+
     final uri = Uri.parse(
       '$apiBaseUrl/chats/$chatId/messages',
     ).replace(queryParameters: query.isEmpty ? null : query);
@@ -42,6 +44,7 @@ class MessageService {
     String chatId,
     String text, {
     int? replyToId,
+    List<String>? attachmentIds,
   }) async {
     final uri = Uri.parse('$apiBaseUrl/chats/$chatId/messages');
     final clientGeneratedId =
@@ -52,6 +55,9 @@ class MessageService {
       'client_generated_id': clientGeneratedId,
     };
     if (replyToId != null) body['reply_to_id'] = replyToId;
+    if (attachmentIds != null && attachmentIds.isNotEmpty) {
+      body['attachment_ids'] = attachmentIds;
+    }
     final response = await http.post(
       uri,
       headers: apiHeaders,
@@ -98,8 +104,7 @@ class MessageService {
     }
   }
 
-  Future<void> markAsRead(String chatId, int messageId) async {
-    print("chat id: $chatId, message id: $messageId");
+  Future<void> markMessagesAsRead(String chatId, int messageId) async {
     final uri = Uri.parse('$apiBaseUrl/chats/$chatId/read');
     final response = await http.post(
       uri,

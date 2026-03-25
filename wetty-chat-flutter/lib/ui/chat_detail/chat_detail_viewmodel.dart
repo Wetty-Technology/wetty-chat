@@ -97,8 +97,7 @@ class ChatDetailViewModel extends ChangeNotifier {
 
     final rebuilt = _repository.rebuildWindow(
       limit: maxWindowSize,
-      anchorMessageId:
-          _windowAnchorMessageId ?? _displayItems.first.id,
+      anchorMessageId: _windowAnchorMessageId ?? _displayItems.first.id,
       liveEdge: _windowMode == ChatWindowMode.latest && _isAtLiveEdge,
     );
     if (rebuilt.isEmpty) return;
@@ -113,9 +112,7 @@ class ChatDetailViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final items = await _repository.initLoadMessages(
-        limit: initialWindowSize,
-      );
+      final items = await _repository.initLoadMessages(limit: initialWindowSize);
       _lastReadSyncId = null;
       _currentReadId = null;
       _didSyncReadState = false;
@@ -151,6 +148,7 @@ class ChatDetailViewModel extends ChangeNotifier {
       targetId = _repository.findUnreadBoundaryId(unreadCount);
     }
     if (targetId == null) return;
+
     final unreadWindow = await _repository.getWindowAround(
       targetId,
       before: initialWindowSize ~/ 2,
@@ -341,9 +339,7 @@ class ChatDetailViewModel extends ChangeNotifier {
   }
 
   Future<bool> jumpToMessage(int messageId) async {
-    final existingIndex = _displayItems.indexWhere(
-      (item) => item.id == messageId,
-    );
+    final existingIndex = _displayItems.indexWhere((item) => item.id == messageId);
     if (existingIndex >= 0) {
       _windowMode = ChatWindowMode.aroundMessage;
       _windowAnchorMessageId = messageId;
@@ -403,9 +399,17 @@ class ChatDetailViewModel extends ChangeNotifier {
     );
   }
 
-  Future<void> sendMessage(String text, {int? replyToId}) async {
+  Future<void> sendMessage(
+    String text, {
+    int? replyToId,
+    List<String>? attachmentIds,
+  }) async {
     try {
-      await _repository.sendMessage(text, replyToId: replyToId);
+      await _repository.sendMessage(
+        text,
+        replyToId: replyToId,
+        attachmentIds: attachmentIds,
+      );
     } catch (e) {
       throw Exception('Failed to send: $e');
     }

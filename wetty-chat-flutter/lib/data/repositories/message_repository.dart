@@ -4,6 +4,7 @@ import '../services/message_service.dart';
 import '../services/websocket_service.dart';
 
 /// Source of truth for messages in a single chat.
+/// Owns the MessageStore and pagination state.
 class MessageRepository {
   final MessageService _service;
   final String chatId;
@@ -20,12 +21,12 @@ class MessageRepository {
     WebSocketService.instance.events.listen((event) {
       final type = event['type'];
       final payload = event['payload'];
-      if (payload == null) return;
+      if (payload is! Map<String, dynamic>) return;
 
       final eventChatId = payload['chat_id']?.toString();
       if (eventChatId != chatId) return;
 
-      final message = MessageItem.fromJson(payload as Map<String, dynamic>);
+      final message = MessageItem.fromJson(payload);
       if (type == 'message') {
         store.addMessages([message]);
       } else if (type == 'message_updated') {
@@ -176,12 +177,21 @@ class MessageRepository {
 
   Future<void> markAsRead(int messageId) async {
     try {
-      await _service.markAsRead(chatId, messageId);
+      await _service.markMessagesAsRead(chatId, messageId);
     } catch (_) {}
   }
 
-  Future<MessageItem> sendMessage(String text, {int? replyToId}) async {
-    final message = await _service.sendMessage(chatId, text, replyToId: replyToId);
+  Future<MessageItem> sendMessage(
+    String text, {
+    int? replyToId,
+    List<String>? attachmentIds,
+  }) async {
+    final message = await _service.sendMessage(
+      chatId,
+      text,
+      replyToId: replyToId,
+      attachmentIds: attachmentIds,
+    );
     store.addMessages([message]);
     return message;
   }
@@ -196,4 +206,6 @@ class MessageRepository {
     await _service.deleteMessage(chatId, messageId);
     store.removeById(messageId);
   }
+
+  List<MessageItem> get displayItems => store.buildDisplayItems();
 }
