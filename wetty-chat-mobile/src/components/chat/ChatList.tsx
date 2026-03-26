@@ -223,7 +223,7 @@ export function ChatList({ activeChatId, onChatSelect }: ChatListProps) {
               </IonLabel>
             </IonItem>
           )}
-          {chats.map((chat) => (
+          {chats.map((chat) =>
             <IonItemSliding key={chat.id}>
               <IonItemOptions
                 side="start"
@@ -251,14 +251,14 @@ export function ChatList({ activeChatId, onChatSelect }: ChatListProps) {
                 className={`${styles.chatListItem} ${activeChatId === chat.id ? styles.active : ''}`}
                 onClick={() => onChatSelect(chat.id)}
               >
-                <div slot="start">
+                <span slot="start">
                   <UserAvatar
                     name={chatDisplayName(chat)}
                     avatarUrl={chat.avatar}
                     size={48}
                     className={styles.chatsListAvatar}
                   />
-                </div>
+                </span>
                 <IonLabel className={styles.chatsListLabel}>
                   <h2 className={styles.chatsListTitle}>
                     <span className={styles.chatsListTitleText}>{chatDisplayName(chat)}</span>
@@ -284,7 +284,7 @@ export function ChatList({ activeChatId, onChatSelect }: ChatListProps) {
                 </div>
               </IonItem>
             </IonItemSliding>
-          ))}
+          )}
         </IonList>
       )}
     </IonContent>
