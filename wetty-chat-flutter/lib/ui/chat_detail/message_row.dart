@@ -66,8 +66,8 @@ class _MessageRowState extends State<MessageRow>
   Widget build(BuildContext context) {
     final message = widget.message;
     final screenWidth = MediaQuery.of(context).size.width;
-    // final msgText = message.message ?? message.id.toString();
-    final msgText = message.id.toString();
+    final msgText = message.message ?? message.id.toString();
+    // final msgText = message.id.toString();
 
     final senderName = message.sender.name ?? 'User ${message.sender.uid}';
     final timeStr = _formatTime(message.createdAt);

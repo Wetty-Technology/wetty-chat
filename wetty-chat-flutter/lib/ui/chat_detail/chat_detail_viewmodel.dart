@@ -8,6 +8,8 @@ import '../shared/draft_store.dart';
 
 sealed class InputState {}
 
+enum ChatWindowMode { latest, aroundMessage, unreadBoundary }
+
 class InputEmpty extends InputState {}
 
 class InputReplying extends InputState {
@@ -35,10 +37,12 @@ class ChatDetailViewModel extends ChangeNotifier {
   int? _currentReadId;
   int? _newestVisibleId;
   int? _oldestVisibleId;
+  int? _windowAnchorMessageId;
   bool _hasOlder = false;
   bool _hasNewer = false;
   bool _isAtLiveEdge = true;
   bool _didSyncReadState = false;
+  ChatWindowMode _windowMode = ChatWindowMode.latest;
 
   ChatDetailViewModel({
     required this.chatId,
@@ -85,19 +89,21 @@ class ChatDetailViewModel extends ChangeNotifier {
   bool get hasMoreMessages => _hasOlder;
   bool get hasNewerMessages => _hasNewer;
   bool get shouldRefreshChats => _didSyncReadState;
+  int? get newestVisibleId => _newestVisibleId;
+  int? get oldestVisibleId => _oldestVisibleId;
 
   void _onStoreChanged() {
-    if (_isLoading || _displayItems.isEmpty) return;
+    if (_isLoading || _isLoadingMore || _displayItems.isEmpty) return;
 
     final rebuilt = _repository.rebuildWindow(
-      newestVisibleId: _newestVisibleId ?? _displayItems.first.id,
-      oldestVisibleId: _oldestVisibleId ?? _displayItems.last.id,
       limit: maxWindowSize,
-      liveEdge: _isAtLiveEdge,
+      anchorMessageId:
+          _windowAnchorMessageId ?? _displayItems.first.id,
+      liveEdge: _windowMode == ChatWindowMode.latest && _isAtLiveEdge,
     );
     if (rebuilt.isEmpty) return;
 
-    _setDisplayItems(rebuilt);
+    _setDisplayItems(rebuilt, anchorMessageId: _windowAnchorMessageId);
     notifyListeners();
   }
 
@@ -115,6 +121,8 @@ class ChatDetailViewModel extends ChangeNotifier {
       _didSyncReadState = false;
       _firstUnreadMessageId = null;
       _showUnreadDivider = false;
+      _windowMode = ChatWindowMode.latest;
+      _windowAnchorMessageId = null;
       _isLoading = false;
       _errorMessage = null;
       _setDisplayItems(items);
@@ -130,8 +138,8 @@ class ChatDetailViewModel extends ChangeNotifier {
   Future<void> _loadInitialUnreadWindowIfNeeded() async {
     if (unreadCount <= 0) return;
 
-    while (_repository.store.displayItems.length < unreadCount &&
-        _repository.nextCursor != null) {
+    int? targetId = _repository.findUnreadBoundaryId(unreadCount);
+    while (targetId == null && _repository.nextCursor != null) {
       final oldestLoadedId = _repository.store.oldestId;
       if (oldestLoadedId == null) break;
 
@@ -140,15 +148,9 @@ class ChatDetailViewModel extends ChangeNotifier {
         pageSize: pageSize,
       );
       if (olderItems.isEmpty) break;
+      targetId = _repository.findUnreadBoundaryId(unreadCount);
     }
-
-    final loadedItems = _repository.store.displayItems;
-    if (loadedItems.isEmpty) return;
-
-    final targetIndex = unreadCount <= loadedItems.length
-        ? unreadCount - 1
-        : loadedItems.length - 1;
-    final targetId = loadedItems[targetIndex].id;
+    if (targetId == null) return;
     final unreadWindow = await _repository.getWindowAround(
       targetId,
       before: initialWindowSize ~/ 2,
@@ -158,7 +160,12 @@ class ChatDetailViewModel extends ChangeNotifier {
 
     _firstUnreadMessageId = targetId;
     _showUnreadDivider = true;
-    _setDisplayItems(unreadWindow.take(maxWindowSize).toList(growable: false));
+    _windowMode = ChatWindowMode.unreadBoundary;
+    _windowAnchorMessageId = targetId;
+    _setDisplayItems(
+      unreadWindow.take(maxWindowSize).toList(growable: false),
+      anchorMessageId: targetId,
+    );
   }
 
   Future<bool> loadMoreMessages() async {
@@ -185,7 +192,10 @@ class ChatDetailViewModel extends ChangeNotifier {
         nextItems = nextItems.sublist(trimCount);
       }
 
-      _setDisplayItems(nextItems);
+      _setDisplayItems(
+        nextItems,
+        anchorMessageId: _windowAnchorMessageId ?? _oldestVisibleId,
+      );
       return true;
     } catch (e) {
       _errorMessage = e.toString();
@@ -219,7 +229,19 @@ class ChatDetailViewModel extends ChangeNotifier {
         nextItems = nextItems.sublist(0, maxWindowSize);
       }
 
-      _setDisplayItems(nextItems);
+      final anchorMessageId = nextItems.first.id;
+      if (!_repository.hasNewerAdjacent(anchorMessageId)) {
+        _windowMode = ChatWindowMode.latest;
+        _isAtLiveEdge = true;
+        _showScrollToBottom = false;
+        _windowAnchorMessageId = null;
+      }
+      _setDisplayItems(
+        nextItems,
+        anchorMessageId: _windowMode == ChatWindowMode.latest
+            ? null
+            : (_windowAnchorMessageId ?? anchorMessageId),
+      );
       return true;
     } catch (e) {
       _errorMessage = e.toString();
@@ -240,6 +262,13 @@ class ChatDetailViewModel extends ChangeNotifier {
       final latestWindow = await _repository.refreshLatestWindow(
         limit: initialWindowSize,
       );
+      if (latestWindow.isEmpty && _displayItems.isNotEmpty) {
+        return;
+      }
+      _windowMode = ChatWindowMode.latest;
+      _windowAnchorMessageId = null;
+      _firstUnreadMessageId = null;
+      _showUnreadDivider = false;
       _isAtLiveEdge = true;
       _showScrollToBottom = false;
       _setDisplayItems(latestWindow);
@@ -272,7 +301,6 @@ class ChatDetailViewModel extends ChangeNotifier {
   }
 
   Future<bool> _syncReadStatus() async {
-    print("currentReadId: $_currentReadId, lastReadSyncId: $_lastReadSyncId");
     if (_currentReadId == null || _currentReadId == _lastReadSyncId) {
       return false;
     }
@@ -317,6 +345,8 @@ class ChatDetailViewModel extends ChangeNotifier {
       (item) => item.id == messageId,
     );
     if (existingIndex >= 0) {
+      _windowMode = ChatWindowMode.aroundMessage;
+      _windowAnchorMessageId = messageId;
       _highlightMessage(messageId);
       return true;
     }
@@ -334,7 +364,12 @@ class ChatDetailViewModel extends ChangeNotifier {
         return false;
       }
 
-      _setDisplayItems(window.take(maxWindowSize).toList(growable: false));
+      _windowMode = ChatWindowMode.aroundMessage;
+      _windowAnchorMessageId = messageId;
+      _setDisplayItems(
+        window.take(maxWindowSize).toList(growable: false),
+        anchorMessageId: messageId,
+      );
       _highlightMessage(messageId);
       return true;
     } catch (e) {
@@ -357,6 +392,15 @@ class ChatDetailViewModel extends ChangeNotifier {
       _highlightedMessageId = null;
       notifyListeners();
     });
+  }
+
+  int? findWindowIndex(int messageId) {
+    if (_newestVisibleId == null || _oldestVisibleId == null) return null;
+    return _repository.findIndexInWindow(
+      newestVisibleId: _newestVisibleId!,
+      oldestVisibleId: _oldestVisibleId!,
+      messageId: messageId,
+    );
   }
 
   Future<void> sendMessage(String text, {int? replyToId}) async {
@@ -400,7 +444,7 @@ class ChatDetailViewModel extends ChangeNotifier {
     DraftStore.instance.clearDraft(chatId);
   }
 
-  void _setDisplayItems(List<MessageItem> items) {
+  void _setDisplayItems(List<MessageItem> items, {int? anchorMessageId}) {
     _displayItems = List.unmodifiable(items);
     if (_displayItems.isNotEmpty) {
       _newestVisibleId = _displayItems.first.id;
@@ -409,6 +453,7 @@ class ChatDetailViewModel extends ChangeNotifier {
       _newestVisibleId = null;
       _oldestVisibleId = null;
     }
+    _windowAnchorMessageId = anchorMessageId ?? _windowAnchorMessageId;
     _syncWindowFlags();
   }
 

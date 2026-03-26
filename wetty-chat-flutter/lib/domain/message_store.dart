@@ -194,6 +194,35 @@ class MessageStore extends ChangeNotifier {
     return range.messages.take(limit).toList(growable: false);
   }
 
+  int? findNthNewestId(int index) {
+    if (index < 0) return null;
+
+    var remaining = index;
+    for (final range in _ranges) {
+      if (remaining < range.messages.length) {
+        return range.messages[remaining].id;
+      }
+      remaining -= range.messages.length;
+    }
+    return null;
+  }
+
+  int? findWindowIndex({
+    required int anchorMessageId,
+    required int targetMessageId,
+    required int before,
+    required int after,
+  }) {
+    final window = getWindowAround(
+      anchorMessageId,
+      before: before,
+      after: after,
+    );
+    if (window.isEmpty) return null;
+    final index = window.indexWhere((message) => message.id == targetMessageId);
+    return index >= 0 ? index : null;
+  }
+
   List<MessageItem> takeOlderAdjacent(int fromId, int limit) {
     final range = findRangeContaining(fromId);
     if (range == null) return const [];
@@ -245,6 +274,17 @@ class MessageStore extends ChangeNotifier {
     }
 
     return range.messages.sublist(newestIndex, oldestIndex + 1);
+  }
+
+  int? findIndexInSlice({
+    required int newestId,
+    required int oldestId,
+    required int messageId,
+  }) {
+    final slice = sliceInclusive(newestId: newestId, oldestId: oldestId);
+    if (slice.isEmpty) return null;
+    final index = slice.indexWhere((message) => message.id == messageId);
+    return index >= 0 ? index : null;
   }
 
   bool get isEmpty =>

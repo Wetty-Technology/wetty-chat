@@ -56,18 +56,18 @@ class MessageRepository {
   }
 
   List<MessageItem> rebuildWindow({
-    required int newestVisibleId,
-    required int oldestVisibleId,
     required int limit,
+    required int anchorMessageId,
     bool liveEdge = false,
   }) {
     if (liveEdge) {
       return getLatestWindow(limit: limit);
     }
 
-    final slice = store.sliceInclusive(
-      newestId: newestVisibleId,
-      oldestId: oldestVisibleId,
+    final slice = store.getWindowAround(
+      anchorMessageId,
+      before: limit ~/ 2,
+      after: limit ~/ 2,
     );
     if (slice.isEmpty) {
       return getLatestWindow(limit: limit);
@@ -144,6 +144,11 @@ class MessageRepository {
     return cached;
   }
 
+  int? findUnreadBoundaryId(int unreadCount) {
+    if (unreadCount <= 0) return null;
+    return store.findNthNewestId(unreadCount - 1);
+  }
+
   bool hasOlderAdjacent(int oldestVisibleId) {
     return store.takeOlderAdjacent(oldestVisibleId, 1).isNotEmpty ||
         nextCursor != null;
@@ -155,6 +160,18 @@ class MessageRepository {
       return true;
     }
     return store.takeNewerAdjacent(newestVisibleId, 1).isNotEmpty;
+  }
+
+  int? findIndexInWindow({
+    required int newestVisibleId,
+    required int oldestVisibleId,
+    required int messageId,
+  }) {
+    return store.findIndexInSlice(
+      newestId: newestVisibleId,
+      oldestId: oldestVisibleId,
+      messageId: messageId,
+    );
   }
 
   Future<void> markAsRead(int messageId) async {

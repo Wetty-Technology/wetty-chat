@@ -123,6 +123,10 @@ class _ChatDetailPageState extends State<ChatDetailPage>
     final isBottomVisible = positions.any((p) => p.index == 0);
     _viewModel.updateScrollToBottom(!isBottomVisible);
 
+    final minIndex = positions
+        .map((p) => p.index)
+        .reduce((a, b) => a < b ? a : b);
+
     final maxIndex = positions
         .map((p) => p.index)
         .reduce((a, b) => a > b ? a : b);
@@ -131,6 +135,9 @@ class _ChatDetailPageState extends State<ChatDetailPage>
 
     if (maxIndex >= totalCount - 5) {
       _loadOlderMessages();
+    }
+    if (minIndex <= 4 && _viewModel.hasNewerMessages && !isBottomVisible) {
+      _loadNewerMessages();
     }
 
     // Track read status
@@ -161,6 +168,19 @@ class _ChatDetailPageState extends State<ChatDetailPage>
     });
   }
 
+  Future<void> _loadNewerMessages() async {
+    final anchor = _bottomViewportAnchor();
+    final changed = await _viewModel.loadNewerMessages();
+    if (!changed || anchor == null || !mounted) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final anchorIndex = _viewModel.findWindowIndex(anchor.key);
+      if (anchorIndex == null) return;
+      _itemScrollController.jumpTo(index: anchorIndex, alignment: anchor.value);
+    });
+  }
+
   MapEntry<int, double>? _topViewportAnchor() {
     final positions = _itemPositionsListener.itemPositions.value
         .where((position) => position.index < _viewModel.displayItems.length)
@@ -168,6 +188,20 @@ class _ChatDetailPageState extends State<ChatDetailPage>
     if (positions.isEmpty) return null;
 
     positions.sort((a, b) => b.index.compareTo(a.index));
+    final anchor = positions.first;
+    return MapEntry(
+      _viewModel.displayItems[anchor.index].id,
+      anchor.itemLeadingEdge,
+    );
+  }
+
+  MapEntry<int, double>? _bottomViewportAnchor() {
+    final positions = _itemPositionsListener.itemPositions.value
+        .where((position) => position.index < _viewModel.displayItems.length)
+        .toList();
+    if (positions.isEmpty) return null;
+
+    positions.sort((a, b) => a.index.compareTo(b.index));
     final anchor = positions.first;
     return MapEntry(
       _viewModel.displayItems[anchor.index].id,
@@ -235,8 +269,8 @@ class _ChatDetailPageState extends State<ChatDetailPage>
     final found = await _viewModel.jumpToMessage(messageId);
     if (!found || !mounted) return;
 
-    final idx = _viewModel.displayItems.indexWhere((m) => m.id == messageId);
-    if (idx < 0) return;
+    final idx = _viewModel.findWindowIndex(messageId);
+    if (idx == null) return;
 
     // Helper for precise centering scroll.
     void performRefinedScroll(int targetIdx) {
@@ -266,8 +300,8 @@ class _ChatDetailPageState extends State<ChatDetailPage>
     // Item not visible. Wait for a frame to ensure SPL recognizes the new data.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-      final idx2 = _viewModel.displayItems.indexWhere((m) => m.id == messageId);
-      if (idx2 < 0) return;
+      final idx2 = _viewModel.findWindowIndex(messageId);
+      if (idx2 == null) return;
 
       // Bring item into viewport.
       _itemScrollController.jumpTo(index: idx2, alignment: 0.5);
@@ -294,6 +328,13 @@ class _ChatDetailPageState extends State<ChatDetailPage>
         _itemScrollController.scrollTo(
           index: idx2,
           alignment: 0.5 - h,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      } else {
+        _itemScrollController.scrollTo(
+          index: idx2,
+          alignment: 0.5,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
