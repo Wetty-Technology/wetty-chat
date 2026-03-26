@@ -62,16 +62,15 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     super.dispose();
   }
 
-  String? _lastJumpedId;
+  int? _lastJumpedId;
 
   void _onViewModelChanged() {
     if (!mounted) return;
     
     // Check if we need to jump to the first unread message
-    if (_viewModel.firstUnreadMessageId != null && 
+    if (_viewModel.firstUnreadMessageId != null &&
         _viewModel.firstUnreadMessageId != _lastJumpedId) {
       _lastJumpedId = _viewModel.firstUnreadMessageId;
-      // We wait for a bit to ensure the list is rendered
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _jumpToMessage(_lastJumpedId!);
       });
@@ -99,7 +98,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     final isBottomVisible = positions.any((p) => p.index == 0);
     _viewModel.updateScrollToBottom(!isBottomVisible);
 
-    // Load more when reaching the end (highest index)
     final maxIndex = positions
         .map((p) => p.index)
         .reduce((a, b) => a > b ? a : b);
@@ -107,7 +105,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         _viewModel.displayItems.length + (_viewModel.hasMoreMessages ? 1 : 0);
 
     if (maxIndex >= totalCount - 5) {
-      _viewModel.loadMoreMessages();
+      _loadOlderMessages();
     }
 
     // Track read status
@@ -123,12 +121,50 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     }
   }
 
-  void _scrollToBottom() {
-    _itemScrollController.scrollTo(
-      index: 0,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOut,
+  Future<void> _loadOlderMessages() async {
+    final anchor = _topViewportAnchor();
+    final changed = await _viewModel.loadMoreMessages();
+    if (!changed || anchor == null || !mounted) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final anchorIndex = _viewModel.displayItems.indexWhere(
+        (message) => message.id == anchor.key,
+      );
+      if (anchorIndex < 0) return;
+      _itemScrollController.jumpTo(
+        index: anchorIndex,
+        alignment: anchor.value,
+      );
+    });
+  }
+
+  MapEntry<int, double>? _topViewportAnchor() {
+    final positions = _itemPositionsListener.itemPositions.value
+        .where((position) => position.index < _viewModel.displayItems.length)
+        .toList();
+    if (positions.isEmpty) return null;
+
+    positions.sort((a, b) => b.index.compareTo(a.index));
+    final anchor = positions.first;
+    return MapEntry(
+      _viewModel.displayItems[anchor.index].id,
+      anchor.itemLeadingEdge,
     );
+  }
+
+  Future<void> _scrollToBottom() async {
+    await _viewModel.jumpToBottom();
+    if (!mounted || _viewModel.displayItems.isEmpty) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _itemScrollController.scrollTo(
+        index: 0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   void _clearInputMessage() {
@@ -156,7 +192,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         _viewModel.clearDraft();
         try {
           await _viewModel.sendMessage(text, replyToId: message.id);
-          _scrollToBottom();
+          await _scrollToBottom();
         } catch (e) {
           if (mounted) _showErrorDialog('$e');
         }
@@ -166,14 +202,14 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         _viewModel.clearDraft();
         try {
           await _viewModel.sendMessage(text);
-          _scrollToBottom();
+          await _scrollToBottom();
         } catch (e) {
           if (mounted) _showErrorDialog('$e');
         }
     }
   }
 
-  Future<void> _jumpToMessage(String messageId) async {
+  Future<void> _jumpToMessage(int messageId) async {
     final found = await _viewModel.jumpToMessage(messageId);
     if (!found || !mounted) return;
 
@@ -529,7 +565,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       );
     }
     final showTopLoader =
-        _viewModel.nextCursor != null && _viewModel.isLoadingMore;
+        _viewModel.hasMoreMessages && _viewModel.isLoadingMore;
     final items = _viewModel.displayItems;
     final itemCount = items.length + (showTopLoader ? 1 : 0);
 

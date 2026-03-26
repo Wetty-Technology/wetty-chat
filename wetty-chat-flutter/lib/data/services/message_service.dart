@@ -9,15 +9,15 @@ class MessageService {
   Future<ListMessagesResponse> fetchMessages(
     String chatId, {
     int? max,
-    String? before,
-    String? after,
-    String? around,
+    int? before,
+    int? after,
+    int? around,
   }) async {
     final query = <String, String>{};
     if (max != null) query['max'] = max.toString();
-    if (before != null && before.isNotEmpty) query['before'] = before;
-    if (after != null && after.isNotEmpty) query['after'] = after;
-    if (around != null && around.isNotEmpty) query['around'] = around;
+    if (before != null) query['before'] = before.toString();
+    if (after != null) query['after'] = after.toString();
+    if (around != null) query['around'] = around.toString();
     final uri = Uri.parse(
       '$apiBaseUrl/chats/$chatId/messages',
     ).replace(queryParameters: query.isEmpty ? null : query);
@@ -33,7 +33,7 @@ class MessageService {
   }
 
   /// Fetches messages around [messageId] for deep linking.
-  Future<List<MessageItem>> fetchAround(String chatId, String messageId) async {
+  Future<List<MessageItem>> fetchAround(String chatId, int messageId) async {
     final res = await fetchMessages(chatId, around: messageId);
     return res.messages;
   }
@@ -41,7 +41,7 @@ class MessageService {
   Future<MessageItem> sendMessage(
     String chatId,
     String text, {
-    String? replyToId,
+    int? replyToId,
   }) async {
     final uri = Uri.parse('$apiBaseUrl/chats/$chatId/messages');
     final clientGeneratedId =
@@ -51,7 +51,7 @@ class MessageService {
       'message_type': 'text',
       'client_generated_id': clientGeneratedId,
     };
-    if (replyToId != null) body['reply_to_id'] = int.parse(replyToId);
+    if (replyToId != null) body['reply_to_id'] = replyToId;
     final response = await http.post(
       uri,
       headers: apiHeaders,
@@ -69,7 +69,7 @@ class MessageService {
 
   Future<MessageItem> editMessage(
     String chatId,
-    String messageId,
+    int messageId,
     String newText,
   ) async {
     final uri = Uri.parse('$apiBaseUrl/chats/$chatId/messages/$messageId');
@@ -88,7 +88,7 @@ class MessageService {
     );
   }
 
-  Future<void> deleteMessage(String chatId, String messageId) async {
+  Future<void> deleteMessage(String chatId, int messageId) async {
     final uri = Uri.parse('$apiBaseUrl/chats/$chatId/messages/$messageId');
     final response = await http.delete(uri, headers: apiHeaders);
     if (response.statusCode != 204) {
@@ -98,7 +98,7 @@ class MessageService {
     }
   }
 
-  Future<void> markAsRead(String chatId, String messageId) async {
+  Future<void> markAsRead(String chatId, int messageId) async {
     final uri = Uri.parse('$apiBaseUrl/chats/$chatId/read');
     final response = await http.post(
       uri,

@@ -1,3 +1,10 @@
+int parseSnowflakeId(Object? value) {
+  if (value is int) return value;
+  if (value is String) return int.parse(value);
+  if (value == null) return 0;
+  throw FormatException('Invalid snowflake id: $value');
+}
+
 class Sender {
   final int uid;
   final String? name;
@@ -10,7 +17,7 @@ class Sender {
 }
 
 class ReplyToMessage {
-  final String id;
+  final int id;
   final String? message;
   final Sender sender;
   final bool isDeleted;
@@ -24,7 +31,7 @@ class ReplyToMessage {
 
   factory ReplyToMessage.fromJson(Map<String, dynamic> json) {
     return ReplyToMessage(
-      id: json['id']?.toString() ?? '',
+      id: parseSnowflakeId(json['id']),
       message: json['message'] as String?,
       sender: Sender.fromJson(json['sender'] as Map<String, dynamic>? ?? {}),
       isDeleted: json['is_deleted'] as bool? ?? false,
@@ -33,7 +40,7 @@ class ReplyToMessage {
 }
 
 class MessageItem {
-  final String id;
+  final int id;
   final String? message;
   final String messageType;
   final Sender sender;
@@ -42,7 +49,7 @@ class MessageItem {
   final bool isEdited;
   final bool isDeleted;
   final String clientGeneratedId;
-  final String? replyRootId;
+  final int? replyRootId;
   final bool hasAttachments;
   final ReplyToMessage? replyToMessage;
 
@@ -64,7 +71,7 @@ class MessageItem {
   factory MessageItem.fromJson(Map<String, dynamic> json) {
     final replyJson = json['reply_to_message'] as Map<String, dynamic>?;
     return MessageItem(
-      id: json['id']?.toString() ?? '',
+      id: parseSnowflakeId(json['id']),
       message: json['message'] as String?,
       messageType: json['message_type'] as String? ?? 'text',
       sender: Sender.fromJson(json['sender'] as Map<String, dynamic>? ?? {}),
@@ -73,7 +80,9 @@ class MessageItem {
       isEdited: json['is_edited'] as bool? ?? false,
       isDeleted: json['is_deleted'] as bool? ?? false,
       clientGeneratedId: json['client_generated_id'] as String? ?? '',
-      replyRootId: json['reply_root_id']?.toString(),
+      replyRootId: json['reply_root_id'] != null
+          ? parseSnowflakeId(json['reply_root_id'])
+          : null,
       hasAttachments: json['has_attachments'] as bool? ?? false,
       replyToMessage: replyJson != null
           ? ReplyToMessage.fromJson(replyJson)

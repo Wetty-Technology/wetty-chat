@@ -1,124 +1,256 @@
 import 'package:flutter/foundation.dart';
+
 import '../data/models/message_models.dart';
 
-// ---------------------------------------------------------------------------
-// Message store with sorted ranges
-// ---------------------------------------------------------------------------
-
+/// A contiguous block of messages sorted descending by snowflake ID.
 class MessageRange {
   final List<MessageItem> messages;
 
-  MessageRange({required this.messages});
+  MessageRange(List<MessageItem> items) : messages = List.of(items) {
+    messages.sort((a, b) => b.id.compareTo(a.id));
+  }
 
-  int get start => int.parse(messages.first.id);
-  int get end => int.parse(messages.last.id);
+  int get end => messages.first.id;
+  int get start => messages.last.id;
 
-  // void _updateBounds() {
-  //   if (messages.isEmpty) return;
-  //   start = messages.last.id; // oldest
-  //   end = messages.first.id; // newest
-  // }
+  bool contains(int messageId) => start <= messageId && messageId <= end;
+
+  bool overlaps(MessageRange other) {
+    return start <= other.end && other.start <= end;
+  }
+
+  int indexOf(int messageId) {
+    return messages.indexWhere((message) => message.id == messageId);
+  }
+
+  void mergeWith(MessageRange other) {
+    final mergedById = <int, MessageItem>{};
+    for (final message in messages) {
+      mergedById[message.id] = message;
+    }
+    for (final message in other.messages) {
+      mergedById[message.id] = message;
+    }
+
+    messages
+      ..clear()
+      ..addAll(mergedById.values)
+      ..sort((a, b) => b.id.compareTo(a.id));
+  }
 }
 
 class MessageStore extends ChangeNotifier {
-  // ranges will be inserted in order
-  final List<MessageRange> messageRanges = [];
+  final List<MessageRange> _ranges = [];
+  List<MessageItem>? _cachedItems;
 
-  // Add a batch of messages from fetching: find overlapping ranges, merge them.
-  void addMessages(List<MessageItem> items) {
-    if (items.isEmpty) return;
+  List<MessageRange> get ranges => List.unmodifiable(_ranges);
 
-    // new message range
-    final range = MessageRange(messages: items);
-
-    // TODO: change this when have overlapped ranges
-    // Linear search to insert range sorted descending by end
-    int insertAt = messageRanges.length;
-    for (int i = 0; i < messageRanges.length; i++) {
-      if (range.end >= messageRanges[i].end) {
-        insertAt = i;
-        break;
-      }
-    }
-    messageRanges.insert(insertAt, range);
-    notifyListeners();
+  List<MessageItem> get displayItems {
+    _cachedItems ??= _buildFlatList();
+    return _cachedItems!;
   }
 
-  /// Flatten all sorted ranges into one list
-  List<MessageItem> buildDisplayItems() {
-    // Put all messages together
+  List<MessageItem> _buildFlatList() {
     final all = <MessageItem>[];
-    for (final r in messageRanges) {
-      all.addAll(r.messages);
+    for (final range in _ranges) {
+      all.addAll(range.messages);
     }
     return all;
   }
 
+  void _invalidateCache() {
+    _cachedItems = null;
+  }
+
   void clear() {
-    messageRanges.clear();
+    _ranges.clear();
+    _invalidateCache();
     notifyListeners();
   }
 
-  /// Remove a message by ID from whichever range contains it.
-  void removeById(String id) {
-    // TODO: can use binary search to remove
-    for (final r in messageRanges) {
-      final removed = r.messages.where((m) => m.id == id).isNotEmpty;
-      if (removed) {
-        r.messages.removeWhere((m) => m.id == id);
-        notifyListeners();
+  void addMessages(List<MessageItem> items) {
+    _insertRange(MessageRange(items));
+  }
+
+  void addOlderPage({required int olderThanId, required List<MessageItem> items}) {
+    _addContiguousPage(anchorId: olderThanId, items: items);
+  }
+
+  void addNewerPage({required int newerThanId, required List<MessageItem> items}) {
+    _addContiguousPage(anchorId: newerThanId, items: items);
+  }
+
+  void _addContiguousPage({
+    required int anchorId,
+    required List<MessageItem> items,
+  }) {
+    if (items.isEmpty) return;
+
+    final anchorRangeIndex = _ranges.indexWhere(
+      (range) => range.contains(anchorId),
+    );
+    if (anchorRangeIndex < 0) {
+      _insertRange(MessageRange(items));
+      return;
+    }
+
+    final merged = MessageRange([
+      ..._ranges[anchorRangeIndex].messages,
+      ...items,
+    ]);
+    _ranges.removeAt(anchorRangeIndex);
+    _insertRange(merged);
+  }
+
+  void _insertRange(MessageRange incoming) {
+    if (incoming.messages.isEmpty) return;
+
+    final overlapping = <int>[];
+    for (var index = 0; index < _ranges.length; index++) {
+      if (_ranges[index].overlaps(incoming)) {
+        overlapping.add(index);
+      }
+    }
+
+    if (overlapping.isNotEmpty) {
+      for (final index in overlapping) {
+        incoming.mergeWith(_ranges[index]);
+      }
+      for (var i = overlapping.length - 1; i >= 0; i--) {
+        _ranges.removeAt(overlapping[i]);
+      }
+    }
+
+    var insertAt = _ranges.length;
+    for (var index = 0; index < _ranges.length; index++) {
+      if (incoming.end >= _ranges[index].end) {
+        insertAt = index;
         break;
       }
     }
+    _ranges.insert(insertAt, incoming);
+    _invalidateCache();
+    notifyListeners();
   }
 
-  /// Find and replace a message across all ranges.
-  void replaceWhere(bool Function(MessageItem) test, MessageItem replacement) {
-    for (final r in messageRanges) {
-      final idx = r.messages.indexWhere(test);
-      if (idx >= 0) {
-        r.messages[idx] = replacement;
-        notifyListeners();
-        return;
+  void removeById(int id) {
+    for (var index = 0; index < _ranges.length; index++) {
+      final range = _ranges[index];
+      final messageIndex = range.indexOf(id);
+      if (messageIndex < 0) continue;
+
+      range.messages.removeAt(messageIndex);
+      if (range.messages.isEmpty) {
+        _ranges.removeAt(index);
       }
+      _invalidateCache();
+      notifyListeners();
+      return;
     }
   }
 
-  /// Remove messages matching a test from all ranges.
+  void replaceWhere(bool Function(MessageItem) test, MessageItem replacement) {
+    for (final range in _ranges) {
+      final index = range.messages.indexWhere(test);
+      if (index < 0) continue;
+      range.messages[index] = replacement;
+      range.messages.sort((a, b) => b.id.compareTo(a.id));
+      _invalidateCache();
+      notifyListeners();
+      return;
+    }
+  }
+
   void removeWhere(bool Function(MessageItem) test) {
-    bool changed = false;
-    for (final r in messageRanges) {
-      final initialCount = r.messages.length;
-      r.messages.removeWhere(test);
-      if (r.messages.length != initialCount) {
+    var changed = false;
+    for (var index = _ranges.length - 1; index >= 0; index--) {
+      final range = _ranges[index];
+      final originalLength = range.messages.length;
+      range.messages.removeWhere(test);
+      if (range.messages.length != originalLength) {
         changed = true;
       }
+      if (range.messages.isEmpty) {
+        _ranges.removeAt(index);
+      }
     }
-    if (changed) {
-      notifyListeners();
+    if (!changed) return;
+    _invalidateCache();
+    notifyListeners();
+  }
+
+  bool contains(int messageId) => findRangeContaining(messageId) != null;
+
+  MessageRange? findRangeContaining(int messageId) {
+    for (final range in _ranges) {
+      if (range.contains(messageId)) return range;
     }
+    return null;
+  }
+
+  List<MessageItem> newest({required int limit}) {
+    if (_ranges.isEmpty) return const [];
+    final range = _ranges.first;
+    return range.messages.take(limit).toList(growable: false);
+  }
+
+  List<MessageItem> takeOlderAdjacent(int fromId, int limit) {
+    final range = findRangeContaining(fromId);
+    if (range == null) return const [];
+    final index = range.indexOf(fromId);
+    if (index < 0 || index + 1 >= range.messages.length) return const [];
+
+    final endIndex = (index + 1 + limit).clamp(0, range.messages.length);
+    return range.messages.sublist(index + 1, endIndex);
+  }
+
+  List<MessageItem> takeNewerAdjacent(int fromId, int limit) {
+    final range = findRangeContaining(fromId);
+    if (range == null) return const [];
+    final index = range.indexOf(fromId);
+    if (index <= 0) return const [];
+
+    final startIndex = (index - limit).clamp(0, index);
+    return range.messages.sublist(startIndex, index);
+  }
+
+  List<MessageItem> getWindowAround(
+    int messageId, {
+    required int before,
+    required int after,
+  }) {
+    final range = findRangeContaining(messageId);
+    if (range == null) return const [];
+
+    final index = range.indexOf(messageId);
+    if (index < 0) return const [];
+
+    final startIndex = (index - after).clamp(0, index);
+    final endIndex =
+        (index + before + 1).clamp(index + 1, range.messages.length);
+    return range.messages.sublist(startIndex, endIndex);
+  }
+
+  List<MessageItem> sliceInclusive({
+    required int newestId,
+    required int oldestId,
+  }) {
+    final range = findRangeContaining(newestId);
+    if (range == null || !range.contains(oldestId)) return const [];
+
+    final newestIndex = range.indexOf(newestId);
+    final oldestIndex = range.indexOf(oldestId);
+    if (newestIndex < 0 || oldestIndex < 0 || newestIndex > oldestIndex) {
+      return const [];
+    }
+
+    return range.messages.sublist(newestIndex, oldestIndex + 1);
   }
 
   bool get isEmpty =>
-      messageRanges.isEmpty || messageRanges.every((r) => r.messages.isEmpty);
+      _ranges.isEmpty || _ranges.every((range) => range.messages.isEmpty);
   bool get isNotEmpty => !isEmpty;
 
-  /// Oldest loaded ID (for "load more" before param).
-  String? get oldestId =>
-      messageRanges.isNotEmpty ? messageRanges.last.start.toString() : null;
-
-  /// Insert a single message into the newest range (for optimistic send).
-  /// Temp messages are always the newest, so insert at front.
-  // void insertIntoNewestRange(MessageItem msg) {
-  //   if (messageRanges.isNotEmpty) {
-  //     messageRanges.first.messages.insert(0, msg);
-  //   } else {
-  //     final range = MessageRange(
-  //       start: BigInt.parse(msg.id),
-  //       end: BigInt.parse(msg.id),
-  //     );
-  //     range.messages.add(msg);
-  //     messageRanges.add(range);
-  //   }
-  // }
+  int? get newestId => _ranges.isNotEmpty ? _ranges.first.end : null;
+  int? get oldestId => _ranges.isNotEmpty ? _ranges.last.start : null;
 }

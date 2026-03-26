@@ -1,13 +1,10 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../../data/models/message_models.dart';
 import '../../data/repositories/message_repository.dart';
 import '../shared/draft_store.dart';
-
-// ---------------------------------------------------------------------------
-// InputState – the three mutually exclusive states for the input bar
-// ---------------------------------------------------------------------------
 
 sealed class InputState {}
 
@@ -23,33 +20,37 @@ class InputEditing extends InputState {
   InputEditing(this.message);
 }
 
-// ---------------------------------------------------------------------------
-// ChatDetailViewModel
-// ---------------------------------------------------------------------------
-
-/// ViewModel for the chat detail (message list) screen.
 class ChatDetailViewModel extends ChangeNotifier {
+  static const int initialWindowSize = 100;
+  static const int pageSize = 50;
+  static const int maxWindowSize = 300;
+
   final MessageRepository _repository;
   final String chatId;
   final int unreadCount;
 
   Timer? _syncTimer;
-  String? _lastReadSyncId;
-  String? _currentReadId;
+  int? _lastReadSyncId;
+  int? _currentReadId;
+  int? _newestVisibleId;
+  int? _oldestVisibleId;
+  bool _hasOlder = false;
+  bool _hasNewer = false;
+  bool _isAtLiveEdge = true;
 
   ChatDetailViewModel({
     required this.chatId,
     this.unreadCount = 0,
     MessageRepository? repository,
   }) : _repository = repository ?? MessageRepository(chatId: chatId) {
-    _repository.store.addListener(_rebuildDisplay);
+    _repository.store.addListener(_onStoreChanged);
     _startSyncTimer();
   }
 
   @override
   void dispose() {
     _syncTimer?.cancel();
-    _repository.store.removeListener(_rebuildDisplay);
+    _repository.store.removeListener(_onStoreChanged);
     super.dispose();
   }
 
@@ -71,37 +72,44 @@ class ChatDetailViewModel extends ChangeNotifier {
   InputState _inputState = InputEmpty();
   InputState get inputState => _inputState;
 
-  String? _highlightedMessageId;
-  String? get highlightedMessageId => _highlightedMessageId;
+  int? _highlightedMessageId;
+  int? get highlightedMessageId => _highlightedMessageId;
 
-  String? _firstUnreadMessageId;
-  String? get firstUnreadMessageId => _firstUnreadMessageId;
+  int? _firstUnreadMessageId;
+  int? get firstUnreadMessageId => _firstUnreadMessageId;
 
-  bool _showUnreadDivider = false;
+  final bool _showUnreadDivider = false;
   bool get showUnreadDivider => _showUnreadDivider;
 
-  String? get nextCursor => _repository.nextCursor;
-  bool get hasMoreMessages => _repository.nextCursor != null;
+  bool get hasMoreMessages => _hasOlder;
+  bool get hasNewerMessages => _hasNewer;
 
-  void _rebuildDisplay() {
-    _displayItems = _repository.displayItems;
+  void _onStoreChanged() {
+    if (_isLoading || _displayItems.isEmpty) return;
+
+    final rebuilt = _repository.rebuildWindow(
+      newestVisibleId: _newestVisibleId ?? _displayItems.first.id,
+      oldestVisibleId: _oldestVisibleId ?? _displayItems.last.id,
+      limit: maxWindowSize,
+      liveEdge: _isAtLiveEdge,
+    );
+    if (rebuilt.isEmpty) return;
+
+    _setDisplayItems(rebuilt);
     notifyListeners();
   }
-
-  // ---- Loading ----
 
   Future<void> loadMessages() async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
+
     try {
-      await _repository.initLoadMessages();
+      final items = await _repository.initLoadMessages(limit: initialWindowSize);
       _isLoading = false;
       _errorMessage = null;
-      _rebuildDisplay();
-
-      // Determine first unread and jump
-      await _handleInitialJump();
+      _setDisplayItems(items);
+      notifyListeners();
     } catch (e) {
       _isLoading = false;
       _errorMessage = e.toString();
@@ -109,71 +117,98 @@ class ChatDetailViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> _handleInitialJump() async {
-    if (unreadCount <= 0) return;
-
-    print("unread count: $unreadCount");
-
-    // Fetch more messages if unreadCount is larger than what we currently have
-    while (unreadCount > _displayItems.length &&
-        _repository.nextCursor != null) {
-      await _repository.loadMoreMessages();
-      _rebuildDisplay();
+  Future<bool> loadMoreMessages() async {
+    if (_displayItems.isEmpty || _isLoadingMore || !_hasOlder) {
+      return false;
     }
 
-    String? targetId;
-    if (_displayItems.isNotEmpty) {
-      print("item len: ${_displayItems.length}");
-      for (var i = 0; i < _displayItems.length; i++) {
-        print("message id: ${_displayItems[i].id}");
-      }
-      if (unreadCount <= _displayItems.length) {
-        targetId = _displayItems[_displayItems.length - unreadCount].id;
-      } else {
-        // Even after fetching all, we don't have enough? Just jump to the oldest.
-        targetId = _displayItems.first.id;
-      }
-    }
-
-    if (targetId != null) {
-      _firstUnreadMessageId = targetId;
-
-      // Only show divider if there's actually a "read" message boundary.
-      // If targetId is the oldest message and no more history, don't show divider.
-      final targetIdx = _displayItems.indexWhere((m) => m.id == targetId);
-      if (targetIdx < _displayItems.length - 1 || hasMoreMessages) {
-        _showUnreadDivider = true;
-      } else {
-        _showUnreadDivider = false;
-      }
-
-      notifyListeners();
-      await jumpToMessage(targetId);
-    }
-  }
-
-  Future<void> loadMoreMessages() async {
-    if (_repository.store.isEmpty || _isLoadingMore || nextCursor == null) {
-      return;
-    }
     _isLoadingMore = true;
     notifyListeners();
+
     try {
-      await _repository.loadMoreMessages();
-      _isLoadingMore = false;
-      _rebuildDisplay();
+      final olderItems = await _repository.extendOlderWindow(
+        _oldestVisibleId!,
+        pageSize: pageSize,
+      );
+      if (olderItems.isEmpty) {
+        _syncWindowFlags();
+        return false;
+      }
+
+      var nextItems = <MessageItem>[..._displayItems, ...olderItems];
+      if (nextItems.length > maxWindowSize) {
+        final trimCount = nextItems.length - maxWindowSize;
+        nextItems = nextItems.sublist(trimCount);
+      }
+
+      _setDisplayItems(nextItems);
+      return true;
     } catch (e) {
+      _errorMessage = e.toString();
+      return false;
+    } finally {
       _isLoadingMore = false;
       notifyListeners();
     }
   }
 
-  // ---- Read status sync ----
+  Future<bool> loadNewerMessages() async {
+    if (_displayItems.isEmpty || _isLoadingMore || !_hasNewer) {
+      return false;
+    }
 
-  void onMessageVisible(String messageId) {
-    // Keep track of the highest message ID seen
-    if (_currentReadId == null ||
-        (int.tryParse(messageId) ?? 0) > (int.tryParse(_currentReadId!) ?? 0)) {
+    _isLoadingMore = true;
+    notifyListeners();
+
+    try {
+      final newerItems = await _repository.extendNewerWindow(
+        _newestVisibleId!,
+        pageSize: pageSize,
+      );
+      if (newerItems.isEmpty) {
+        _syncWindowFlags();
+        return false;
+      }
+
+      var nextItems = <MessageItem>[...newerItems, ..._displayItems];
+      if (nextItems.length > maxWindowSize) {
+        nextItems = nextItems.sublist(0, maxWindowSize);
+      }
+
+      _setDisplayItems(nextItems);
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      return false;
+    } finally {
+      _isLoadingMore = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> jumpToBottom() async {
+    if (_isLoadingMore) return;
+
+    _isLoadingMore = true;
+    notifyListeners();
+
+    try {
+      final latestWindow = await _repository.refreshLatestWindow(
+        limit: initialWindowSize,
+      );
+      _isAtLiveEdge = true;
+      _showScrollToBottom = false;
+      _setDisplayItems(latestWindow);
+    } catch (e) {
+      _errorMessage = e.toString();
+    } finally {
+      _isLoadingMore = false;
+      notifyListeners();
+    }
+  }
+
+  void onMessageVisible(int messageId) {
+    if (_currentReadId == null || messageId > _currentReadId!) {
       _currentReadId = messageId;
     }
   }
@@ -191,21 +226,17 @@ class ChatDetailViewModel extends ChangeNotifier {
     try {
       await _repository.markAsRead(toSync);
       _lastReadSyncId = toSync;
-    } catch (e) {
-      print("Sync read status failed: $e");
-    }
+    } catch (_) {}
   }
 
-  // ---- Scroll ----
-
   void updateScrollToBottom(bool shouldShow) {
-    if (shouldShow != _showScrollToBottom) {
-      _showScrollToBottom = shouldShow;
+    final changed = shouldShow != _showScrollToBottom;
+    _showScrollToBottom = shouldShow;
+    _isAtLiveEdge = !shouldShow;
+    if (changed) {
       notifyListeners();
     }
   }
-
-  // ---- Input state ----
 
   void setReplyTo(MessageItem msg) {
     _inputState = InputReplying(msg);
@@ -222,37 +253,42 @@ class ChatDetailViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ---- Jump to message ----
-
-  Future<bool> jumpToMessage(String messageId) async {
-    int idx = _displayItems.indexWhere((m) => m.id == messageId);
-    // if found, highlight the message
-    if (idx >= 0) {
-      _highlightedMessageId = messageId;
-      notifyListeners();
-      _clearHighlightAfterDelay();
+  Future<bool> jumpToMessage(int messageId) async {
+    final existingIndex = _displayItems.indexWhere((item) => item.id == messageId);
+    if (existingIndex >= 0) {
+      _highlightMessage(messageId);
       return true;
     }
 
     _isLoadingMore = true;
     notifyListeners();
+
     try {
-      await _repository.fetchAround(messageId);
-      _isLoadingMore = false;
-      _rebuildDisplay();
-      idx = _displayItems.indexWhere((m) => m.id == messageId);
-      if (idx >= 0) {
-        _highlightedMessageId = messageId;
-        notifyListeners();
-        _clearHighlightAfterDelay();
-        return true;
+      final window = await _repository.getWindowAround(
+        messageId,
+        before: initialWindowSize ~/ 2,
+        after: initialWindowSize ~/ 2,
+      );
+      if (window.isEmpty) {
+        return false;
       }
+
+      _setDisplayItems(window.take(maxWindowSize).toList(growable: false));
+      _highlightMessage(messageId);
+      return true;
     } catch (e) {
-      _isLoadingMore = false;
       _errorMessage = 'Failed to jump: $e';
+      return false;
+    } finally {
+      _isLoadingMore = false;
       notifyListeners();
     }
-    return false;
+  }
+
+  void _highlightMessage(int messageId) {
+    _highlightedMessageId = messageId;
+    notifyListeners();
+    _clearHighlightAfterDelay();
   }
 
   void _clearHighlightAfterDelay() {
@@ -262,36 +298,29 @@ class ChatDetailViewModel extends ChangeNotifier {
     });
   }
 
-  // ---- Send / Edit / Delete ----
-
-  Future<void> sendMessage(String text, {String? replyToId}) async {
+  Future<void> sendMessage(String text, {int? replyToId}) async {
     try {
       await _repository.sendMessage(text, replyToId: replyToId);
-      _rebuildDisplay();
     } catch (e) {
       throw Exception('Failed to send: $e');
     }
   }
 
-  Future<void> editMessage(String messageId, String newText) async {
+  Future<void> editMessage(int messageId, String newText) async {
     try {
       await _repository.editMessage(messageId, newText);
-      _rebuildDisplay();
     } catch (e) {
       throw Exception('Failed to edit: $e');
     }
   }
 
-  Future<void> deleteMessage(String messageId) async {
+  Future<void> deleteMessage(int messageId) async {
     try {
       await _repository.deleteMessage(messageId);
-      _rebuildDisplay();
     } catch (e) {
       throw Exception('Failed to delete: $e');
     }
   }
-
-  // ---- Draft ----
 
   void saveDraft(String text) {
     final trimmed = text.trim();
@@ -308,5 +337,26 @@ class ChatDetailViewModel extends ChangeNotifier {
 
   void clearDraft() {
     DraftStore.instance.clearDraft(chatId);
+  }
+
+  void _setDisplayItems(List<MessageItem> items) {
+    _displayItems = List.unmodifiable(items);
+    if (_displayItems.isNotEmpty) {
+      _newestVisibleId = _displayItems.first.id;
+      _oldestVisibleId = _displayItems.last.id;
+    } else {
+      _newestVisibleId = null;
+      _oldestVisibleId = null;
+    }
+    _syncWindowFlags();
+  }
+
+  void _syncWindowFlags() {
+    _hasOlder = _oldestVisibleId != null
+        ? _repository.hasOlderAdjacent(_oldestVisibleId!)
+        : false;
+    _hasNewer = _newestVisibleId != null
+        ? _repository.hasNewerAdjacent(_newestVisibleId!)
+        : false;
   }
 }

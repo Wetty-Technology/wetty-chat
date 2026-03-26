@@ -1,14 +1,14 @@
+import '../../domain/message_store.dart';
 import '../models/message_models.dart';
 import '../services/message_service.dart';
 import '../services/websocket_service.dart';
-import '../../domain/message_store.dart';
 
 /// Source of truth for messages in a single chat.
-/// Owns the MessageStore and pagination state.
 class MessageRepository {
   final MessageService _service;
   final String chatId;
   final MessageStore store = MessageStore();
+
   String? nextCursor;
 
   MessageRepository({required this.chatId, MessageService? service})
@@ -22,70 +22,161 @@ class MessageRepository {
       final payload = event['payload'];
       if (payload == null) return;
 
-      // Filter by chatId
       final eventChatId = payload['chat_id']?.toString();
       if (eventChatId != chatId) return;
 
-      final msg = MessageItem.fromJson(payload as Map<String, dynamic>);
-
+      final message = MessageItem.fromJson(payload as Map<String, dynamic>);
       if (type == 'message') {
-        store.addMessages([msg]);
+        store.addMessages([message]);
       } else if (type == 'message_updated') {
-        store.replaceWhere((m) => m.id == msg.id, msg);
+        store.replaceWhere((item) => item.id == message.id, message);
       } else if (type == 'message_deleted') {
-        store.removeById(msg.id);
+        store.removeById(message.id);
       }
     });
   }
 
-  /// Load the initial set of messages.
-  Future<void> initLoadMessages() async {
-    final res = await _service.fetchMessages(chatId);
+  Future<List<MessageItem>> initLoadMessages({int limit = 100}) async {
+    final response = await _service.fetchMessages(chatId, max: limit);
     store.clear();
-    store.addMessages(res.messages);
-    nextCursor = res.nextCursor;
+    store.addMessages(response.messages);
+    nextCursor = response.nextCursor;
+    return store.newest(limit: limit);
   }
 
-  /// Load older messages (scroll up).
-  Future<bool> loadMoreMessages() async {
-    if (store.isEmpty || nextCursor == null) return false;
-    final res = await _service.fetchMessages(chatId, before: store.oldestId);
-    store.addMessages(res.messages);
-    nextCursor = res.nextCursor;
-    return res.messages.isNotEmpty;
+  Future<List<MessageItem>> refreshLatestWindow({int limit = 100}) async {
+    final response = await _service.fetchMessages(chatId, max: limit);
+    store.addMessages(response.messages);
+    nextCursor = response.nextCursor;
+    return store.newest(limit: limit);
   }
 
-  /// Fetch messages around a specific message (for jump-to-reply).
-  Future<void> fetchAround(String messageId) async {
-    final msgs = await _service.fetchAround(chatId, messageId);
-    store.addMessages(msgs);
+  List<MessageItem> getLatestWindow({int limit = 100}) {
+    return store.newest(limit: limit);
   }
 
-  /// Mark message as read on the server.
-  Future<void> markAsRead(String messageId) async {
+  List<MessageItem> rebuildWindow({
+    required int newestVisibleId,
+    required int oldestVisibleId,
+    required int limit,
+    bool liveEdge = false,
+  }) {
+    if (liveEdge) {
+      return getLatestWindow(limit: limit);
+    }
+
+    final slice = store.sliceInclusive(
+      newestId: newestVisibleId,
+      oldestId: oldestVisibleId,
+    );
+    if (slice.isEmpty) {
+      return getLatestWindow(limit: limit);
+    }
+    if (slice.length <= limit) {
+      return slice;
+    }
+    return slice.sublist(0, limit);
+  }
+
+  Future<List<MessageItem>> extendOlderWindow(
+    int oldestVisibleId, {
+    int pageSize = 50,
+  }) async {
+    final cached = store.takeOlderAdjacent(oldestVisibleId, pageSize);
+    if (cached.isNotEmpty) return cached;
+
+    final response = await _service.fetchMessages(
+      chatId,
+      before: oldestVisibleId,
+      max: pageSize,
+    );
+    store.addOlderPage(
+      olderThanId: oldestVisibleId,
+      items: response.messages,
+    );
+    nextCursor = response.nextCursor;
+    return store.takeOlderAdjacent(oldestVisibleId, pageSize);
+  }
+
+  Future<List<MessageItem>> extendNewerWindow(
+    int newestVisibleId, {
+    int pageSize = 50,
+  }) async {
+    final cached = store.takeNewerAdjacent(newestVisibleId, pageSize);
+    if (cached.isNotEmpty) return cached;
+
+    final response = await _service.fetchMessages(
+      chatId,
+      after: newestVisibleId,
+      max: pageSize,
+    );
+    store.addNewerPage(
+      newerThanId: newestVisibleId,
+      items: response.messages,
+    );
+    return store.takeNewerAdjacent(newestVisibleId, pageSize);
+  }
+
+  Future<List<MessageItem>> getWindowAround(
+    int messageId, {
+    int before = 75,
+    int after = 75,
+  }) async {
+    var cached = store.getWindowAround(
+      messageId,
+      before: before,
+      after: after,
+    );
+    if (cached.isNotEmpty) return cached;
+
+    final response = await _service.fetchMessages(
+      chatId,
+      around: messageId,
+      max: before + after + 1,
+    );
+    store.addMessages(response.messages);
+    nextCursor = response.nextCursor;
+    cached = store.getWindowAround(
+      messageId,
+      before: before,
+      after: after,
+    );
+    return cached;
+  }
+
+  bool hasOlderAdjacent(int oldestVisibleId) {
+    return store.takeOlderAdjacent(oldestVisibleId, 1).isNotEmpty ||
+        nextCursor != null;
+  }
+
+  bool hasNewerAdjacent(int newestVisibleId) {
+    final latestCachedId = store.newestId;
+    if (latestCachedId != null && latestCachedId > newestVisibleId) {
+      return true;
+    }
+    return store.takeNewerAdjacent(newestVisibleId, 1).isNotEmpty;
+  }
+
+  Future<void> markAsRead(int messageId) async {
     try {
       await _service.markAsRead(chatId, messageId);
-    } catch (e) {
-      // Log error but don't block
-      print("Failed to sync markAsRead to server: $e");
-    }
+    } catch (_) {}
   }
 
-  /// Send a new message.
-  Future<MessageItem> sendMessage(String text, {String? replyToId}) async {
-    return await _service.sendMessage(chatId, text, replyToId: replyToId);
+  Future<MessageItem> sendMessage(String text, {int? replyToId}) async {
+    final message = await _service.sendMessage(chatId, text, replyToId: replyToId);
+    store.addMessages([message]);
+    return message;
   }
 
-  /// Edit an existing message.
-  Future<MessageItem> editMessage(String messageId, String newText) async {
-    return await _service.editMessage(chatId, messageId, newText);
+  Future<MessageItem> editMessage(int messageId, String newText) async {
+    final message = await _service.editMessage(chatId, messageId, newText);
+    store.replaceWhere((item) => item.id == messageId, message);
+    return message;
   }
 
-  /// Delete a message.
-  Future<void> deleteMessage(String messageId) async {
+  Future<void> deleteMessage(int messageId) async {
     await _service.deleteMessage(chatId, messageId);
+    store.removeById(messageId);
   }
-
-  /// Get display items
-  List<MessageItem> get displayItems => store.buildDisplayItems();
 }
