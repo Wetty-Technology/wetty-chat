@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/api_config.dart';
 import '../../data/models/message_models.dart';
+import '../shared/settings_store.dart';
 
 // ---------------------------------------------------------------------------
 // MessageRow — message bubble with avatar, inline time, reply quote,
@@ -64,6 +65,13 @@ class _MessageRowState extends State<MessageRow>
 
   @override
   Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: SettingsStore.instance,
+      builder: (context, _) => _buildWithSettings(context),
+    );
+  }
+
+  Widget _buildWithSettings(BuildContext context) {
     final message = widget.message;
     final screenWidth = MediaQuery.of(context).size.width;
     final msgText = message.message ?? '';
@@ -118,6 +126,9 @@ class _MessageRowState extends State<MessageRow>
     final linkColor = _isMe
         ? CupertinoColors.white
         : CupertinoColors.activeBlue;
+    final fontScale = SettingsStore.instance.chatFontScale;
+    final messageFontSize = 15 * fontScale;
+    final replyFontSize = 13 * fontScale;
 
     Widget bubbleContent;
     if (msgText.isNotEmpty) {
@@ -128,7 +139,7 @@ class _MessageRowState extends State<MessageRow>
               children: [
                 ..._buildLinkedSpans(
                   msgText,
-                  TextStyle(color: textColor, fontSize: 15),
+                  TextStyle(color: textColor, fontSize: messageFontSize),
                   linkColor,
                 ),
                 WidgetSpan(
@@ -166,7 +177,11 @@ class _MessageRowState extends State<MessageRow>
         if (message.replyToMessage != null)
           GestureDetector(
             onTap: widget.onTapReply,
-            child: _buildReplyQuote(context, message.replyToMessage!),
+            child: _buildReplyQuote(
+              context,
+              message.replyToMessage!,
+              replyFontSize,
+            ),
           ),
         if (hasAttachments)
           Padding(
@@ -292,7 +307,11 @@ class _MessageRowState extends State<MessageRow>
     );
   }
 
-  Widget _buildReplyQuote(BuildContext context, ReplyToMessage reply) {
+  Widget _buildReplyQuote(
+    BuildContext context,
+    ReplyToMessage reply,
+    double replyFontSize,
+  ) {
     final replySender = reply.sender.name ?? 'User ${reply.sender.uid}';
     final replyText = reply.isDeleted
         ? 'Message deleted'
@@ -337,7 +356,7 @@ class _MessageRowState extends State<MessageRow>
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: replyFontSize,
               color: _isMe
                   ? CupertinoColors.white.withAlpha(200)
                   : CupertinoColors.secondaryLabel.resolveFrom(context),

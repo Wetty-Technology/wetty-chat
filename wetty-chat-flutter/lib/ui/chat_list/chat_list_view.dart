@@ -8,6 +8,7 @@ import '../../data/models/message_models.dart';
 import '../shared/draft_store.dart';
 import '../shared/widgets.dart';
 import '../chat_detail/chat_detail_view.dart';
+import '../settings/settings_view.dart';
 import 'chat_list_viewmodel.dart';
 import 'new_chat_view.dart';
 
@@ -95,6 +96,14 @@ class _ChatPageState extends State<ChatPage> {
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
+        leading: CupertinoButton(
+          padding: EdgeInsets.zero,
+          onPressed: () => Navigator.push(
+            context,
+            CupertinoPageRoute(builder: (_) => const SettingsPage()),
+          ),
+          child: const Icon(CupertinoIcons.gear),
+        ),
         middle: const Text('Chats'),
         trailing: CupertinoButton(
           padding: EdgeInsets.zero,
