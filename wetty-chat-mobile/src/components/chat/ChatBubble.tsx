@@ -193,6 +193,28 @@ export function ChatBubble({
     attachments?.filter((att) => att.kind.startsWith('image/') || att.kind.startsWith('video/')) ?? [];
   const chatFontSizeStyle = useSelector(selectChatFontSizeStyle);
 
+  function logAttachmentLoad(
+    kind: 'image' | 'video',
+    attachment: Attachment,
+    element: HTMLImageElement | HTMLVideoElement,
+  ) {
+    if (!import.meta.env.DEV) return;
+
+    const rect = element.getBoundingClientRect();
+    console.log('[ChatBubble] attachment-load', {
+      kind,
+      attachmentId: attachment.id,
+      attachmentKind: attachment.kind,
+      src: attachment.url,
+      metaWidth: attachment.width ?? null,
+      metaHeight: attachment.height ?? null,
+      renderedWidth: Math.round(rect.width),
+      renderedHeight: Math.round(rect.height),
+      naturalWidth: 'naturalWidth' in element ? element.naturalWidth : element.videoWidth,
+      naturalHeight: 'naturalHeight' in element ? element.naturalHeight : element.videoHeight,
+    });
+  }
+
   return (
     <div className={styles.swipeContainer}>
       <div
@@ -287,6 +309,9 @@ export function ChatBubble({
                           alt={t`Attachment`}
                           className={styles.attachmentImage}
                           style={imageLayoutStyle ? undefined : { maxHeight: maxImageHeight }}
+                          onLoad={(event) => {
+                            logAttachmentLoad('image', att, event.currentTarget);
+                          }}
                         />
                       </button>
                     );
@@ -315,6 +340,9 @@ export function ChatBubble({
                           src={att.url}
                           className={styles.attachmentImage}
                           style={imageLayoutStyle ? undefined : { maxHeight: maxImageHeight }}
+                          onLoadedMetadata={(event) => {
+                            logAttachmentLoad('video', att, event.currentTarget);
+                          }}
                         />
                       </button>
                     );

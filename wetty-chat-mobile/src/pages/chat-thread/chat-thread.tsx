@@ -87,6 +87,16 @@ function areAttachmentIdsEqual(left: string[], right: string[]): boolean {
   return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
+function areMessageListsEquivalent(left: MessageResponse[], right: MessageResponse[]): boolean {
+  return (
+    left.length === right.length &&
+    left.every((message, index) => {
+      const candidate = right[index];
+      return candidate != null && message.id === candidate.id;
+    })
+  );
+}
+
 function buildOptimisticUploadedAttachments(uploadedAttachments: ComposeUploadedAttachment[]): {
   attachments: Attachment[];
   revoke: () => void;
@@ -192,6 +202,35 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   const [presentAlert] = useIonAlert();
   const [overlayMessage, setOverlayMessage] = useState<{ message: MessageResponse; sourceRect: DOMRect } | null>(null);
 
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    console.log('[ChatThread] view-mounted', {
+      chatId,
+      storeChatId,
+      threadId: threadId ?? null,
+    });
+    return () => {
+      console.log('[ChatThread] view-unmounted', {
+        chatId,
+        storeChatId,
+        threadId: threadId ?? null,
+      });
+    };
+  }, [chatId, storeChatId, threadId]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    console.log('[ChatThread] rows-changed', {
+      chatId,
+      storeChatId,
+      messageCount: messages.length,
+      firstMessageId: messages[0]?.id ?? null,
+      lastMessageId: messages[messages.length - 1]?.id ?? null,
+      rowCount: chatRows.length,
+      initialAnchor,
+    });
+  }, [chatId, storeChatId, messages, chatRows.length, initialAnchor]);
+
   const getMessageKey = useCallback(
     (message: MessageResponse) => `msg:${message.client_generated_id || message.id}`,
     [],
@@ -254,27 +293,97 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
     }
   }, [messages, atBottom, chatId, dispatch]);
 
-  const fetchLatestWindow = useCallback(() => {
+  const fetchLatestWindow = useCallback((options?: { forceReopen?: boolean }) => {
+    const forceReopen = options?.forceReopen ?? false;
     if (!chatId) return;
+    if (import.meta.env.DEV) {
+      console.log('[ChatThread] fetchLatestWindow:start', {
+        chatId,
+        storeChatId,
+        threadId: threadId ?? null,
+        forceReopen,
+      });
+    }
     getMessages(chatId, threadId ? { thread_id: threadId } : undefined)
       .then((res) => {
         const list = res.data.messages ?? [];
+        const nextCursor = res.data.next_cursor ?? null;
+        const prevCursor = null;
+        const currentState = store.getState();
+        const currentMessages = selectMessagesForChat(currentState, storeChatId);
+        const currentNextCursor = selectNextCursorForChat(currentState, storeChatId);
+        const currentPrevCursor = selectPrevCursorForChat(currentState, storeChatId);
+        const shouldResetAnchor =
+          forceReopen ||
+          !areMessageListsEquivalent(currentMessages, list) ||
+          nextCursor !== currentNextCursor ||
+          prevCursor !== currentPrevCursor;
+        if (import.meta.env.DEV) {
+          console.log('[ChatThread] fetchLatestWindow:resolved', {
+            chatId,
+            storeChatId,
+            threadId: threadId ?? null,
+            forceReopen,
+            fetchedCount: list.length,
+            firstMessageId: list[0]?.id ?? null,
+            lastMessageId: list[list.length - 1]?.id ?? null,
+            nextCursor,
+            prevCursor,
+            currentMessageCount: currentMessages.length,
+            currentFirstMessageId: currentMessages[0]?.id ?? null,
+            currentLastMessageId: currentMessages[currentMessages.length - 1]?.id ?? null,
+            shouldResetAnchor,
+          });
+        }
         dispatch(
           refreshLatest({
             chatId: storeChatId,
             messages: list,
-            nextCursor: res.data.next_cursor ?? null,
-            prevCursor: null,
+            nextCursor,
+            prevCursor,
           }),
         );
-        setInitialAnchor((currentAnchor) => ({ type: 'bottom', token: currentAnchor.token + 1 }));
+
+        if (shouldResetAnchor) {
+          setInitialAnchor((currentAnchor) => {
+            const nextAnchor = { type: 'bottom' as const, token: currentAnchor.token + 1 };
+            if (import.meta.env.DEV) {
+              console.log('[ChatThread] initialAnchor-reset', {
+                reason: forceReopen ? 'fetchLatestWindow-forceReopen' : 'fetchLatestWindow-dataChanged',
+                previous: currentAnchor,
+                next: nextAnchor,
+                chatId,
+                storeChatId,
+              });
+            }
+            return nextAnchor;
+          });
+        } else if (import.meta.env.DEV) {
+          console.log('[ChatThread] initialAnchor-preserved', {
+            reason: 'fetchLatestWindow-equivalentWindow',
+            chatId,
+            storeChatId,
+          });
+        }
       })
       .catch((err: Error) => {
         dispatch(resetChat({ chatId: storeChatId, messages: [], nextCursor: null, prevCursor: null }));
-        setInitialAnchor((currentAnchor) => ({ type: 'bottom', token: currentAnchor.token + 1 }));
+        setInitialAnchor((currentAnchor) => {
+          const nextAnchor = { type: 'bottom' as const, token: currentAnchor.token + 1 };
+          if (import.meta.env.DEV) {
+            console.log('[ChatThread] initialAnchor-reset', {
+              reason: 'fetchLatestWindow-error',
+              previous: currentAnchor,
+              next: nextAnchor,
+              chatId,
+              storeChatId,
+            });
+          }
+          return nextAnchor;
+        });
         showToast(err.message || t`Failed to load messages`);
       });
-  }, [chatId, storeChatId, threadId, dispatch, showToast]);
+  }, [chatId, dispatch, showToast, storeChatId, threadId]);
 
   // Initial load
   useEffect(() => {
@@ -765,7 +874,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
             size="small"
             onClick={() => {
               if (prevCursor != null) {
-                fetchLatestWindow();
+                fetchLatestWindow({ forceReopen: true });
               } else {
                 scrollApiRef.current?.scrollToBottom();
               }
