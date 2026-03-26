@@ -111,13 +111,28 @@ class GeneralSettingsPage extends StatelessWidget {
                                 color: const Color(0xFFF0F0F0),
                                 borderRadius: BorderRadius.circular(14),
                               ),
-                              child: Text(
-                                '这是你的消息在聊天中的显示效果。',
-                                style: TextStyle(
-                                  fontSize: 14 * scale,
-                                  color: CupertinoColors.label
-                                      .resolveFrom(context),
-                                ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '风纪委员',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: CupertinoColors.secondaryLabel
+                                          .resolveFrom(context),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '这是你的消息在聊天中的显示效果。',
+                                    style: TextStyle(
+                                      fontSize: 14 * scale,
+                                      color: CupertinoColors.label
+                                          .resolveFrom(context),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
