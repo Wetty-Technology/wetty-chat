@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
@@ -26,7 +28,8 @@ class ChatDetailPage extends StatefulWidget {
   State<ChatDetailPage> createState() => _ChatDetailPageState();
 }
 
-class _ChatDetailPageState extends State<ChatDetailPage> {
+class _ChatDetailPageState extends State<ChatDetailPage>
+    with WidgetsBindingObserver {
   late final ChatDetailViewModel _viewModel;
   final ItemScrollController _itemScrollController = ItemScrollController();
   final ItemPositionsListener _itemPositionsListener =
@@ -34,6 +37,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   final ScrollController _inputScrollController = ScrollController();
   final TextEditingController _textController = TextEditingController();
   static const double _titleBarHeight = 70.0;
+  bool _isPopping = false;
 
   @override
   void initState() {
@@ -42,6 +46,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       chatId: widget.chatId,
       unreadCount: widget.unreadCount,
     );
+    WidgetsBinding.instance.addObserver(this);
     _viewModel.addListener(_onViewModelChanged);
     _itemPositionsListener.itemPositions.addListener(_onItemPositionsChanged);
     _viewModel.loadMessages();
@@ -51,7 +56,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _saveDraft();
+    unawaited(_viewModel.flushReadStatus());
     _viewModel.removeListener(_onViewModelChanged);
     _viewModel.dispose();
     _itemPositionsListener.itemPositions.removeListener(
@@ -62,11 +69,20 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     super.dispose();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      unawaited(_viewModel.flushReadStatus());
+    }
+  }
+
   int? _lastJumpedId;
 
   void _onViewModelChanged() {
     if (!mounted) return;
-    
+
     // Check if we need to jump to the first unread message
     if (_viewModel.firstUnreadMessageId != null &&
         _viewModel.firstUnreadMessageId != _lastJumpedId) {
@@ -81,6 +97,15 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
   void _saveDraft() {
     _viewModel.saveDraft(_textController.text);
+  }
+
+  Future<void> _popWithResult() async {
+    if (_isPopping) return;
+    _isPopping = true;
+    _saveDraft();
+    await _viewModel.flushReadStatus();
+    if (!mounted) return;
+    Navigator.pop(context, _viewModel.shouldRefreshChats);
   }
 
   void _onItemPositionsChanged() {
@@ -132,10 +157,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         (message) => message.id == anchor.key,
       );
       if (anchorIndex < 0) return;
-      _itemScrollController.jumpTo(
-        index: anchorIndex,
-        alignment: anchor.value,
-      );
+      _itemScrollController.jumpTo(index: anchorIndex, alignment: anchor.value);
     });
   }
 
@@ -372,8 +394,11 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         ? 'Chat ${widget.chatId}'
         : widget.chatName;
     return PopScope(
+      canPop: false,
       onPopInvokedWithResult: (didPop, _) {
-        if (didPop) _saveDraft();
+        if (!didPop) {
+          unawaited(_popWithResult());
+        }
       },
       child: CupertinoPageScaffold(
         backgroundColor: const Color(0xFFECE5DD),
@@ -474,10 +499,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                               left: 8,
                               child: CupertinoButton(
                                 padding: EdgeInsets.zero,
-                                onPressed: () {
-                                  _saveDraft();
-                                  Navigator.pop(context);
-                                },
+                                onPressed: _popWithResult,
                                 child: const Icon(
                                   CupertinoIcons.back,
                                   size: 28,
@@ -602,7 +624,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           }
         }
 
-        final isFirstUnread = _viewModel.firstUnreadMessageId == msg.id && _viewModel.showUnreadDivider;
+        final isFirstUnread =
+            _viewModel.firstUnreadMessageId == msg.id &&
+            _viewModel.showUnreadDivider;
 
         final messageRow = MessageRow(
           key: ValueKey(msg.id),
@@ -620,10 +644,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         if (isFirstUnread) {
           return Column(
             mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildUnreadDivider(),
-              messageRow,
-            ],
+            children: [_buildUnreadDivider(), messageRow],
           );
         }
 

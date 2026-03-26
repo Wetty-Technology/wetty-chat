@@ -99,6 +99,7 @@ class MessageService {
   }
 
   Future<void> markAsRead(String chatId, int messageId) async {
+    print("chat id: $chatId, message id: $messageId");
     final uri = Uri.parse('$apiBaseUrl/chats/$chatId/read');
     final response = await http.post(
       uri,

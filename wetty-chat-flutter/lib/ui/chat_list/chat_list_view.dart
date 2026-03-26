@@ -168,7 +168,7 @@ class _ChatPageState extends State<ChatPage> {
           children: [
             GestureDetector(
               onTap: () async {
-                await Navigator.push(
+                final shouldRefresh = await Navigator.push<bool>(
                   context,
                   CupertinoPageRoute(
                     builder: (_) => ChatDetailPage(
@@ -178,6 +178,9 @@ class _ChatPageState extends State<ChatPage> {
                     ),
                   ),
                 );
+                if (shouldRefresh == true) {
+                  await _viewModel.refreshChats();
+                }
                 if (mounted) setState(() {});
               },
               behavior: HitTestBehavior.opaque,

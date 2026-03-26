@@ -40,13 +40,6 @@ class ChatListViewModel extends ChangeNotifier {
       await _repository.loadChats();
       _isLoading = false;
       _errorMessage = null;
-
-      // Print unread counts for debugging
-      for (final chat in chats) {
-        print(
-          "Chat: ${chat.name ?? chat.id}, Unread Count: ${chat.unreadCount}",
-        );
-      }
     } catch (e) {
       _isLoading = false;
       _errorMessage = e.toString();
@@ -61,16 +54,21 @@ class ChatListViewModel extends ChangeNotifier {
     notifyListeners();
     try {
       await _repository.loadMoreChats();
-      // Print unread counts for newly fetched chats
-      for (final chat in chats) {
-        print(
-          "Chat: ${chat.name ?? chat.id}, Unread Count: ${chat.unreadCount}",
-        );
-      }
     } catch (_) {
       // Silently fail pagination
     }
     _isLoadingMore = false;
+    notifyListeners();
+  }
+
+  Future<void> refreshChats() async {
+    final limit = chats.isEmpty ? 11 : chats.length;
+    try {
+      await _repository.loadChats(limit: limit);
+      _errorMessage = null;
+    } catch (e) {
+      _errorMessage = e.toString();
+    }
     notifyListeners();
   }
 

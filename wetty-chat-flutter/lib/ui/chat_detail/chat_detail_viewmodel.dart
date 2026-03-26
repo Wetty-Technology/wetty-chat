@@ -24,12 +24,13 @@ class ChatDetailViewModel extends ChangeNotifier {
   static const int initialWindowSize = 100;
   static const int pageSize = 50;
   static const int maxWindowSize = 300;
+  static const Duration readSyncDebounce = Duration(milliseconds: 100);
 
   final MessageRepository _repository;
   final String chatId;
   final int unreadCount;
 
-  Timer? _syncTimer;
+  Timer? _readSyncDebounceTimer;
   int? _lastReadSyncId;
   int? _currentReadId;
   int? _newestVisibleId;
@@ -37,6 +38,7 @@ class ChatDetailViewModel extends ChangeNotifier {
   bool _hasOlder = false;
   bool _hasNewer = false;
   bool _isAtLiveEdge = true;
+  bool _didSyncReadState = false;
 
   ChatDetailViewModel({
     required this.chatId,
@@ -44,12 +46,11 @@ class ChatDetailViewModel extends ChangeNotifier {
     MessageRepository? repository,
   }) : _repository = repository ?? MessageRepository(chatId: chatId) {
     _repository.store.addListener(_onStoreChanged);
-    _startSyncTimer();
   }
 
   @override
   void dispose() {
-    _syncTimer?.cancel();
+    _readSyncDebounceTimer?.cancel();
     _repository.store.removeListener(_onStoreChanged);
     super.dispose();
   }
@@ -78,11 +79,12 @@ class ChatDetailViewModel extends ChangeNotifier {
   int? _firstUnreadMessageId;
   int? get firstUnreadMessageId => _firstUnreadMessageId;
 
-  final bool _showUnreadDivider = false;
+  bool _showUnreadDivider = false;
   bool get showUnreadDivider => _showUnreadDivider;
 
   bool get hasMoreMessages => _hasOlder;
   bool get hasNewerMessages => _hasNewer;
+  bool get shouldRefreshChats => _didSyncReadState;
 
   void _onStoreChanged() {
     if (_isLoading || _displayItems.isEmpty) return;
@@ -105,16 +107,58 @@ class ChatDetailViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final items = await _repository.initLoadMessages(limit: initialWindowSize);
+      final items = await _repository.initLoadMessages(
+        limit: initialWindowSize,
+      );
+      _lastReadSyncId = null;
+      _currentReadId = null;
+      _didSyncReadState = false;
+      _firstUnreadMessageId = null;
+      _showUnreadDivider = false;
       _isLoading = false;
       _errorMessage = null;
       _setDisplayItems(items);
+      await _loadInitialUnreadWindowIfNeeded();
       notifyListeners();
     } catch (e) {
       _isLoading = false;
       _errorMessage = e.toString();
       notifyListeners();
     }
+  }
+
+  Future<void> _loadInitialUnreadWindowIfNeeded() async {
+    if (unreadCount <= 0) return;
+
+    while (_repository.store.displayItems.length < unreadCount &&
+        _repository.nextCursor != null) {
+      final oldestLoadedId = _repository.store.oldestId;
+      if (oldestLoadedId == null) break;
+
+      final olderItems = await _repository.extendOlderWindow(
+        oldestLoadedId,
+        pageSize: pageSize,
+      );
+      if (olderItems.isEmpty) break;
+    }
+
+    final loadedItems = _repository.store.displayItems;
+    if (loadedItems.isEmpty) return;
+
+    final targetIndex = unreadCount <= loadedItems.length
+        ? unreadCount - 1
+        : loadedItems.length - 1;
+    final targetId = loadedItems[targetIndex].id;
+    final unreadWindow = await _repository.getWindowAround(
+      targetId,
+      before: initialWindowSize ~/ 2,
+      after: initialWindowSize ~/ 2,
+    );
+    if (unreadWindow.isEmpty) return;
+
+    _firstUnreadMessageId = targetId;
+    _showUnreadDivider = true;
+    _setDisplayItems(unreadWindow.take(maxWindowSize).toList(growable: false));
   }
 
   Future<bool> loadMoreMessages() async {
@@ -210,23 +254,38 @@ class ChatDetailViewModel extends ChangeNotifier {
   void onMessageVisible(int messageId) {
     if (_currentReadId == null || messageId > _currentReadId!) {
       _currentReadId = messageId;
+      _scheduleReadSync();
     }
   }
 
-  void _startSyncTimer() {
-    _syncTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+  void _scheduleReadSync() {
+    _readSyncDebounceTimer?.cancel();
+    _readSyncDebounceTimer = Timer(readSyncDebounce, () {
       _syncReadStatus();
     });
   }
 
-  Future<void> _syncReadStatus() async {
-    if (_currentReadId == null || _currentReadId == _lastReadSyncId) return;
+  Future<bool> flushReadStatus() async {
+    _readSyncDebounceTimer?.cancel();
+    _readSyncDebounceTimer = null;
+    return _syncReadStatus();
+  }
+
+  Future<bool> _syncReadStatus() async {
+    print("currentReadId: $_currentReadId, lastReadSyncId: $_lastReadSyncId");
+    if (_currentReadId == null || _currentReadId == _lastReadSyncId) {
+      return false;
+    }
 
     final toSync = _currentReadId!;
     try {
       await _repository.markAsRead(toSync);
       _lastReadSyncId = toSync;
-    } catch (_) {}
+      _didSyncReadState = true;
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   void updateScrollToBottom(bool shouldShow) {
@@ -254,7 +313,9 @@ class ChatDetailViewModel extends ChangeNotifier {
   }
 
   Future<bool> jumpToMessage(int messageId) async {
-    final existingIndex = _displayItems.indexWhere((item) => item.id == messageId);
+    final existingIndex = _displayItems.indexWhere(
+      (item) => item.id == messageId,
+    );
     if (existingIndex >= 0) {
       _highlightMessage(messageId);
       return true;
