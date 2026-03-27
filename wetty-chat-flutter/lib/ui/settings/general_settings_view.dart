@@ -7,8 +7,21 @@ class GeneralSettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+    final secondaryTextColor = CupertinoColors.secondaryLabel.resolveFrom(
+      context,
+    );
+    final cardColor = isDark
+        ? const Color(0xFF1F2937)
+        : CupertinoColors.systemBackground.resolveFrom(context);
+    final cardBorderColor = isDark
+        ? const Color(0xFF334155)
+        : CupertinoColors.separator.resolveFrom(context);
+
     return CupertinoPageScaffold(
-      backgroundColor: const Color(0xFFF2F2F7),
+      backgroundColor: CupertinoColors.systemGroupedBackground.resolveFrom(
+        context,
+      ),
       navigationBar: const CupertinoNavigationBar(
         middle: Text('通用'),
       ),
@@ -23,10 +36,9 @@ class GeneralSettingsPage extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: CupertinoColors.systemBackground.resolveFrom(
-                      context,
-                    ),
+                    color: cardColor,
                     borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: cardBorderColor),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -45,9 +57,7 @@ class GeneralSettingsPage extends StatelessWidget {
                           min: SettingsStore.minChatFontScale,
                           max: SettingsStore.maxChatFontScale,
                           value: scale,
-                          onChanged: (value) {
-                            SettingsStore.instance.setChatFontScale(value);
-                          },
+                          onChanged: SettingsStore.instance.setChatFontScale,
                         ),
                       ),
                       Padding(
@@ -59,16 +69,14 @@ class GeneralSettingsPage extends StatelessWidget {
                               '小',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: CupertinoColors.secondaryLabel
-                                    .resolveFrom(context),
+                                color: secondaryTextColor,
                               ),
                             ),
                             Text(
                               '大',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: CupertinoColors.secondaryLabel
-                                    .resolveFrom(context),
+                                color: secondaryTextColor,
                               ),
                             ),
                           ],
@@ -77,7 +85,7 @@ class GeneralSettingsPage extends StatelessWidget {
                       const SizedBox(height: 12),
                       Container(
                         height: 0.5,
-                        color: CupertinoColors.separator.resolveFrom(context),
+                        color: cardBorderColor,
                       ),
                       const SizedBox(height: 12),
                       Row(
@@ -92,7 +100,7 @@ class GeneralSettingsPage extends StatelessWidget {
                             ),
                             alignment: Alignment.center,
                             child: const Text(
-                              '风纪',
+                              '示例',
                               style: TextStyle(
                                 color: CupertinoColors.white,
                                 fontSize: 12,
@@ -108,19 +116,20 @@ class GeneralSettingsPage extends StatelessWidget {
                                 vertical: 10,
                               ),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF0F0F0),
+                                color: isDark
+                                    ? const Color(0xFF2C2C2E)
+                                    : const Color(0xFFF0F0F0),
                                 borderRadius: BorderRadius.circular(14),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    '风纪委员',
+                                    '示例用户',
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
-                                      color: CupertinoColors.secondaryLabel
-                                          .resolveFrom(context),
+                                      color: secondaryTextColor,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
@@ -128,8 +137,9 @@ class GeneralSettingsPage extends StatelessWidget {
                                     '这是你的消息在聊天中的显示效果。',
                                     style: TextStyle(
                                       fontSize: 14 * scale,
-                                      color: CupertinoColors.label
-                                          .resolveFrom(context),
+                                      color: CupertinoColors.label.resolveFrom(
+                                        context,
+                                      ),
                                     ),
                                   ),
                                 ],

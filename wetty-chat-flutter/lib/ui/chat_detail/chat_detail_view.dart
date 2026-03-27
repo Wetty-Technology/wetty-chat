@@ -12,6 +12,7 @@ import '../../config/api_config.dart';
 import '../../data/models/message_models.dart';
 import '../../data/services/attachment_service.dart';
 import '../shared/widgets.dart';
+import '../shared/settings_store.dart';
 import '../group_members/group_members_view.dart';
 import '../group_settings/group_settings_view.dart';
 import 'chat_detail_viewmodel.dart';
@@ -52,6 +53,10 @@ class _PendingAttachment {
 
 class _ChatDetailPageState extends State<ChatDetailPage>
     with WidgetsBindingObserver {
+  static const Color _darkCardColor = Color(0xFF4A5D76);
+  static const Color _darkCardMutedColor = Color(0xFF556A84);
+  static const Color _darkCardBorderColor = Color(0xFF6C82A1);
+  static const Color _darkDividerColor = Color(0xFF7A90AD);
   late final ChatDetailViewModel _viewModel;
   final ItemScrollController _itemScrollController = ItemScrollController();
   final ItemPositionsListener _itemPositionsListener =
@@ -73,6 +78,7 @@ class _ChatDetailPageState extends State<ChatDetailPage>
     );
     WidgetsBinding.instance.addObserver(this);
     _viewModel.addListener(_onViewModelChanged);
+    SettingsStore.instance.addListener(_onSettingsChanged);
     _itemPositionsListener.itemPositions.addListener(_onItemPositionsChanged);
     _viewModel.loadMessages();
     final draft = _viewModel.loadDraft();
@@ -85,6 +91,7 @@ class _ChatDetailPageState extends State<ChatDetailPage>
     _saveDraft();
     unawaited(_viewModel.flushReadStatus());
     _viewModel.removeListener(_onViewModelChanged);
+    SettingsStore.instance.removeListener(_onSettingsChanged);
     _viewModel.dispose();
     _itemPositionsListener.itemPositions.removeListener(
       _onItemPositionsChanged,
@@ -118,6 +125,10 @@ class _ChatDetailPageState extends State<ChatDetailPage>
     }
 
     setState(() {});
+  }
+
+  void _onSettingsChanged() {
+    if (mounted) setState(() {});
   }
 
   void _saveDraft() {
@@ -393,8 +404,13 @@ class _ChatDetailPageState extends State<ChatDetailPage>
     _PendingAttachment attachment,
     int index,
   ) {
-    final borderColor = CupertinoColors.systemGrey4.resolveFrom(context);
-    final bgColor = CupertinoColors.systemGrey5.resolveFrom(context);
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+    final borderColor = isDark
+        ? _darkCardBorderColor
+        : CupertinoColors.systemGrey4.resolveFrom(context);
+    final bgColor = isDark
+        ? _darkCardColor
+        : CupertinoColors.systemGrey5.resolveFrom(context);
     final textColor = CupertinoColors.label.resolveFrom(context);
 
     final thumb = attachment.isImage
@@ -673,6 +689,8 @@ class _ChatDetailPageState extends State<ChatDetailPage>
     final chatName = widget.chatName.isEmpty
         ? 'Chat ${widget.chatId}'
         : widget.chatName;
+    final chatBackgroundColor = SettingsStore.instance.chatBackgroundColor;
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -681,7 +699,7 @@ class _ChatDetailPageState extends State<ChatDetailPage>
         }
       },
       child: CupertinoPageScaffold(
-        backgroundColor: const Color(0xFFECE5DD),
+        backgroundColor: chatBackgroundColor,
         child: GestureDetector(
           onTap: () => FocusScope.of(context).unfocus(),
           child: Stack(
@@ -704,8 +722,10 @@ class _ChatDetailPageState extends State<ChatDetailPage>
                                   width: 40,
                                   height: 40,
                                   decoration: BoxDecoration(
-                                    color: CupertinoColors.systemGrey5
-                                        .resolveFrom(context),
+                                    color: isDark
+                                        ? _darkCardColor
+                                        : CupertinoColors.systemGrey5
+                                            .resolveFrom(context),
                                     shape: BoxShape.circle,
                                     boxShadow: [
                                       BoxShadow(
@@ -742,19 +762,19 @@ class _ChatDetailPageState extends State<ChatDetailPage>
                 left: 0,
                 right: 0,
                 child: Container(
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      begin: Alignment(0, 0.5),
+                      begin: const Alignment(0, 0.5),
                       end: Alignment.bottomCenter,
                       colors: [
-                        Color(0xFFECE5DD),
-                        Color(0xDFECE5DD),
-                        Color(0xCCECE5DD),
-                        Color(0x80ECE5DD),
-                        Color(0x40ECE5DD),
-                        Color(0x00ECE5DD),
+                        chatBackgroundColor,
+                        chatBackgroundColor.withAlpha(0xDF),
+                        chatBackgroundColor.withAlpha(0xCC),
+                        chatBackgroundColor.withAlpha(0x80),
+                        chatBackgroundColor.withAlpha(0x40),
+                        chatBackgroundColor.withAlpha(0x00),
                       ],
-                      stops: [0.0, 0.5, 0.6, 0.8, 0.9, 1.0],
+                      stops: const [0.0, 0.5, 0.6, 0.8, 0.9, 1.0],
                     ),
                   ),
                   child: SafeArea(
@@ -934,15 +954,22 @@ class _ChatDetailPageState extends State<ChatDetailPage>
   }
 
   Widget _buildUnreadDivider() {
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+    final dividerColor = isDark
+        ? _darkDividerColor
+        : CupertinoColors.systemGrey4;
+    final badgeColor = isDark
+        ? _darkCardMutedColor
+        : CupertinoColors.systemGrey4.resolveFrom(context);
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 16),
       child: Row(
         children: [
-          const Expanded(child: Divider(color: CupertinoColors.systemGrey4)),
+          Expanded(child: Divider(color: dividerColor)),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
-              color: CupertinoColors.systemGrey4.resolveFrom(context),
+              color: badgeColor,
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Text(
@@ -954,7 +981,7 @@ class _ChatDetailPageState extends State<ChatDetailPage>
               ),
             ),
           ),
-          const Expanded(child: Divider(color: CupertinoColors.systemGrey4)),
+          Expanded(child: Divider(color: dividerColor)),
         ],
       ),
     );
@@ -964,6 +991,7 @@ class _ChatDetailPageState extends State<ChatDetailPage>
     final hasPreview = _viewModel.inputState is! InputEmpty;
     final isEditing = _viewModel.inputState is InputEditing;
     final canAttach = !_isUploadingAttachment && !isEditing;
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
 
     return Column(
       children: [
@@ -995,14 +1023,18 @@ class _ChatDetailPageState extends State<ChatDetailPage>
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: CupertinoColors.systemBackground.resolveFrom(
-                          context,
-                        ),
+                        color: isDark
+                            ? _darkCardColor
+                            : CupertinoColors.systemBackground.resolveFrom(
+                                context,
+                              ),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: CupertinoColors.systemGrey4.resolveFrom(
-                            context,
-                          ),
+                          color: isDark
+                              ? _darkCardBorderColor
+                              : CupertinoColors.systemGrey4.resolveFrom(
+                                  context,
+                                ),
                           width: 1.0,
                         ),
                       ),
@@ -1082,10 +1114,13 @@ class _ChatDetailPageState extends State<ChatDetailPage>
   }
 
   Widget _buildPreviewBar({required String title, required String body}) {
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 8, 4),
       decoration: BoxDecoration(
-        color: CupertinoColors.systemGrey5.resolveFrom(context),
+        color: isDark
+            ? _darkCardMutedColor
+            : CupertinoColors.systemGrey5.resolveFrom(context),
         border: const Border(
           left: BorderSide(color: CupertinoColors.activeBlue, width: 3),
         ),

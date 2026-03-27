@@ -17,28 +17,34 @@ const _miSansBaseTextStyle = TextStyle(
   fontWeight: FontWeight.w400,
 );
 
-final _miSansCupertinoTheme = CupertinoThemeData(
-  brightness: Brightness.light,
-  primaryColor: CupertinoColors.activeBlue,
-  textTheme: CupertinoTextThemeData(
-    textStyle: _miSansBaseTextStyle,
-    actionTextStyle:
-        _miSansBaseTextStyle.copyWith(color: CupertinoColors.activeBlue),
-    tabLabelTextStyle: _miSansBaseTextStyle,
-    navTitleTextStyle: _miSansBaseTextStyle.copyWith(
-      color: CupertinoColors.activeBlue,
-      fontWeight: FontWeight.w600,
+CupertinoThemeData _buildMiSansCupertinoTheme(bool isDarkModeEnabled) {
+  const navTextColor = CupertinoDynamicColor.withBrightness(
+    color: CupertinoColors.black,
+    darkColor: CupertinoColors.white,
+  );
+  return CupertinoThemeData(
+    brightness: isDarkModeEnabled ? Brightness.dark : Brightness.light,
+    primaryColor: CupertinoColors.activeBlue,
+    textTheme: CupertinoTextThemeData(
+      textStyle: _miSansBaseTextStyle,
+      actionTextStyle:
+          _miSansBaseTextStyle.copyWith(color: CupertinoColors.activeBlue),
+      tabLabelTextStyle: _miSansBaseTextStyle,
+      navTitleTextStyle: _miSansBaseTextStyle.copyWith(
+        color: navTextColor,
+        fontWeight: FontWeight.w600,
+      ),
+      navLargeTitleTextStyle: _miSansBaseTextStyle.copyWith(
+        color: navTextColor,
+        fontWeight: FontWeight.w700,
+      ),
+      navActionTextStyle:
+          _miSansBaseTextStyle.copyWith(color: CupertinoColors.activeBlue),
+      pickerTextStyle: _miSansBaseTextStyle,
+      dateTimePickerTextStyle: _miSansBaseTextStyle,
     ),
-    navLargeTitleTextStyle: _miSansBaseTextStyle.copyWith(
-      color: CupertinoColors.activeBlue,
-      fontWeight: FontWeight.w700,
-    ),
-    navActionTextStyle:
-        _miSansBaseTextStyle.copyWith(color: CupertinoColors.activeBlue),
-    pickerTextStyle: _miSansBaseTextStyle,
-    dateTimePickerTextStyle: _miSansBaseTextStyle,
-  ),
-);
+  );
+}
 
 TextStyle _appTextStyle(BuildContext context) {
   return _miSansBaseTextStyle.copyWith(
@@ -65,15 +71,22 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CupertinoApp(
-      theme: _miSansCupertinoTheme,
-      builder: (context, child) {
-        return DefaultTextStyle.merge(
-          style: _appTextStyle(context),
-          child: child ?? const SizedBox.shrink(),
+    return AnimatedBuilder(
+      animation: SettingsStore.instance,
+      builder: (context, _) {
+        return CupertinoApp(
+          theme: _buildMiSansCupertinoTheme(
+            SettingsStore.instance.isDarkModeEnabled,
+          ),
+          builder: (context, child) {
+            return DefaultTextStyle.merge(
+              style: _appTextStyle(context),
+              child: child ?? const SizedBox.shrink(),
+            );
+          },
+          home: home ?? const AuthGate(),
         );
       },
-      home: home ?? const AuthGate(),
     );
   }
 }
