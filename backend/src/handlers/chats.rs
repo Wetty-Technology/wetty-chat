@@ -824,6 +824,18 @@ pub struct CreateMessageBody {
     attachment_ids: Vec<String>,
 }
 
+const SYSTEM_MESSAGE_TYPE_FORBIDDEN: &str = "System messages cannot be sent by clients";
+
+fn validate_client_message_type(
+    message_type: &MessageType,
+) -> Result<(), (StatusCode, &'static str)> {
+    if matches!(message_type, MessageType::System) {
+        return Err((StatusCode::BAD_REQUEST, SYSTEM_MESSAGE_TYPE_FORBIDDEN));
+    }
+
+    Ok(())
+}
+
 #[derive(serde::Deserialize)]
 pub struct ThreadIdPath {
     chat_id: i64,
@@ -846,6 +858,7 @@ async fn post_message(
     })?;
 
     check_membership(conn, chat_id, uid)?;
+    validate_client_message_type(&body.message_type)?;
 
     let id: i64 = ids::next_message_id(state.id_gen.as_ref())
         .await
@@ -975,6 +988,7 @@ async fn post_thread_message(
     })?;
 
     check_membership(conn, chat_id, uid)?;
+    validate_client_message_type(&body.message_type)?;
 
     // Fast-path: check if root message actually exists
     use crate::schema::messages::dsl;
@@ -1110,6 +1124,30 @@ async fn post_thread_message(
     }
 
     Ok((StatusCode::CREATED, Json(response)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{validate_client_message_type, SYSTEM_MESSAGE_TYPE_FORBIDDEN};
+    use crate::models::MessageType;
+    use axum::http::StatusCode;
+
+    #[test]
+    fn rejects_system_message_type_from_clients() {
+        let err = validate_client_message_type(&MessageType::System)
+            .expect_err("system should be rejected");
+        assert_eq!(
+            err,
+            (StatusCode::BAD_REQUEST, SYSTEM_MESSAGE_TYPE_FORBIDDEN)
+        );
+    }
+
+    #[test]
+    fn allows_standard_message_types_from_clients() {
+        assert!(validate_client_message_type(&MessageType::Text).is_ok());
+        assert!(validate_client_message_type(&MessageType::Audio).is_ok());
+        assert!(validate_client_message_type(&MessageType::File).is_ok());
+    }
 }
 
 #[derive(serde::Deserialize)]

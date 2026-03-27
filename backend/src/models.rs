@@ -55,6 +55,7 @@ pub enum MessageType {
     Text,
     Audio,
     File,
+    System,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -314,6 +315,24 @@ pub struct MessageReaction {
     pub user_uid: i32,
     pub emoji: String,
     pub created_at: DateTime<Utc>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::MessageType;
+
+    #[test]
+    fn message_type_serializes_as_snake_case() {
+        let json = serde_json::to_string(&MessageType::System).expect("serialize message type");
+        assert_eq!(json, "\"system\"");
+    }
+
+    #[test]
+    fn message_type_deserializes_system_variant() {
+        let value: MessageType =
+            serde_json::from_str("\"system\"").expect("deserialize message type");
+        assert_eq!(value, MessageType::System);
+    }
 }
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize, Insertable)]
