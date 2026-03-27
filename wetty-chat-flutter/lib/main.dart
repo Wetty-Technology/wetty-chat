@@ -17,15 +17,24 @@ const _miSansBaseTextStyle = TextStyle(
   fontWeight: FontWeight.w400,
 );
 
-const _miSansCupertinoTheme = CupertinoThemeData(
+final _miSansCupertinoTheme = CupertinoThemeData(
   brightness: Brightness.light,
+  primaryColor: CupertinoColors.activeBlue,
   textTheme: CupertinoTextThemeData(
     textStyle: _miSansBaseTextStyle,
-    actionTextStyle: _miSansBaseTextStyle,
+    actionTextStyle:
+        _miSansBaseTextStyle.copyWith(color: CupertinoColors.activeBlue),
     tabLabelTextStyle: _miSansBaseTextStyle,
-    navTitleTextStyle: _miSansBaseTextStyle,
-    navLargeTitleTextStyle: _miSansBaseTextStyle,
-    navActionTextStyle: _miSansBaseTextStyle,
+    navTitleTextStyle: _miSansBaseTextStyle.copyWith(
+      color: CupertinoColors.activeBlue,
+      fontWeight: FontWeight.w600,
+    ),
+    navLargeTitleTextStyle: _miSansBaseTextStyle.copyWith(
+      color: CupertinoColors.activeBlue,
+      fontWeight: FontWeight.w700,
+    ),
+    navActionTextStyle:
+        _miSansBaseTextStyle.copyWith(color: CupertinoColors.activeBlue),
     pickerTextStyle: _miSansBaseTextStyle,
     dateTimePickerTextStyle: _miSansBaseTextStyle,
   ),
