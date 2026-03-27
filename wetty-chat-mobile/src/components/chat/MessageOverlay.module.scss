@@ -193,6 +193,9 @@
   border-radius: 24px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
   width: fit-content;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .reactionBtn {
@@ -207,6 +210,9 @@
   background: transparent;
   cursor: pointer;
   padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   transition:
     transform 0.15s ease,
     background-color 0.15s ease;
@@ -228,6 +234,9 @@
   overflow: hidden;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
   min-width: 200px;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .actionItem {
@@ -243,6 +252,9 @@
   cursor: pointer;
   text-align: left;
   appearance: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 
   &:not(:last-child) {
     border-bottom: 1px solid rgba(0, 0, 0, 0.08);
