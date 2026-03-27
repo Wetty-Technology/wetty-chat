@@ -10,7 +10,6 @@ export interface GroupInfoResponse {
   avatar: string | null;
   visibility: string;
   created_at: string;
-  muted_until: string | null;
 }
 
 export interface UpdateGroupInfoBody {

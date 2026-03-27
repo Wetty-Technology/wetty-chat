@@ -1,4 +1,4 @@
-import { type ChatListItem, getChats } from '@/api/chats';
+import { type ChatListEntry, getChats } from '@/api/chats';
 import { getMessages } from '@/api/messages';
 import { setChatsList } from '@/store/chatsSlice';
 import { appendMessages } from '@/store/messagesSlice';
@@ -55,7 +55,7 @@ export async function syncApp() {
           threadId = parts[1];
         } else {
           // For main chats, optimize: only fetch if chatsList indicates a newer message
-          const chatListItem = chats.find((c: ChatListItem) => c.id === apiChatId);
+          const chatListItem = chats.find((c: ChatListEntry) => c.id === apiChatId);
           if (chatListItem && chatListItem.last_message) {
             const serverId = BigInt(chatListItem.last_message.id);
             const localId = BigInt(lastMsg.id);

@@ -47,7 +47,6 @@ import {
   selectChatName,
   selectIsChatMuted,
   setChatMeta,
-  setChatMutedUntil,
 } from '@/store/chatsSlice';
 import {
   appendMessages,
@@ -169,10 +168,9 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
     if (!chatId || storedName != null) return;
     getGroupInfo(chatId)
       .then((res) => {
-        const { id, muted_until, ...meta } = res.data;
+        const { id, ...meta } = res.data;
         void id;
         dispatch(setChatMeta({ chatId: chatId, meta }));
-        dispatch(setChatMutedUntil({ chatId, mutedUntil: muted_until }));
       })
       .catch(() => {});
   }, [chatId, storedName, dispatch]);

@@ -2,7 +2,7 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import { createSelector, createSlice } from '@reduxjs/toolkit';
 import type { RootState } from './index';
 import type { MessageResponse } from '@/api/messages';
-import type { ChatListItem } from '@/api/chats';
+import type { ChatListEntry } from '@/api/chats';
 import { compareMessageOrder, isSameMessage } from './messageProjection';
 
 export interface ChatMeta {
@@ -97,7 +97,7 @@ const chatsSlice = createSlice({
         entry.details = { ...entry.details, ...meta };
       }
     },
-    setChatsList(state, action: PayloadAction<ChatListItem[]>) {
+    setChatsList(state, action: PayloadAction<ChatListEntry[]>) {
       for (const chat of action.payload) {
         const entry = getChatEntry(state, chat.id);
         entry.details = {
@@ -277,7 +277,7 @@ export function selectChatLastReadMessageId(state: RootState, chatId: string): s
 
 const selectChatsById = (state: RootState) => state.chats.byId;
 
-export const selectAllChats = createSelector([selectChatsById], (byId): ChatListItem[] => {
+export const selectAllChats = createSelector([selectChatsById], (byId): ChatListEntry[] => {
   return Object.entries(byId)
     .filter(([, entry]) => getEffectiveListMeta(entry).in_list)
     .map(([id, entry]) => {

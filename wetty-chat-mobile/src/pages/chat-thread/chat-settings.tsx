@@ -16,7 +16,7 @@ import { useHistory, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
-import { selectChatMeta, selectChatMutedUntil, setChatMeta, setChatMutedUntil } from '@/store/chatsSlice';
+import { selectChatMeta, selectChatMutedUntil, setChatMeta } from '@/store/chatsSlice';
 import type { RootState } from '@/store/index';
 import { getGroupInfo, requestGroupAvatarUploadUrl, updateGroupInfo } from '@/api/group';
 import { uploadFileToS3 } from '@/api/upload';
@@ -137,10 +137,9 @@ function ChatSettingsSession({ chatId, backAction }: { chatId: string; backActio
 
     getGroupInfo(chatId)
       .then((res) => {
-        const { id, muted_until, ...meta } = res.data;
+        const { id, ...meta } = res.data;
         void id;
         dispatch(setChatMeta({ chatId, meta }));
-        dispatch(setChatMutedUntil({ chatId, mutedUntil: muted_until }));
         setFormState(getInitialFormState(meta));
       })
       .catch((err: Error) => {
@@ -183,11 +182,10 @@ function ChatSettingsSession({ chatId, backAction }: { chatId: string; backActio
       const patchRes = await updateGroupInfo(chatId, {
         avatar_image_id: image_id,
       });
-      const { id, muted_until, ...meta } = patchRes.data;
+      const { id, ...meta } = patchRes.data;
       void id;
 
       dispatch(setChatMeta({ chatId, meta }));
-      dispatch(setChatMutedUntil({ chatId, mutedUntil: muted_until }));
 
       setFormState((current) => ({
         ...current,
@@ -227,7 +225,7 @@ function ChatSettingsSession({ chatId, backAction }: { chatId: string; backActio
       visibility: formState.visibility,
     })
       .then((res) => {
-        const { id, muted_until, ...meta } = res.data;
+        const { id, ...meta } = res.data;
         void id;
         dispatch(
           setChatMeta({
@@ -235,7 +233,6 @@ function ChatSettingsSession({ chatId, backAction }: { chatId: string; backActio
             meta,
           }),
         );
-        dispatch(setChatMutedUntil({ chatId, mutedUntil: muted_until }));
         setFormState(getInitialFormState(meta));
         presentToast({ message: t`Settings saved`, duration: 2000 });
         history.goBack();

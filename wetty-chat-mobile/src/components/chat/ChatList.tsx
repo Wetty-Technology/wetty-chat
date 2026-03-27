@@ -15,7 +15,7 @@ import {
 } from '@ionic/react';
 import { useDispatch, useSelector } from 'react-redux';
 import { checkmarkDone, mailUnreadOutline, notificationsOffOutline } from 'ionicons/icons';
-import { type ChatListItem, getChats } from '@/api/chats';
+import { type ChatListEntry, getChats } from '@/api/chats';
 import {
   markChatAsRead,
   selectAllChats,
@@ -69,12 +69,12 @@ function formatLastActivity(isoString: string | null, locale: string): string {
   }
 }
 
-function chatDisplayName(chat: ChatListItem): string {
+function chatDisplayName(chat: ChatListEntry): string {
   if (chat.name && chat.name.trim()) return chat.name;
   return t`Chat ${chat.id}`;
 }
 
-function isChatMuted(chat: ChatListItem): boolean {
+function isChatMuted(chat: ChatListEntry): boolean {
   if (!chat.muted_until) return false;
   return new Date(chat.muted_until) > new Date();
 }
@@ -132,7 +132,7 @@ export function ChatList({ activeChatId, onChatSelect }: ChatListProps) {
     updateAppBadge();
   }, [loadChats, updateAppBadge]);
 
-  const handleToggleRead = async (chat: ChatListItem, slidingItem: HTMLIonItemSlidingElement | null) => {
+  const handleToggleRead = async (chat: ChatListEntry, slidingItem: HTMLIonItemSlidingElement | null) => {
     slidingItem?.close();
     if (!chat.last_message) return;
 

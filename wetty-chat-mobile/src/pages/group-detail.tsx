@@ -19,7 +19,7 @@ import { addMember, getGroupInfo, getMembers, type GroupInfoResponse, type Membe
 import { FeatureGate } from '@/components/FeatureGate';
 import { BackButton } from '@/components/BackButton';
 import type { BackAction } from '@/types/back-action';
-import { setChatMeta, setChatMutedUntil } from '@/store/chatsSlice';
+import { setChatMeta } from '@/store/chatsSlice';
 
 function groupDisplayName(detail: GroupInfoResponse | null, id: string): string {
   if (detail?.name?.trim()) return detail.name.trim();
@@ -56,10 +56,9 @@ function GroupDetailSession({ id, backAction }: { id: string; backAction?: BackA
     Promise.all([getGroupInfo(id), getMembers(id, { limit: 20 })])
       .then(([chatRes, membersRes]) => {
         setDetail(chatRes.data);
-        const { id: groupId, muted_until, ...meta } = chatRes.data;
+        const { id: groupId, ...meta } = chatRes.data;
         void groupId;
         dispatch(setChatMeta({ chatId: id, meta }));
-        dispatch(setChatMutedUntil({ chatId: id, mutedUntil: muted_until }));
         setMembers(membersRes.data.members ?? []);
       })
       .catch((err: Error) => {

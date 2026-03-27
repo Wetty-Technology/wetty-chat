@@ -2,7 +2,7 @@ import type { AxiosResponse } from 'axios';
 import apiClient from './client';
 import type { MessageResponse } from './messages';
 
-export interface ChatListItem {
+export interface ChatListEntry {
   id: string;
   name: string | null;
   avatar: string | null;
@@ -14,7 +14,7 @@ export interface ChatListItem {
 }
 
 interface ListChatsResponse {
-  chats: ChatListItem[];
+  chats: ChatListEntry[];
   next_cursor: string | null;
 }
 
