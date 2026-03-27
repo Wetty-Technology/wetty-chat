@@ -190,7 +190,7 @@ class MessageRepository {
       chatId,
       text,
       replyToId: replyToId,
-      attachmentIds: attachmentIds,
+      attachmentIds: attachmentIds ?? const <String>[],
     );
     store.addMessages([message]);
     return message;

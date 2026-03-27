@@ -10,7 +10,6 @@ import '../../data/models/chat_models.dart';
 import '../chat_detail/chat_detail_view.dart';
 import '../settings/settings_view.dart';
 import '../shared/draft_store.dart';
-import '../shared/widgets.dart';
 import 'chat_list_viewmodel.dart';
 import 'new_chat_view.dart';
 
@@ -499,6 +498,42 @@ class _ChatPageState extends State<ChatPage> {
           fontSize: 11,
           color: CupertinoColors.white,
           fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+class _ToastWidget extends StatefulWidget {
+  const _ToastWidget({required this.message, required this.onDismiss});
+
+  final String message;
+  final VoidCallback onDismiss;
+
+  @override
+  State<_ToastWidget> createState() => _ToastWidgetState();
+}
+
+class _ToastWidgetState extends State<_ToastWidget> {
+  @override
+  void initState() {
+    super.initState();
+    Future<void>.delayed(const Duration(seconds: 2), widget.onDismiss);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemGrey.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Text(
+          widget.message,
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: CupertinoColors.white),
         ),
       ),
     );
