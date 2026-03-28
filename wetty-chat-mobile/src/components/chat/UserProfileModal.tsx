@@ -1,10 +1,12 @@
-import { IonChip, IonContent, IonIcon, IonLabel, IonModal } from '@ionic/react';
-import { close } from 'ionicons/icons';
+import { IonButton, IonChip, IonContent, IonIcon, IonLabel, IonModal } from '@ionic/react';
+import { close, openOutline } from 'ionicons/icons';
 import { t } from '@lingui/core/macro';
 import type { Sender } from '@/api/messages';
 import { useIsDarkMode, useIsDesktop } from '@/hooks/platformHooks';
 import { UserAvatar } from '@/components/UserAvatar';
 import { FeatureGate } from '../FeatureGate';
+import { useSelector } from 'react-redux';
+import type { RootState } from '@/store';
 
 interface UserProfileModalProps {
   sender: Sender | null;
@@ -19,6 +21,8 @@ export function UserProfileModal({ sender, onDismiss }: UserProfileModalProps) {
   const groupNameColor = isDarkMode
     ? sender?.user_group?.chat_group_color_dark || sender?.user_group?.chat_group_color || undefined
     : sender?.user_group?.chat_group_color || undefined;
+  const currentUserId = useSelector((state: RootState) => state.user.uid);
+  const isOwn = sender?.uid === currentUserId;
 
   return (
     <IonModal
@@ -67,6 +71,37 @@ export function UserProfileModal({ sender, onDismiss }: UserProfileModalProps) {
                   <IonLabel>{groupName}</IonLabel>
                 </IonChip>
               </div>
+            )}
+            <IonButton
+              fill="outline"
+              href={'https://www.shireyishunjian.com/main/home.php?mod=space&uid=' + sender.uid}
+              target="_blank"
+              size="small"
+            >
+              个人空间
+              <IonIcon slot="end" icon={openOutline}></IonIcon>
+            </IonButton>
+            {isOwn && (
+              <>
+                <IonButton
+                  fill="outline"
+                  href="https://www.shireyishunjian.com/main/forum.php?mod=viewthread&tid=209934"
+                  target="_blank"
+                  size="small"
+                >
+                  修改用户名
+                  <IonIcon slot="end" icon={openOutline}></IonIcon>
+                </IonButton>
+                <IonButton
+                  fill="outline"
+                  href="https://www.shireyishunjian.com/main/home.php?mod=spacecp&ac=avatar"
+                  target="_blank"
+                  size="small"
+                >
+                  修改头像
+                  <IonIcon slot="end" icon={openOutline}></IonIcon>
+                </IonButton>
+              </>
             )}
             <FeatureGate>
               <p style={{ color: 'var(--ion-color-medium)' }}>UID: {sender.uid}</p>
