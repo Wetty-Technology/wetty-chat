@@ -9,12 +9,15 @@ import ChatSettingsCore from '@/pages/chat-thread/chat-settings';
 import ChatMembersCore from '@/pages/chat-thread/chat-members';
 import ChatInvitesCore from '@/pages/chat-thread/chat-invites';
 import CreateChatCore from '@/pages/create-chat';
+import { InvitePreviewCore } from '@/pages/invite-preview';
+import { JoinChatCore } from '@/pages/join-chat';
 import { SettingsCore } from '@/pages/settings';
 import { GeneralSettingsCore } from '@/pages/settings/general';
 import { LanguagePageCore } from '@/pages/settings/language';
 import type { BackAction } from '@/types/back-action';
 import styles from './DesktopSplitLayout.module.scss';
 import { FeatureGate } from '@/components/FeatureGate';
+import { HeaderActionMenu } from '@/components/HeaderActionMenu';
 
 interface DesktopRouteState {
   backgroundPath?: string;
@@ -26,7 +29,9 @@ interface DesktopRouteMatches {
   settingsMatch: { id: string } | null;
   membersMatch: { id: string } | null;
   invitesMatch: { id: string } | null;
+  joinPreviewMatch: { inviteCode: string } | null;
   isNewChat: boolean;
+  isJoinChat: boolean;
   globalSettings: boolean;
   generalSettings: boolean;
   languageSettings: boolean;
@@ -57,6 +62,14 @@ function getDesktopRouteMatches(pathname: string): DesktopRouteMatches {
     path: '/chats/new',
     exact: true,
   });
+  const joinRaw = matchPath(pathname, {
+    path: '/chats/join',
+    exact: true,
+  });
+  const joinPreviewRaw = matchPath<{ inviteCode: string }>(pathname, {
+    path: '/chats/join/:inviteCode',
+    exact: true,
+  });
   const languageSettings = !!matchPath(pathname, {
     path: '/settings/language',
     exact: true,
@@ -85,7 +98,9 @@ function getDesktopRouteMatches(pathname: string): DesktopRouteMatches {
     settingsMatch: settingsRaw?.params ?? null,
     membersMatch: membersRaw?.params ?? null,
     invitesMatch: invitesRaw?.params ?? null,
+    joinPreviewMatch: joinPreviewRaw?.params ?? null,
     isNewChat: !!newRaw,
+    isJoinChat: !!joinRaw,
     globalSettings,
     generalSettings,
     languageSettings,
@@ -140,7 +155,7 @@ export function DesktopSplitLayout() {
   const currentRoute = getDesktopRouteMatches(location.pathname);
   const backgroundPath = location.state?.backgroundPath ?? '/chats';
   const baseRoute = currentRoute.globalSettings ? getDesktopRouteMatches(backgroundPath) : currentRoute;
-  const { activeChatId, threadMatch, settingsMatch, membersMatch, invitesMatch, isNewChat } = baseRoute;
+  const { activeChatId, threadMatch, settingsMatch, membersMatch, invitesMatch, joinPreviewMatch, isNewChat, isJoinChat } = baseRoute;
   const globalSettingsOpen = currentRoute.globalSettings;
 
   const handleChatSelect = useCallback(
@@ -214,9 +229,21 @@ export function DesktopSplitLayout() {
             </IonTitle>
             <IonButtons slot="end">
               <FeatureGate>
-                <IonButton routerLink="/chats/new">
-                  <IonIcon slot="icon-only" icon={createOutline} />
-                </IonButton>
+                <HeaderActionMenu
+                  icon={createOutline}
+                  actions={[
+                    {
+                      id: 'create-chat',
+                      label: <Trans>Create Chat</Trans>,
+                      onSelect: () => history.push('/chats/new'),
+                    },
+                    {
+                      id: 'join-via-code',
+                      label: <Trans>Join via Code</Trans>,
+                      onSelect: () => history.push('/chats/join'),
+                    },
+                  ]}
+                />
               </FeatureGate>
             </IonButtons>
           </IonToolbar>
@@ -225,7 +252,7 @@ export function DesktopSplitLayout() {
       </div>
       <div className={styles.desktopSplitRight}>
         {/* Base layer: always render ChatThreadCore when a chat is selected */}
-        {activeChatId && !isNewChat && (
+        {activeChatId && !isNewChat && !joinPreviewMatch && (
           <div style={{ display: subPageOverlay ? 'none' : undefined }} className={styles.desktopSplitPane}>
             <ChatThreadCore key={activeChatId} chatId={activeChatId} />
           </div>
@@ -293,8 +320,24 @@ export function DesktopSplitLayout() {
           </div>
         )}
 
+        {/* Join chat page */}
+        {isJoinChat && (
+          <div className={styles.desktopSplitPane}>
+            <JoinChatCore backAction={{ type: 'close', onClose: () => history.replace('/chats') }} />
+          </div>
+        )}
+
+        {joinPreviewMatch && (
+          <div className={styles.desktopSplitPane}>
+            <InvitePreviewCore
+              inviteCode={decodeURIComponent(joinPreviewMatch.inviteCode)}
+              backAction={{ type: 'close', onClose: () => history.replace('/chats') }}
+            />
+          </div>
+        )}
+
         {/* Placeholder when no chat selected */}
-        {!activeChatId && !isNewChat && (
+        {!activeChatId && !isNewChat && !isJoinChat && !joinPreviewMatch && (
           <div className={styles.desktopSplitPlaceholder}>
             <Trans>Select a chat</Trans>
           </div>

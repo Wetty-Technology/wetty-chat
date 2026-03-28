@@ -15,3 +15,37 @@
 .cardContent {
   padding: 28px 24px;
 }
+
+.formStack {
+  display: grid;
+  gap: 18px;
+}
+
+.formCopy {
+  display: grid;
+  gap: 8px;
+}
+
+.formTitle {
+  margin: 0;
+  font-size: 1.6rem;
+  line-height: 1.15;
+  color: #1f1d17;
+}
+
+.formDescription {
+  margin: 0;
+  color: #5c5644;
+  line-height: 1.5;
+}
+
+.inputItem {
+  --background: rgba(248, 244, 235, 0.85);
+  --border-radius: 18px;
+  --inner-padding-top: 8px;
+  --inner-padding-bottom: 8px;
+  --padding-start: 14px;
+  --padding-end: 14px;
+
+  border: 1px solid rgba(102, 92, 64, 0.12);
+}

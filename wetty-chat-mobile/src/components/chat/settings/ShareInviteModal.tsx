@@ -23,6 +23,7 @@ import type { GroupSelectorItem } from '@/api/group';
 import { messageAdded } from '@/store/messageEvents';
 import type { AppDispatch } from '@/store';
 import { useIsDesktop } from '@/hooks/platformHooks';
+import { InsetContent } from '@/components/shared/InsetContent';
 import { getChatDisplayName } from '@/utils/chatDisplay';
 import { ShareInviteGroupSelectorModal } from './ShareInviteGroupSelectorModal';
 import {
@@ -81,7 +82,7 @@ function ConfigureStep({
 }: ConfigureStepProps) {
   return (
     <div className={styles.section}>
-      <div className={styles.insetContent}>
+      <InsetContent>
         <div className={styles.hero}>
           <div className={styles.heroIconWrap}>
             <IonIcon icon={linkOutline} className={styles.heroIcon} />
@@ -107,7 +108,7 @@ function ConfigureStep({
         <IonText color="medium" className={styles.descriptionText}>
           <p className={styles.description}>{getInviteDescription(mode)}</p>
         </IonText>
-      </div>
+      </InsetContent>
 
       <IonList inset className={styles.formList}>
         {mode === 'membership' ? (
@@ -131,7 +132,7 @@ function ConfigureStep({
         </IonItem>
       </IonList>
 
-      <div className={styles.insetContent}>
+      <InsetContent>
         <div className={styles.actions}>
           <IonButton expand="block" onClick={onCreateInvite} disabled={submitting}>
             <Trans>Create Invite</Trans>
@@ -140,7 +141,7 @@ function ConfigureStep({
             <Trans>Manage Invite Links</Trans>
           </IonButton>
         </div>
-      </div>
+      </InsetContent>
     </div>
   );
 }
@@ -157,7 +158,7 @@ function DestinationStep({
 }: DestinationStepProps) {
   return (
     <div className={styles.section}>
-      <div className={styles.insetContent}>
+      <InsetContent>
         <p className={styles.eyebrow}>
           <Trans>Invite Link Created</Trans>
         </p>
@@ -183,7 +184,7 @@ function DestinationStep({
             </IonButton>
           </div>
         ) : null}
-      </div>
+      </InsetContent>
 
       <IonList inset className={styles.list}>
         <IonItem button={!isMembership} detail={!isMembership} onClick={!isMembership ? onOpenSelector : undefined}>
@@ -196,7 +197,7 @@ function DestinationStep({
           </IonItem>
       </IonList>
 
-      <div className={styles.insetContent}>
+      <InsetContent>
         <div className={styles.actionsInline}>
           <IonButton fill="clear" onClick={onBack}>
             <Trans>Back</Trans>
@@ -206,7 +207,7 @@ function DestinationStep({
             <Trans>Send invite</Trans>
           </IonButton>
         </div>
-      </div>
+      </InsetContent>
     </div>
   );
 }

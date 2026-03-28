@@ -1,23 +1,31 @@
 import { IonButtons, IonCard, IonCardContent, IonContent, IonHeader, IonPage, IonTitle, IonToolbar } from '@ionic/react';
 import { Trans } from '@lingui/react/macro';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useParams } from 'react-router-dom';
 import { BackButton } from '@/components/BackButton';
 import { InvitePreviewCard } from '@/components/invites/InvitePreviewCard';
+import type { BackAction } from '@/types/back-action';
 import styles from './invite-preview.module.scss';
 
 interface InvitePreviewPageProps {
-  inviteCode: string;
+  inviteCode?: string;
+  backAction?: BackAction;
 }
 
-export default function InvitePreviewPage({ inviteCode }: InvitePreviewPageProps) {
+export function InvitePreviewCore({ inviteCode: inviteCodeProp, backAction }: InvitePreviewPageProps) {
   const history = useHistory();
+  const { inviteCode: inviteCodeParam } = useParams<{ inviteCode?: string }>();
+  const inviteCode = inviteCodeProp ?? inviteCodeParam ?? '';
+
+  if (!inviteCode) {
+    return null;
+  }
 
   return (
-    <IonPage className={styles.page}>
+    <div className={`ion-page ${styles.page}`}>
       <IonHeader translucent={true}>
         <IonToolbar>
           <IonButtons slot="start">
-            <BackButton action={{ type: 'back', defaultHref: '/chats' }} />
+            {backAction && <BackButton action={backAction} />}
           </IonButtons>
           <IonTitle>
             <Trans>Invite</Trans>
@@ -35,6 +43,14 @@ export default function InvitePreviewPage({ inviteCode }: InvitePreviewPageProps
           </IonCardContent>
         </IonCard>
       </IonContent>
+    </div>
+  );
+}
+
+export default function InvitePreviewPage(props: InvitePreviewPageProps) {
+  return (
+    <IonPage>
+      <InvitePreviewCore backAction={{ type: 'back', defaultHref: '/chats' }} {...props} />
     </IonPage>
   );
 }

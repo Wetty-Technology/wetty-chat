@@ -1,13 +1,25 @@
-import { IonButton, IonButtons, IonHeader, IonIcon, IonPage, IonToolbar } from '@ionic/react';
+import { IonButtons, IonHeader, IonPage, IonToolbar } from '@ionic/react';
 import { Trans } from '@lingui/react/macro';
 import { useHistory } from 'react-router-dom';
 import { createOutline } from 'ionicons/icons';
 import { ChatList } from '@/components/chat/ChatList';
-import { FeatureGate } from '@/components/FeatureGate';
+import { HeaderActionMenu } from '@/components/HeaderActionMenu';
 import { TitleWithConnectionStatus } from '@/components/TitleWithConnectionStatus';
 
 export default function Chats() {
   const history = useHistory();
+  const menuActions = [
+    {
+      id: 'create-chat',
+      label: <Trans>Create Chat</Trans>,
+      onSelect: () => history.push('/chats/new'),
+    },
+    {
+      id: 'join-via-code',
+      label: <Trans>Join via Code</Trans>,
+      onSelect: () => history.push('/chats/join'),
+    },
+  ];
 
   return (
     <IonPage className="chats-page">
@@ -17,11 +29,7 @@ export default function Chats() {
             <Trans>Chats</Trans>
           </TitleWithConnectionStatus>
           <IonButtons slot="end">
-            <FeatureGate>
-              <IonButton routerLink="/chats/new">
-                <IonIcon slot="icon-only" icon={createOutline} />
-              </IonButton>
-            </FeatureGate>
+            <HeaderActionMenu actions={menuActions} icon={createOutline} />
           </IonButtons>
         </IonToolbar>
       </IonHeader>

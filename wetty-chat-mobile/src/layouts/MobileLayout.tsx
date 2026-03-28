@@ -6,6 +6,8 @@ import { Redirect, Route, useLocation } from 'react-router-dom';
 
 import ChatsPage from '@/pages/chats';
 import { CreateChatPage } from '@/pages/create-chat';
+import InvitePreviewPage from '@/pages/invite-preview';
+import JoinChatPage from '@/pages/join-chat';
 import { ChatThreadPage } from '@/pages/chat-thread/chat-thread';
 import { ChatSettingsPage } from '@/pages/chat-thread/chat-settings';
 import { ChatMembersPage } from '@/pages/chat-thread/chat-members';
@@ -58,6 +60,8 @@ const MobileLayout: React.FC = () => {
       <IonRouterOutlet animation={safariSafeRouteAnimation}>
         <Route path="/chats" exact component={ChatsPage} />
         <Route path="/chats/new" exact component={CreateChatPage} />
+        <Route path="/chats/join" exact component={JoinChatPage} />
+        <Route path="/chats/join/:inviteCode" exact component={InvitePreviewPage} />
         <Route path="/chats/chat/:id" exact component={ChatThreadPage} />
         <Route path="/chats/chat/:id/thread/:threadId" exact component={ChatThreadPage} />
         <Route path="/chats/chat/:id/settings" exact component={ChatSettingsPage} />
