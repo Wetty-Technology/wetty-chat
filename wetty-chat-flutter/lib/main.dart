@@ -4,7 +4,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:media_kit/media_kit.dart';
 
 import 'config/auth_store.dart';
-import 'config/realtime_service.dart';
 import 'data/services/media_preview_cache.dart';
 import 'data/services/websocket_service.dart';
 import 'ui/auth/token_import_page.dart';
@@ -44,7 +43,6 @@ void main() async {
   await AuthStore.instance.init();
   await DraftStore.instance.init();
   await SettingsStore.instance.init();
-  RealtimeService.instance.init();
   WebSocketService.instance.init();
   runApp(const MyApp());
 }
