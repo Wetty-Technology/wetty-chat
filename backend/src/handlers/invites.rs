@@ -499,9 +499,6 @@ async fn post_send_invite_message(
         if invite.chat_id != body.source_chat_id {
             return Err((StatusCode::BAD_REQUEST, "Invite does not belong to source chat"));
         }
-        if invite.invite_type != InviteType::Generic {
-            return Err((StatusCode::BAD_REQUEST, "Only public invites can be sent"));
-        }
         if !validate_invite_is_active(&invite, now) {
             return Err((StatusCode::BAD_REQUEST, "Invite is no longer active"));
         }

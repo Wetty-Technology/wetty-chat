@@ -1,10 +1,11 @@
 use axum::{
-    extract::{Json, Path, State},
+    extract::{Json, Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
 };
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
+use diesel::PgTextExpressionMethods;
 use serde::Serialize;
 use std::collections::BTreeMap;
 
@@ -22,6 +23,7 @@ use crate::AppState;
 /// Maximum mute duration: 7 days in seconds.
 const MAX_MUTE_DURATION_SECS: i64 = 7 * 24 * 3600;
 const MAX_GROUP_AVATAR_BYTES: i64 = 10 * 1024 * 1024;
+const MAX_GROUP_SELECTOR_LIMIT: i64 = 50;
 
 /// Far-future date used for "mute indefinitely".
 fn indefinite_mute_until() -> DateTime<Utc> {
@@ -57,6 +59,62 @@ pub(super) struct GroupInfoResponse {
     avatar: Option<String>,
     visibility: GroupVisibility,
     created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Copy, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+enum GroupSearchMode {
+    Autocomplete,
+    Submitted,
+}
+
+#[derive(Debug, Clone, Copy, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+enum GroupSelectorScope {
+    Manageable,
+    Joined,
+    Public,
+}
+
+#[derive(serde::Deserialize)]
+struct ListGroupsQuery {
+    #[serde(default)]
+    q: Option<String>,
+    #[serde(default)]
+    mode: Option<GroupSearchMode>,
+    #[serde(default)]
+    limit: Option<i64>,
+    #[serde(
+        default,
+        deserialize_with = "crate::serde_i64_string::opt::deserialize"
+    )]
+    after: Option<i64>,
+    #[serde(default)]
+    scope: Option<GroupSelectorScope>,
+}
+
+#[derive(Serialize)]
+struct GroupSelectorItem {
+    #[serde(with = "crate::serde_i64_string")]
+    id: i64,
+    name: String,
+    description: Option<String>,
+    avatar: Option<String>,
+    visibility: GroupVisibility,
+    role: Option<GroupRole>,
+}
+
+#[derive(Serialize)]
+struct ListGroupsResponse {
+    groups: Vec<GroupSelectorItem>,
+    #[serde(with = "crate::serde_i64_string::opt")]
+    next_cursor: Option<i64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ParsedGroupSearch {
+    pattern: String,
+    exact_id: Option<i64>,
 }
 
 #[derive(serde::Deserialize)]
@@ -99,6 +157,27 @@ pub(super) struct MuteResponse {
 }
 
 type DbConn = diesel::r2d2::PooledConnection<diesel::r2d2::ConnectionManager<diesel::PgConnection>>;
+
+fn parse_group_search_query(
+    raw_query: Option<&str>,
+    mode: GroupSearchMode,
+) -> Option<ParsedGroupSearch> {
+    let query = raw_query?.trim();
+    if query.is_empty() {
+        return None;
+    }
+
+    let exact_id = (mode == GroupSearchMode::Submitted)
+        .then(|| query.parse::<i64>().ok())
+        .flatten();
+
+    let pattern = match mode {
+        GroupSearchMode::Autocomplete => format!("{query}%"),
+        GroupSearchMode::Submitted => format!("%{query}%"),
+    };
+
+    Some(ParsedGroupSearch { pattern, exact_id })
+}
 
 fn require_admin_role(
     conn: &mut DbConn,
@@ -233,6 +312,106 @@ async fn post_group(
             created_at: now,
         }),
     ))
+}
+
+/// GET /group — List groups for selector/search.
+async fn get_groups(
+    CurrentUid(uid): CurrentUid,
+    State(state): State<AppState>,
+    Query(q): Query<ListGroupsQuery>,
+) -> Result<Json<ListGroupsResponse>, (StatusCode, &'static str)> {
+    let conn = &mut state.db.get().map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Database connection failed",
+        )
+    })?;
+
+    let limit = q
+        .limit
+        .map(|value| std::cmp::min(value, MAX_GROUP_SELECTOR_LIMIT))
+        .unwrap_or(MAX_GROUP_SELECTOR_LIMIT)
+        .max(1);
+    let scope = q.scope.unwrap_or(GroupSelectorScope::Joined);
+    let search = parse_group_search_query(
+        q.q.as_deref(),
+        q.mode.unwrap_or(GroupSearchMode::Autocomplete),
+    );
+
+    type Row = (
+        i64,
+        String,
+        Option<String>,
+        Option<String>,
+        GroupVisibility,
+        Option<GroupRole>,
+    );
+
+    let mut query = groups::table
+        .left_join(
+            media::table.on(groups::avatar_image_id
+                .eq(media::id.nullable())
+                .and(media::deleted_at.is_null())),
+        )
+        .left_join(
+            group_membership::table.on(group_membership::chat_id
+                .eq(groups::id)
+                .and(group_membership::uid.eq(uid))),
+        )
+        .select((
+            groups::id,
+            groups::name,
+            groups::description,
+            media::storage_key.nullable(),
+            groups::visibility,
+            group_membership::role.nullable(),
+        ))
+        .into_boxed();
+
+    query = match scope {
+        GroupSelectorScope::Joined => query.filter(group_membership::uid.is_not_null()),
+        GroupSelectorScope::Manageable => query.filter(group_membership::role.eq(GroupRole::Admin)),
+        GroupSelectorScope::Public => query.filter(groups::visibility.eq(GroupVisibility::Public)),
+    };
+
+    if let Some(after) = q.after {
+        query = query.filter(groups::id.gt(after));
+    }
+
+    if let Some(search) = search {
+        let filter = groups::name.ilike(search.pattern);
+        query = match search.exact_id {
+            Some(exact_id) => query.filter(filter.or(groups::id.eq(exact_id))),
+            None => query.filter(filter),
+        };
+    }
+
+    let rows: Vec<Row> = query
+        .order_by(groups::id.asc())
+        .limit(limit + 1)
+        .load(conn)
+        .map_err(|e| {
+            tracing::error!("list groups: {:?}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to list groups")
+        })?;
+
+    let has_more = rows.len() as i64 > limit;
+    let page_rows: Vec<Row> = rows.into_iter().take(limit as usize).collect();
+    let next_cursor = has_more.then(|| page_rows.last().map(|(id, _, _, _, _, _)| *id)).flatten();
+
+    let groups = page_rows
+        .into_iter()
+        .map(|(id, name, description, avatar_key, visibility, role)| GroupSelectorItem {
+            id,
+            name,
+            description,
+            avatar: avatar_key.map(|key| build_public_object_url(&state, &key)),
+            visibility,
+            role,
+        })
+        .collect();
+
+    Ok(Json(ListGroupsResponse { groups, next_cursor }))
 }
 
 /// GET /group/:chat_id — Get chat details.
@@ -475,7 +654,7 @@ async fn delete_mute(
 
 pub fn router() -> axum::Router<crate::AppState> {
     axum::Router::new()
-        .route("/", axum::routing::post(post_group))
+        .route("/", axum::routing::get(get_groups).post(post_group))
         .route(
             "/{chat_id}",
             axum::routing::get(get_group).patch(patch_group),
