@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../config/api_config.dart';
 import '../../data/models/message_models.dart';
 import '../../data/services/media_preview_cache.dart';
+import '../shared/settings_store.dart';
 import 'attachment_viewer_page.dart';
 import 'video_popup_player.dart';
 
@@ -43,6 +44,10 @@ class _MessageRowState extends State<MessageRow>
     with SingleTickerProviderStateMixin {
   static const double _replyThreshold = 60;
   static const FontWeight _bubbleFontWeight = FontWeight.w400;
+  static const Color _darkCardColor = Color(0xFF4A5D76);
+  static const Color _darkCardColorMe = Color(0xFF5B7191);
+  static const Color _darkCardBorderColor = Color(0xFF6C82A1);
+  static const Color _darkCardAccentTextColor = Color(0xFFE4EDF8);
   static const String _maleBadgeSvg =
       '<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M896.35739 415.483806V127.690194h-287.794636l107.116623 107.116623-108.319007 108.316961c-49.568952-34.997072-110.052488-55.56348-175.344541-55.56348-168.101579 0-304.374242 136.273686-304.374242 304.374242s136.273686 304.374242 304.374242 304.374243S736.390072 760.03612 736.390072 591.93454c0-61.631686-18.3356-118.972649-49.824779-166.901241L796.238135 315.365574l100.119255 100.118232zM432.015829 800.190655c-115.015523 0-208.256114-93.240591-208.256115-208.256115s93.240591-208.256114 208.256115-208.256114 208.256114 93.240591 208.256114 208.256114-93.240591 208.256114-208.256114 208.256115z" fill="#CCCCCC"/></svg>';
   static const String _femaleBadgeSvg =
@@ -54,6 +59,22 @@ class _MessageRowState extends State<MessageRow>
   bool get _isMe {
     final currentUserId = curUserId;
     return currentUserId != null && widget.message.sender.uid == currentUserId;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    SettingsStore.instance.addListener(_onSettingsChanged);
+  }
+
+  @override
+  void dispose() {
+    SettingsStore.instance.removeListener(_onSettingsChanged);
+    super.dispose();
+  }
+
+  void _onSettingsChanged() {
+    if (mounted) setState(() {});
   }
 
   TextStyle _bubbleStyle({
@@ -141,16 +162,23 @@ class _MessageRowState extends State<MessageRow>
     final screenWidth = MediaQuery.sizeOf(context).width;
     final maxBubbleWidth = screenWidth * 0.82;
     final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+    final accentColor = SettingsStore.instance.chatAccentColor;
 
     final bubbleColor = _isMe
-        ? (isDark ? const Color(0xFF3C444D) : const Color(0xFFF7F5F2))
-        : (isDark ? const Color(0xFF30343A) : const Color(0xFFF8F6F3));
+        ? accentColor
+        : (isDark ? _darkCardColor : const Color(0xFFF8F6F3));
     final bubbleBorderColor = _isMe
-        ? (isDark ? const Color(0xFF515C67) : const Color(0xFFE9E1D7))
-        : (isDark ? const Color(0xFF454A52) : const Color(0xFFEEE7DE));
-    final textColor = CupertinoColors.label.resolveFrom(context);
-    final metaColor = CupertinoColors.secondaryLabel.resolveFrom(context);
-    final linkColor = const Color(0xFF3C82F6);
+        ? accentColor.withOpacity(isDark ? 0.85 : 0.9)
+        : (isDark ? _darkCardBorderColor : const Color(0xFFEEE7DE));
+    final textColor = _isMe
+        ? CupertinoColors.white
+        : CupertinoColors.label.resolveFrom(context);
+    final metaColor = _isMe
+        ? CupertinoColors.white.withAlpha(180)
+        : CupertinoColors.secondaryLabel.resolveFrom(context);
+    final linkColor = _isMe
+        ? CupertinoColors.white
+        : const Color(0xFF3C82F6);
 
     final initial = (senderName.isNotEmpty ? senderName[0] : '?').toUpperCase();
     final timeWidget = Row(
@@ -292,6 +320,12 @@ class _MessageRowState extends State<MessageRow>
       if (threadInfo != null &&
           threadInfo.replyCount > 0 &&
           widget.onOpenThread != null) {
+        final threadBadgeBgColor = isDark
+            ? (_isMe ? _darkCardColorMe : _darkCardColor)
+            : (_isMe ? const Color(0xFFF2E9DE) : const Color(0xFFF1EAE3));
+        final threadBadgeTextColor = isDark
+            ? _darkCardAccentTextColor
+            : const Color(0xFF8B6D52);
         contentChildren.add(const SizedBox(height: 8));
         contentChildren.add(
           GestureDetector(
@@ -299,9 +333,7 @@ class _MessageRowState extends State<MessageRow>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: _isMe
-                    ? const Color(0xFFF2E9DE)
-                    : const Color(0xFFF1EAE3),
+                color: threadBadgeBgColor,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -310,7 +342,7 @@ class _MessageRowState extends State<MessageRow>
                   Icon(
                     CupertinoIcons.chat_bubble_2,
                     size: 15,
-                    color: const Color(0xFF8B6D52),
+                    color: threadBadgeTextColor,
                   ),
                   const SizedBox(width: 6),
                   Text(
@@ -318,7 +350,7 @@ class _MessageRowState extends State<MessageRow>
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: _bubbleFontWeight,
-                      color: const Color(0xFF8B6D52),
+                      color: threadBadgeTextColor,
                     ),
                   ),
                 ],
@@ -439,10 +471,10 @@ class _MessageRowState extends State<MessageRow>
                   color: CupertinoColors.systemGrey5.resolveFrom(context),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   CupertinoIcons.reply,
                   size: 22,
-                  color: CupertinoColors.activeBlue,
+                  color: accentColor,
                 ),
               ),
             ),
@@ -525,11 +557,18 @@ class _MessageRowState extends State<MessageRow>
     BuildContext context,
     AttachmentItem attachment,
   ) {
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+    final tileBackgroundColor = isDark
+        ? (_isMe ? _darkCardColorMe : _darkCardColor)
+        : (_isMe ? const Color(0xFFF2E9DE) : const Color(0xFFF1EAE3));
+    final tileAccentColor =
+        isDark ? _darkCardAccentTextColor : const Color(0xFF8B6D52);
+
     return Container(
       width: 180,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: _isMe ? const Color(0xFFF2E9DE) : const Color(0xFFF1EAE3),
+        color: tileBackgroundColor,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -539,7 +578,7 @@ class _MessageRowState extends State<MessageRow>
                 ? CupertinoIcons.play_rectangle
                 : CupertinoIcons.doc,
             size: 18,
-            color: const Color(0xFF8B6D52),
+            color: tileAccentColor,
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -565,10 +604,12 @@ class _MessageRowState extends State<MessageRow>
         ? 'Message deleted'
         : (reply.message ?? '');
 
-    final quoteBackgroundColor = _isMe
-        ? const Color(0xFFF2E9DE)
-        : const Color(0xFFF1EAE3);
-    final quoteBorderColor = const Color(0xFFB98F63);
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+    final quoteBackgroundColor = isDark
+        ? (_isMe ? _darkCardColorMe : _darkCardColor)
+        : (_isMe ? const Color(0xFFF2E9DE) : const Color(0xFFF1EAE3));
+    final quoteBorderColor =
+        isDark ? _darkCardAccentTextColor : const Color(0xFFB98F63);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 6),

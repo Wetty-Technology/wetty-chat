@@ -273,6 +273,10 @@ class _ChatPageState extends State<ChatPage> {
     final chatName = chat.name?.isNotEmpty == true
         ? chat.name!
         : 'Chat ${chat.id}';
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+    final itemDividerColor = isDark
+        ? const Color(0xFF6C829E)
+        : CupertinoColors.separator.resolveFrom(context);
 
     String? dateText;
     if (chat.lastMessageAt != null) {
@@ -396,7 +400,7 @@ class _ChatPageState extends State<ChatPage> {
           padding: const EdgeInsets.only(left: 72),
           child: Container(
             height: 0.5,
-            color: CupertinoColors.separator.resolveFrom(context),
+            color: itemDividerColor,
           ),
         ),
       ],
