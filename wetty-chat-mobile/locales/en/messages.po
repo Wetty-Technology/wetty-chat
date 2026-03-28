@@ -224,8 +224,8 @@ msgid "Create Invite"
 msgstr "Create Invite"
 
 #: src/pages/chat-thread/chat-settings.tsx
-msgid "Create Share Link"
-msgstr "Create Share Link"
+#~ msgid "Create Share Link"
+#~ msgstr "Create Share Link"
 
 #: src/pages/chat-thread/chat-thread.tsx
 #: src/pages/chat-thread/chat-thread.tsx
@@ -467,6 +467,7 @@ msgid "Invite code copied"
 msgstr "Invite code copied"
 
 #: src/components/chat/settings/ShareInviteModal.tsx
+#: src/pages/chat-thread/chat-settings.tsx
 msgid "Invite Link"
 msgstr "Invite Link"
 

@@ -16,10 +16,11 @@ import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import { selectChatMeta, selectChatMutedUntil, setChatMeta } from '@/store/chatsSlice';
 import type { RootState } from '@/store/index';
-import { getGroupInfo, requestGroupAvatarUploadUrl, updateGroupInfo } from '@/api/group';
+import { getGroupInfo, requestGroupAvatarUploadUrl, updateGroupInfo, type GroupRole } from '@/api/group';
 import { uploadFileToS3 } from '@/api/upload';
 import { BackButton } from '@/components/BackButton';
 import { GroupProfile } from '@/components/chat/GroupProfile';
+import { ChatRoleGate } from '@/components/chat/permissions/ChatRoleGate';
 import { ChatMuteSettingItem } from '@/components/chat/settings/ChatMuteSettingItem';
 import type { BackAction } from '@/types/back-action';
 import styles from './ChatSettings.module.scss';
@@ -39,6 +40,7 @@ interface ChatSettingsFormState {
   avatarUrl: string;
   avatarImageId: string | null;
   visibility: 'public' | 'private';
+  myRole: GroupRole | null;
 }
 
 function getInitialFormState(cachedMeta?: {
@@ -47,6 +49,7 @@ function getInitialFormState(cachedMeta?: {
   avatar_image_id?: string | null;
   avatar?: string | null;
   visibility?: string;
+  my_role?: GroupRole | null;
 }): ChatSettingsFormState {
   return {
     name: cachedMeta?.name || '',
@@ -54,6 +57,7 @@ function getInitialFormState(cachedMeta?: {
     avatarUrl: cachedMeta?.avatar || '',
     avatarImageId: cachedMeta?.avatar_image_id || null,
     visibility: (cachedMeta?.visibility as 'public' | 'private') || 'public',
+    myRole: cachedMeta?.my_role ?? null,
   };
 }
 
@@ -61,6 +65,7 @@ interface ChatSettingsContentProps {
   chatId: string;
   formState: ChatSettingsFormState;
   mutedUntil: string | null;
+  myRole: GroupRole | null;
   saving: boolean;
   uploadingAvatar: boolean;
   onNameChange: (value: string) => void;
@@ -74,6 +79,7 @@ function ChatSettingsContent({
   chatId,
   formState,
   mutedUntil,
+  myRole,
   saving,
   uploadingAvatar,
   onNameChange,
@@ -96,9 +102,11 @@ function ChatSettingsContent({
       <div className={styles.shareActions}>
         <ChatMuteSettingItem chatId={chatId} mutedUntil={mutedUntil} />
 
-        <GroupSettingsActionButton icon={linkOutline} onClick={() => setShareModalOpen(true)}>
-          <Trans>Create Share Link</Trans>
-        </GroupSettingsActionButton>
+        <ChatRoleGate chatId={chatId} allow="admin" role={myRole}>
+          <GroupSettingsActionButton icon={linkOutline} onClick={() => setShareModalOpen(true)}>
+            <Trans>Invite Link</Trans>
+          </GroupSettingsActionButton>
+        </ChatRoleGate>
       </div>
 
       <FeatureGate>
@@ -117,9 +125,18 @@ function ChatSettingsContent({
         />
       </FeatureGate>
 
-      <ShareInviteModal isOpen={shareModalOpen} chatId={chatId} onDismiss={() => setShareModalOpen(false)} />
+      {myRole === 'admin' ? (
+        <ShareInviteModal isOpen={shareModalOpen} chatId={chatId} onDismiss={() => setShareModalOpen(false)} />
+      ) : null}
     </>
   );
+}
+
+function hasLoadedChatSettingsMeta(cachedMeta?: {
+  visibility?: string;
+  my_role?: GroupRole | null;
+}): boolean {
+  return !!cachedMeta?.visibility && cachedMeta.my_role !== undefined;
 }
 
 function ChatSettingsSession({ chatId, backAction }: { chatId: string; backAction?: BackAction }) {
@@ -129,12 +146,12 @@ function ChatSettingsSession({ chatId, backAction }: { chatId: string; backActio
   const cachedMeta = useSelector((state: RootState) => selectChatMeta(state, chatId));
   const mutedUntil = useSelector((state: RootState) => selectChatMutedUntil(state, chatId));
   const [formState, setFormState] = useState<ChatSettingsFormState>(() => getInitialFormState(cachedMeta));
-  const [loading, setLoading] = useState(() => !cachedMeta?.visibility);
+  const [loading, setLoading] = useState(() => !hasLoadedChatSettingsMeta(cachedMeta));
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   useEffect(() => {
-    if (cachedMeta?.visibility) {
+    if (hasLoadedChatSettingsMeta(cachedMeta)) {
       return;
     }
 
@@ -270,6 +287,7 @@ function ChatSettingsSession({ chatId, backAction }: { chatId: string; backActio
             chatId={chatId}
             formState={formState}
             mutedUntil={mutedUntil}
+            myRole={formState.myRole}
             saving={saving}
             uploadingAvatar={uploadingAvatar}
             onNameChange={(value) => updateFormState('name', value)}

@@ -10,6 +10,7 @@ export interface GroupInfoResponse {
   avatar: string | null;
   visibility: string;
   created_at: string;
+  my_role: GroupRole | null;
 }
 
 export interface UpdateGroupInfoBody {

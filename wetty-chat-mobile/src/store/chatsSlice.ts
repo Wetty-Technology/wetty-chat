@@ -3,6 +3,7 @@ import { createSelector, createSlice } from '@reduxjs/toolkit';
 import type { RootState } from './index';
 import type { MessageResponse } from '@/api/messages';
 import type { ChatListEntry } from '@/api/chats';
+import type { GroupRole } from '@/api/group';
 import { compareMessageOrder, isSameMessage } from './messageProjection';
 
 export interface ChatMeta {
@@ -12,6 +13,7 @@ export interface ChatMeta {
   avatar_image_id?: string | null;
   visibility?: string;
   created_at?: string;
+  my_role?: GroupRole | null;
 }
 
 interface ChatListMeta {
