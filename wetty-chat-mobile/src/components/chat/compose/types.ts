@@ -61,12 +61,20 @@ export interface DraftUploadRecord {
   abortController?: AbortController;
 }
 
-export type VoiceRecorderPhase = 'requesting' | 'recording' | 'locked' | 'uploading';
-
-export interface VoiceRecorderState {
-  phase: VoiceRecorderPhase;
-  startedAt: number;
+export interface RecordedVoiceDraft {
+  file: File;
+  mimeType: string;
+  size: number;
   durationMs: number;
-  cancelArmed: boolean;
-  uploadProgress: number;
 }
+
+export type VoiceRecorderState =
+  | {
+      phase: 'requesting' | 'recording';
+      startedAt: number;
+      durationMs: number;
+    }
+  | ({
+      phase: 'recorded' | 'uploading';
+      uploadProgress: number;
+    } & RecordedVoiceDraft);

@@ -1,7 +1,8 @@
 import { forwardRef, useCallback, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import { IonButton, IonIcon } from '@ionic/react';
 import { t } from '@lingui/core/macro';
-import { addCircleOutline, micOutline, send } from 'ionicons/icons';
+import { addCircleOutline, send } from 'ionicons/icons';
+import { AudioRecordButton } from './compose/AudioRecordButton';
 import styles from './compose/MessageComposeBar.module.scss';
 import { UploadPreview } from './UploadPreview';
 import { ComposeContextBanner } from './compose/ComposeContextBanner';
@@ -160,7 +161,8 @@ const MessageComposeBarInner = forwardRef<MessageComposeBarHandle, MessageCompos
   const canStartVoiceBase = trimmedText.length === 0 && !hasAttachment && !editing && !hasUploadingDraft && !hasFailedDraft;
   const canRequestRecentEdit = !editing && !replyTo && text.length === 0 && !hasAttachment && drafts.length === 0;
 
-  const { voiceRecorder, voiceActive, handleVoicePointerDown, finishVoiceRecording } = useVoiceRecorder({
+  const { voiceRecorder, voiceActive, startVoiceRecording, completeVoiceRecording, cancelVoiceRecording, sendVoiceRecording } =
+    useVoiceRecorder({
     uploadAttachment,
     onSend,
     onError,
@@ -170,6 +172,8 @@ const MessageComposeBarInner = forwardRef<MessageComposeBarHandle, MessageCompos
     },
   });
   const canStartVoice = canStartVoiceBase && !voiceActive;
+  const showAudioRecordButton = canStartVoice || voiceRecorder?.phase === 'requesting' || voiceRecorder?.phase === 'recording';
+  const showVoiceSendButton = voiceRecorder?.phase === 'recorded' || voiceRecorder?.phase === 'uploading';
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -178,7 +182,7 @@ const MessageComposeBarInner = forwardRef<MessageComposeBarHandle, MessageCompos
   };
 
   return (
-    <div className={styles.bar}>
+    <div id="message-compose-bar" className={styles.bar}>
       <input
         type="file"
         accept="image/*,video/*"
@@ -212,7 +216,7 @@ const MessageComposeBarInner = forwardRef<MessageComposeBarHandle, MessageCompos
         />
 
         {voiceRecorder ? (
-          <VoiceRecorderPanel voiceRecorder={voiceRecorder} onFinish={finishVoiceRecording} />
+          <VoiceRecorderPanel voiceRecorder={voiceRecorder} onCancel={cancelVoiceRecording} />
         ) : (
           <ComposeInput
             textareaRef={textareaRef}
@@ -228,30 +232,41 @@ const MessageComposeBarInner = forwardRef<MessageComposeBarHandle, MessageCompos
           />
         )}
       </div>
-      {canStartVoice || voiceActive ? (
-        <IonButton
-          fill="solid"
-          color="primary"
-          className={`${styles.sendBtn} ${voiceActive ? styles.recordingBtn : ''}`}
-          onPointerDown={handleVoicePointerDown}
-          onClick={(event) => event.preventDefault()}
-          aria-label={t`Record voice`}
-          disabled={voiceRecorder?.phase === 'uploading'}
-        >
-          <IonIcon slot="icon-only" icon={micOutline} />
-        </IonButton>
-      ) : (
-        <IonButton
-          fill="solid"
-          color="primary"
-          className={`${styles.sendBtn}${!canSend ? ` ${styles.disabled}` : ''}`}
-          onClick={handleSend}
-          aria-label={t`Send message`}
-          disabled={!canSend}
-        >
-          <IonIcon slot="icon-only" icon={send} className={styles.moveRight} />
-        </IonButton>
-      )}
+      <div className={styles.actionSlot}>
+        {showAudioRecordButton ? (
+          <AudioRecordButton
+            className={styles.recordButton}
+            onStart={startVoiceRecording}
+            onComplete={completeVoiceRecording}
+            onCancel={cancelVoiceRecording}
+            onSend={sendVoiceRecording}
+          />
+        ) : showVoiceSendButton ? (
+          <IonButton
+            fill="solid"
+            color="primary"
+            className={`${styles.sendBtn}${voiceRecorder?.phase === 'uploading' ? ` ${styles.disabled}` : ''}`}
+            onClick={sendVoiceRecording}
+            aria-label={t`Send voice message`}
+            disabled={voiceRecorder?.phase === 'uploading'}
+          >
+            <IonIcon slot="icon-only" icon={send} className={styles.moveRight} />
+          </IonButton>
+        ) : voiceRecorder ? (
+          <div className={styles.actionSpacer} aria-hidden="true" />
+        ) : (
+          <IonButton
+            fill="solid"
+            color="primary"
+            className={`${styles.sendBtn}${!canSend ? ` ${styles.disabled}` : ''}`}
+            onClick={handleSend}
+            aria-label={t`Send message`}
+            disabled={!canSend}
+          >
+            <IonIcon slot="icon-only" icon={send} className={styles.moveRight} />
+          </IonButton>
+        )}
+      </div>
     </div>
   );
 });

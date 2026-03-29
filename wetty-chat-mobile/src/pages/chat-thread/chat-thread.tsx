@@ -344,8 +344,19 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   }, [currentUserId, editingSession, messages, replyingTo, startEditingMessage]);
 
   const showToast = useCallback(
-    (text: string, duration = 3000) => {
-      presentToast({ message: text, duration, position: 'bottom' });
+    (
+      text: string,
+      duration = 3000,
+      options?: {
+        positionAnchor?: string;
+      },
+    ) => {
+      presentToast({
+        message: text,
+        duration,
+        position: 'bottom',
+        positionAnchor: options?.positionAnchor,
+      });
     },
     [presentToast],
   );
@@ -1098,7 +1109,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
           ref={composeBarRef}
           onSend={handleSend}
           uploadAttachment={uploadAttachment}
-          onError={(message) => showToast(message)}
+          onError={(message) => showToast(message, 2200, { positionAnchor: 'message-compose-bar' })}
           onFocusChange={handleComposeFocusChange}
           replyTo={
             replyingTo

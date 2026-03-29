@@ -40,6 +40,7 @@
   display: flex;
   flex-direction: row;
   align-items: flex-end;
+  min-height: 36px;
   padding-right: 4px;
 }
 
@@ -157,16 +158,33 @@
   transform: translateX(1.5px);
 }
 
-.recordingBtn {
-  --background: var(--ion-color-danger);
+.actionSlot {
+  width: 48px;
+  min-width: 48px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.actionSpacer {
+  width: 36px;
+  height: 36px;
+}
+
+.recordButton {
+  margin: 0 6px;
 }
 
 .voiceRecorder {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 52px;
-  padding: 8px 12px;
+  min-height: 36px;
+  padding: 0 4px 0 12px;
+}
+
+.voiceRecorderDraft {
+  gap: 6px;
 }
 
 .voiceRecorderMain {
@@ -206,12 +224,12 @@
 .voiceActions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .voiceActionBtn {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -222,6 +240,10 @@
   color: #fff;
 }
 
+.voiceActionBtn:disabled {
+  opacity: 0.55;
+}
+
 .voiceCancelBtn {
   background: var(--ion-color-medium, #8b919b);
 }
@@ -230,7 +252,7 @@
   background: var(--ion-color-primary, #3880ff);
 }
 
-.voiceLockBadge {
+.voiceDraftIcon {
   width: 28px;
   height: 28px;
   display: inline-flex;
@@ -240,6 +262,13 @@
   background: var(--ion-background-color-step-100, #eef1f5);
   color: var(--ion-color-primary, #3880ff);
   flex-shrink: 0;
+}
+
+.voiceDraftMeta {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 @keyframes voicePulse {
