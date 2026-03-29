@@ -1,7 +1,7 @@
 import { IonButtons, IonHeader, IonPage, IonToolbar } from '@ionic/react';
 import { Trans } from '@lingui/react/macro';
 import { useHistory } from 'react-router-dom';
-import { createOutline } from 'ionicons/icons';
+import { addCircleOutline } from 'ionicons/icons';
 import { ChatList } from '@/components/chat/ChatList';
 import { HeaderActionMenu } from '@/components/HeaderActionMenu';
 import { TitleWithConnectionStatus } from '@/components/TitleWithConnectionStatus';
@@ -18,12 +18,12 @@ export default function Chats() {
     },
     ...(isFeatureGateEnabled
       ? [
-          {
-            id: 'create-chat',
-            label: <Trans>Create Chat</Trans>,
-            onSelect: () => history.push('/chats/new'),
-          },
-        ]
+        {
+          id: 'create-chat',
+          label: <Trans>Create Chat</Trans>,
+          onSelect: () => history.push('/chats/new'),
+        },
+      ]
       : []),
   ];
 
@@ -35,7 +35,7 @@ export default function Chats() {
             <Trans>Chats</Trans>
           </TitleWithConnectionStatus>
           <IonButtons slot="end">
-            <HeaderActionMenu actions={menuActions} icon={createOutline} />
+            <HeaderActionMenu actions={menuActions} icon={addCircleOutline} />
           </IonButtons>
         </IonToolbar>
       </IonHeader>

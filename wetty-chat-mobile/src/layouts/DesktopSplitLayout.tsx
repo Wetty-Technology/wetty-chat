@@ -2,7 +2,7 @@ import { type ReactNode, useCallback, useRef } from 'react';
 import { matchPath, useHistory, useLocation } from 'react-router-dom';
 import { Trans } from '@lingui/react/macro';
 import { IonButton, IonButtons, IonHeader, IonIcon, IonModal, IonTitle, IonToolbar } from '@ionic/react';
-import { createOutline, settings } from 'ionicons/icons';
+import { addCircleOutline, settings } from 'ionicons/icons';
 import { ChatList } from '@/components/chat/ChatList';
 import ChatThreadCore from '@/pages/chat-thread/chat-thread';
 import ChatSettingsCore from '@/pages/chat-thread/chat-settings';
@@ -156,12 +156,12 @@ export function DesktopSplitLayout() {
   const headerActions: HeaderActionMenuItem[] = [
     ...(isFeatureGateEnabled
       ? [
-          {
-            id: 'create-chat',
-            label: <Trans>Create Chat</Trans>,
-            onSelect: () => history.push('/chats/new'),
-          },
-        ]
+        {
+          id: 'create-chat',
+          label: <Trans>Create Chat</Trans>,
+          onSelect: () => history.push('/chats/new'),
+        },
+      ]
       : []),
     {
       id: 'join-via-code',
@@ -245,7 +245,7 @@ export function DesktopSplitLayout() {
               <Trans>Chats</Trans>
             </IonTitle>
             <IonButtons slot="end">
-              <HeaderActionMenu icon={createOutline} actions={headerActions} />
+              <HeaderActionMenu icon={addCircleOutline} actions={headerActions} />
             </IonButtons>
           </IonToolbar>
         </IonHeader>
