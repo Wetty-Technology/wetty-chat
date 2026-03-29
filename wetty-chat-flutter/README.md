@@ -1,17 +1,43 @@
-# flutter_application_1
+# wetty-chat-flutter
 
-A new Flutter project.
+Flutter client for wetty-chat.
 
-## Getting Started
+## API base URL
 
-This project is a starting point for a Flutter application.
+The app reads the API base URL from a compile-time define:
 
-A few resources to get you started if this is your first Flutter project:
+```dart
+const String apiBaseUrl = String.fromEnvironment(
+  'API_BASE_URL',
+  defaultValue: 'https://chahui.app/_api',
+);
+```
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+If `API_BASE_URL` is not provided, the app uses `https://chahui.app/_api`.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Run with a development API
+
+From the terminal:
+
+```bash
+flutter run --dart-define=API_BASE_URL=http://wchat.i386.mov/_api
+```
+
+## VS Code
+
+Use a launch configuration that passes `--dart-define` to the Flutter tool:
+
+```json
+"toolArgs": [
+  "--dart-define",
+  "API_BASE_URL=http://your-local-api:3000"
+]
+```
+
+Do a full restart after changing it. Hot reload does not change compile-time defines.
+
+The app prints the active API URL once at startup so you can confirm the define was applied:
+
+```text
+[APP] API_BASE_URL=...
+```

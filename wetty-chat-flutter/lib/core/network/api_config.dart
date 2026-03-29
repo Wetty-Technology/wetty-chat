@@ -1,6 +1,9 @@
 import '../../features/auth/application/auth_store.dart';
 
-const String apiBaseUrl = 'http://10.42.3.100:3000';
+const String apiBaseUrl = String.fromEnvironment(
+  'API_BASE_URL',
+  defaultValue: 'https://chahui.app/_api',
+);
 
 class ApiSession {
   const ApiSession._();
