@@ -94,7 +94,6 @@ export interface CreateMessageBody {
   attachment_ids?: string[];
 }
 
-
 export function getMessages(
   chatId: string | number,
   params?: { before?: string; around?: string; after?: string; max?: number; thread_id?: string },

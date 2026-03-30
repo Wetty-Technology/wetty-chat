@@ -241,7 +241,10 @@ fn load_first_stickers_for_packs(
     let rows: Vec<(i64, Sticker, Media)> = sticker_pack_stickers::table
         .inner_join(stickers::table.inner_join(media::table))
         .filter(sticker_pack_stickers::pack_id.eq_any(pack_ids))
-        .order((sticker_pack_stickers::pack_id.asc(), sticker_pack_stickers::added_at.asc()))
+        .order((
+            sticker_pack_stickers::pack_id.asc(),
+            sticker_pack_stickers::added_at.asc(),
+        ))
         .distinct_on(sticker_pack_stickers::pack_id)
         .select((
             sticker_pack_stickers::pack_id,
@@ -926,7 +929,10 @@ async fn get_sticker(
     let packs: Vec<StickerPack> = sticker_pack_stickers::table
         .inner_join(sticker_packs::table)
         .filter(sticker_pack_stickers::sticker_id.eq(sticker_id))
-        .order((sticker_pack_stickers::added_at.asc(), sticker_packs::id.asc()))
+        .order((
+            sticker_pack_stickers::added_at.asc(),
+            sticker_packs::id.asc(),
+        ))
         .select(StickerPack::as_select())
         .load(conn)
         .map_err(|e| {

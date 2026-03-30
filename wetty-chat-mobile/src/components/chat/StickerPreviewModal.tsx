@@ -31,7 +31,9 @@ export function StickerPreviewModal({ stickerId, onDismiss }: StickerPreviewModa
 
   if (!isOpen) return null;
 
-  return <StickerPreviewModalContent key={stickerId} stickerId={stickerId} isDesktop={isDesktop} onDismiss={onDismiss} />;
+  return (
+    <StickerPreviewModalContent key={stickerId} stickerId={stickerId} isDesktop={isDesktop} onDismiss={onDismiss} />
+  );
 }
 
 function StickerPreviewModalContent({ stickerId, isDesktop, onDismiss }: StickerPreviewModalContentProps) {
@@ -45,7 +47,7 @@ function StickerPreviewModalContent({ stickerId, isDesktop, onDismiss }: Sticker
   const pack = packDetail?.data ?? null;
 
   const heroSticker = selectedStickerId
-    ? pack?.stickers.find((sticker) => sticker.id === selectedStickerId) ?? stickerData
+    ? (pack?.stickers.find((sticker) => sticker.id === selectedStickerId) ?? stickerData)
     : stickerData;
   const heroUrl = heroSticker?.media.url ?? null;
 
@@ -108,9 +110,7 @@ function StickerPreviewModalContent({ stickerId, isDesktop, onDismiss }: Sticker
     return (
       <>
         <div className={styles.heroSection}>
-          {heroUrl && (
-            <img src={heroUrl} alt={t`Sticker preview`} className={styles.heroMedia} />
-          )}
+          {heroUrl && <img src={heroUrl} alt={t`Sticker preview`} className={styles.heroMedia} />}
           {heroSticker && <span className={styles.heroEmoji}>{heroSticker.emoji}</span>}
         </div>
 
@@ -160,9 +160,7 @@ function StickerPreviewModalContent({ stickerId, isDesktop, onDismiss }: Sticker
   if (isDesktop) {
     return (
       <IonModal isOpen onDidDismiss={onDismiss}>
-        <IonContent>
-          {renderContent()}
-        </IonContent>
+        <IonContent>{renderContent()}</IonContent>
         {renderActionButton()}
       </IonModal>
     );
@@ -178,9 +176,7 @@ function StickerPreviewModalContent({ stickerId, isDesktop, onDismiss }: Sticker
           </button>
           <span className={styles.sheetTitle}>{packName}</span>
         </div>
-        <div className={styles.sheetBody}>
-          {renderContent()}
-        </div>
+        <div className={styles.sheetBody}>{renderContent()}</div>
         {renderActionButton()}
       </div>
     </>

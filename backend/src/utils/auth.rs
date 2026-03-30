@@ -87,9 +87,9 @@ fn decode_discuz_auth(
     }
 
     let cryptkey = format!(
-        "{}{}",
+        "{}{:x}",
         keya,
-        format!("{:x}", md5::compute(format!("{}{}", keya, &auth[0..4])))
+        md5::compute(format!("{}{}", keya, &auth[0..4]))
     );
     debug_assert_eq!(cryptkey.len(), 64, "Invalid cryptkey len");
 

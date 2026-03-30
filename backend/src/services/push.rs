@@ -223,7 +223,7 @@ async fn run_push_worker(
             }
         };
 
-        match process_push_job(&service, conn, &ws_registry, &job).await {
+        match process_push_job(service, conn, ws_registry, &job).await {
             Ok(()) => service
                 .metrics
                 .record_push_job("success", started_at.elapsed().as_secs_f64()),
@@ -264,7 +264,7 @@ async fn process_push_job(
         .filter(|(uid, _)| *uid != job.sender_uid)
         .filter(|(_, muted_until)| {
             // Not muted, or mute has expired
-            muted_until.map_or(true, |t| t <= now)
+            muted_until.is_none_or(|t| t <= now)
         })
         .map(|(uid, _)| uid)
         .filter(|&uid| {

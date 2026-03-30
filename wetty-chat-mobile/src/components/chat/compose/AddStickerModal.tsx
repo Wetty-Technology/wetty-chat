@@ -1,5 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonInput, IonModal, IonTitle, IonToolbar } from '@ionic/react';
+import {
+  IonButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonIcon,
+  IonInput,
+  IonModal,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/react';
 import { close } from 'ionicons/icons';
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
@@ -16,12 +26,7 @@ export function AddStickerModal({ file, onDismiss, onAdd }: AddStickerModalProps
   const fileKey = file ? `${file.name}:${file.size}:${file.lastModified}` : 'empty';
 
   return (
-    <IonModal
-      isOpen={file != null}
-      onDidDismiss={onDismiss}
-      initialBreakpoint={0.6}
-      breakpoints={[0, 0.6]}
-    >
+    <IonModal isOpen={file != null} onDidDismiss={onDismiss} initialBreakpoint={0.6} breakpoints={[0, 0.6]}>
       {file ? <AddStickerModalForm key={fileKey} file={file} onDismiss={onDismiss} onAdd={onAdd} /> : null}
     </IonModal>
   );
@@ -39,9 +44,12 @@ function AddStickerModalForm({ file, onDismiss, onAdd }: AddStickerModalFormProp
   const [showEmojiError, setShowEmojiError] = useState(false);
   const previewUrl = useMemo(() => URL.createObjectURL(file), [file]);
 
-  useEffect(() => () => {
-    URL.revokeObjectURL(previewUrl);
-  }, [previewUrl]);
+  useEffect(
+    () => () => {
+      URL.revokeObjectURL(previewUrl);
+    },
+    [previewUrl],
+  );
 
   const handleAdd = () => {
     const trimmedEmoji = emoji.trim();

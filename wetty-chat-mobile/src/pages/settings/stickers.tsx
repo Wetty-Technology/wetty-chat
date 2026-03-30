@@ -21,14 +21,18 @@ import { addOutline, cubeOutline } from 'ionicons/icons';
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import { BackButton } from '@/components/BackButton';
-import { createStickerPack, getOwnedStickerPacks, getSubscribedStickerPacks, type StickerPackSummary } from '@/api/stickers';
+import {
+  createStickerPack,
+  getOwnedStickerPacks,
+  getSubscribedStickerPacks,
+  type StickerPackSummary,
+} from '@/api/stickers';
 import type { BackAction } from '@/types/back-action';
 
 interface StickerSettingsCoreProps {
   backAction?: BackAction;
   onOpenPack?: (packId: string) => void;
 }
-
 
 export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsCoreProps) {
   const history = useHistory();
@@ -42,9 +46,7 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
       const [ownedRes, subscribedRes] = await Promise.all([getOwnedStickerPacks(), getSubscribedStickerPacks()]);
       setOwnedPacks(ownedRes.data.packs);
       setSubscribedPacks(
-        subscribedRes.data.packs.filter(
-          (pack) => !ownedRes.data.packs.some((ownedPack) => ownedPack.id === pack.id),
-        ),
+        subscribedRes.data.packs.filter((pack) => !ownedRes.data.packs.some((ownedPack) => ownedPack.id === pack.id)),
       );
     } catch (error) {
       console.error('Failed to load sticker packs', error);
@@ -115,7 +117,12 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
           {ownedPacks.map((pack) => (
             <IonItem key={pack.id} button detail onClick={() => handleOpenPack(pack.id)}>
               {pack.preview_sticker ? (
-                <img slot="start" src={pack.preview_sticker.media.url} alt="" style={{ width: 32, height: 32, objectFit: 'contain', borderRadius: 4 }} />
+                <img
+                  slot="start"
+                  src={pack.preview_sticker.media.url}
+                  alt=""
+                  style={{ width: 32, height: 32, objectFit: 'contain', borderRadius: 4 }}
+                />
               ) : (
                 <IonIcon aria-hidden="true" icon={cubeOutline} slot="start" color="medium" />
               )}
@@ -150,7 +157,12 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
             subscribedPacks.map((pack) => (
               <IonItem key={pack.id} button detail onClick={() => handleOpenPack(pack.id)}>
                 {pack.preview_sticker ? (
-                  <img slot="start" src={pack.preview_sticker.media.url} alt="" style={{ width: 32, height: 32, objectFit: 'contain', borderRadius: 4 }} />
+                  <img
+                    slot="start"
+                    src={pack.preview_sticker.media.url}
+                    alt=""
+                    style={{ width: 32, height: 32, objectFit: 'contain', borderRadius: 4 }}
+                  />
                 ) : (
                   <IonIcon aria-hidden="true" icon={cubeOutline} slot="start" color="medium" />
                 )}

@@ -62,13 +62,21 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 
 // Shared styles
@@ -124,7 +132,9 @@
   background: var(--ion-background-color, #fff);
   border: 2px solid transparent;
   cursor: pointer;
-  transition: border-color 0.15s, background-color 0.12s;
+  transition:
+    border-color 0.15s,
+    background-color 0.12s;
   padding: 0;
 
   &:hover {

@@ -18,12 +18,12 @@ export default function Chats() {
     },
     ...(isFeatureGateEnabled
       ? [
-        {
-          id: 'create-chat',
-          label: <Trans>Create Chat</Trans>,
-          onSelect: () => history.push('/chats/new'),
-        },
-      ]
+          {
+            id: 'create-chat',
+            label: <Trans>Create Chat</Trans>,
+            onSelect: () => history.push('/chats/new'),
+          },
+        ]
       : []),
   ];
 

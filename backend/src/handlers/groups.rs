@@ -206,7 +206,7 @@ fn require_admin_role(
     let role = load_requester_group_role(conn, chat_id, uid)?;
 
     match role {
-        Some(r) if r == GroupRole::Admin => Ok(()),
+        Some(GroupRole::Admin) => Ok(()),
         Some(_) => Err((StatusCode::FORBIDDEN, "Admin role required")),
         None => Err((StatusCode::FORBIDDEN, "Not a member of this chat")),
     }
@@ -278,7 +278,7 @@ async fn post_group(
     let name = body
         .name
         .filter(|s| !s.trim().is_empty())
-        .unwrap_or_else(|| String::new());
+        .unwrap_or_else(String::new);
 
     let conn = &mut state.db.get().map_err(|_| {
         (

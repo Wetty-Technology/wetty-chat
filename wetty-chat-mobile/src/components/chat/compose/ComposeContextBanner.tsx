@@ -12,12 +12,7 @@ interface ComposeContextBannerProps {
   onCancelReply?: () => void;
 }
 
-export function ComposeContextBanner({
-  editing,
-  replyTo,
-  onCancelEdit,
-  onCancelReply,
-}: ComposeContextBannerProps) {
+export function ComposeContextBanner({ editing, replyTo, onCancelEdit, onCancelReply }: ComposeContextBannerProps) {
   if (editing) {
     return (
       <div className={styles.replyPreview}>

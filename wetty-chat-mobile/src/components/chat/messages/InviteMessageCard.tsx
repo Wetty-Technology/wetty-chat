@@ -1,13 +1,5 @@
 import { type ReactNode } from 'react';
-import {
-  IonCard,
-  IonCardHeader,
-  IonCardSubtitle,
-  IonIcon,
-  IonItem,
-  IonLabel,
-  IonSkeletonText,
-} from '@ionic/react';
+import { IonCard, IonCardHeader, IonCardSubtitle, IonIcon, IonItem, IonLabel, IonSkeletonText } from '@ionic/react';
 import { chevronForward, mailOutline } from 'ionicons/icons';
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
@@ -35,12 +27,12 @@ function formatTime(iso: string): string {
 type CardBodyViewState =
   | { kind: 'loading' }
   | {
-    kind: 'ready';
-    avatar?: ReactNode;
-    title: ReactNode;
-    description: ReactNode;
-    clickable: boolean;
-  };
+      kind: 'ready';
+      avatar?: ReactNode;
+      title: ReactNode;
+      description: ReactNode;
+      clickable: boolean;
+    };
 
 function InviteCardBody({ viewState }: { viewState: CardBodyViewState }) {
   return (
@@ -49,7 +41,7 @@ function InviteCardBody({ viewState }: { viewState: CardBodyViewState }) {
         {viewState.kind === 'loading' ? (
           <IonSkeletonText animated className={styles.skeletonAvatar} />
         ) : (
-          viewState.avatar ?? null
+          (viewState.avatar ?? null)
         )}
       </div>
       <IonLabel>
@@ -92,7 +84,9 @@ export function InviteMessageCard({
   } else if (previewState.kind === 'loaded' && preview) {
     bodyViewState = {
       kind: 'ready',
-      avatar: <UserAvatar name={displayName} avatarUrl={preview.chat.avatar} size={44} className={styles.groupAvatar} />,
+      avatar: (
+        <UserAvatar name={displayName} avatarUrl={preview.chat.avatar} size={44} className={styles.groupAvatar} />
+      ),
       title: displayName,
       description: preview.chat.description?.trim() || t`Open this invite to view the group and join.`,
       clickable: true,

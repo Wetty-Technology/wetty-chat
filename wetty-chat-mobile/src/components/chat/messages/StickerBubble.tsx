@@ -1,11 +1,6 @@
 import type { CSSProperties, HTMLAttributes, Ref } from 'react';
 import { IonIcon } from '@ionic/react';
-import {
-  arrowUndo,
-  chatbubbles,
-  checkmarkCircle,
-  checkmarkCircleOutline,
-} from 'ionicons/icons';
+import { arrowUndo, chatbubbles, checkmarkCircle, checkmarkCircleOutline } from 'ionicons/icons';
 import { t } from '@lingui/core/macro';
 import styles from './ChatBubble.module.scss';
 import { getMessagePreviewText } from '@/components/chat/messagePreview';
@@ -78,7 +73,9 @@ export function StickerBubble({
     <div
       ref={bubbleRef}
       {...bubbleRestProps}
-      className={[styles.bubble, styles.stickerBubble, mouseDetected ? styles.mouseSelectable : '', bubbleClassName].filter(Boolean).join(' ')}
+      className={[styles.bubble, styles.stickerBubble, mouseDetected ? styles.mouseSelectable : '', bubbleClassName]
+        .filter(Boolean)
+        .join(' ')}
       style={bubbleStyle}
     >
       {replyTo && (
@@ -103,10 +100,7 @@ export function StickerBubble({
             {formatTime(timestamp)}
             {edited && ` (${t`Edited`})`}
             {isSent && (
-              <IonIcon
-                icon={isConfirmed ? checkmarkCircle : checkmarkCircleOutline}
-                className={styles.statusIcon}
-              />
+              <IonIcon icon={isConfirmed ? checkmarkCircle : checkmarkCircleOutline} className={styles.statusIcon} />
             )}
           </span>
         )}

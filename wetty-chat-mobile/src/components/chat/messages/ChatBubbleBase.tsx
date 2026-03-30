@@ -309,7 +309,9 @@ export function ChatBubbleBase({
     <div
       ref={bubbleRef}
       {...bubbleRestProps}
-      className={[styles.bubble, mouseDetected ? styles.mouseSelectable : '', bubbleClassName].filter(Boolean).join(' ')}
+      className={[styles.bubble, mouseDetected ? styles.mouseSelectable : '', bubbleClassName]
+        .filter(Boolean)
+        .join(' ')}
       style={{ fontSize: chatFontSizeStyle, ...bubbleStyle }}
     >
       {showName && (
@@ -337,7 +339,9 @@ export function ChatBubbleBase({
           <div className={styles.replyPreviewText}>{getMessagePreviewText(replyTo.preview)}</div>
         </div>
       )}
-      {attachments && attachments.length > 0 && <div className={styles.attachmentsContainer}>{attachments.map(renderAttachment)}</div>}
+      {attachments && attachments.length > 0 && (
+        <div className={styles.attachmentsContainer}>{attachments.map(renderAttachment)}</div>
+      )}
       <div className={styles.messageWrapper}>
         <span className={styles.messageText}>{renderMessageWithLinks(message)}</span>
         <span className={styles.timestampSpacer} />
@@ -346,10 +350,7 @@ export function ChatBubbleBase({
             {formatTime(timestamp)}
             {edited && ` (${t`Edited`})`}
             {isSent && (
-              <IonIcon
-                icon={isConfirmed ? checkmarkCircle : checkmarkCircleOutline}
-                className={styles.statusIcon}
-              />
+              <IonIcon icon={isConfirmed ? checkmarkCircle : checkmarkCircleOutline} className={styles.statusIcon} />
             )}
           </span>
         )}

@@ -117,7 +117,11 @@ function ConfigureStep({
               <Trans>Member Group</Trans>
             </IonLabel>
             <IonNote slot="end" color="medium">
-              {selectedRequiredGroup ? getChatDisplayName(selectedRequiredGroup.id, selectedRequiredGroup.name) : <Trans>Select</Trans>}
+              {selectedRequiredGroup ? (
+                getChatDisplayName(selectedRequiredGroup.id, selectedRequiredGroup.name)
+              ) : (
+                <Trans>Select</Trans>
+              )}
             </IonNote>
           </IonItem>
         ) : null}
@@ -188,13 +192,17 @@ function DestinationStep({
 
       <IonList inset className={styles.list}>
         <IonItem button={!isMembership} detail={!isMembership} onClick={!isMembership ? onOpenSelector : undefined}>
-            <IonLabel>
-              <Trans>Destination Group</Trans>
-            </IonLabel>
-            <IonNote slot="end" color="medium">
-              {selectedDestinationGroup ? getChatDisplayName(selectedDestinationGroup.id, selectedDestinationGroup.name) : <Trans>Select</Trans>}
-            </IonNote>
-          </IonItem>
+          <IonLabel>
+            <Trans>Destination Group</Trans>
+          </IonLabel>
+          <IonNote slot="end" color="medium">
+            {selectedDestinationGroup ? (
+              getChatDisplayName(selectedDestinationGroup.id, selectedDestinationGroup.name)
+            ) : (
+              <Trans>Select</Trans>
+            )}
+          </IonNote>
+        </IonItem>
       </IonList>
 
       <InsetContent>
@@ -346,7 +354,10 @@ function ShareInviteModalSession({ chatId, onDismiss }: Omit<ShareInviteModalPro
         }),
       );
 
-      presentToast({ message: t`Invite sent to ${getChatDisplayName(selectedDestinationGroup.id, selectedDestinationGroup.name)}`, duration: 2500 });
+      presentToast({
+        message: t`Invite sent to ${getChatDisplayName(selectedDestinationGroup.id, selectedDestinationGroup.name)}`,
+        duration: 2500,
+      });
       onDismiss();
     } catch (error) {
       const message = error instanceof Error ? error.message : t`Failed to send invite`;

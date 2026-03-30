@@ -8,10 +8,12 @@ impl Instrumentation for TracingInstrumentation {
             InstrumentationEvent::StartQuery { query, .. } => {
                 tracing::trace!(sql = %query, "db query");
             }
-            InstrumentationEvent::FinishQuery { query, error, .. } => {
-                if let Some(err) = error {
-                    tracing::error!(sql = %query, error = %err, "db query failed");
-                }
+            InstrumentationEvent::FinishQuery {
+                query,
+                error: Some(err),
+                ..
+            } => {
+                tracing::error!(sql = %query, error = %err, "db query failed");
             }
             _ => {}
         }

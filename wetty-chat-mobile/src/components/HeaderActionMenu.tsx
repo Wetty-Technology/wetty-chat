@@ -15,11 +15,7 @@ interface HeaderActionMenuProps {
   triggerAriaLabel?: string;
 }
 
-export function HeaderActionMenu({
-  actions,
-  icon,
-  triggerAriaLabel = t`Open chat actions`,
-}: HeaderActionMenuProps) {
+export function HeaderActionMenu({ actions, icon, triggerAriaLabel = t`Open chat actions` }: HeaderActionMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [triggerEvent, setTriggerEvent] = useState<Event | undefined>();
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
@@ -66,7 +62,13 @@ export function HeaderActionMenu({
       >
         <IonList inset={false} lines="none" className={styles.menuList}>
           {actions.map((action) => (
-            <IonItem key={action.id} button detail={false} className={styles.menuItem} onClick={() => handleActionSelect(action)}>
+            <IonItem
+              key={action.id}
+              button
+              detail={false}
+              className={styles.menuItem}
+              onClick={() => handleActionSelect(action)}
+            >
               {action.label}
             </IonItem>
           ))}

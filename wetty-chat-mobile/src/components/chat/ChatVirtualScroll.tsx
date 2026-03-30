@@ -259,18 +259,21 @@ export function ChatVirtualScroll({
   const [renderTick, setRenderTick] = useState(0);
   const triggerRender = useCallback(() => setRenderTick((value) => value + 1), []);
 
-  const setPhaseState = useCallback((next: Phase) => {
-    if (phaseRef.current !== next) {
-      logVirtualScroll('phase-change', {
-        from: phaseRef.current,
-        to: next,
-        rowCount: rowKeys.length,
-        mounted: mountedRef.current,
-      });
-    }
-    phaseRef.current = next;
-    setPhase(next);
-  }, [rowKeys.length]);
+  const setPhaseState = useCallback(
+    (next: Phase) => {
+      if (phaseRef.current !== next) {
+        logVirtualScroll('phase-change', {
+          from: phaseRef.current,
+          to: next,
+          rowCount: rowKeys.length,
+          mounted: mountedRef.current,
+        });
+      }
+      phaseRef.current = next;
+      setPhase(next);
+    },
+    [rowKeys.length],
+  );
 
   if (treeKeysRef.current !== rowKeys) {
     const tree = new FenwickTree(rowKeys.length);
@@ -364,10 +367,10 @@ export function ChatVirtualScroll({
       if (rowKeys.length === 0) return null;
 
       const container = containerRef.current;
-      const maxScrollTop = container ? Math.max(0, container.scrollHeight - container.clientHeight) : Number.POSITIVE_INFINITY;
-      const targetScrollTop = roundScrollValue(
-        clamp(topChromeHeight() + offsetOf(targetIndex), 0, maxScrollTop),
-      );
+      const maxScrollTop = container
+        ? Math.max(0, container.scrollHeight - container.clientHeight)
+        : Number.POSITIVE_INFINITY;
+      const targetScrollTop = roundScrollValue(clamp(topChromeHeight() + offsetOf(targetIndex), 0, maxScrollTop));
 
       return deriveDesiredRange(targetScrollTop, viewportHeight);
     },
@@ -851,10 +854,10 @@ export function ChatVirtualScroll({
         clientHeight: container.clientHeight,
         pendingBatch: pendingBatch
           ? {
-            reason: pendingBatch.reason,
-            direction: pendingBatch.direction,
-            size: pendingBatch.keys.length,
-          }
+              reason: pendingBatch.reason,
+              direction: pendingBatch.direction,
+              size: pendingBatch.keys.length,
+            }
           : null,
         pendingScrollToBottom: pendingScrollToBottomRef.current,
         pendingScrollToBottomSource: pendingScrollToBottomSourceRef.current,
@@ -970,7 +973,15 @@ export function ChatVirtualScroll({
     }
 
     queueRangeBatch(range.start, range.end, 'forward', 'jump');
-  }, [allMeasured, deriveDesiredRange, pendingBatch, queueRangeBatch, rowKeys.length, triggerRender, updateMountedRange]);
+  }, [
+    allMeasured,
+    deriveDesiredRange,
+    pendingBatch,
+    queueRangeBatch,
+    rowKeys.length,
+    triggerRender,
+    updateMountedRange,
+  ]);
 
   const handleMountedMeasure = useCallback(
     (key: string, height: number) => {
@@ -1058,7 +1069,6 @@ export function ChatVirtualScroll({
           strategy: 'natural-reflow',
         });
       }
-
     },
     [keyToIndex, rows, scheduleBottomSettle, scrollToBottomInternal],
   );
@@ -1142,10 +1152,10 @@ export function ChatVirtualScroll({
             : null,
           pendingBatch: pendingBatch
             ? {
-              reason: pendingBatch.reason,
-              direction: pendingBatch.direction,
-              size: pendingBatch.keys.length,
-            }
+                reason: pendingBatch.reason,
+                direction: pendingBatch.direction,
+                size: pendingBatch.keys.length,
+              }
             : null,
           pendingScrollToBottom: pendingScrollToBottomRef.current,
           pendingScrollToBottomBehavior: pendingScrollToBottomBehaviorRef.current,
@@ -1410,7 +1420,7 @@ export function ChatVirtualScroll({
     const topSpacer = mounted ? topSpacerHeight() : 0;
     const bottomSpacer = mounted ? bottomSpacerHeight() : 0;
     const mountedContentHeight = mounted ? heightBetween(mounted.start, mounted.end + 1) : 0;
-    const contentPaddingTop = (loadOlder.hasMore || loadOlder.loading) ? EDGE_HINT_HEIGHT : 0;
+    const contentPaddingTop = loadOlder.hasMore || loadOlder.loading ? EDGE_HINT_HEIGHT : 0;
     const mountedTop = topSpacer + contentPaddingTop;
     const mountedBottom = mountedTop + mountedContentHeight;
     const viewportTop = container.scrollTop;
@@ -1427,12 +1437,12 @@ export function ChatVirtualScroll({
       mounted,
       pendingBatch: pendingBatch
         ? {
-          reason: pendingBatch.reason,
-          direction: pendingBatch.direction,
-          size: pendingBatch.keys.length,
-          firstKey: pendingBatch.keys[0] ?? null,
-          lastKey: pendingBatch.keys[pendingBatch.keys.length - 1] ?? null,
-        }
+            reason: pendingBatch.reason,
+            direction: pendingBatch.direction,
+            size: pendingBatch.keys.length,
+            firstKey: pendingBatch.keys[0] ?? null,
+            lastKey: pendingBatch.keys[pendingBatch.keys.length - 1] ?? null,
+          }
         : null,
       scrollTop: container.scrollTop,
       scrollHeight: container.scrollHeight,
@@ -1449,15 +1459,24 @@ export function ChatVirtualScroll({
       bootstrapRevealState:
         phase === 'BOOTSTRAP'
           ? {
-            mountedSize: rangeSize(mounted),
-            mountedIntersectsViewport,
-            mountedVisibleHeight,
-            pendingBatchSize: pendingBatch?.keys.length ?? 0,
-          }
+              mountedSize: rangeSize(mounted),
+              mountedIntersectsViewport,
+              mountedVisibleHeight,
+              pendingBatchSize: pendingBatch?.keys.length ?? 0,
+            }
           : null,
     });
-
-  }, [bottomSpacerHeight, heightBetween, loadOlder.hasMore, loadOlder.loading, pendingBatch, phase, renderTick, rowKeys.length, topSpacerHeight]);
+  }, [
+    bottomSpacerHeight,
+    heightBetween,
+    loadOlder.hasMore,
+    loadOlder.loading,
+    pendingBatch,
+    phase,
+    renderTick,
+    rowKeys.length,
+    topSpacerHeight,
+  ]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -1682,9 +1701,7 @@ export function ChatVirtualScroll({
       return;
     }
 
-    const desired = container
-      ? deriveDesiredRangeForTargetIndex(targetIndex, container.clientHeight)
-      : null;
+    const desired = container ? deriveDesiredRangeForTargetIndex(targetIndex, container.clientHeight) : null;
     if (!desired) {
       updateMountedRange(capRange(mounted, rowKeys.length - 1));
       setPhaseState('READY');
@@ -2154,8 +2171,16 @@ export function ChatVirtualScroll({
         )}
         <div className={styles.stagingArea}>{stagingRows}</div>
       </div>
-      {showEmptyState && <div className={styles.overlayScrim}><Trans>No messages yet</Trans></div>}
-      {showLoadingScrim && <div className={styles.overlayScrim}><Trans>Loading…</Trans></div>}
+      {showEmptyState && (
+        <div className={styles.overlayScrim}>
+          <Trans>No messages yet</Trans>
+        </div>
+      )}
+      {showLoadingScrim && (
+        <div className={styles.overlayScrim}>
+          <Trans>Loading…</Trans>
+        </div>
+      )}
     </div>
   );
 }

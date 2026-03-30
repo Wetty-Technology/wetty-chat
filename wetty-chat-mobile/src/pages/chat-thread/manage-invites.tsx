@@ -20,7 +20,11 @@ import { useSelector } from 'react-redux';
 import { deleteInvite, getInvites, sendInviteMessage, type InviteInfoResponse, type InviteType } from '@/api/invites';
 import { BackButton } from '@/components/BackButton';
 import { ShareInviteGroupSelectorModal } from '@/components/chat/settings/ShareInviteGroupSelectorModal';
-import { canCopyInviteCode, copyInviteCode, createInviteMessageClientGeneratedId } from '@/components/chat/settings/shareInviteHelpers';
+import {
+  canCopyInviteCode,
+  copyInviteCode,
+  createInviteMessageClientGeneratedId,
+} from '@/components/chat/settings/shareInviteHelpers';
 import { getChatDisplayName } from '@/utils/chatDisplay';
 import type { GroupSelectorItem } from '@/api/group';
 import { selectEffectiveLocale } from '@/store/settingsSlice';
@@ -91,7 +95,15 @@ interface InviteCardProps {
   onRevoke: (invite: InviteInfoResponse) => void;
 }
 
-function InviteCard({ invite, locale, restrictedGroupName, pendingAction, onCopy, onShare, onRevoke }: InviteCardProps) {
+function InviteCard({
+  invite,
+  locale,
+  restrictedGroupName,
+  pendingAction,
+  onCopy,
+  onShare,
+  onRevoke,
+}: InviteCardProps) {
   const disableShare = pendingAction !== null;
   const disableRevoke = pendingAction !== null;
 
@@ -140,7 +152,12 @@ function InviteCard({ invite, locale, restrictedGroupName, pendingAction, onCopy
       </div>
 
       <div className={`${styles.cardRow} ${styles.actionsRow}`}>
-        <IonButton expand="block" className={styles.actionButton} disabled={disableShare} onClick={() => onShare(invite)}>
+        <IonButton
+          expand="block"
+          className={styles.actionButton}
+          disabled={disableShare}
+          onClick={() => onShare(invite)}
+        >
           {pendingAction === 'share' ? <IonSpinner name="crescent" /> : <Trans>Share</Trans>}
         </IonButton>
         <IonButton

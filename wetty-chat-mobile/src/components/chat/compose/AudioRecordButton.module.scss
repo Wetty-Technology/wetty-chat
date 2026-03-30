@@ -21,7 +21,8 @@
   touch-action: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-  transform: translate3d(var(--audio-record-button-x, 0), var(--audio-record-button-y, 0), 0) scale(var(--audio-record-button-scale, 1));
+  transform: translate3d(var(--audio-record-button-x, 0), var(--audio-record-button-y, 0), 0)
+    scale(var(--audio-record-button-scale, 1));
   transition:
     transform 160ms ease,
     background-color 160ms ease;

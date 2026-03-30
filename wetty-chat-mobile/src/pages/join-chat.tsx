@@ -70,9 +70,7 @@ export function JoinChatCore({ backAction }: JoinChatCoreProps) {
     <div className="ion-page">
       <IonHeader>
         <IonToolbar>
-          <IonButtons slot="start">
-            {backAction && <BackButton action={backAction} />}
-          </IonButtons>
+          <IonButtons slot="start">{backAction && <BackButton action={backAction} />}</IonButtons>
           <IonTitle>
             <Trans>Join via Code</Trans>
           </IonTitle>

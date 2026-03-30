@@ -66,10 +66,12 @@ export function redeemInvite(body: RedeemInviteBody): Promise<AxiosResponse<Rede
   return apiClient.post('/invites/redeem', body);
 }
 
-export function getInvites(params: {
-  group_id?: string;
-  limit?: number;
-} = {}): Promise<AxiosResponse<ListInvitesResponse>> {
+export function getInvites(
+  params: {
+    group_id?: string;
+    limit?: number;
+  } = {},
+): Promise<AxiosResponse<ListInvitesResponse>> {
   return apiClient.get('/invites', { params });
 }
 

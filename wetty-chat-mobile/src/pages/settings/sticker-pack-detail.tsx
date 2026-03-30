@@ -199,7 +199,9 @@ export function StickerPackDetailCore({ packId, backAction }: StickerPackDetailC
               aria-label={t`Add sticker`}
               onClick={() => fileInputRef.current?.click()}
             >
-              <span className={styles.addIcon} aria-hidden="true">+</span>
+              <span className={styles.addIcon} aria-hidden="true">
+                +
+              </span>
             </button>
           )}
           {pack.stickers.map((sticker) => (
@@ -216,26 +218,21 @@ export function StickerPackDetailCore({ packId, backAction }: StickerPackDetailC
               ) : (
                 <img src={sticker.media.url} alt="" className={styles.preview} />
               )}
-              {owned && <span className={styles.removeHint} aria-hidden="true">✕</span>}
+              {owned && (
+                <span className={styles.removeHint} aria-hidden="true">
+                  ✕
+                </span>
+              )}
             </button>
           ))}
         </div>
       </IonContent>
-      <AddStickerModal
-        file={addStickerFile}
-        onDismiss={() => setAddStickerFile(null)}
-        onAdd={handleAddSticker}
-      />
+      <AddStickerModal file={addStickerFile} onDismiss={() => setAddStickerFile(null)} onAdd={handleAddSticker} />
     </IonPage>
   );
 }
 
 export default function StickerPackDetailPage() {
   const { packId } = useParams<{ packId: string }>();
-  return (
-    <StickerPackDetailCore
-      packId={packId}
-      backAction={{ type: 'back', defaultHref: '/settings/stickers' }}
-    />
-  );
+  return <StickerPackDetailCore packId={packId} backAction={{ type: 'back', defaultHref: '/settings/stickers' }} />;
 }

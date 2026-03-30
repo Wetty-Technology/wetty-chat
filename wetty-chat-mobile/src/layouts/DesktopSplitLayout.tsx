@@ -86,8 +86,7 @@ function getDesktopRouteMatches(pathname: string): DesktopRouteMatches {
     path: '/settings/stickers/:packId',
     exact: true,
   });
-  const stickerSettings =
-    !!matchPath(pathname, { path: '/settings/stickers', exact: true }) || !!stickerPackRaw;
+  const stickerSettings = !!matchPath(pathname, { path: '/settings/stickers', exact: true }) || !!stickerPackRaw;
   const globalSettings =
     !!matchPath(pathname, {
       path: '/settings',
@@ -169,12 +168,12 @@ export function DesktopSplitLayout() {
   const headerActions: HeaderActionMenuItem[] = [
     ...(isFeatureGateEnabled
       ? [
-        {
-          id: 'create-chat',
-          label: <Trans>Create Chat</Trans>,
-          onSelect: () => history.push('/chats/new'),
-        },
-      ]
+          {
+            id: 'create-chat',
+            label: <Trans>Create Chat</Trans>,
+            onSelect: () => history.push('/chats/new'),
+          },
+        ]
       : []),
     {
       id: 'join-via-code',
@@ -185,7 +184,16 @@ export function DesktopSplitLayout() {
   const currentRoute = getDesktopRouteMatches(location.pathname);
   const backgroundPath = location.state?.backgroundPath ?? '/chats';
   const baseRoute = currentRoute.globalSettings ? getDesktopRouteMatches(backgroundPath) : currentRoute;
-  const { activeChatId, threadMatch, settingsMatch, membersMatch, invitesMatch, joinPreviewMatch, isNewChat, isJoinChat } = baseRoute;
+  const {
+    activeChatId,
+    threadMatch,
+    settingsMatch,
+    membersMatch,
+    invitesMatch,
+    joinPreviewMatch,
+    isNewChat,
+    isJoinChat,
+  } = baseRoute;
   const globalSettingsOpen = currentRoute.globalSettings;
 
   const handleChatSelect = useCallback(
@@ -237,12 +245,15 @@ export function DesktopSplitLayout() {
     });
   }, [backgroundPath, history]);
 
-  const openStickerPackSettings = useCallback((packId: string) => {
-    history.push({
-      pathname: `/settings/stickers/${packId}`,
-      state: { backgroundPath },
-    });
-  }, [backgroundPath, history]);
+  const openStickerPackSettings = useCallback(
+    (packId: string) => {
+      history.push({
+        pathname: `/settings/stickers/${packId}`,
+        state: { backgroundPath },
+      });
+    },
+    [backgroundPath, history],
+  );
 
   let subPageOverlay: ReactNode = null;
 

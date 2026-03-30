@@ -603,15 +603,11 @@ fn load_sticker_accessible_ids(
     stickers::table
         .inner_join(sticker_pack_stickers::table)
         .left_join(
-            user_sticker_pack_subscriptions::table.on(
-                user_sticker_pack_subscriptions::pack_id
-                    .eq(sticker_pack_stickers::pack_id)
-                    .and(user_sticker_pack_subscriptions::uid.eq(uid)),
-            ),
+            user_sticker_pack_subscriptions::table.on(user_sticker_pack_subscriptions::pack_id
+                .eq(sticker_pack_stickers::pack_id)
+                .and(user_sticker_pack_subscriptions::uid.eq(uid))),
         )
-        .left_join(
-            sticker_packs::table.on(sticker_packs::id.eq(sticker_pack_stickers::pack_id)),
-        )
+        .left_join(sticker_packs::table.on(sticker_packs::id.eq(sticker_pack_stickers::pack_id)))
         .filter(stickers::id.eq_any(sticker_ids))
         .filter(
             user_sticker_pack_subscriptions::uid
@@ -773,7 +769,11 @@ pub async fn attach_metadata(
     let sticker_ids: Vec<i64> = messages_to_process
         .iter()
         .filter_map(|m| m.sticker_id)
-        .chain(reply_messages_map.values().filter_map(|reply_msg| reply_msg.sticker_id))
+        .chain(
+            reply_messages_map
+                .values()
+                .filter_map(|reply_msg| reply_msg.sticker_id),
+        )
         .collect::<std::collections::HashSet<_>>()
         .into_iter()
         .collect();
@@ -1198,14 +1198,20 @@ fn validate_message_payload(
             .ok_or((StatusCode::BAD_REQUEST, "Sticker ID is required"))?;
 
         if !attachment_ids.is_empty() {
-            return Err((StatusCode::BAD_REQUEST, "Sticker messages cannot include attachments"));
+            return Err((
+                StatusCode::BAD_REQUEST,
+                "Sticker messages cannot include attachments",
+            ));
         }
         if body
             .message
             .as_deref()
             .is_some_and(|message| !message.trim().is_empty())
         {
-            return Err((StatusCode::BAD_REQUEST, "Sticker messages cannot include text"));
+            return Err((
+                StatusCode::BAD_REQUEST,
+                "Sticker messages cannot include text",
+            ));
         }
 
         let accessible = load_sticker_accessible_ids(conn, uid, &[sticker_id]).map_err(|e| {
@@ -1216,10 +1222,16 @@ fn validate_message_payload(
             )
         })?;
         if !accessible.contains(&sticker_id) {
-            return Err((StatusCode::FORBIDDEN, "Sticker is not available to this user"));
+            return Err((
+                StatusCode::FORBIDDEN,
+                "Sticker is not available to this user",
+            ));
         }
     } else if body.sticker_id.is_some() {
-        return Err((StatusCode::BAD_REQUEST, "Sticker ID is only valid for sticker messages"));
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "Sticker ID is only valid for sticker messages",
+        ));
     }
 
     Ok(())
@@ -1371,8 +1383,8 @@ mod tests {
         INVITE_MESSAGE_TYPE_FORBIDDEN, SYSTEM_MESSAGE_TYPE_FORBIDDEN,
     };
     use crate::models::{Attachment, MessageType, Sender};
-    use chrono::Utc;
     use axum::http::StatusCode;
+    use chrono::Utc;
     use serde_json::json;
     use std::collections::HashMap;
 

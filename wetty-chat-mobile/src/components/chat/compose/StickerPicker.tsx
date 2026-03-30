@@ -52,7 +52,9 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
 
   useEffect(() => {
     overlayActiveRef.current = popover !== null || addStickerFile !== null;
-    return () => { overlayActiveRef.current = false; };
+    return () => {
+      overlayActiveRef.current = false;
+    };
   }, [popover, addStickerFile, overlayActiveRef]);
 
   const loadPackDetail = useCallback(async (packId: string) => {
@@ -82,9 +84,7 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
       ]);
       setOwnedPacks(ownedRes.data.packs);
       setSubscribedPacks(
-        subscribedRes.data.packs.filter(
-          (pack) => !ownedRes.data.packs.some((ownedPack) => ownedPack.id === pack.id),
-        ),
+        subscribedRes.data.packs.filter((pack) => !ownedRes.data.packs.some((ownedPack) => ownedPack.id === pack.id)),
       );
       setFavoriteStickers(favoritesRes.data.stickers);
       hasLoaded.current = true;
@@ -194,11 +194,7 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
         };
       });
       setOwnedPacks((prev) =>
-        prev.map((pack) =>
-          pack.id === activePack.id
-            ? { ...pack, sticker_count: pack.sticker_count + 1 }
-            : pack,
-        ),
+        prev.map((pack) => (pack.id === activePack.id ? { ...pack, sticker_count: pack.sticker_count + 1 } : pack)),
       );
       setAddStickerFile(null);
       presentToast({ message: t`Sticker added`, duration: 1500, position: 'bottom' });
@@ -263,7 +259,9 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
             aria-label={t`Add sticker`}
             onClick={() => fileInputRef.current?.click()}
           >
-            <span className={styles.addStickerIcon} aria-hidden="true">+</span>
+            <span className={styles.addStickerIcon} aria-hidden="true">
+              +
+            </span>
           </button>
         )}
         {activePack.stickers.map((sticker) => (
@@ -275,9 +273,7 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
           />
         ))}
         {!activePack.isLoading && activePack.stickers.length === 0 && (
-          <div className={styles.emptyState}>
-            {t`No stickers`}
-          </div>
+          <div className={styles.emptyState}>{t`No stickers`}</div>
         )}
       </div>
 
@@ -315,27 +311,24 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
         </button>
       </div>
 
-      <AddStickerModal
-        file={addStickerFile}
-        onDismiss={() => setAddStickerFile(null)}
-        onAdd={handleAddSticker}
-      />
+      <AddStickerModal file={addStickerFile} onDismiss={() => setAddStickerFile(null)} onAdd={handleAddSticker} />
 
-      {popover && createPortal(
-        <>
-          <div className={styles.popoverBackdrop} onClick={() => setPopover(null)} />
-          <div
-            className={styles.popover}
-            style={{ top: popover.rect.top, left: popover.rect.left + popover.rect.width / 2 }}
-          >
-            <button type="button" className={styles.popoverItem} onClick={handleFavoriteToggle}>
-              <IonIcon icon={popover.sticker.is_favorited ? heartDislike : heart} />
-              {popover.sticker.is_favorited ? t`Remove from Favorites` : t`Add to Favorites`}
-            </button>
-          </div>
-        </>,
-        document.body,
-      )}
+      {popover &&
+        createPortal(
+          <>
+            <div className={styles.popoverBackdrop} onClick={() => setPopover(null)} />
+            <div
+              className={styles.popover}
+              style={{ top: popover.rect.top, left: popover.rect.left + popover.rect.width / 2 }}
+            >
+              <button type="button" className={styles.popoverItem} onClick={handleFavoriteToggle}>
+                <IonIcon icon={popover.sticker.is_favorited ? heartDislike : heart} />
+                {popover.sticker.is_favorited ? t`Remove from Favorites` : t`Add to Favorites`}
+              </button>
+            </div>
+          </>,
+          document.body,
+        )}
     </div>
   );
 }

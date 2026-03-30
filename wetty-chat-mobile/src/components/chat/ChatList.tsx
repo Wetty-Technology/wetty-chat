@@ -205,7 +205,7 @@ export function ChatList({ activeChatId, onChatSelect }: ChatListProps) {
               </IonLabel>
             </IonItem>
           )}
-          {chats.map((chat) =>
+          {chats.map((chat) => (
             <IonItemSliding key={chat.id}>
               <IonItemOptions
                 side="start"
@@ -266,7 +266,7 @@ export function ChatList({ activeChatId, onChatSelect }: ChatListProps) {
                 </div>
               </IonItem>
             </IonItemSliding>
-          )}
+          ))}
         </IonList>
       )}
     </IonContent>

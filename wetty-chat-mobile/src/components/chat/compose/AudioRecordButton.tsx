@@ -1,4 +1,12 @@
-import { type CSSProperties, type PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { IonIcon } from '@ionic/react';
 import { t } from '@lingui/core/macro';
 import { arrowUp, mic, trash } from 'ionicons/icons';
@@ -75,21 +83,28 @@ export function AudioRecordButton({
     [midpoint],
   );
 
-  const completeGesture = useCallback((finalPosition: SnapPosition) => {
-    if (finalPosition === 'left') {
-      onCancel?.();
-    } else if (finalPosition === 'top') {
-      onSend?.();
-    } else {
-      onComplete?.();
-    }
+  const completeGesture = useCallback(
+    (finalPosition: SnapPosition) => {
+      if (finalPosition === 'left') {
+        onCancel?.();
+      } else if (finalPosition === 'top') {
+        onSend?.();
+      } else {
+        onComplete?.();
+      }
 
-    if (buttonRef.current && gestureRef.current.pointerId != null && buttonRef.current.hasPointerCapture(gestureRef.current.pointerId)) {
-      buttonRef.current.releasePointerCapture(gestureRef.current.pointerId);
-    }
+      if (
+        buttonRef.current &&
+        gestureRef.current.pointerId != null &&
+        buttonRef.current.hasPointerCapture(gestureRef.current.pointerId)
+      ) {
+        buttonRef.current.releasePointerCapture(gestureRef.current.pointerId);
+      }
 
-    resetGesture();
-  }, [onCancel, onComplete, onSend, resetGesture]);
+      resetGesture();
+    },
+    [onCancel, onComplete, onSend, resetGesture],
+  );
 
   const handlePointerDown = useCallback(
     (event: ReactPointerEvent<HTMLButtonElement>) => {

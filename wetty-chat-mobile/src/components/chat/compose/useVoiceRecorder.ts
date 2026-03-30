@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { t } from '@lingui/core/macro';
-import type { ComposeSendAudioPayload, ComposeUploadInput, ComposeUploadResult, RecordedVoiceDraft, VoiceRecorderState } from './types';
+import type {
+  ComposeSendAudioPayload,
+  ComposeUploadInput,
+  ComposeUploadResult,
+  RecordedVoiceDraft,
+  VoiceRecorderState,
+} from './types';
 
 const MIN_VOICE_DURATION_MS = 500;
 
@@ -278,7 +284,14 @@ export function useVoiceRecorder({
       setVoiceRecorderState(null);
       reportVoiceError(t`Microphone access was denied.`);
     }
-  }, [canStartVoice, finalizeVoiceRecording, reportVoiceError, setVoiceRecorderState, stopVoiceStream, uploadAndSendDraft]);
+  }, [
+    canStartVoice,
+    finalizeVoiceRecording,
+    reportVoiceError,
+    setVoiceRecorderState,
+    stopVoiceStream,
+    uploadAndSendDraft,
+  ]);
 
   useEffect(() => {
     if (!voiceRecorder || voiceRecorder.phase !== 'recording') {

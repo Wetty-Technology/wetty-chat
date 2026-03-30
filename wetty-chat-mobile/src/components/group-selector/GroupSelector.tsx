@@ -47,11 +47,7 @@ function mergeGroups(existing: GroupSelectorItem[], incoming: GroupSelectorItem[
   return next;
 }
 
-export function GroupSelector({
-  scope = 'joined',
-  placeholder = t`Search groups`,
-  onSelect,
-}: GroupSelectorProps) {
+export function GroupSelector({ scope = 'joined', placeholder = t`Search groups`, onSelect }: GroupSelectorProps) {
   const [presentToast] = useIonToast();
   const [groups, setGroups] = useState<GroupSelectorItem[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);

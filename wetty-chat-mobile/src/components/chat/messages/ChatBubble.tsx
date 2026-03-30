@@ -22,10 +22,7 @@ type RegularChatBubbleProps = ChatBubbleBaseProps & {
 
 export type ChatBubbleProps = StickerChatBubbleProps | RegularChatBubbleProps;
 
-function renderInnerBubble(
-  props: ChatBubbleProps,
-  bubbleRef: React.RefObject<HTMLDivElement | null>,
-): React.ReactNode {
+function renderInnerBubble(props: ChatBubbleProps, bubbleRef: React.RefObject<HTMLDivElement | null>): React.ReactNode {
   if (props.messageType === 'sticker') {
     return (
       <StickerBubble

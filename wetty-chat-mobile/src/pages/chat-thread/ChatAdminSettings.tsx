@@ -97,7 +97,11 @@ export function ChatAdminSettings({
               <Trans>Group Avatar</Trans>
             </div>
             <div className={styles.uploadDescription}>
-              {avatarUrl ? <Trans>Choose a new image to replace the current avatar.</Trans> : <Trans>Upload an image for this group.</Trans>}
+              {avatarUrl ? (
+                <Trans>Choose a new image to replace the current avatar.</Trans>
+              ) : (
+                <Trans>Upload an image for this group.</Trans>
+              )}
             </div>
             {uploadingAvatar ? (
               <IonText color="medium" className={styles.uploadStatus}>
@@ -124,7 +128,10 @@ export function ChatAdminSettings({
           <IonLabel>
             <Trans>Visibility</Trans>
           </IonLabel>
-          <IonSelect value={visibility} onIonChange={(event) => onVisibilityChange(event.detail.value as 'public' | 'private')}>
+          <IonSelect
+            value={visibility}
+            onIonChange={(event) => onVisibilityChange(event.detail.value as 'public' | 'private')}
+          >
             <IonSelectOption value="public">
               <Trans>Public</Trans>
             </IonSelectOption>

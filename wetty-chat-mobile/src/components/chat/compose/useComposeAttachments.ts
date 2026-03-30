@@ -54,7 +54,10 @@ interface UseComposeAttachmentsArgs {
   initialExistingAttachments?: Attachment[];
 }
 
-export function useComposeAttachments({ uploadAttachment, initialExistingAttachments = [] }: UseComposeAttachmentsArgs) {
+export function useComposeAttachments({
+  uploadAttachment,
+  initialExistingAttachments = [],
+}: UseComposeAttachmentsArgs) {
   const [drafts, setDrafts] = useState<DraftUploadRecord[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<Attachment[]>(initialExistingAttachments);
   const draftsRef = useRef<DraftUploadRecord[]>([]);

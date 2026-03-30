@@ -1,4 +1,13 @@
-import { IonButtons, IonCard, IonCardContent, IonContent, IonHeader, IonPage, IonTitle, IonToolbar } from '@ionic/react';
+import {
+  IonButtons,
+  IonCard,
+  IonCardContent,
+  IonContent,
+  IonHeader,
+  IonPage,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/react';
 import { Trans } from '@lingui/react/macro';
 import { useHistory, useParams } from 'react-router-dom';
 import { BackButton } from '@/components/BackButton';
@@ -24,9 +33,7 @@ export function InvitePreviewCore({ inviteCode: inviteCodeProp, backAction }: In
     <div className={`ion-page ${styles.page}`}>
       <IonHeader translucent={true}>
         <IonToolbar>
-          <IonButtons slot="start">
-            {backAction && <BackButton action={backAction} />}
-          </IonButtons>
+          <IonButtons slot="start">{backAction && <BackButton action={backAction} />}</IonButtons>
           <IonTitle>
             <Trans>Invite</Trans>
           </IonTitle>

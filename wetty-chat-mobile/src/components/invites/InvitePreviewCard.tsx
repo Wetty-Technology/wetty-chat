@@ -23,24 +23,24 @@ type InviteAction = {
 type InviteViewState =
   | { kind: 'loading' }
   | {
-    kind: 'error';
-    eyebrow: ReactNode;
-    title: string;
-    description: string;
-    statusMessage: string;
-    statusTone: 'error';
-  }
+      kind: 'error';
+      eyebrow: ReactNode;
+      title: string;
+      description: string;
+      statusMessage: string;
+      statusTone: 'error';
+    }
   | {
-    kind: 'loaded';
-    eyebrow: ReactNode;
-    title: string;
-    description: string;
-    statusMessage?: string;
-    statusTone?: 'info' | 'error';
-    supporting?: ReactNode;
-    avatarUrl: string | null;
-    actions: [InviteAction, InviteAction];
-  };
+      kind: 'loaded';
+      eyebrow: ReactNode;
+      title: string;
+      description: string;
+      statusMessage?: string;
+      statusTone?: 'info' | 'error';
+      supporting?: ReactNode;
+      avatarUrl: string | null;
+      actions: [InviteAction, InviteAction];
+    };
 
 type InviteErrorCopy = {
   title: string;
@@ -177,7 +177,8 @@ export function InvitePreviewCard({ inviteCode, onResolved, onCancel }: InvitePr
         kind: 'loaded',
         eyebrow: <Trans>Invite</Trans>,
         title: displayName,
-        description: previewState.data.chat.description?.trim() || t`Join this chat to start reading and sending messages.`,
+        description:
+          previewState.data.chat.description?.trim() || t`Join this chat to start reading and sending messages.`,
         statusMessage: t`You are already a member`,
         avatarUrl: previewState.data.chat.avatar,
         actions: [
@@ -198,7 +199,8 @@ export function InvitePreviewCard({ inviteCode, onResolved, onCancel }: InvitePr
       kind: 'loaded',
       eyebrow: <Trans>You’ve been invited</Trans>,
       title: displayName,
-      description: previewState.data.chat.description?.trim() || t`Join this chat to start reading and sending messages.`,
+      description:
+        previewState.data.chat.description?.trim() || t`Join this chat to start reading and sending messages.`,
       statusMessage: joinError?.message,
       statusTone: joinError ? 'error' : undefined,
       supporting: <Trans>Review to confirm if you want to join. Nothing changes until you click join.</Trans>,
@@ -247,7 +249,9 @@ export function InvitePreviewCard({ inviteCode, onResolved, onCancel }: InvitePr
             showAvatar
             avatarUrl={viewState.avatarUrl}
           />
-          {viewState.statusMessage ? <InviteStatus message={viewState.statusMessage} tone={viewState.statusTone} /> : null}
+          {viewState.statusMessage ? (
+            <InviteStatus message={viewState.statusMessage} tone={viewState.statusTone} />
+          ) : null}
           <div className={styles.actions}>
             {viewState.actions.map((action, index) => (
               <IonButton

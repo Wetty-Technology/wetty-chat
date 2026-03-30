@@ -54,8 +54,7 @@ function getMutedUntilLabel(locale: string, mutedUntil: string): ReactNode {
 
   return (
     <>
-      <Trans>until</Trans>{' '}
-      <wbr />
+      <Trans>until</Trans> <wbr />
       <span style={{ whiteSpace: 'nowrap' }}>{formatted ?? mutedUntil}</span>
     </>
   );

@@ -141,10 +141,7 @@ function ChatSettingsContent({
   );
 }
 
-function hasLoadedChatSettingsMeta(cachedMeta?: {
-  visibility?: string;
-  my_role?: GroupRole | null;
-}): boolean {
+function hasLoadedChatSettingsMeta(cachedMeta?: { visibility?: string; my_role?: GroupRole | null }): boolean {
   return !!cachedMeta?.visibility && cachedMeta.my_role !== undefined;
 }
 

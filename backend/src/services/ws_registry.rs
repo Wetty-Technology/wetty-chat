@@ -145,7 +145,7 @@ impl ConnectionRegistry {
     /// Returns true when at least one fresh connection is actively viewing the app.
     pub fn should_suppress_push(&self, uid: i32, freshness_secs: u64) -> bool {
         let now = now_secs();
-        self.inner.get(&uid).map_or(false, |vec| {
+        self.inner.get(&uid).is_some_and(|vec| {
             vec.iter().any(|entry| {
                 now.saturating_sub(entry.last_ping_at.load(Ordering::Relaxed)) <= freshness_secs
                     && entry.app_state() == AppPresenceState::Active
