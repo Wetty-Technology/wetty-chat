@@ -39,6 +39,7 @@ pub(crate) struct Metrics {
     registry: Registry,
     http_requests_total: IntCounterVec,
     http_request_duration_seconds: HistogramVec,
+    http_multipart_duration_seconds: HistogramVec,
     messages_total: IntCounterVec,
     push_notifications_total: IntCounterVec,
     push_notification_jobs_total: IntCounterVec,
@@ -88,6 +89,15 @@ impl Metrics {
             &["method", "route", "status"],
         )
         .expect("http_request_duration_seconds metric should be valid");
+        let http_multipart_duration_seconds = HistogramVec::new(
+            histogram_opts!(
+                "http_multipart_duration_seconds",
+                "HTTP multipart request latency in seconds for the API server",
+                vec![0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
+            ),
+            &["method", "route", "status"],
+        )
+        .expect("http_multipart_duration_seconds metric should be valid");
         let messages_total = IntCounterVec::new(
             opts!(
                 "messages_total",
@@ -265,6 +275,9 @@ impl Metrics {
             .register(Box::new(http_request_duration_seconds.clone()))
             .expect("http_request_duration_seconds registration should succeed");
         registry
+            .register(Box::new(http_multipart_duration_seconds.clone()))
+            .expect("http_multipart_duration_seconds registration should succeed");
+        registry
             .register(Box::new(messages_total.clone()))
             .expect("messages_total registration should succeed");
         registry
@@ -350,6 +363,7 @@ impl Metrics {
             registry,
             http_requests_total,
             http_request_duration_seconds,
+            http_multipart_duration_seconds,
             messages_total,
             push_notifications_total,
             push_notification_jobs_total,
@@ -392,6 +406,19 @@ impl Metrics {
             .with_label_values(&[method, route, &status])
             .inc();
         self.http_request_duration_seconds
+            .with_label_values(&[method, route, &status])
+            .observe(duration_seconds);
+    }
+
+    pub(crate) fn record_http_multipart(
+        &self,
+        method: &str,
+        route: &str,
+        status: StatusCode,
+        duration_seconds: f64,
+    ) {
+        let status = status.as_u16().to_string();
+        self.http_multipart_duration_seconds
             .with_label_values(&[method, route, &status])
             .observe(duration_seconds);
     }
@@ -533,15 +560,20 @@ pub(crate) async fn track_http_metrics(
             .get::<MatchedPath>()
             .map(MatchedPath::as_str),
     );
+    let is_multipart = request
+        .headers()
+        .get(header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .is_some_and(|value| value.starts_with("multipart/form-data"));
     let start = Instant::now();
 
     let response = next.run(request).await;
-    metrics.record_http(
-        &method,
-        &route,
-        response.status(),
-        start.elapsed().as_secs_f64(),
-    );
+    let elapsed = start.elapsed().as_secs_f64();
+    if is_multipart {
+        metrics.record_http_multipart(&method, &route, response.status(), elapsed);
+    } else {
+        metrics.record_http(&method, &route, response.status(), elapsed);
+    }
 
     response
 }
@@ -591,6 +623,7 @@ mod tests {
     async fn metrics_endpoint_renders_registered_collectors() {
         let metrics = Arc::new(Metrics::new());
         metrics.record_http("GET", "/seed", StatusCode::OK, 0.001);
+        metrics.record_http_multipart("POST", "/upload", StatusCode::CREATED, 0.05);
         metrics.record_message(42);
         metrics.record_push_notification(true);
         metrics.record_push_job("success", 0.002);
@@ -637,6 +670,7 @@ mod tests {
         let body = String::from_utf8(body.to_vec()).expect("metrics body should be utf8");
         assert!(body.contains("http_requests_total"));
         assert!(body.contains("http_request_duration_seconds"));
+        assert!(body.contains("http_multipart_duration_seconds"));
         assert!(body.contains("messages_total"));
         assert!(body.contains("push_notifications_total"));
         assert!(body.contains("push_notification_jobs_total"));
@@ -717,6 +751,43 @@ mod tests {
 
         let rendered = metrics.render().expect("metrics should render");
         assert!(rendered.contains("method=\"GET\",route=\"unknown\",status=\"404\""));
+    }
+
+    #[tokio::test]
+    async fn multipart_requests_use_dedicated_duration_metric() {
+        let metrics = Arc::new(Metrics::new());
+        let app =
+            Router::new()
+                .route("/upload", get(ok_handler))
+                .layer(middleware::from_fn_with_state(
+                    metrics.clone(),
+                    track_http_metrics,
+                ));
+
+        let response = app
+            .oneshot(
+                HttpRequest::builder()
+                    .method("GET")
+                    .uri("/upload")
+                    .header(header::CONTENT_TYPE, "multipart/form-data; boundary=abc123")
+                    .body(Body::empty())
+                    .expect("request should build"),
+            )
+            .await
+            .expect("app should respond");
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let rendered = metrics.render().expect("metrics should render");
+        assert!(rendered.contains("http_multipart_duration_seconds"));
+        assert!(rendered.contains(
+            "http_multipart_duration_seconds_bucket{method=\"GET\",route=\"/upload\",status=\"200\""
+        ));
+        assert!(!rendered
+            .contains("http_requests_total{method=\"GET\",route=\"/upload\",status=\"200\"} 1"));
+        assert!(!rendered.contains(
+            "http_request_duration_seconds_bucket{method=\"GET\",route=\"/upload\",status=\"200\""
+        ));
     }
 
     #[test]
