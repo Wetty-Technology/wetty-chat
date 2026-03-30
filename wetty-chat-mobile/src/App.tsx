@@ -14,6 +14,7 @@ import { AppUpdateProvider } from './hooks/AppUpdateProvider';
 import { useIsDesktop } from './hooks/platformHooks';
 import { useAppLifecycle } from './hooks/useAppLifecycle';
 import { useAppUpdate } from './hooks/useAppUpdate';
+import { usePushNotificationBootstrap } from './hooks/usePushNotifications';
 import { DesktopSplitLayout } from './layouts/DesktopSplitLayout';
 import OobePage from '@/pages/oobe';
 import LandingPage from './pages/landing';
@@ -48,6 +49,7 @@ function AppShell() {
   const isDesktop = useIsDesktop();
   const token = useDeviceToken(true);
   useAppLifecycle();
+  usePushNotificationBootstrap();
   const { needRefresh, setNeedRefresh, updateServiceWorker } = useAppUpdate();
   const missingProdToken = import.meta.env.PROD && (!token || token.length === 0);
 

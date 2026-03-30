@@ -1,4 +1,9 @@
-use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+use axum::{
+    extract::{Query, State},
+    http::StatusCode,
+    response::IntoResponse,
+    Json,
+};
 use chrono::Utc;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -57,33 +62,46 @@ async fn post_subscribe(
         p256dh: body.keys.p256dh,
         auth: body.keys.auth,
         created_at: Utc::now().naive_utc(),
-        client_id: Some(client_id),
+        client_id: Some(client_id.clone()),
     };
 
-    diesel::insert_into(push_subscriptions::table)
-        .values(&new_sub)
-        .on_conflict((push_subscriptions::user_id, push_subscriptions::endpoint))
-        .do_update()
-        .set((
-            push_subscriptions::p256dh.eq(&new_sub.p256dh),
-            push_subscriptions::auth.eq(&new_sub.auth),
-            push_subscriptions::created_at.eq(&new_sub.created_at),
-            push_subscriptions::client_id.eq(&new_sub.client_id),
-        ))
-        .execute(conn)
-        .map_err(|e| {
-            tracing::error!("upsert subscription: {:?}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to save subscription",
-            )
-        })?;
+    conn.transaction::<_, diesel::result::Error, _>(|conn| {
+        diesel::delete(
+            push_subscriptions::table
+                .filter(push_subscriptions::dsl::user_id.eq(uid))
+                .filter(push_subscriptions::dsl::client_id.eq(Some(client_id.clone())))
+                .filter(push_subscriptions::dsl::endpoint.ne(&new_sub.endpoint)),
+        )
+        .execute(conn)?;
+
+        diesel::insert_into(push_subscriptions::table)
+            .values(&new_sub)
+            .on_conflict((push_subscriptions::user_id, push_subscriptions::endpoint))
+            .do_update()
+            .set((
+                push_subscriptions::p256dh.eq(&new_sub.p256dh),
+                push_subscriptions::auth.eq(&new_sub.auth),
+                push_subscriptions::created_at.eq(&new_sub.created_at),
+                push_subscriptions::client_id.eq(&new_sub.client_id),
+            ))
+            .execute(conn)?;
+
+        Ok(())
+    })
+    .map_err(|e| {
+        tracing::error!("upsert subscription: {:?}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to save subscription",
+        )
+    })?;
 
     Ok(StatusCode::CREATED)
 }
 
 #[derive(Deserialize)]
 pub struct UnsubscribeBody {
+    #[allow(dead_code)]
     pub endpoint: String,
 }
 
@@ -91,7 +109,7 @@ async fn post_unsubscribe(
     CurrentUid(uid): CurrentUid,
     ClientId(client_id): ClientId,
     State(state): State<AppState>,
-    Json(body): Json<UnsubscribeBody>,
+    Json(_body): Json<UnsubscribeBody>,
 ) -> Result<impl IntoResponse, (StatusCode, &'static str)> {
     let conn = &mut state.db.get().map_err(|_| {
         (
@@ -103,8 +121,7 @@ async fn post_unsubscribe(
     diesel::delete(
         push_subscriptions::table
             .filter(push_subscriptions::dsl::user_id.eq(uid))
-            .filter(push_subscriptions::dsl::client_id.eq(Some(client_id)))
-            .filter(push_subscriptions::dsl::endpoint.eq(&body.endpoint)),
+            .filter(push_subscriptions::dsl::client_id.eq(Some(client_id))),
     )
     .execute(conn)
     .map_err(|e| {
@@ -118,11 +135,81 @@ async fn post_unsubscribe(
     Ok(StatusCode::OK)
 }
 
+#[derive(Deserialize)]
+pub struct SubscriptionStatusQuery {
+    pub endpoint: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SubscriptionStatusResponse {
+    pub has_active_subscription: bool,
+    pub has_matching_endpoint: Option<bool>,
+}
+
+async fn get_subscription_status(
+    CurrentUid(uid): CurrentUid,
+    ClientId(client_id): ClientId,
+    State(state): State<AppState>,
+    Query(query): Query<SubscriptionStatusQuery>,
+) -> Result<Json<SubscriptionStatusResponse>, (StatusCode, &'static str)> {
+    let conn = &mut state.db.get().map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Database connection failed",
+        )
+    })?;
+
+    let has_active_subscription = diesel::select(diesel::dsl::exists(
+        push_subscriptions::table
+            .filter(push_subscriptions::dsl::user_id.eq(uid))
+            .filter(push_subscriptions::dsl::client_id.eq(Some(client_id.clone()))),
+    ))
+    .get_result::<bool>(conn)
+    .map_err(|e| {
+        tracing::error!("load push subscription status: {:?}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to load subscription status",
+        )
+    })?;
+
+    let has_matching_endpoint = query
+        .endpoint
+        .as_ref()
+        .map(|endpoint| {
+            diesel::select(diesel::dsl::exists(
+                push_subscriptions::table
+                    .filter(push_subscriptions::dsl::user_id.eq(uid))
+                    .filter(push_subscriptions::dsl::client_id.eq(Some(client_id.clone())))
+                    .filter(push_subscriptions::dsl::endpoint.eq(endpoint)),
+            ))
+            .get_result::<bool>(conn)
+        })
+        .transpose()
+        .map_err(|e| {
+            tracing::error!("load push subscription endpoint status: {:?}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to load subscription status",
+            )
+        })?;
+
+    Ok(Json(SubscriptionStatusResponse {
+        has_active_subscription,
+        has_matching_endpoint,
+    }))
+}
+
 pub fn router() -> axum::Router<crate::AppState> {
     axum::Router::new()
         .route(
             "/vapid-public-key",
             axum::routing::get(get_vapid_public_key),
+        )
+        .route(
+            "/subscription-status",
+            axum::routing::get(get_subscription_status),
         )
         .route("/subscribe", axum::routing::post(post_subscribe))
         .route("/unsubscribe", axum::routing::post(post_unsubscribe))

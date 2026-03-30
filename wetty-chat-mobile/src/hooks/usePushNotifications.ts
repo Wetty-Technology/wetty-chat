@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import apiClient from '@/api/client';
 import { initializeClientId } from '@/utils/clientId';
 
@@ -63,41 +63,193 @@ function encodeSubscriptionKeys(subscription: PushSubscription) {
   };
 }
 
-function syncSubscriptionWithBackend(subscription: PushSubscription) {
+async function registerSubscriptionWithBackend(subscription: PushSubscription) {
   initializeClientId();
   const keys = encodeSubscriptionKeys(subscription);
-  apiClient
-    .post('/push/subscribe', {
-      endpoint: subscription.endpoint,
-      keys,
-    })
-    .catch((err) => {
-      console.warn('Failed to sync push subscription with backend', err);
+  await apiClient.post('/push/subscribe', {
+    endpoint: subscription.endpoint,
+    keys,
+  });
+}
+
+async function fetchPushRegistration() {
+  return navigator.serviceWorker.ready;
+}
+
+async function ensurePushSubscription(registration: ServiceWorkerRegistration) {
+  const existingSubscription = await registration.pushManager.getSubscription();
+  if (existingSubscription) {
+    await registerSubscriptionWithBackend(existingSubscription);
+    return existingSubscription;
+  }
+
+  const vapidRes = await apiClient.get('/push/vapid-public-key');
+  const publicKey = urlBase64ToUint8Array(vapidRes.data.public_key);
+  const newSubscription = await registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: publicKey,
+  });
+
+  try {
+    await registerSubscriptionWithBackend(newSubscription);
+    return newSubscription;
+  } catch (error) {
+    await newSubscription.unsubscribe().catch((unsubscribeError) => {
+      console.warn('Failed to roll back push subscription after backend sync error', unsubscribeError);
     });
+    throw error;
+  }
+}
+
+async function hasBackendSubscription(endpoint?: string): Promise<boolean> {
+  initializeClientId();
+  const response = await apiClient.get<PushSubscriptionStatusResponse>('/push/subscription-status', {
+    params: endpoint ? { endpoint } : undefined,
+  });
+
+  if (typeof response.data?.hasMatchingEndpoint === 'boolean') {
+    return response.data.hasMatchingEndpoint;
+  }
+
+  return Boolean(response.data?.hasActiveSubscription);
+}
+
+function getCurrentPermission(): NotificationPermission {
+  if ('Notification' in window) {
+    return Notification.permission;
+  }
+
+  return 'default';
+}
+
+type ReconcilePushSubscriptionResult = {
+  permission: NotificationPermission;
+  isSubscribed: boolean;
+};
+
+type PushSubscriptionStatusResponse = {
+  hasActiveSubscription?: boolean;
+  hasMatchingEndpoint?: boolean | null;
+};
+
+async function reconcilePushSubscription({
+  repairIfMissing,
+}: {
+  repairIfMissing: boolean;
+}): Promise<ReconcilePushSubscriptionResult> {
+  initializeClientId();
+  const permission = getCurrentPermission();
+  const supportResult = checkPushSupport();
+
+  if (!supportResult.ok) {
+    return { permission, isSubscribed: false };
+  }
+
+  let registration: ServiceWorkerRegistration;
+  try {
+    registration = await fetchPushRegistration();
+  } catch (error) {
+    console.error('Service Worker ready failed during push reconciliation', error);
+    return { permission, isSubscribed: false };
+  }
+
+  const subscription = await registration.pushManager.getSubscription();
+  if (subscription) {
+    try {
+      const backendHasEndpoint = await hasBackendSubscription(subscription.endpoint);
+      if (!backendHasEndpoint) {
+        await registerSubscriptionWithBackend(subscription);
+      }
+    } catch (error) {
+      console.warn('Failed to verify push subscription with backend', error);
+    }
+
+    return { permission, isSubscribed: true };
+  }
+
+  if (permission !== 'granted' || !repairIfMissing) {
+    return { permission, isSubscribed: false };
+  }
+
+  try {
+    const backendHasSubscription = await hasBackendSubscription();
+    if (!backendHasSubscription) {
+      return { permission, isSubscribed: false };
+    }
+
+    await ensurePushSubscription(registration);
+    return { permission, isSubscribed: true };
+  } catch (error) {
+    console.warn('Failed to repair missing push subscription', error);
+    return { permission, isSubscribed: false };
+  }
+}
+
+export function usePushNotificationBootstrap() {
+  const syncInFlightRef = useRef<Promise<void> | null>(null);
+
+  const runVerification = useCallback(() => {
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+      return;
+    }
+
+    if (syncInFlightRef.current) {
+      return;
+    }
+
+    syncInFlightRef.current = (async () => {
+      try {
+        await reconcilePushSubscription({ repairIfMissing: true });
+      } catch (error) {
+        console.warn('Push subscription bootstrap verification failed', error);
+      } finally {
+        syncInFlightRef.current = null;
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        runVerification();
+      }
+    };
+
+    runVerification();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pageshow', runVerification);
+    window.addEventListener('online', runVerification);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pageshow', runVerification);
+      window.removeEventListener('online', runVerification);
+    };
+  }, [runVerification]);
 }
 
 export function usePushNotifications() {
-  const [permission, setPermission] = useState<NotificationPermission>('default');
+  const [permission, setPermission] = useState<NotificationPermission>(getCurrentPermission);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isCheckingSubscription, setIsCheckingSubscription] = useState(false);
 
-  useEffect(() => {
-    initializeClientId();
-    if ('Notification' in window) {
-      setPermission(Notification.permission);
-    }
+  const refreshSubscriptionState = useCallback(async ({ repairIfMissing = true }: { repairIfMissing?: boolean } = {}) => {
+    setIsCheckingSubscription(true);
 
-    // Check if already subscribed in SW, and re-sync with backend
-    if ('serviceWorker' in navigator && 'PushManager' in window) {
-      navigator.serviceWorker.ready.then(async (registration) => {
-        const subscription = await registration.pushManager.getSubscription();
-        setIsSubscribed(!!subscription);
-        if (subscription) {
-          syncSubscriptionWithBackend(subscription);
-        }
-      });
+    try {
+      const result = await reconcilePushSubscription({ repairIfMissing });
+      setPermission(result.permission);
+      setIsSubscribed(result.isSubscribed);
+      return result;
+    } finally {
+      setIsCheckingSubscription(false);
     }
   }, []);
+
+  useEffect(() => {
+    void refreshSubscriptionState();
+  }, [refreshSubscriptionState]);
 
   const requestPermission = useCallback(async (): Promise<PushNotificationResult> => {
     const supportResult = checkPushSupport();
@@ -132,39 +284,20 @@ export function usePushNotifications() {
 
       let registration: ServiceWorkerRegistration;
       try {
-        registration = await navigator.serviceWorker.ready;
+        registration = await fetchPushRegistration();
       } catch (error) {
         console.error('Service Worker ready failed', error);
         return failure('service_worker_unavailable', getErrorMessage(error, 'Service Worker unavailable'));
       }
 
-      // Get VAPID public key
-      const vapidRes = await apiClient.get('/push/vapid-public-key');
-      const publicKey = urlBase64ToUint8Array(vapidRes.data.public_key);
-
-      const existingSubscription = await registration.pushManager.getSubscription();
-      const subscription =
-        existingSubscription ??
-        (await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: publicKey,
-        }));
-
-      // Send to backend
-      const keys = encodeSubscriptionKeys(subscription);
       try {
-        await apiClient.post('/push/subscribe', {
-          endpoint: subscription.endpoint,
-          keys,
-        });
+        await ensurePushSubscription(registration);
       } catch (backendError) {
-        console.error('Backend subscription failed, rolling back browser subscription', backendError);
-        if (!existingSubscription) {
-          await subscription.unsubscribe();
-        }
+        console.error('Backend subscription failed', backendError);
         return failure('backend_subscribe_failed', getErrorMessage(backendError, 'Failed to subscribe on the server'));
       }
 
+      setPermission(getCurrentPermission());
       setIsSubscribed(true);
       return success();
     } catch (e) {
@@ -185,7 +318,7 @@ export function usePushNotifications() {
 
       let registration: ServiceWorkerRegistration;
       try {
-        registration = await navigator.serviceWorker.ready;
+        registration = await fetchPushRegistration();
       } catch (error) {
         console.error('Service Worker ready failed', error);
         return failure('service_worker_unavailable', getErrorMessage(error, 'Service Worker unavailable'));
@@ -220,6 +353,8 @@ export function usePushNotifications() {
     permission,
     isSubscribed,
     loading,
+    isCheckingSubscription,
+    refreshSubscriptionState,
     requestPermission,
     subscribeToPush,
     unsubscribeFromPush,

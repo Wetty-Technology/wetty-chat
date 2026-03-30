@@ -70,7 +70,8 @@ export function SettingsCore({ backAction, onOpenGeneral, onOpenStickers }: Sett
   const [uidInput, setUidInput] = useState(() => String(currentUid || '1'));
   const [presentToast] = useIonToast();
   const history = useHistory();
-  const { permission, isSubscribed, loading, subscribeToPush, unsubscribeFromPush } = usePushNotifications();
+  const { permission, isSubscribed, loading, isCheckingSubscription, subscribeToPush, unsubscribeFromPush } =
+    usePushNotifications();
 
   const handleSave = () => {
     const trimmed = uidInput.trim();
@@ -184,7 +185,7 @@ export function SettingsCore({ backAction, onOpenGeneral, onOpenStickers }: Sett
               <Trans>Status</Trans>
             </IonLabel>
             <IonNote slot="end" color="medium">
-              {isSubscribed ? t`Subscribed` : t`Not subscribed`}
+              {isCheckingSubscription ? t`Checking...` : isSubscribed ? t`Subscribed` : t`Not subscribed`}
             </IonNote>
           </IonItem>
           {permission !== 'granted' && (
@@ -198,14 +199,24 @@ export function SettingsCore({ backAction, onOpenGeneral, onOpenStickers }: Sett
             </IonItem>
           )}
           {!isSubscribed ? (
-            <IonItem button detail={false} onClick={handleSubscribeToPush} disabled={loading || isSubscribed}>
+            <IonItem
+              button
+              detail={false}
+              onClick={handleSubscribeToPush}
+              disabled={loading || isCheckingSubscription || isSubscribed}
+            >
               <IonIcon aria-hidden="true" icon={logIn} slot="start" color="primary" />
               <IonLabel color="primary">
                 <Trans>Turn On Push Notifications</Trans>
               </IonLabel>
             </IonItem>
           ) : (
-            <IonItem button detail={false} onClick={handleUnsubscribeFromPush} disabled={loading || !isSubscribed}>
+            <IonItem
+              button
+              detail={false}
+              onClick={handleUnsubscribeFromPush}
+              disabled={loading || isCheckingSubscription || !isSubscribed}
+            >
               <IonIcon aria-hidden="true" icon={logOut} slot="start" color="danger" />
               <IonLabel color="danger">
                 <Trans>Turn Off Push Notifications</Trans>
