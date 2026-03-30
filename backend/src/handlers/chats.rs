@@ -45,6 +45,7 @@ use crate::{
     },
 };
 use crate::{AppState, MAX_CHATS_LIMIT, MAX_MESSAGES_LIMIT};
+use unicode_segmentation::UnicodeSegmentation;
 
 // Queryable struct replaced by raw tuples
 
