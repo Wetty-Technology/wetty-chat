@@ -96,6 +96,7 @@ export function ReactionDetailsModal({ chatId, messageId, initialEmoji, onDismis
                     ? '2px solid var(--ion-color-primary)'
                     : '1px solid var(--ion-color-light-shade)',
                 background: g.emoji === activeGroup?.emoji ? 'rgba(var(--ion-color-primary-rgb), 0.1)' : 'transparent',
+                color: 'var(--ion-text-color)',
                 cursor: 'pointer',
                 fontSize: 18,
               }}
