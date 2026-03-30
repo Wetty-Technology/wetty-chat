@@ -115,7 +115,7 @@ export function ReactionDetailsModal({ chatId, messageId, initialEmoji, onDismis
               const displayName = reactor.name ?? `User ${reactor.uid}`;
               return (
                 <div key={reactor.uid} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <UserAvatar name={displayName} avatarUrl={reactor.avatar_url} size={36} />
+                  <UserAvatar name={displayName} avatarUrl={reactor.avatarUrl} size={36} />
                   <span style={{ fontSize: 15 }}>{displayName}</span>
                 </div>
               );

@@ -68,9 +68,9 @@ export function ChatMuteSettingItem({ chatId, mutedUntil }: ChatMuteSettingItemP
   const muted = isChatMuted(mutedUntil);
 
   const handleMute = (durationSeconds: number | null) => {
-    muteChat(chatId, { duration_seconds: durationSeconds })
+    muteChat(chatId, { durationSeconds })
       .then((response) => {
-        dispatch(setChatMutedUntil({ chatId, mutedUntil: response.data.muted_until }));
+        dispatch(setChatMutedUntil({ chatId, mutedUntil: response.data.mutedUntil }));
         presentToast({ message: t`Notifications muted`, duration: 2000 });
       })
       .catch((error: Error) => {

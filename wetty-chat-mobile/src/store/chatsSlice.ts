@@ -10,19 +10,19 @@ export interface ChatMeta {
   name: string | null;
   description?: string | null;
   avatar?: string | null;
-  avatar_image_id?: string | null;
+  avatarImageId?: string | null;
   visibility?: string;
-  created_at?: string;
-  my_role?: GroupRole | null;
+  createdAt?: string;
+  myRole?: GroupRole | null;
 }
 
 interface ChatListMeta {
-  last_message_at?: string | null;
-  unread_count?: number;
-  last_read_message_id?: string | null;
-  last_message?: MessageResponse | null;
-  in_list?: boolean;
-  muted_until?: string | null;
+  lastMessageAt?: string | null;
+  unreadCount?: number;
+  lastReadMessageId?: string | null;
+  lastMessage?: MessageResponse | null;
+  inList?: boolean;
+  mutedUntil?: string | null;
 }
 
 interface ChatStateEntry {
@@ -51,9 +51,9 @@ function getChatEntry(state: ChatsState, chatId: string): ChatStateEntry {
 }
 
 function chooseEffectiveLatest(snapshot?: ChatListMeta, live?: ChatListMeta): MessageResponse | null {
-  const liveOverridesLatest = !!live && Object.prototype.hasOwnProperty.call(live, 'last_message');
-  const snapshotMessage = snapshot?.last_message ?? null;
-  const liveMessage = live?.last_message ?? null;
+  const liveOverridesLatest = !!live && Object.prototype.hasOwnProperty.call(live, 'lastMessage');
+  const snapshotMessage = snapshot?.lastMessage ?? null;
+  const liveMessage = live?.lastMessage ?? null;
 
   if (liveOverridesLatest && liveMessage === null) return null;
   if (!liveMessage) return snapshotMessage;
@@ -64,11 +64,11 @@ function chooseEffectiveLatest(snapshot?: ChatListMeta, live?: ChatListMeta): Me
 }
 
 function resolveMutedUntil(snapshot?: ChatListMeta, live?: ChatListMeta): string | null {
-  if (live && Object.prototype.hasOwnProperty.call(live, 'muted_until')) {
-    return live.muted_until ?? null;
+  if (live && Object.prototype.hasOwnProperty.call(live, 'mutedUntil')) {
+    return live.mutedUntil ?? null;
   }
 
-  return snapshot?.muted_until ?? null;
+  return snapshot?.mutedUntil ?? null;
 }
 
 function getEffectiveListMeta(entry?: ChatStateEntry): ChatListMeta {
@@ -77,11 +77,11 @@ function getEffectiveListMeta(entry?: ChatStateEntry): ChatListMeta {
   const latest = chooseEffectiveLatest(snapshot, live);
 
   return {
-    in_list: live?.in_list ?? snapshot?.in_list ?? false,
-    unread_count: live?.unread_count ?? snapshot?.unread_count ?? 0,
-    last_read_message_id: live?.last_read_message_id ?? snapshot?.last_read_message_id ?? null,
-    last_message: latest,
-    last_message_at: latest?.created_at ?? snapshot?.last_message_at ?? null,
+    inList: live?.inList ?? snapshot?.inList ?? false,
+    unreadCount: live?.unreadCount ?? snapshot?.unreadCount ?? 0,
+    lastReadMessageId: live?.lastReadMessageId ?? snapshot?.lastReadMessageId ?? null,
+    lastMessage: latest,
+    lastMessageAt: latest?.createdAt ?? snapshot?.lastMessageAt ?? null,
   };
 }
 
@@ -108,12 +108,12 @@ const chatsSlice = createSlice({
           avatar: chat.avatar ?? entry.details.avatar ?? null,
         };
         entry.listSnapshot = {
-          last_message: chat.last_message,
-          last_message_at: chat.last_message_at,
-          unread_count: chat.unread_count,
-          last_read_message_id: chat.last_read_message_id,
-          in_list: true,
-          muted_until: chat.muted_until,
+          lastMessage: chat.lastMessage,
+          lastMessageAt: chat.lastMessageAt,
+          unreadCount: chat.unreadCount,
+          lastReadMessageId: chat.lastReadMessageId,
+          inList: true,
+          mutedUntil: chat.mutedUntil,
         };
       }
     },
@@ -121,14 +121,14 @@ const chatsSlice = createSlice({
       const entry = getChatEntry(state, action.payload.chatId);
       entry.liveProjection = {
         ...entry.liveProjection,
-        muted_until: action.payload.mutedUntil,
+        mutedUntil: action.payload.mutedUntil,
       };
     },
     setChatInList(state, action: PayloadAction<{ chatId: string; inList: boolean }>) {
       const entry = getChatEntry(state, action.payload.chatId);
       entry.liveProjection = {
         ...entry.liveProjection,
-        in_list: action.payload.inList,
+        inList: action.payload.inList,
       };
     },
     projectChatMessageAdded(
@@ -140,18 +140,18 @@ const chatsSlice = createSlice({
       const current = getEffectiveListMeta(entry);
       entry.liveProjection = {
         ...entry.liveProjection,
-        in_list: true,
-        unread_count: (entry.liveProjection?.unread_count ?? current.unread_count ?? 0) + (incrementUnread ? 1 : 0),
+        inList: true,
+        unreadCount: (entry.liveProjection?.unreadCount ?? current.unreadCount ?? 0) + (incrementUnread ? 1 : 0),
       };
 
-      if (message.reply_root_id || message.is_deleted) {
+      if (message.replyRootId || message.isDeleted) {
         return;
       }
 
-      const currentLatest = current.last_message;
+      const currentLatest = current.lastMessage;
       if (!currentLatest || compareMessageOrder(message, currentLatest) >= 0) {
-        entry.liveProjection.last_message = message;
-        entry.liveProjection.last_message_at = message.created_at;
+        entry.liveProjection.lastMessage = message;
+        entry.liveProjection.lastMessageAt = message.createdAt;
       }
     },
     projectChatMessageConfirmed(
@@ -163,29 +163,29 @@ const chatsSlice = createSlice({
       const current = getEffectiveListMeta(entry);
       entry.liveProjection = {
         ...entry.liveProjection,
-        in_list: true,
+        inList: true,
       };
 
-      if (message.reply_root_id || message.is_deleted) {
+      if (message.replyRootId || message.isDeleted) {
         return;
       }
 
-      const currentLatest = current.last_message;
+      const currentLatest = current.lastMessage;
       const isConfirmingCurrent =
         !!currentLatest &&
-        (currentLatest.client_generated_id === clientGeneratedId || currentLatest.id === clientGeneratedId);
+        (currentLatest.clientGeneratedId === clientGeneratedId || currentLatest.id === clientGeneratedId);
 
       if (isConfirmingCurrent || !currentLatest || compareMessageOrder(message, currentLatest) >= 0) {
-        entry.liveProjection.last_message = message;
-        entry.liveProjection.last_message_at = message.created_at;
+        entry.liveProjection.lastMessage = message;
+        entry.liveProjection.lastMessageAt = message.createdAt;
       }
     },
     setChatUnreadCount(state, action: PayloadAction<{ chatId: string; unreadCount: number }>) {
       const entry = getChatEntry(state, action.payload.chatId);
       entry.liveProjection = {
         ...entry.liveProjection,
-        unread_count: action.payload.unreadCount,
-        in_list: true,
+        unreadCount: action.payload.unreadCount,
+        inList: true,
       };
     },
     projectChatMessagePatched(
@@ -202,48 +202,48 @@ const chatsSlice = createSlice({
       if (!entry) return;
 
       const current = getEffectiveListMeta(entry);
-      const currentLatest = current.last_message;
+      const currentLatest = current.lastMessage;
       const isCurrentLatest =
         !!currentLatest &&
-        (currentLatest.id === messageId || currentLatest.client_generated_id === message.client_generated_id);
+        (currentLatest.id === messageId || currentLatest.clientGeneratedId === message.clientGeneratedId);
 
       if (!isCurrentLatest) return;
 
       entry.liveProjection = {
         ...entry.liveProjection,
-        in_list: true,
+        inList: true,
       };
 
-      if (message.is_deleted) {
-        entry.liveProjection.last_message = fallbackMessage;
-        entry.liveProjection.last_message_at = fallbackMessage?.created_at ?? null;
+      if (message.isDeleted) {
+        entry.liveProjection.lastMessage = fallbackMessage;
+        entry.liveProjection.lastMessageAt = fallbackMessage?.createdAt ?? null;
         return;
       }
 
-      entry.liveProjection.last_message = {
+      entry.liveProjection.lastMessage = {
         ...currentLatest,
         ...message,
       };
-      entry.liveProjection.last_message_at = message.created_at;
+      entry.liveProjection.lastMessageAt = message.createdAt;
     },
     markChatAsRead(state, action: PayloadAction<{ chatId: string; lastReadMessageId?: string | null }>) {
       const entry = getChatEntry(state, action.payload.chatId);
       entry.liveProjection = {
         ...entry.liveProjection,
-        unread_count: 0,
-        last_read_message_id:
+        unreadCount: 0,
+        lastReadMessageId:
           action.payload.lastReadMessageId !== undefined
             ? action.payload.lastReadMessageId
-            : (entry.liveProjection?.last_read_message_id ?? entry.listSnapshot?.last_read_message_id ?? null),
-        in_list: true,
+            : (entry.liveProjection?.lastReadMessageId ?? entry.listSnapshot?.lastReadMessageId ?? null),
+        inList: true,
       };
     },
     setChatLastReadMessageId(state, action: PayloadAction<{ chatId: string; lastReadMessageId: string | null }>) {
       const entry = getChatEntry(state, action.payload.chatId);
       entry.liveProjection = {
         ...entry.liveProjection,
-        last_read_message_id: action.payload.lastReadMessageId,
-        in_list: true,
+        lastReadMessageId: action.payload.lastReadMessageId,
+        inList: true,
       };
     },
   },
@@ -282,29 +282,29 @@ export function selectChatMutedUntil(state: RootState, chatId: string): string |
 
 export function selectChatLastReadMessageId(state: RootState, chatId: string): string | null {
   const entry = state.chats.byId[chatId];
-  return getEffectiveListMeta(entry).last_read_message_id ?? null;
+  return getEffectiveListMeta(entry).lastReadMessageId ?? null;
 }
 
 const selectChatsById = (state: RootState) => state.chats.byId;
 
 export const selectAllChats = createSelector([selectChatsById], (byId): ChatListEntry[] => {
   return Object.entries(byId)
-    .filter(([, entry]) => getEffectiveListMeta(entry).in_list)
+    .filter(([, entry]) => getEffectiveListMeta(entry).inList)
     .map(([id, entry]) => {
       const listMeta = getEffectiveListMeta(entry);
       return {
         id,
         name: entry.details.name ?? null,
         avatar: entry.details.avatar ?? null,
-        last_message_at: listMeta.last_message_at ?? null,
-        unread_count: listMeta.unread_count ?? 0,
-        last_read_message_id: listMeta.last_read_message_id ?? null,
-        last_message: listMeta.last_message ?? null,
-        muted_until: resolveMutedUntil(entry?.listSnapshot, entry?.liveProjection),
+        lastMessageAt: listMeta.lastMessageAt ?? null,
+        unreadCount: listMeta.unreadCount ?? 0,
+        lastReadMessageId: listMeta.lastReadMessageId ?? null,
+        lastMessage: listMeta.lastMessage ?? null,
+        mutedUntil: resolveMutedUntil(entry?.listSnapshot, entry?.liveProjection),
       };
     })
     .sort((a, b) => {
-      return compareMessageOrder(b.last_message, a.last_message);
+      return compareMessageOrder(b.lastMessage, a.lastMessage);
     });
 });
 

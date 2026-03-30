@@ -6,7 +6,7 @@ import { usersApi } from '@/api/users';
 export interface UserState {
   uid: number | null;
   username: string | null;
-  avatar_url: string | null;
+  avatarUrl: string | null;
   loading: boolean;
   error: string | null;
 }
@@ -14,7 +14,7 @@ export interface UserState {
 const initialState: UserState = {
   uid: null,
   username: null,
-  avatar_url: null,
+  avatarUrl: null,
   loading: true,
   error: null,
 };
@@ -32,10 +32,10 @@ const userSlice = createSlice({
   name: 'user',
   initialState,
   reducers: {
-    setUser(state, action: PayloadAction<{ uid: number; username: string; avatar_url: string | null }>) {
+    setUser(state, action: PayloadAction<{ uid: number; username: string; avatarUrl: string | null }>) {
       state.uid = action.payload.uid;
       state.username = action.payload.username;
-      state.avatar_url = action.payload.avatar_url;
+      state.avatarUrl = action.payload.avatarUrl;
     },
   },
   extraReducers: (builder) => {
@@ -48,7 +48,7 @@ const userSlice = createSlice({
         state.loading = false;
         state.uid = action.payload.uid;
         state.username = action.payload.username;
-        state.avatar_url = action.payload.avatar_url ?? null;
+        state.avatarUrl = action.payload.avatarUrl ?? null;
       })
       .addCase(fetchCurrentUser.rejected, (state, action) => {
         state.loading = false;

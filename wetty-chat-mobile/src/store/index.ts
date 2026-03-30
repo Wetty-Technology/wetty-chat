@@ -23,7 +23,7 @@ listenerMiddleware.startListening({
         message: action.payload.message,
         incrementUnread:
           action.payload.scope === 'main' &&
-          !action.payload.message.is_deleted &&
+          !action.payload.message.isDeleted &&
           !isOptimisticMessageId(action.payload.message.id) &&
           action.payload.message.sender.uid !== (state.user.uid ?? 0),
       }),
@@ -53,7 +53,7 @@ listenerMiddleware.startListening({
         chatId: action.payload.chatId,
         messageId: action.payload.messageId,
         message: action.payload.message,
-        fallbackMessage: action.payload.message.is_deleted
+        fallbackMessage: action.payload.message.isDeleted
           ? findLatestEligibleRootMessage(
               state.messages.chats[action.payload.chatId]?.windows,
               action.payload.messageId,

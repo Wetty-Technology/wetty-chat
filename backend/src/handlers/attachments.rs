@@ -15,6 +15,7 @@ use crate::utils::ids;
 use crate::{models::NewAttachment, schema::attachments, AppState};
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UploadUrlRequest {
     filename: String,
     content_type: String,
@@ -24,6 +25,7 @@ pub struct UploadUrlRequest {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UploadUrlResponse {
     attachment_id: String,
     upload_url: String,

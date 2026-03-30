@@ -285,7 +285,7 @@ export function useComposeAttachments({
       localId: `existing-${attachment.id}`,
       attachmentId: attachment.id,
       kind: attachment.kind,
-      name: attachment.file_name,
+      name: attachment.fileName,
       previewUrl: attachment.kind.startsWith('image/') ? attachment.url : undefined,
     })),
     ...drafts.map((draftRecord) => ({

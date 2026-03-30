@@ -60,11 +60,11 @@ function confirmPendingInWindows(
   const chat = state.chats[chatId];
   if (!chat) return;
   for (const win of chat.windows) {
-    const idx = win.messages.findIndex((m) => m.client_generated_id === clientGeneratedId);
+    const idx = win.messages.findIndex((m) => m.clientGeneratedId === clientGeneratedId);
     if (idx !== -1) {
       win.messages[idx] = {
         ...message,
-        client_generated_id: message.client_generated_id || clientGeneratedId,
+        clientGeneratedId: message.clientGeneratedId || clientGeneratedId,
       };
       return;
     }
@@ -81,26 +81,26 @@ function patchMessageInWindows(
     if (chatId !== baseChatId && !chatId.startsWith(`${baseChatId}_thread_`)) continue;
 
     for (const win of chat.windows) {
-      if (message.is_deleted) {
+      if (message.isDeleted) {
         win.messages = win.messages.filter((m) => m.id !== messageId);
       }
 
       for (let i = 0; i < win.messages.length; i++) {
         const current = win.messages[i];
-        if (!message.is_deleted && current.id === messageId) {
+        if (!message.isDeleted && current.id === messageId) {
           const preservedReplyTo =
-            message.reply_to_message ??
-            (message.reply_to_message === undefined && current.reply_to_message !== undefined
-              ? current.reply_to_message
+            message.replyToMessage ??
+            (message.replyToMessage === undefined && current.replyToMessage !== undefined
+              ? current.replyToMessage
               : undefined);
-          win.messages[i] = { ...message, reply_to_message: preservedReplyTo };
-        } else if (current.reply_to_message?.id === messageId) {
-          current.reply_to_message.message = message.message;
-          current.reply_to_message.message_type = message.message_type;
-          current.reply_to_message.sticker = message.sticker;
-          current.reply_to_message.is_deleted = message.is_deleted;
-          current.reply_to_message.attachments = message.attachments;
-          current.reply_to_message.first_attachment_kind = message.attachments?.[0]?.kind;
+          win.messages[i] = { ...message, replyToMessage: preservedReplyTo };
+        } else if (current.replyToMessage?.id === messageId) {
+          current.replyToMessage.message = message.message;
+          current.replyToMessage.messageType = message.messageType;
+          current.replyToMessage.sticker = message.sticker;
+          current.replyToMessage.isDeleted = message.isDeleted;
+          current.replyToMessage.attachments = message.attachments;
+          current.replyToMessage.firstAttachmentKind = message.attachments?.[0]?.kind;
         }
       }
     }
@@ -137,10 +137,10 @@ const messagesSlice = createSlice({
       const newWin: MessageWindow = { messages, nextCursor, prevCursor };
 
       // Insert in chronological order so the last window is always the most recent
-      const newTs = messages.length > 0 ? messages[0].created_at : '';
+      const newTs = messages.length > 0 ? messages[0].createdAt : '';
       let insertIdx = chat.windows.length;
       for (let i = 0; i < chat.windows.length; i++) {
-        const winTs = chat.windows[i].messages[0]?.created_at ?? '';
+        const winTs = chat.windows[i].messages[0]?.createdAt ?? '';
         if (newTs < winTs) {
           insertIdx = i;
           break;
@@ -298,7 +298,7 @@ const messagesSlice = createSlice({
                 const existing = win.messages[i].reactions ?? [];
                 const merged = reactions.map((r) => {
                   const prev = existing.find((e) => e.emoji === r.emoji);
-                  return { ...r, reacted_by_me: r.reacted_by_me ?? prev?.reacted_by_me };
+                  return { ...r, reactedByMe: r.reactedByMe ?? prev?.reactedByMe };
                 });
                 win.messages[i] = { ...win.messages[i], reactions: merged };
               }

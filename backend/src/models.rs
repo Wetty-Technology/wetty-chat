@@ -61,6 +61,7 @@ pub enum MessageType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UserGroupInfo {
     pub group_id: i32,
     pub name: Option<String>,
@@ -69,6 +70,7 @@ pub struct UserGroupInfo {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Sender {
     pub uid: i32,
     pub avatar_url: Option<String>,
@@ -288,6 +290,7 @@ pub struct Message {
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ThreadInfo {
     pub reply_count: i64,
 }
@@ -369,6 +372,7 @@ pub struct Attachment {
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AttachmentResponse {
     #[serde(with = "crate::serde_i64_string")]
     pub id: i64,

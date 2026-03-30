@@ -16,7 +16,7 @@ export function ChatMemberRow({ member, isAdmin, isCurrentUser, onSelect }: Chat
   const displayName = member.username || t`User ${member.uid}`;
   return (
     <IonItem className={styles.row} button={isAdmin && !isCurrentUser} detail={false} onClick={() => onSelect(member)}>
-      <UserAvatar name={displayName} avatarUrl={member.avatar_url} size={40} className={styles.avatar} />
+      <UserAvatar name={displayName} avatarUrl={member.avatarUrl} size={40} className={styles.avatar} />
       <IonLabel>{displayName}</IonLabel>
       <FeatureGate>
         <IonChip className={styles.roleChip} color={member.role === 'admin' ? 'primary' : 'medium'} slot="end">

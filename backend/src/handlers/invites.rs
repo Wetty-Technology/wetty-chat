@@ -34,6 +34,7 @@ struct InviteIdPath {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct CreateInviteBody {
     #[serde(deserialize_with = "crate::serde_i64_string::deserialize")]
     chat_id: i64,
@@ -48,6 +49,7 @@ struct CreateInviteBody {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct ListInvitesQuery {
     #[serde(
         default,
@@ -58,11 +60,13 @@ struct ListInvitesQuery {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct GetInviteByCodeQuery {
     invite_code: String,
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct PatchInviteBody {
     #[serde(default, deserialize_with = "double_opt_datetime::deserialize")]
     expires_at: Option<Option<DateTime<Utc>>>,
@@ -74,6 +78,7 @@ struct RedeemInviteBody {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct SendInviteMessageBody {
     #[serde(deserialize_with = "crate::serde_i64_string::deserialize")]
     source_chat_id: i64,
@@ -89,6 +94,7 @@ struct SendInviteMessageBody {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct InviteResponse {
     #[serde(with = "crate::serde_i64_string")]
     id: i64,
@@ -107,11 +113,13 @@ struct InviteResponse {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct ListInvitesResponse {
     invites: Vec<InviteResponse>,
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct InvitePreviewResponse {
     invite: InviteResponse,
     chat: GroupInfoResponse,
@@ -119,11 +127,13 @@ struct InvitePreviewResponse {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct RedeemInviteResponse {
     chat: GroupInfoResponse,
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct SendInviteMessageResponse {
     invite: InviteResponse,
     message: MessageResponse,

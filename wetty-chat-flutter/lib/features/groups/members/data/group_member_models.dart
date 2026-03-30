@@ -16,7 +16,7 @@ class GroupMember {
       uid: json['uid'] as int? ?? 0,
       username: json['username'] as String?,
       role: json['role'] as String? ?? 'member',
-      joinedAt: json['joined_at'] as String? ?? '',
+      joinedAt: json['joinedAt'] as String? ?? '',
     );
   }
 }

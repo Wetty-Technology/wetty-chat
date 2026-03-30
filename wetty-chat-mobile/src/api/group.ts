@@ -6,49 +6,49 @@ export interface GroupInfoResponse {
   id: string;
   name: string;
   description: string | null;
-  avatar_image_id: string | null;
+  avatarImageId: string | null;
   avatar: string | null;
   visibility: string;
-  created_at: string;
-  muted_until?: string | null;
-  my_role: GroupRole | null;
+  createdAt: string;
+  mutedUntil?: string | null;
+  myRole: GroupRole | null;
 }
 
 export interface UpdateGroupInfoBody {
   name?: string;
   description?: string;
-  avatar_image_id?: string | null;
+  avatarImageId?: string | null;
   visibility?: string;
 }
 
 export interface GroupAvatarUploadUrlRequest {
   filename: string;
-  content_type: string;
+  contentType: string;
   size: number;
   width?: number;
   height?: number;
 }
 
 export interface GroupAvatarUploadUrlResponse {
-  image_id: string;
-  upload_url: string;
-  upload_headers: Record<string, string>;
+  imageId: string;
+  uploadUrl: string;
+  uploadHeaders: Record<string, string>;
 }
 
 export interface MemberResponse {
   uid: number;
   role: string;
-  joined_at: string;
+  joinedAt: string;
   username: string | null;
-  avatar_url: string | null;
+  avatarUrl: string | null;
   gender: number;
-  user_group?: UserGroupInfo | null;
+  userGroup?: UserGroupInfo | null;
 }
 
 export interface ListMembersResponse {
   members: MemberResponse[];
-  next_cursor: number | null;
-  can_manage_members: boolean;
+  nextCursor: number | null;
+  canManageMembers: boolean;
 }
 
 export type GroupSearchMode = 'autocomplete' | 'submitted';
@@ -67,7 +67,7 @@ export interface GroupSelectorItem {
 
 export interface ListGroupsResponse {
   groups: GroupSelectorItem[];
-  next_cursor: string | null;
+  nextCursor: string | null;
 }
 
 export type MemberSearchMode = 'autocomplete' | 'submitted';
@@ -82,7 +82,7 @@ export interface UpdateMemberRoleBody {
 }
 
 export interface MuteChatBody {
-  duration_seconds?: number | null;
+  durationSeconds?: number | null;
 }
 
 export function getGroupInfo(chatId: string | number): Promise<AxiosResponse<GroupInfoResponse>> {
@@ -145,7 +145,7 @@ export function updateMemberRole(
 export function muteChat(
   chatId: string | number,
   body: MuteChatBody = {},
-): Promise<AxiosResponse<{ muted_until: string }>> {
+): Promise<AxiosResponse<{ mutedUntil: string }>> {
   return apiClient.put(`/group/${chatId}/mute`, body);
 }
 

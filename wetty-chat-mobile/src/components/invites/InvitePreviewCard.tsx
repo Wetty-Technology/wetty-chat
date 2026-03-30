@@ -134,7 +134,7 @@ export function InvitePreviewCard({ inviteCode, onResolved, onCancel }: InvitePr
   const { previewState, preview, displayName } = useInvitePreview(inviteCode);
 
   const handleJoin = async () => {
-    if (!preview || joining || preview.already_member) return;
+    if (!preview || joining || preview.alreadyMember) return;
 
     setJoining(true);
     setJoinError(null);
@@ -172,7 +172,7 @@ export function InvitePreviewCard({ inviteCode, onResolved, onCancel }: InvitePr
       };
     }
 
-    if (previewState.data.already_member) {
+    if (previewState.data.alreadyMember) {
       return {
         kind: 'loaded',
         eyebrow: <Trans>Invite</Trans>,

@@ -105,7 +105,7 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
     const packEntries = [...ownedPacks, ...subscribedPacks].map((pack) => ({
       id: pack.id,
       name: pack.name,
-      previewUrl: pack.preview_sticker?.media.url ?? null,
+      previewUrl: pack.previewSticker?.media.url ?? null,
       owned: ownedPacks.some((ownedPack) => ownedPack.id === pack.id),
       stickers: packDetails[pack.id]?.stickers ?? [],
       isLoading: !!loadingPackIds[pack.id],
@@ -188,13 +188,13 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
           ...prev,
           [activePack.id]: {
             ...detail,
-            sticker_count: detail.sticker_count + 1,
+            stickerCount: detail.stickerCount + 1,
             stickers: [...detail.stickers, res.data],
           },
         };
       });
       setOwnedPacks((prev) =>
-        prev.map((pack) => (pack.id === activePack.id ? { ...pack, sticker_count: pack.sticker_count + 1 } : pack)),
+        prev.map((pack) => (pack.id === activePack.id ? { ...pack, stickerCount: pack.stickerCount + 1 } : pack)),
       );
       setAddStickerFile(null);
       presentToast({ message: t`Sticker added`, duration: 1500, position: 'bottom' });
@@ -211,7 +211,7 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
   const handleFavoriteToggle = async () => {
     if (!popover) return;
     const { sticker } = popover;
-    const isFav = sticker.is_favorited;
+    const isFav = sticker.isFavorited;
     setPopover(null);
 
     try {
@@ -220,7 +220,7 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
         setFavoriteStickers((prev) => prev.filter((item) => item.id !== sticker.id));
       } else {
         await favoriteSticker(sticker.id);
-        setFavoriteStickers((prev) => [...prev, { ...sticker, is_favorited: true }]);
+        setFavoriteStickers((prev) => [...prev, { ...sticker, isFavorited: true }]);
       }
       setPackDetails((prev) =>
         Object.fromEntries(
@@ -229,7 +229,7 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
             {
               ...detail,
               stickers: detail.stickers.map((item) =>
-                item.id === sticker.id ? { ...item, is_favorited: !isFav } : item,
+                item.id === sticker.id ? { ...item, isFavorited: !isFav } : item,
               ),
             },
           ]),
@@ -322,8 +322,8 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
               style={{ top: popover.rect.top, left: popover.rect.left + popover.rect.width / 2 }}
             >
               <button type="button" className={styles.popoverItem} onClick={handleFavoriteToggle}>
-                <IonIcon icon={popover.sticker.is_favorited ? heartDislike : heart} />
-                {popover.sticker.is_favorited ? t`Remove from Favorites` : t`Add to Favorites`}
+                <IonIcon icon={popover.sticker.isFavorited ? heartDislike : heart} />
+                {popover.sticker.isFavorited ? t`Remove from Favorites` : t`Add to Favorites`}
               </button>
             </div>
           </>,
@@ -386,7 +386,7 @@ function StickerButton({
         fireLongPress();
       }}
     >
-      {sticker.media.content_type.startsWith('video/') ? (
+      {sticker.media.contentType.startsWith('video/') ? (
         <video src={sticker.media.url} className={styles.stickerThumb} autoPlay loop muted playsInline />
       ) : (
         <img src={sticker.media.url} alt="" className={styles.stickerThumb} />

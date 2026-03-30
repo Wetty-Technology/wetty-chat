@@ -22,8 +22,8 @@ export async function syncAppBadgeCount(target: BadgeCapable | undefined = globa
     const res = await getUnreadCount();
     if (requestId !== latestBadgeSyncRequestId) return;
 
-    if (res.data.unread_count > 0) {
-      await setAppBadgeCount(target ?? {}, res.data.unread_count);
+    if (res.data.unreadCount > 0) {
+      await setAppBadgeCount(target ?? {}, res.data.unreadCount);
       return;
     }
 

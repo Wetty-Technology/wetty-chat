@@ -22,15 +22,15 @@ interface ChatMessageRowProps {
 }
 
 function isSystemMessage(message: MessageResponse): boolean {
-  return message.message_type === 'system';
+  return message.messageType === 'system';
 }
 
 function isInviteMessage(message: MessageResponse): boolean {
-  return message.message_type === 'invite';
+  return message.messageType === 'invite';
 }
 
 function isStickerMessage(message: MessageResponse): boolean {
-  return message.message_type === 'sticker';
+  return message.messageType === 'sticker';
 }
 
 export function ChatMessageRow({
@@ -52,9 +52,9 @@ export function ChatMessageRow({
   }
 
   const msg = row.message;
-  const replyToMessage = msg.reply_to_message;
+  const replyToMessage = msg.replyToMessage;
   if (isSystemMessage(msg)) {
-    return <SystemMessage message={msg.is_deleted ? t`[Deleted]` : (msg.message ?? '')} />;
+    return <SystemMessage message={msg.isDeleted ? t`[Deleted]` : (msg.message ?? '')} />;
   }
 
   if (isInviteMessage(msg)) {
@@ -67,7 +67,7 @@ export function ChatMessageRow({
           isSent={msg.sender.uid === currentUserId}
           showName={row.showName}
           showAvatar={row.showAvatar}
-          timestamp={msg.created_at}
+          timestamp={msg.createdAt}
           onAvatarClick={() => onAvatarClick(msg.sender)}
           onOpen={() => setInviteCode(code)}
         />
@@ -79,14 +79,14 @@ export function ChatMessageRow({
   const sharedBubbleProps = {
     senderName: msg.sender.name ?? `User ${msg.sender.uid}`,
     isSent: msg.sender.uid === currentUserId,
-    avatarUrl: msg.sender.avatar_url,
+    avatarUrl: msg.sender.avatarUrl,
     onReply: () => onReply(msg),
-    onReplyTap: replyToMessage && !replyToMessage.is_deleted ? () => onJumpToReply(replyToMessage.id) : undefined,
+    onReplyTap: replyToMessage && !replyToMessage.isDeleted ? () => onJumpToReply(replyToMessage.id) : undefined,
     onLongPress: (rect: DOMRect) => onLongPress(msg, rect),
     showAvatar: row.showAvatar,
-    timestamp: msg.created_at,
-    edited: msg.is_edited,
-    threadInfo: !threadId ? msg.thread_info : undefined,
+    timestamp: msg.createdAt,
+    edited: msg.isEdited,
+    threadInfo: !threadId ? msg.threadInfo : undefined,
     onThreadClick: () => onThreadClick(msg),
     onAvatarClick: () => onAvatarClick(msg.sender),
     isConfirmed: !msg.id.startsWith('cg_'),
@@ -113,10 +113,10 @@ export function ChatMessageRow({
   return (
     <ChatBubble
       {...sharedBubbleProps}
-      messageType={msg.message_type as 'text' | 'audio'}
+      messageType={msg.messageType as 'text' | 'audio'}
       senderGender={msg.sender.gender}
-      senderGroup={msg.sender.user_group}
-      message={msg.is_deleted ? t`[Deleted]` : (msg.message ?? '')}
+      senderGroup={msg.sender.userGroup}
+      message={msg.isDeleted ? t`[Deleted]` : (msg.message ?? '')}
       showName={row.showName}
       attachments={msg.attachments}
       reactions={msg.reactions}

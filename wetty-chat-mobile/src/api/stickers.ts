@@ -4,7 +4,7 @@ import apiClient from './client';
 export interface StickerMedia {
   id: string;
   url: string;
-  content_type: string;
+  contentType: string;
   size: number;
   width?: number | null;
   height?: number | null;
@@ -16,8 +16,8 @@ export interface StickerSummary {
   emoji: string;
   name?: string | null;
   description?: string | null;
-  created_at: string;
-  is_favorited: boolean;
+  createdAt: string;
+  isFavorited: boolean;
 }
 
 export interface StickerPackPreviewSticker {
@@ -28,15 +28,15 @@ export interface StickerPackPreviewSticker {
 
 export interface StickerPackSummary {
   id: string;
-  owner_uid: number;
-  owner_name?: string | null;
+  ownerUid: number;
+  ownerName?: string | null;
   name: string;
   description?: string | null;
-  created_at: string;
-  updated_at: string;
-  sticker_count: number;
-  is_subscribed: boolean;
-  preview_sticker?: StickerPackPreviewSticker | null;
+  createdAt: string;
+  updatedAt: string;
+  stickerCount: number;
+  isSubscribed: boolean;
+  previewSticker?: StickerPackPreviewSticker | null;
 }
 
 export interface StickerPackListResponse {

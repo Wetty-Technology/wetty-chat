@@ -55,7 +55,7 @@ function AppShell() {
     syncStoredJwtToken();
     initWebSocket();
     if (import.meta.env.DEV) {
-      dispatch(setUser({ uid: getCurrentUserId(), username: 'Development User', avatar_url: null }));
+      dispatch(setUser({ uid: getCurrentUserId(), username: 'Development User', avatarUrl: null }));
     }
     dispatch(fetchCurrentUser());
   }, [dispatch]);

@@ -105,7 +105,7 @@ export function InviteMessageCard({
       {!isSent ? (
         showAvatar ? (
           <button type="button" className={styles.avatarButton} onClick={onAvatarClick}>
-            <UserAvatar name={senderName} avatarUrl={sender.avatar_url} size={32} />
+            <UserAvatar name={senderName} avatarUrl={sender.avatarUrl} size={32} />
           </button>
         ) : (
           <div className={styles.avatarSpacer} />

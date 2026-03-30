@@ -20,7 +20,7 @@ function isSameDate(a: string, b: string): boolean {
 }
 
 function isSystemMessage(message: MessageResponse): boolean {
-  return message.message_type === 'system';
+  return message.messageType === 'system';
 }
 
 export function useChatRows(messages: MessageResponse[], formatDateSeparator: (iso: string) => string): ChatRow[] {
@@ -36,13 +36,13 @@ export function useChatRows(messages: MessageResponse[], formatDateSeparator: (i
       // Date separator: always shown on the first message and on date boundaries.
       // The key must stay stable when older messages are prepended, otherwise
       // staging batches can get stranded waiting on a row that changed identity.
-      const isDateBoundary = prevMsg && !isSameDate(msg.created_at, prevMsg.created_at);
+      const isDateBoundary = prevMsg && !isSameDate(msg.createdAt, prevMsg.createdAt);
       const isFirstMessage = i === 0;
       if (isFirstMessage || isDateBoundary) {
         rows.push({
           type: 'date',
-          key: `date:${formatDateKey(msg.created_at)}`,
-          dateLabel: formatDateSeparator(msg.created_at),
+          key: `date:${formatDateKey(msg.createdAt)}`,
+          dateLabel: formatDateSeparator(msg.createdAt),
         });
         prevSenderUid = null;
       }
@@ -58,13 +58,13 @@ export function useChatRows(messages: MessageResponse[], formatDateSeparator: (i
         !nextMsg ||
         nextIsSystem ||
         nextMsg.sender.uid !== msg.sender.uid ||
-        !isSameDate(msg.created_at, nextMsg.created_at);
+        !isSameDate(msg.createdAt, nextMsg.createdAt);
 
       rows.push({
         type: 'message',
-        key: `msg:${msg.client_generated_id || msg.id}`,
+        key: `msg:${msg.clientGeneratedId || msg.id}`,
         messageId: msg.id,
-        clientGeneratedId: msg.client_generated_id ?? null,
+        clientGeneratedId: msg.clientGeneratedId ?? null,
         message: msg,
         showName,
         showAvatar: isLastInGroup,

@@ -30,7 +30,7 @@ interface PingMessage {
 }
 
 interface AppStateMessage {
-  type: 'app_state';
+  type: 'appState';
   state: WebSocketAppState;
 }
 
@@ -90,7 +90,7 @@ function getReconnectDelayMs(): number {
 function normalizePayload(payload: unknown): MessageResponse | null {
   if (payload == null || typeof payload !== 'object') return null;
   const msg = payload as MessageResponse;
-  if (!msg.chat_id || !msg.id) return null;
+  if (!msg.chatId || !msg.id) return null;
   return msg;
 }
 
@@ -111,23 +111,23 @@ function showLocalNotification(message: MessageResponse): void {
 
   const currentUid = store.getState().user.uid;
   if (currentUid != null && message.sender.uid === currentUid) return;
-  if (message.is_deleted) return;
+  if (message.isDeleted) return;
 
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
 
-  const chatEntry = store.getState().chats.byId[message.chat_id];
+  const chatEntry = store.getState().chats.byId[message.chatId];
 
   // Skip notification for muted chats
   const mutedUntil =
-    chatEntry?.liveProjection && Object.prototype.hasOwnProperty.call(chatEntry.liveProjection, 'muted_until')
-      ? (chatEntry.liveProjection.muted_until ?? null)
-      : (chatEntry?.listSnapshot?.muted_until ?? null);
+    chatEntry?.liveProjection && Object.prototype.hasOwnProperty.call(chatEntry.liveProjection, 'mutedUntil')
+      ? (chatEntry.liveProjection.mutedUntil ?? null)
+      : (chatEntry?.listSnapshot?.mutedUntil ?? null);
   if (mutedUntil && new Date(mutedUntil) > new Date()) return;
 
   const chatName = chatEntry?.details?.name ?? 'New Message';
 
   let body: string;
-  if (message.message_type === 'invite') {
+  if (message.messageType === 'invite') {
     body = `${message.sender.name ?? 'Someone'} sent an invite`;
   } else if (message.message) {
     const preview =
@@ -151,15 +151,15 @@ function showLocalNotification(message: MessageResponse): void {
           tag,
           data: {
             type: 'new_message',
-            chat_id: message.chat_id,
-            message_id: message.id,
+            chatId: message.chatId,
+            messageId: message.id,
           },
         });
 
         // Inform the SW of the notified message so it can skip stale push notifications
         registration.active?.postMessage({
           type: 'NOTIFIED',
-          chatId: message.chat_id,
+          chatId: message.chatId,
           messageId: message.id,
         });
       })
@@ -173,35 +173,35 @@ function handleWsMessage(payload: unknown): void {
   const message = normalizePayload(payload);
   if (!message) return;
 
-  const storeChatId = message.reply_root_id ? `${message.chat_id}_thread_${message.reply_root_id}` : message.chat_id;
+  const storeChatId = message.replyRootId ? `${message.chatId}_thread_${message.replyRootId}` : message.chatId;
   const all = allMessagesForChat(storeChatId);
   const pending = all.find(
-    (current) => current.client_generated_id === message.client_generated_id && current.id.startsWith('cg_'),
+    (current) => current.clientGeneratedId === message.clientGeneratedId && current.id.startsWith('cg_'),
   );
 
   if (pending) {
     store.dispatch(
       messageConfirmed({
-        chatId: message.chat_id,
+        chatId: message.chatId,
         storeChatId,
-        clientGeneratedId: message.client_generated_id,
+        clientGeneratedId: message.clientGeneratedId,
         message,
         origin: 'ws',
-        scope: message.reply_root_id ? 'thread' : 'main',
+        scope: message.replyRootId ? 'thread' : 'main',
       }),
     );
   } else {
     const exists = all.some(
-      (current) => current.id === message.id || current.client_generated_id === message.client_generated_id,
+      (current) => current.id === message.id || current.clientGeneratedId === message.clientGeneratedId,
     );
     if (!exists) {
       store.dispatch(
         messageAdded({
-          chatId: message.chat_id,
+          chatId: message.chatId,
           storeChatId,
           message,
           origin: 'ws',
-          scope: message.reply_root_id ? 'thread' : 'main',
+          scope: message.replyRootId ? 'thread' : 'main',
         }),
       );
       showLocalNotification(message);
@@ -215,7 +215,7 @@ function sendJson(message: AuthMessage | PingMessage | AppStateMessage): void {
 }
 
 function publishAppState(): void {
-  sendJson({ type: 'app_state', state: currentAppState });
+  sendJson({ type: 'appState', state: currentAppState });
 }
 
 function closeSocket(socket: WebSocket | null): void {
@@ -320,12 +320,12 @@ async function connectWebSocket(): Promise<void> {
           return;
         }
 
-        if ((message.type === 'message_deleted' || message.type === 'message_updated') && message.payload != null) {
+        if ((message.type === 'messageDeleted' || message.type === 'messageUpdated') && message.payload != null) {
           const payload = normalizePayload(message.payload);
           if (!payload) return;
           store.dispatch(
             messagePatched({
-              chatId: payload.chat_id,
+              chatId: payload.chatId,
               messageId: payload.id,
               message: payload,
             }),
@@ -333,17 +333,17 @@ async function connectWebSocket(): Promise<void> {
           return;
         }
 
-        if (message.type === 'reaction_updated' && message.payload != null) {
+        if (message.type === 'reactionUpdated' && message.payload != null) {
           const payload = message.payload as {
-            message_id: string;
-            chat_id: string;
+            messageId: string;
+            chatId: string;
             reactions: ReactionSummary[];
           };
-          if (payload.message_id && payload.chat_id) {
+          if (payload.messageId && payload.chatId) {
             store.dispatch(
               reactionsUpdated({
-                chatId: payload.chat_id,
-                messageId: payload.message_id,
+                chatId: payload.chatId,
+                messageId: payload.messageId,
                 reactions: payload.reactions ?? [],
               }),
             );
@@ -351,9 +351,9 @@ async function connectWebSocket(): Promise<void> {
           return;
         }
 
-        if (message.type === 'presence_update' && message.payload != null) {
-          const payload = message.payload as { active_connections: number };
-          store.dispatch(setActiveConnections(payload.active_connections));
+        if (message.type === 'presenceUpdate' && message.payload != null) {
+          const payload = message.payload as { activeConnections: number };
+          store.dispatch(setActiveConnections(payload.activeConnections));
         }
       } catch {
         // ignore malformed websocket messages

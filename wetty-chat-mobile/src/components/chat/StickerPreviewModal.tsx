@@ -62,7 +62,7 @@ function StickerPreviewModalContent({ stickerId, isDesktop, onDismiss }: Sticker
         const firstPack = res.data.packs[0];
         if (!firstPack) return;
 
-        setIsSubscribed(firstPack.is_subscribed);
+        setIsSubscribed(firstPack.isSubscribed);
 
         return getStickerPack(firstPack.id).then((packRes) => {
           if (cancelled) return;
@@ -95,7 +95,7 @@ function StickerPreviewModalContent({ stickerId, isDesktop, onDismiss }: Sticker
   }
 
   const packName = pack?.name ?? stickerData?.packs[0]?.name ?? '';
-  const stickerCount = pack?.stickers.length ?? stickerData?.packs[0]?.sticker_count ?? 0;
+  const stickerCount = pack?.stickers.length ?? stickerData?.packs[0]?.stickerCount ?? 0;
   const stickers = pack?.stickers ?? [];
 
   function renderContent() {
@@ -130,7 +130,7 @@ function StickerPreviewModalContent({ stickerId, isDesktop, onDismiss }: Sticker
               onClick={() => setSelectedStickerId(sticker.id)}
               aria-label={sticker.name || sticker.emoji}
             >
-              {sticker.media.content_type.startsWith('video/') ? (
+              {sticker.media.contentType.startsWith('video/') ? (
                 <video src={sticker.media.url} className={styles.gridMedia} autoPlay loop muted playsInline />
               ) : (
                 <img src={sticker.media.url} alt="" className={styles.gridMedia} />

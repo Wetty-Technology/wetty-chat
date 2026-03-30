@@ -47,18 +47,18 @@ interface ChatSettingsFormState {
 function getInitialFormState(cachedMeta?: {
   name?: string | null;
   description?: string | null;
-  avatar_image_id?: string | null;
+  avatarImageId?: string | null;
   avatar?: string | null;
   visibility?: string;
-  my_role?: GroupRole | null;
+  myRole?: GroupRole | null;
 }): ChatSettingsFormState {
   return {
     name: cachedMeta?.name || '',
     description: cachedMeta?.description || '',
     avatarUrl: cachedMeta?.avatar || '',
-    avatarImageId: cachedMeta?.avatar_image_id || null,
+    avatarImageId: cachedMeta?.avatarImageId || null,
     visibility: (cachedMeta?.visibility as 'public' | 'private') || 'public',
-    myRole: cachedMeta?.my_role ?? null,
+    myRole: cachedMeta?.myRole ?? null,
   };
 }
 
@@ -141,8 +141,8 @@ function ChatSettingsContent({
   );
 }
 
-function hasLoadedChatSettingsMeta(cachedMeta?: { visibility?: string; my_role?: GroupRole | null }): boolean {
-  return !!cachedMeta?.visibility && cachedMeta.my_role !== undefined;
+function hasLoadedChatSettingsMeta(cachedMeta?: { visibility?: string; myRole?: GroupRole | null }): boolean {
+  return !!cachedMeta?.visibility && cachedMeta.myRole !== undefined;
 }
 
 function ChatSettingsSession({ chatId, backAction }: { chatId: string; backAction?: BackAction }) {
@@ -203,13 +203,13 @@ function ChatSettingsSession({ chatId, backAction }: { chatId: string; backActio
     try {
       const uploadRes = await requestGroupAvatarUploadUrl(chatId, {
         filename: file.name,
-        content_type: file.type || 'application/octet-stream',
+        contentType: file.type || 'application/octet-stream',
         size: file.size,
       });
-      const { image_id, upload_url, upload_headers } = uploadRes.data;
-      await uploadFileToS3(upload_url, file, upload_headers);
+      const { imageId, uploadUrl, uploadHeaders } = uploadRes.data;
+      await uploadFileToS3(uploadUrl, file, uploadHeaders);
       const patchRes = await updateGroupInfo(chatId, {
-        avatar_image_id: image_id,
+        avatarImageId: imageId,
       });
       const { id, ...meta } = patchRes.data;
       void id;
@@ -218,7 +218,7 @@ function ChatSettingsSession({ chatId, backAction }: { chatId: string; backActio
 
       setFormState((current) => ({
         ...current,
-        avatarImageId: image_id,
+        avatarImageId: imageId,
         avatarUrl: meta.avatar || current.avatarUrl,
       }));
 
@@ -250,7 +250,7 @@ function ChatSettingsSession({ chatId, backAction }: { chatId: string; backActio
     updateGroupInfo(chatId, {
       name: name || undefined,
       description: description || undefined,
-      avatar_image_id: formState.avatarImageId,
+      avatarImageId: formState.avatarImageId,
       visibility: formState.visibility,
     })
       .then((res) => {

@@ -43,7 +43,7 @@ function getPushErrorMessage(code: PushNotificationErrorCode) {
 
 export default function OobePage() {
   const history = useHistory();
-  const { username, avatar_url } = useSelector((state: RootState) => state.user);
+  const { username, avatarUrl } = useSelector((state: RootState) => state.user);
   const [presentToast] = useIonToast();
   const { isSubscribed, loading, subscribeToPush, unsubscribeFromPush } = usePushNotifications();
 
@@ -77,7 +77,7 @@ export default function OobePage() {
       <IonContent fullscreen={true}>
         <div className="oobe-shell">
           <div className="oobe-card">
-            <UserAvatar name={username ?? 'W'} avatarUrl={avatar_url} size={88} className="oobe-avatar" />
+            <UserAvatar name={username ?? 'W'} avatarUrl={avatarUrl} size={88} className="oobe-avatar" />
 
             <IonText>
               <h1 className="oobe-title">欢迎，{username ?? 'Wetty 用户'}</h1>

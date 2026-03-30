@@ -71,8 +71,8 @@ function formatLastActivity(isoString: string | null, locale: string): string {
 }
 
 function isChatMuted(chat: ChatListEntry): boolean {
-  if (!chat.muted_until) return false;
-  return new Date(chat.muted_until) > new Date();
+  if (!chat.mutedUntil) return false;
+  return new Date(chat.mutedUntil) > new Date();
 }
 
 function getMessagePreview(message: MessageResponse | null): ReactNode {
@@ -126,19 +126,19 @@ export function ChatList({ activeChatId, onChatSelect }: ChatListProps) {
 
   const handleToggleRead = async (chat: ChatListEntry, slidingItem: HTMLIonItemSlidingElement | null) => {
     slidingItem?.close();
-    if (!chat.last_message) return;
+    if (!chat.lastMessage) return;
 
-    if (chat.unread_count > 0) {
-      dispatch(markChatAsRead({ chatId: chat.id, lastReadMessageId: chat.last_message.id }));
+    if (chat.unreadCount > 0) {
+      dispatch(markChatAsRead({ chatId: chat.id, lastReadMessageId: chat.lastMessage.id }));
       try {
-        await markMessagesAsRead(chat.id, chat.last_message.id);
+        await markMessagesAsRead(chat.id, chat.lastMessage.id);
         await updateAppBadge();
       } catch (err) {
         console.error('Failed to mark as read', err);
       }
     } else {
       try {
-        const prevId = (BigInt(chat.last_message.id) - 1n).toString();
+        const prevId = (BigInt(chat.lastMessage.id) - 1n).toString();
         dispatch(setChatUnreadCount({ chatId: chat.id, unreadCount: 1 }));
         dispatch(setChatLastReadMessageId({ chatId: chat.id, lastReadMessageId: prevId }));
         await markMessagesAsRead(chat.id, prevId);
@@ -222,8 +222,8 @@ export function ChatList({ activeChatId, onChatSelect }: ChatListProps) {
                     handleToggleRead(chat, slidingItem as HTMLIonItemSlidingElement | null);
                   }}
                 >
-                  <IonIcon slot="top" icon={chat.unread_count > 0 ? checkmarkDone : mailUnreadOutline} />
-                  {chat.unread_count > 0 ? <Trans>Read</Trans> : <Trans>Unread</Trans>}
+                  <IonIcon slot="top" icon={chat.unreadCount > 0 ? checkmarkDone : mailUnreadOutline} />
+                  {chat.unreadCount > 0 ? <Trans>Read</Trans> : <Trans>Unread</Trans>}
                 </IonItemOption>
               </IonItemOptions>
               <IonItem
@@ -252,14 +252,14 @@ export function ChatList({ activeChatId, onChatSelect }: ChatListProps) {
                       />
                     ) : null}
                   </h2>
-                  <p className={styles.chatsListPreview}>{getMessagePreview(chat.last_message)}</p>
+                  <p className={styles.chatsListPreview}>{getMessagePreview(chat.lastMessage)}</p>
                 </IonLabel>
                 <div slot="end" className={styles.chatsListEndSlot}>
-                  <div className={styles.chatsListTime}>{formatLastActivity(chat.last_message_at, locale)}</div>
+                  <div className={styles.chatsListTime}>{formatLastActivity(chat.lastMessageAt, locale)}</div>
                   <div className={styles.chatsListBadge}>
-                    {chat.unread_count > 0 && (
+                    {chat.unreadCount > 0 && (
                       <IonBadge mode="ios" color="primary">
-                        {chat.unread_count > 99 ? '99+' : chat.unread_count}
+                        {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
                       </IonBadge>
                     )}
                   </div>

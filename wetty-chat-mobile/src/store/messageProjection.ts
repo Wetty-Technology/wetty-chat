@@ -31,8 +31,8 @@ export function compareMessageOrder(
     }
   }
 
-  const aTs = a.created_at ? new Date(a.created_at).getTime() : 0;
-  const bTs = b.created_at ? new Date(b.created_at).getTime() : 0;
+  const aTs = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+  const bTs = b.createdAt ? new Date(b.createdAt).getTime() : 0;
   if (aTs > bTs) return 1;
   if (aTs < bTs) return -1;
   return 0;
@@ -41,12 +41,12 @@ export function compareMessageOrder(
 export function isSameMessage(a: MessageResponse | null | undefined, b: MessageResponse | null | undefined): boolean {
   if (!a || !b) return false;
   if (a.id === b.id) return true;
-  return !!a.client_generated_id && a.client_generated_id === b.client_generated_id;
+  return !!a.clientGeneratedId && a.clientGeneratedId === b.clientGeneratedId;
 }
 
 export function isEligibleRootPreviewMessage(message: MessageResponse, excludeMessageId?: string): boolean {
-  if (message.reply_root_id != null) return false;
-  if (message.is_deleted) return false;
+  if (message.replyRootId != null) return false;
+  if (message.isDeleted) return false;
   if (excludeMessageId && message.id === excludeMessageId) return false;
   return true;
 }

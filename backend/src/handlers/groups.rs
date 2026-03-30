@@ -31,11 +31,13 @@ fn indefinite_mute_until() -> DateTime<Utc> {
 }
 
 #[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(super) struct CreateChatBody {
     name: Option<String>,
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub(super) struct CreateChatResponse {
     #[serde(with = "crate::serde_i64_string")]
     id: i64,
@@ -49,6 +51,7 @@ pub(super) struct ChatIdPath {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub(super) struct GroupInfoResponse {
     #[serde(with = "crate::serde_i64_string")]
     id: i64,
@@ -78,6 +81,7 @@ enum GroupSelectorScope {
 }
 
 #[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct ListGroupsQuery {
     #[serde(default)]
     q: Option<String>,
@@ -95,6 +99,7 @@ struct ListGroupsQuery {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct GroupSelectorItem {
     #[serde(with = "crate::serde_i64_string")]
     id: i64,
@@ -106,6 +111,7 @@ struct GroupSelectorItem {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct ListGroupsResponse {
     groups: Vec<GroupSelectorItem>,
     #[serde(with = "crate::serde_i64_string::opt")]
@@ -119,6 +125,7 @@ struct ParsedGroupSearch {
 }
 
 #[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(super) struct UpdateChatBody {
     name: Option<String>,
     description: Option<String>,
@@ -131,6 +138,7 @@ pub(super) struct UpdateChatBody {
 }
 
 #[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct AvatarUploadUrlRequest {
     filename: String,
     content_type: String,
@@ -140,6 +148,7 @@ struct AvatarUploadUrlRequest {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct AvatarUploadUrlResponse {
     image_id: String,
     upload_url: String,
@@ -147,12 +156,14 @@ struct AvatarUploadUrlResponse {
 }
 
 #[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(super) struct MuteBody {
     /// Duration in seconds, or null/absent for indefinite mute.
     duration_seconds: Option<i64>,
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub(super) struct MuteResponse {
     muted_until: DateTime<Utc>,
 }

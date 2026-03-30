@@ -133,8 +133,8 @@ export function GroupSelector({ scope = 'joined', placeholder = t`Search groups`
         }
 
         setGroups(res.data.groups);
-        setNextCursor(res.data.next_cursor);
-        setHasMore(res.data.next_cursor != null);
+        setNextCursor(res.data.nextCursor);
+        setHasMore(res.data.nextCursor != null);
       })
       .catch((err: Error) => {
         if (latestInitialLoadRef.current !== requestId) {
@@ -175,8 +175,8 @@ export function GroupSelector({ scope = 'joined', placeholder = t`Search groups`
         }
 
         setGroups((current) => mergeGroups(current, res.data.groups));
-        setNextCursor(res.data.next_cursor);
-        setHasMore(res.data.next_cursor != null);
+        setNextCursor(res.data.nextCursor);
+        setHasMore(res.data.nextCursor != null);
       })
       .catch((err: Error) => {
         if (activeSearchKeyRef.current !== searchKey) {

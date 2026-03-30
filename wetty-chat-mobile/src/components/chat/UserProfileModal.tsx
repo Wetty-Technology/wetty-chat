@@ -17,10 +17,10 @@ export function UserProfileModal({ sender, onDismiss }: UserProfileModalProps) {
   const isDesktop = useIsDesktop();
   const isDarkMode = useIsDarkMode();
   const displayName = sender?.name ?? (sender ? `User ${sender.uid}` : '');
-  const groupName = sender?.user_group?.name?.trim() || null;
+  const groupName = sender?.userGroup?.name?.trim() || null;
   const groupNameColor = isDarkMode
-    ? sender?.user_group?.chat_group_color_dark || sender?.user_group?.chat_group_color || undefined
-    : sender?.user_group?.chat_group_color || undefined;
+    ? sender?.userGroup?.chatGroupColorDark || sender?.userGroup?.chatGroupColor || undefined
+    : sender?.userGroup?.chatGroupColor || undefined;
   const currentUserId = useSelector((state: RootState) => state.user.uid);
   const isOwn = sender?.uid === currentUserId;
 
@@ -54,7 +54,7 @@ export function UserProfileModal({ sender, onDismiss }: UserProfileModalProps) {
         </button>
         {sender && (
           <div style={{ textAlign: 'center', paddingTop: 24 }}>
-            <UserAvatar name={displayName} avatarUrl={sender.avatar_url} size={80} style={{ display: 'inline-flex' }} />
+            <UserAvatar name={displayName} avatarUrl={sender.avatarUrl} size={80} style={{ display: 'inline-flex' }} />
             <h2>{displayName}</h2>
             {groupName && (
               <div

@@ -5,31 +5,25 @@ export interface PreviewMessage {
   message?: string | null;
   text?: string | null;
   messageType?: string | null;
-  message_type?: string | null;
   attachments?: Attachment[];
   firstAttachmentKind?: string | null;
-  first_attachment_kind?: string | null;
   isDeleted?: boolean;
-  is_deleted?: boolean;
 }
 
 function normalizePreviewMessage({
   message,
   text,
   messageType,
-  message_type,
   attachments,
   firstAttachmentKind,
-  first_attachment_kind,
   isDeleted,
-  is_deleted,
 }: PreviewMessage) {
   return {
     message: message ?? text,
-    messageType: messageType ?? message_type,
+    messageType: messageType,
     attachments,
-    firstAttachmentKind: firstAttachmentKind ?? first_attachment_kind,
-    isDeleted: isDeleted ?? is_deleted,
+    firstAttachmentKind: firstAttachmentKind,
+    isDeleted,
   };
 }
 

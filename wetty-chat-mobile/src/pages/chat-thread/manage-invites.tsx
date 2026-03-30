@@ -40,15 +40,15 @@ interface ChatInvitesCoreProps {
 type PendingAction = 'share' | 'revoke' | null;
 
 function isInviteActive(invite: InviteInfoResponse): boolean {
-  if (invite.revoked_at) {
+  if (invite.revokedAt) {
     return false;
   }
 
-  if (!invite.expires_at) {
+  if (!invite.expiresAt) {
     return true;
   }
 
-  return new Date(invite.expires_at).getTime() > Date.now();
+  return new Date(invite.expiresAt).getTime() > Date.now();
 }
 
 function getInviteTypeLabel(inviteType: InviteType): string {
@@ -133,9 +133,9 @@ function InviteCard({
           <span className={styles.rowLabel}>
             <Trans>Invite Type</Trans>
           </span>
-          <span className={styles.metaValue}>{getInviteTypeLabel(invite.invite_type)}</span>
+          <span className={styles.metaValue}>{getInviteTypeLabel(invite.inviteType)}</span>
         </div>
-        {invite.invite_type === 'membership' && restrictedGroupName ? (
+        {invite.inviteType === 'membership' && restrictedGroupName ? (
           <div className={styles.metaItem}>
             <span className={styles.rowLabel}>
               <Trans>Restricted To</Trans>
@@ -147,7 +147,7 @@ function InviteCard({
           <span className={styles.rowLabel}>
             <Trans>Expire Date</Trans>
           </span>
-          <span className={styles.metaValue}>{formatExpiry(locale, invite.expires_at)}</span>
+          <span className={styles.metaValue}>{formatExpiry(locale, invite.expiresAt)}</span>
         </div>
       </div>
 
@@ -227,8 +227,8 @@ function ChatInvitesContent({
           invite={invite}
           locale={locale}
           restrictedGroupName={
-            invite.required_chat_id
-              ? getChatDisplayName(invite.required_chat_id, chatsById[invite.required_chat_id]?.details.name)
+            invite.requiredChatId
+              ? getChatDisplayName(invite.requiredChatId, chatsById[invite.requiredChatId]?.details.name)
               : null
           }
           pendingAction={pendingInviteId === invite.id ? pendingAction : null}
@@ -260,9 +260,9 @@ export default function ChatInvitesCore({ chatId: propChatId, backAction }: Chat
     setLoading(true);
 
     try {
-      const response = await getInvites({ group_id: chatId });
+      const response = await getInvites({ groupId: chatId });
       const filteredInvites = response.data.invites.filter(
-        (invite) => invite.chat_id === chatId && invite.creator_uid === currentUserId && isInviteActive(invite),
+        (invite) => invite.chatId === chatId && invite.creatorUid === currentUserId && isInviteActive(invite),
       );
       setInvites(filteredInvites);
       setError(null);
@@ -281,8 +281,8 @@ export default function ChatInvitesCore({ chatId: propChatId, backAction }: Chat
   const sortedInvites = useMemo(
     () =>
       [...invites].sort((left, right) => {
-        const leftTs = new Date(left.created_at).getTime();
-        const rightTs = new Date(right.created_at).getTime();
+        const leftTs = new Date(left.createdAt).getTime();
+        const rightTs = new Date(right.createdAt).getTime();
         return rightTs - leftTs;
       }),
     [invites],
@@ -330,10 +330,10 @@ export default function ChatInvitesCore({ chatId: propChatId, backAction }: Chat
 
       try {
         await sendInviteMessage({
-          source_chat_id: chatId,
-          destination_chat_id: group.id,
-          invite_id: selectedInvite.id,
-          client_generated_id: createInviteMessageClientGeneratedId(),
+          sourceChatId: chatId,
+          destinationChatId: group.id,
+          inviteId: selectedInvite.id,
+          clientGeneratedId: createInviteMessageClientGeneratedId(),
         });
 
         presentToast({

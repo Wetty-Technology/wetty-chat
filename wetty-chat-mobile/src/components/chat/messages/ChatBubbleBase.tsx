@@ -105,7 +105,7 @@ export interface ChatBubbleBaseProps {
   timestamp?: string;
   edited?: boolean;
   isConfirmed?: boolean;
-  threadInfo?: { reply_count: number };
+  threadInfo?: { replyCount: number };
   onThreadClick?: () => void;
   attachments?: Attachment[];
   maxImageHeight?: number;
@@ -266,7 +266,7 @@ export function ChatBubbleBase({
       );
     }
 
-    if (att.kind.startsWith('audio/')) {
+  if (att.kind.startsWith('audio/')) {
       if (messageType === 'audio') {
         return <VoiceMessageBubble key={att.id} src={att.url} />;
       }
@@ -275,7 +275,7 @@ export function ChatBubbleBase({
         return (
           <div key={att.id} className={styles.filePlaceholder}>
             <IonIcon icon={documentOutline} className={styles.fileIcon} />
-            <span className={styles.fileName}>{att.file_name}</span>
+            <span className={styles.fileName}>{att.fileName}</span>
           </div>
         );
       }
@@ -283,7 +283,7 @@ export function ChatBubbleBase({
       return (
         <a key={att.id} className={styles.filePlaceholder} href={att.url} target="_blank" rel="noopener noreferrer">
           <IonIcon icon={documentOutline} className={styles.fileIcon} />
-          <span className={styles.fileName}>{att.file_name}</span>
+          <span className={styles.fileName}>{att.fileName}</span>
         </a>
       );
     }
@@ -292,7 +292,7 @@ export function ChatBubbleBase({
       return (
         <div key={att.id} className={styles.filePlaceholder}>
           <IonIcon icon={documentOutline} className={styles.fileIcon} />
-          <span className={styles.fileName}>{att.file_name}</span>
+          <span className={styles.fileName}>{att.fileName}</span>
         </div>
       );
     }
@@ -300,7 +300,7 @@ export function ChatBubbleBase({
     return (
       <a key={att.id} className={styles.filePlaceholder} href={att.url} target="_blank" rel="noopener noreferrer">
         <IonIcon icon={documentOutline} className={styles.fileIcon} />
-        <span className={styles.fileName}>{att.file_name}</span>
+        <span className={styles.fileName}>{att.fileName}</span>
       </a>
     );
   }
@@ -318,7 +318,7 @@ export function ChatBubbleBase({
         <div className={styles.sender}>
           <span className={styles.senderName}>{senderName}</span>
           {senderGroup && (
-            <span className={styles.senderGroup} color={senderGroup.chat_group_color!}>
+            <span className={styles.senderGroup} color={senderGroup.chatGroupColor!}>
               {senderGroup.name}
             </span>
           )}
@@ -359,7 +359,7 @@ export function ChatBubbleBase({
         <div className={styles.threadIndicator} onClick={interactive ? onThreadClick : undefined}>
           <IonIcon icon={chatbubbles} />
           <span>
-            {threadInfo.reply_count} {threadInfo.reply_count === 1 ? t`reply` : t`replies`}
+            {threadInfo.replyCount} {threadInfo.replyCount === 1 ? t`reply` : t`replies`}
           </span>
         </div>
       )}
@@ -370,10 +370,10 @@ export function ChatBubbleBase({
               <button
                 key={reaction.emoji}
                 type="button"
-                className={`${styles.reactionPill} ${reaction.reacted_by_me ? styles.reactionPillActive : ''}`}
+                className={`${styles.reactionPill} ${reaction.reactedByMe ? styles.reactionPillActive : ''}`}
                 onClick={(e) => {
                   e.stopPropagation();
-                  onReactionToggle?.(reaction.emoji, !!reaction.reacted_by_me);
+                  onReactionToggle?.(reaction.emoji, !!reaction.reactedByMe);
                 }}
               >
                 <span className={styles.reactionEmoji}>{reaction.emoji}</span>
@@ -382,7 +382,7 @@ export function ChatBubbleBase({
                     {reaction.reactors.slice(0, 5).map((reactor, i) => (
                       <img
                         key={reactor.uid}
-                        src={reactor.avatar_url ?? undefined}
+                        src={reactor.avatarUrl ?? undefined}
                         alt=""
                         className={styles.reactorAvatar}
                         style={{ marginLeft: i > 0 ? -9 : 0, zIndex: 5 - i }}
@@ -397,7 +397,7 @@ export function ChatBubbleBase({
             ) : (
               <div
                 key={reaction.emoji}
-                className={`${styles.reactionPill} ${reaction.reacted_by_me ? styles.reactionPillActive : ''}`}
+                className={`${styles.reactionPill} ${reaction.reactedByMe ? styles.reactionPillActive : ''}`}
               >
                 <span className={styles.reactionEmoji}>{reaction.emoji}</span>
                 {reaction.reactors && reaction.reactors.length > 0 ? (
@@ -405,7 +405,7 @@ export function ChatBubbleBase({
                     {reaction.reactors.slice(0, 5).map((reactor, i) => (
                       <img
                         key={reactor.uid}
-                        src={reactor.avatar_url ?? undefined}
+                        src={reactor.avatarUrl ?? undefined}
                         alt=""
                         className={styles.reactorAvatar}
                         style={{ marginLeft: i > 0 ? -9 : 0, zIndex: 5 - i }}
@@ -455,7 +455,7 @@ export function ChatBubbleBase({
             id: image.id,
             kind: image.kind,
             src: image.url,
-            fileName: image.file_name,
+            fileName: image.fileName,
             width: image.width,
             height: image.height,
           }))}

@@ -191,15 +191,15 @@ class MessageRepository {
     final payload = event['payload'];
     if (payload is! Map<String, dynamic>) return;
 
-    final eventChatId = payload['chat_id']?.toString();
+    final eventChatId = payload['chatId']?.toString();
     if (eventChatId != chatId) return;
 
     final message = MessageItem.fromJson(payload);
     if (type == 'message') {
       store.addMessages([message]);
-    } else if (type == 'message_updated') {
+    } else if (type == 'messageUpdated') {
       store.replaceWhere((item) => item.id == message.id, message);
-    } else if (type == 'message_deleted') {
+    } else if (type == 'messageDeleted') {
       store.removeById(message.id);
     }
   }

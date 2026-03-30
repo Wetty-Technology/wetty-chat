@@ -3,7 +3,7 @@ import apiClient from './client';
 export interface User {
   uid: number;
   username: string;
-  avatar_url?: string | null;
+  avatarUrl?: string | null;
   gender: number;
 }
 

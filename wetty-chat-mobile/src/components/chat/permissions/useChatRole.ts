@@ -12,7 +12,7 @@ export function useChatRole(chatId: string): UseChatRoleResult {
   const meta = useSelector((state: RootState) => selectChatMeta(state, chatId));
 
   return {
-    role: meta?.my_role ?? null,
-    loading: meta?.my_role === undefined,
+    role: meta?.myRole ?? null,
+    loading: meta?.myRole === undefined,
   };
 }

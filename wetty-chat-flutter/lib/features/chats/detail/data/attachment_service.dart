@@ -17,10 +17,10 @@ class UploadUrlResponse {
   });
 
   factory UploadUrlResponse.fromJson(Map<String, dynamic> json) {
-    final headers = json['upload_headers'] as Map<String, dynamic>? ?? {};
+    final headers = json['uploadHeaders'] as Map<String, dynamic>? ?? {};
     return UploadUrlResponse(
-      attachmentId: json['attachment_id']?.toString() ?? '',
-      uploadUrl: json['upload_url'] as String? ?? '',
+      attachmentId: json['attachmentId']?.toString() ?? '',
+      uploadUrl: json['uploadUrl'] as String? ?? '',
       uploadHeaders: headers.map(
         (key, value) => MapEntry(key, value.toString()),
       ),
@@ -42,7 +42,7 @@ class AttachmentService {
     final uri = Uri.parse('$apiBaseUrl/attachments/upload-url');
     final body = <String, dynamic>{
       'filename': filename,
-      'content_type': contentType,
+      'contentType': contentType,
       'size': size,
     };
     if (width != null) body['width'] = width;

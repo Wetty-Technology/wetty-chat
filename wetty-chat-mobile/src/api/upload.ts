@@ -3,16 +3,16 @@ import apiClient from './client';
 
 export interface UploadUrlRequest {
   filename: string;
-  content_type: string;
+  contentType: string;
   size: number;
   width?: number;
   height?: number;
 }
 
 export interface UploadUrlResponse {
-  attachment_id: string;
-  upload_url: string;
-  upload_headers: Record<string, string>;
+  attachmentId: string;
+  uploadUrl: string;
+  uploadHeaders: Record<string, string>;
 }
 
 export interface UploadFileToS3Options {

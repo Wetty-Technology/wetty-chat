@@ -18,16 +18,16 @@ class ChatListItem {
   });
 
   factory ChatListItem.fromJson(Map<String, dynamic> json) {
-    final lastMsgJson = json['last_message'] as Map<String, dynamic>?;
+    final lastMsgJson = json['lastMessage'] as Map<String, dynamic>?;
     return ChatListItem(
       id: json['id']?.toString() ?? '',
       name: json['name'] as String?,
-      lastMessageAt: json['last_message_at'] as String?,
-      unreadCount: json['unread_count'] as int? ?? 0,
+      lastMessageAt: json['lastMessageAt'] as String?,
+      unreadCount: json['unreadCount'] as int? ?? 0,
       lastMessage: lastMsgJson != null
           ? MessageItem.fromJson(lastMsgJson)
           : null,
-      mutedUntil: json['muted_until'] as String?,
+      mutedUntil: json['mutedUntil'] as String?,
     );
   }
 
@@ -61,7 +61,7 @@ class ListChatsResponse {
       chats: list
           .map((e) => ChatListItem.fromJson(e as Map<String, dynamic>))
           .toList(),
-      nextCursor: json['next_cursor']?.toString(),
+      nextCursor: json['nextCursor']?.toString(),
     );
   }
 }

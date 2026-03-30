@@ -70,7 +70,7 @@ class ChatRepository extends ChangeNotifier {
     final payload = event['payload'];
     if (payload is! Map<String, dynamic>) return;
 
-    final chatId = payload['chat_id']?.toString() ?? '';
+    final chatId = payload['chatId']?.toString() ?? '';
     final index = _chats.indexWhere((chat) => chat.id == chatId);
     if (index < 0) {
       if (type == 'message') {
@@ -83,7 +83,7 @@ class ChatRepository extends ChangeNotifier {
     final message = MessageItem.fromJson(payload);
     if (type == 'message') {
       final senderUid = payload['sender']?['uid'] as int?;
-      final createdAt = payload['created_at'] as String?;
+      final createdAt = payload['createdAt'] as String?;
       final updated = previous.copyWith(
         lastMessage: message,
         lastMessageAt: createdAt,
@@ -98,7 +98,7 @@ class ChatRepository extends ChangeNotifier {
       return;
     }
 
-    if (type == 'message_updated' || type == 'message_deleted') {
+    if (type == 'messageUpdated' || type == 'messageDeleted') {
       if (previous.lastMessage?.id != message.id) return;
       _chats[index] = previous.copyWith(lastMessage: message);
       notifyListeners();

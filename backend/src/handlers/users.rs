@@ -12,6 +12,7 @@ use crate::utils::auth::{
 use crate::AppState;
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MeResponse {
     pub uid: i32,
     pub username: String,

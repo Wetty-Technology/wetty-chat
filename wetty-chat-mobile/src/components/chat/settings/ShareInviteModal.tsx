@@ -310,10 +310,10 @@ function ShareInviteModalSession({ chatId, onDismiss }: Omit<ShareInviteModalPro
     setSubmitting(true);
     try {
       const response = await createInvite({
-        chat_id: chatId,
-        invite_type: mode === 'membership' ? 'membership' : 'generic',
-        required_chat_id: mode === 'membership' ? requiredChatId : undefined,
-        expires_at: getExpiresAt(expiryOption),
+        chatId,
+        inviteType: mode === 'membership' ? 'membership' : 'generic',
+        requiredChatId: mode === 'membership' ? requiredChatId : undefined,
+        expiresAt: getExpiresAt(expiryOption),
       });
       setDraftInvite(response.data);
       if (mode === 'membership' && selectedRequiredGroup) {
@@ -337,17 +337,17 @@ function ShareInviteModalSession({ chatId, onDismiss }: Omit<ShareInviteModalPro
     setSubmitting(true);
     try {
       const response = await sendInviteMessage({
-        source_chat_id: chatId,
-        destination_chat_id: selectedDestinationGroup.id,
-        invite_id: draftInvite?.id,
-        expires_at: getExpiresAt(expiryOption),
-        client_generated_id: createInviteMessageClientGeneratedId(),
+        sourceChatId: chatId,
+        destinationChatId: selectedDestinationGroup.id,
+        inviteId: draftInvite?.id,
+        expiresAt: getExpiresAt(expiryOption),
+        clientGeneratedId: createInviteMessageClientGeneratedId(),
       });
 
       dispatch(
         messageAdded({
-          chatId: response.data.message.chat_id,
-          storeChatId: response.data.message.chat_id,
+          chatId: response.data.message.chatId,
+          storeChatId: response.data.message.chatId,
           message: response.data.message,
           origin: 'api_confirm',
           scope: 'main',

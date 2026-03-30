@@ -22,7 +22,7 @@ class Sender {
     return Sender(
       uid: json['uid'] as int? ?? 0,
       name: json['name'] as String?,
-      avatarUrl: json['avatar_url'] as String?,
+      avatarUrl: json['avatarUrl'] as String?,
       gender: json['gender'] as int? ?? 0,
     );
   }
@@ -56,7 +56,7 @@ class AttachmentItem {
       url: json['url'] as String? ?? '',
       kind: json['kind'] as String? ?? 'application/octet-stream',
       size: (json['size'] as num?)?.toInt() ?? 0,
-      fileName: json['file_name'] as String? ?? '',
+      fileName: json['fileName'] as String? ?? '',
       width: (json['width'] as num?)?.toInt(),
       height: (json['height'] as num?)?.toInt(),
     );
@@ -81,7 +81,7 @@ class ReplyToMessage {
       id: parseSnowflakeId(json['id']),
       message: json['message'] as String?,
       sender: Sender.fromJson(json['sender'] as Map<String, dynamic>? ?? {}),
-      isDeleted: json['is_deleted'] as bool? ?? false,
+      isDeleted: json['isDeleted'] as bool? ?? false,
     );
   }
 }
@@ -92,7 +92,7 @@ class ThreadInfo {
   const ThreadInfo({required this.replyCount});
 
   factory ThreadInfo.fromJson(Map<String, dynamic> json) {
-    return ThreadInfo(replyCount: json['reply_count'] as int? ?? 0);
+    return ThreadInfo(replyCount: json['replyCount'] as int? ?? 0);
   }
 }
 
@@ -130,24 +130,24 @@ class MessageItem {
   });
 
   factory MessageItem.fromJson(Map<String, dynamic> json) {
-    final replyJson = json['reply_to_message'] as Map<String, dynamic>?;
+    final replyJson = json['replyToMessage'] as Map<String, dynamic>?;
     final attachmentList = json['attachments'] as List<dynamic>? ?? [];
-    final threadInfoJson = json['thread_info'] as Map<String, dynamic>?;
+    final threadInfoJson = json['threadInfo'] as Map<String, dynamic>?;
 
     return MessageItem(
       id: parseSnowflakeId(json['id']),
       message: json['message'] as String?,
-      messageType: json['message_type'] as String? ?? 'text',
+      messageType: json['messageType'] as String? ?? 'text',
       sender: Sender.fromJson(json['sender'] as Map<String, dynamic>? ?? {}),
-      chatId: json['chat_id']?.toString() ?? '',
-      createdAt: json['created_at'] as String? ?? '',
-      isEdited: json['is_edited'] as bool? ?? false,
-      isDeleted: json['is_deleted'] as bool? ?? false,
-      clientGeneratedId: json['client_generated_id'] as String? ?? '',
-      replyRootId: json['reply_root_id'] != null
-          ? parseSnowflakeId(json['reply_root_id'])
+      chatId: json['chatId']?.toString() ?? '',
+      createdAt: json['createdAt'] as String? ?? '',
+      isEdited: json['isEdited'] as bool? ?? false,
+      isDeleted: json['isDeleted'] as bool? ?? false,
+      clientGeneratedId: json['clientGeneratedId'] as String? ?? '',
+      replyRootId: json['replyRootId'] != null
+          ? parseSnowflakeId(json['replyRootId'])
           : null,
-      hasAttachments: json['has_attachments'] as bool? ?? false,
+      hasAttachments: json['hasAttachments'] as bool? ?? false,
       replyToMessage: replyJson != null
           ? ReplyToMessage.fromJson(replyJson)
           : null,
@@ -178,8 +178,8 @@ class ListMessagesResponse {
       messages: list.reversed
           .map((e) => MessageItem.fromJson(e as Map<String, dynamic>))
           .toList(),
-      nextCursor: json['next_cursor']?.toString(),
-      prevCursor: json['prev_cursor']?.toString(),
+      nextCursor: json['nextCursor']?.toString(),
+      prevCursor: json['prevCursor']?.toString(),
     );
   }
 }

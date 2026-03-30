@@ -44,6 +44,6 @@ class ChatApiService {
     }
 
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-    return decoded['unread_count'] as int? ?? 0;
+    return decoded['unreadCount'] as int? ?? 0;
   }
 }

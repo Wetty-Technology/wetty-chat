@@ -84,7 +84,7 @@ export function StickerPackDetailCore({ packId, backAction }: StickerPackDetailC
     );
   }
 
-  const owned = pack.owner_uid === currentUserId;
+  const owned = pack.ownerUid === currentUserId;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
@@ -99,7 +99,7 @@ export function StickerPackDetailCore({ packId, backAction }: StickerPackDetailC
         prev
           ? {
               ...prev,
-              sticker_count: prev.sticker_count + 1,
+              stickerCount: prev.stickerCount + 1,
               stickers: [...prev.stickers, res.data],
             }
           : prev,
@@ -128,7 +128,7 @@ export function StickerPackDetailCore({ packId, backAction }: StickerPackDetailC
                 prev
                   ? {
                       ...prev,
-                      sticker_count: Math.max(prev.sticker_count - 1, 0),
+                      stickerCount: Math.max(prev.stickerCount - 1, 0),
                       stickers: prev.stickers.filter((item) => item.id !== sticker.id),
                     }
                   : prev,
@@ -213,7 +213,7 @@ export function StickerPackDetailCore({ packId, backAction }: StickerPackDetailC
               onClick={owned ? () => handleRemoveSticker(sticker) : undefined}
               style={{ cursor: owned ? 'pointer' : 'default' }}
             >
-              {sticker.media.content_type.startsWith('video/') ? (
+              {sticker.media.contentType.startsWith('video/') ? (
                 <video src={sticker.media.url} className={styles.preview} autoPlay loop muted playsInline />
               ) : (
                 <img src={sticker.media.url} alt="" className={styles.preview} />

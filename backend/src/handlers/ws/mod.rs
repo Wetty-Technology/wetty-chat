@@ -20,6 +20,7 @@ use messages::ServerWsMessage;
 use ws_registry::AppPresenceState;
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TicketResponse {
     pub ticket: String,
 }
@@ -40,6 +41,7 @@ async fn get_ws_ticket(
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct WsAuthMessage {
     #[serde(rename = "type")]
     type_: String,
@@ -47,6 +49,7 @@ struct WsAuthMessage {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct WsMessage {
     #[serde(rename = "type")]
     type_: String,
@@ -147,7 +150,7 @@ async fn handle_socket(
                                 if socket.send(Message::Text(PONG_JSON.into())).await.is_err() {
                                     break;
                                 }
-                            } else if parsed.type_ == "app_state" {
+                            } else if parsed.type_ == "appState" {
                                 let state = parsed
                                     .state
                                     .map(AppPresenceState::from)

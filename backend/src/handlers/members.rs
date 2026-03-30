@@ -33,6 +33,7 @@ pub struct MemberPath {
 }
 
 #[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AddMemberBody {
     uid: i32,
     #[serde(default)]
@@ -40,11 +41,13 @@ pub struct AddMemberBody {
 }
 
 #[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateMemberBody {
     role: GroupRole,
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MemberResponse {
     uid: i32,
     role: GroupRole,
@@ -56,6 +59,7 @@ pub struct MemberResponse {
 }
 
 #[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct ListMembersQuery {
     limit: Option<i64>,
     after: Option<i32>,
@@ -64,6 +68,7 @@ struct ListMembersQuery {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct ListMembersResponse {
     members: Vec<MemberResponse>,
     next_cursor: Option<i32>,

@@ -6,22 +6,22 @@ export interface ChatListEntry {
   id: string;
   name: string | null;
   avatar: string | null;
-  last_message_at: string | null;
-  unread_count: number;
-  last_read_message_id?: string | null;
-  last_message: MessageResponse | null;
-  muted_until: string | null;
+  lastMessageAt: string | null;
+  unreadCount: number;
+  lastReadMessageId?: string | null;
+  lastMessage: MessageResponse | null;
+  mutedUntil: string | null;
 }
 
 interface ListChatsResponse {
   chats: ChatListEntry[];
-  next_cursor: string | null;
+  nextCursor: string | null;
 }
 
 interface CreateChatResponse {
   id: string;
   name: string | null;
-  created_at: string;
+  createdAt: string;
 }
 
 export function getChats(params: { limit?: number; after?: string } = {}): Promise<AxiosResponse<ListChatsResponse>> {
@@ -32,6 +32,6 @@ export function createChat(body: { name?: string } = {}): Promise<AxiosResponse<
   return apiClient.post('/group', body);
 }
 
-export function getUnreadCount(): Promise<AxiosResponse<{ unread_count: number }>> {
+export function getUnreadCount(): Promise<AxiosResponse<{ unreadCount: number }>> {
   return apiClient.get('/chats/unread');
 }

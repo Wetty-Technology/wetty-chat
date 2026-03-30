@@ -36,7 +36,7 @@ export interface StickerBubbleProps {
   timestamp?: string;
   edited?: boolean;
   isConfirmed?: boolean;
-  threadInfo?: { reply_count: number };
+  threadInfo?: { replyCount: number };
   onThreadClick?: () => void;
   layout?: 'thread' | 'bubble-only';
   interactionMode?: 'interactive' | 'read-only';
@@ -109,7 +109,7 @@ export function StickerBubble({
         <div className={styles.threadIndicator} onClick={interactive ? onThreadClick : undefined}>
           <IonIcon icon={chatbubbles} />
           <span>
-            {threadInfo.reply_count} {threadInfo.reply_count === 1 ? t`reply` : t`replies`}
+            {threadInfo.replyCount} {threadInfo.replyCount === 1 ? t`reply` : t`replies`}
           </span>
         </div>
       )}

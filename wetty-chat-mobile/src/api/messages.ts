@@ -3,29 +3,29 @@ import type { StickerSummary } from './stickers';
 import apiClient from './client';
 
 export interface UserGroupInfo {
-  group_id: number;
+  groupId: number;
   name?: string | null;
-  chat_group_color?: string | null;
-  chat_group_color_dark?: string | null;
+  chatGroupColor?: string | null;
+  chatGroupColorDark?: string | null;
 }
 
 export interface Sender {
   uid: number;
-  avatar_url?: string;
+  avatarUrl?: string;
   name: string | null;
   gender: number;
-  user_group?: UserGroupInfo | null;
+  userGroup?: UserGroupInfo | null;
 }
 
 export interface ReplyToMessage {
   id: string;
   message: string | null;
-  message_type: 'text' | 'audio' | 'file' | 'system' | 'invite' | 'sticker';
+  messageType: 'text' | 'audio' | 'file' | 'system' | 'invite' | 'sticker';
   sticker?: StickerSummary;
   sender: Sender;
-  is_deleted: boolean;
+  isDeleted: boolean;
   attachments?: Attachment[];
-  first_attachment_kind?: string;
+  firstAttachmentKind?: string;
 }
 
 export interface Attachment {
@@ -33,25 +33,25 @@ export interface Attachment {
   url: string;
   kind: string;
   size: number;
-  file_name: string;
+  fileName: string;
   width?: number | null;
   height?: number | null;
 }
 
 export interface ThreadInfo {
-  reply_count: number;
+  replyCount: number;
 }
 
 export interface ReactionReactor {
   uid: number;
   name: string | null;
-  avatar_url?: string;
+  avatarUrl?: string;
 }
 
 export interface ReactionSummary {
   emoji: string;
   count: number;
-  reacted_by_me?: boolean;
+  reactedByMe?: boolean;
   reactors?: ReactionReactor[];
 }
 
@@ -62,48 +62,48 @@ export interface ReactionDetailResponse {
 export interface MessageResponse {
   id: string;
   message: string | null;
-  message_type: 'text' | 'audio' | 'system' | 'invite' | 'sticker';
+  messageType: 'text' | 'audio' | 'system' | 'invite' | 'sticker';
   sticker?: StickerSummary;
-  reply_root_id: string | null;
-  client_generated_id: string;
+  replyRootId: string | null;
+  clientGeneratedId: string;
   sender: Sender;
-  chat_id: string;
-  created_at: string;
-  is_edited: boolean;
-  is_deleted: boolean;
-  has_attachments: boolean;
-  thread_info?: ThreadInfo;
-  reply_to_message?: ReplyToMessage;
+  chatId: string;
+  createdAt: string;
+  isEdited: boolean;
+  isDeleted: boolean;
+  hasAttachments: boolean;
+  threadInfo?: ThreadInfo;
+  replyToMessage?: ReplyToMessage;
   attachments?: Attachment[];
   reactions?: ReactionSummary[];
 }
 
 export interface ListMessagesResponse {
   messages: MessageResponse[];
-  next_cursor: string | null;
-  prev_cursor?: string | null;
+  nextCursor: string | null;
+  prevCursor?: string | null;
 }
 
 export interface CreateMessageBody {
   message?: string;
-  message_type: string;
-  sticker_id?: string;
-  client_generated_id: string;
-  reply_to_id?: string; // Keep in CreateMessageBody
-  reply_root_id?: string;
-  attachment_ids?: string[];
+  messageType: string;
+  stickerId?: string;
+  clientGeneratedId: string;
+  replyToId?: string;
+  replyRootId?: string;
+  attachmentIds?: string[];
 }
 
 export function getMessages(
   chatId: string | number,
-  params?: { before?: string; around?: string; after?: string; max?: number; thread_id?: string },
+  params?: { before?: string; around?: string; after?: string; max?: number; threadId?: string },
 ): Promise<AxiosResponse<ListMessagesResponse>> {
   const query: Record<string, string | number> = {};
   if (params?.before != null) query.before = params.before;
   if (params?.around != null) query.around = params.around;
   if (params?.after != null) query.after = params.after;
   if (params?.max != null) query.max = params.max;
-  if (params?.thread_id != null) query.thread_id = params.thread_id;
+  if (params?.threadId != null) query.threadId = params.threadId;
   return apiClient.get(`/chats/${chatId}/messages`, { params: query });
 }
 
@@ -121,7 +121,7 @@ export function sendThreadMessage(
 
 export interface UpdateMessageBody {
   message: string;
-  attachment_ids?: string[];
+  attachmentIds?: string[];
 }
 
 export function updateMessage(
@@ -160,5 +160,5 @@ export function getReactionDetails(
 }
 
 export function markMessagesAsRead(chatId: string | number, messageId: string | number): Promise<AxiosResponse<void>> {
-  return apiClient.post(`/chats/${chatId}/read`, { message_id: messageId.toString() });
+  return apiClient.post(`/chats/${chatId}/read`, { messageId: messageId.toString() });
 }

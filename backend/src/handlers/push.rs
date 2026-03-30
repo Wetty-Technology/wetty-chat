@@ -10,6 +10,7 @@ use crate::utils::ids;
 use crate::AppState;
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct VapidPublicKeyResponse {
     pub public_key: String,
 }

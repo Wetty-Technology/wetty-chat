@@ -150,10 +150,10 @@ function estimateRowHeight(row: ChatRow): number {
   if (row.type === 'date') return 32;
 
   const { message } = row;
-  if (message.is_deleted) return 48;
+  if (message.isDeleted) return 48;
 
   let estimate = message.attachments?.length || message.sticker ? 220 : 76;
-  if (message.reply_to_message) {
+  if (message.replyToMessage) {
     estimate += 26;
   }
 

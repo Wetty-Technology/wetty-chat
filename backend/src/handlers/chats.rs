@@ -50,6 +50,7 @@ use unicode_segmentation::UnicodeSegmentation;
 // Queryable struct replaced by raw tuples
 
 #[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ListChatsQuery {
     #[serde(default)]
     limit: Option<i64>,
@@ -61,6 +62,7 @@ pub struct ListChatsQuery {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ChatListItem {
     #[serde(with = "crate::serde_i64_string")]
     id: i64,
@@ -75,6 +77,7 @@ pub struct ChatListItem {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ListChatsResponse {
     chats: Vec<ChatListItem>,
     #[serde(with = "crate::serde_i64_string::opt")]
@@ -300,6 +303,7 @@ pub struct ChatIdPath {
 }
 
 #[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ListMessagesQuery {
     #[serde(
         default,
@@ -326,6 +330,7 @@ pub struct ListMessagesQuery {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ListMessagesResponse {
     messages: Vec<MessageResponse>,
     #[serde(with = "crate::serde_i64_string::opt")]
@@ -335,6 +340,7 @@ pub struct ListMessagesResponse {
 }
 
 #[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct MessageResponse {
     #[serde(with = "crate::serde_i64_string")]
     pub id: i64,
@@ -359,6 +365,7 @@ pub struct MessageResponse {
 }
 
 #[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct ReactionReactor {
     pub uid: i32,
     pub name: Option<String>,
@@ -366,6 +373,7 @@ pub struct ReactionReactor {
 }
 
 #[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct ReactionSummary {
     pub emoji: String,
     pub count: i64,
@@ -376,6 +384,7 @@ pub struct ReactionSummary {
 }
 
 #[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct ReplyToMessage {
     #[serde(with = "crate::serde_i64_string")]
     id: i64,
@@ -390,6 +399,7 @@ pub struct ReplyToMessage {
 }
 
 #[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct StickerMediaResponse {
     #[serde(with = "crate::serde_i64_string")]
     pub id: i64,
@@ -401,6 +411,7 @@ pub struct StickerMediaResponse {
 }
 
 #[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct MessageStickerResponse {
     #[serde(with = "crate::serde_i64_string")]
     pub id: i64,
@@ -1151,6 +1162,7 @@ async fn get_messages(
 }
 
 #[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateMessageBody {
     message: Option<String>,
     message_type: MessageType,
@@ -1238,6 +1250,7 @@ fn validate_message_payload(
 }
 
 #[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ThreadIdPath {
     chat_id: i64,
     #[serde(deserialize_with = "crate::serde_i64_string::deserialize")]
@@ -1417,7 +1430,7 @@ mod tests {
     }
 
     #[test]
-    fn serializes_reply_to_message_type() {
+    fn serializes_reply_to_message_type_and_camel_case_keys() {
         let reply = ReplyToMessage {
             id: 42,
             message: Some("voice".to_string()),
@@ -1435,7 +1448,10 @@ mod tests {
         };
 
         let value = serde_json::to_value(reply).expect("serialize reply_to_message");
-        assert_eq!(value["message_type"], json!("audio"));
+        assert_eq!(value["messageType"], json!("audio"));
+        assert_eq!(value["isDeleted"], json!(false));
+        assert_eq!(value["firstAttachmentKind"], json!("audio/webm"));
+        assert!(value.get("message_type").is_none());
     }
 
     #[test]
@@ -1468,6 +1484,7 @@ mod tests {
 }
 
 #[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MessageIdPath {
     chat_id: i64,
     #[serde(deserialize_with = "crate::serde_i64_string::deserialize")]
@@ -1475,6 +1492,7 @@ pub struct MessageIdPath {
 }
 
 #[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateMessageBody {
     message: String,
     #[serde(default)]
@@ -1764,6 +1782,7 @@ async fn get_message(
 }
 
 #[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MarkAsReadBody {
     #[serde(deserialize_with = "crate::serde_i64_string::deserialize")]
     message_id: i64,
@@ -1800,6 +1819,7 @@ async fn mark_as_read(
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UnreadCountResponse {
     unread_count: i64,
 }
@@ -1917,12 +1937,14 @@ fn broadcast_reaction_update(conn: &mut DbConn, state: &AppState, chat_id: i64, 
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 struct ReactionDetailGroup {
     emoji: String,
     reactors: Vec<ReactionReactor>,
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 struct ReactionDetailResponse {
     reactions: Vec<ReactionDetailGroup>,
 }

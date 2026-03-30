@@ -174,9 +174,9 @@ export default function ChatMembersCore({ chatId: propChatId, backAction }: Chat
         }
 
         setMembers(res.data.members);
-        setNextCursor(res.data.next_cursor);
-        setHasMore(res.data.next_cursor != null);
-        setIsAdmin(res.data.can_manage_members);
+        setNextCursor(res.data.nextCursor);
+        setHasMore(res.data.nextCursor != null);
+        setIsAdmin(res.data.canManageMembers);
       })
       .catch((err: Error) => {
         if (latestInitialLoadRef.current !== requestId) {
@@ -217,9 +217,9 @@ export default function ChatMembersCore({ chatId: propChatId, backAction }: Chat
         }
 
         setMembers((current) => mergeMembers(current, res.data.members));
-        setNextCursor(res.data.next_cursor);
-        setHasMore(res.data.next_cursor != null);
-        setIsAdmin(res.data.can_manage_members);
+        setNextCursor(res.data.nextCursor);
+        setHasMore(res.data.nextCursor != null);
+        setIsAdmin(res.data.canManageMembers);
       })
       .catch((err: Error) => {
         if (activeSearchKeyRef.current !== searchKey) {

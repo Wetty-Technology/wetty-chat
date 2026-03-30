@@ -35,18 +35,21 @@ const MAX_STICKER_EMOJI_GRAPHEMES: usize = 4;
 type DbConn = diesel::r2d2::PooledConnection<diesel::r2d2::ConnectionManager<diesel::PgConnection>>;
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct CreateStickerPackBody {
     name: String,
     description: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct UpdateStickerPackBody {
     name: Option<String>,
     description: Option<String>,
 }
 
 #[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 struct StickerMediaResponse {
     #[serde(with = "crate::serde_i64_string")]
     id: i64,
@@ -58,6 +61,7 @@ struct StickerMediaResponse {
 }
 
 #[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 struct StickerSummary {
     #[serde(with = "crate::serde_i64_string")]
     id: i64,
@@ -70,6 +74,7 @@ struct StickerSummary {
 }
 
 #[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 struct StickerPackPreviewSticker {
     #[serde(with = "crate::serde_i64_string")]
     id: i64,
@@ -78,6 +83,7 @@ struct StickerPackPreviewSticker {
 }
 
 #[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 struct StickerPackSummary {
     #[serde(with = "crate::serde_i64_string")]
     id: i64,
@@ -93,6 +99,7 @@ struct StickerPackSummary {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 struct StickerPackDetailResponse {
     #[serde(flatten)]
     pack: StickerPackSummary,
@@ -100,6 +107,7 @@ struct StickerPackDetailResponse {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 struct StickerDetailResponse {
     #[serde(flatten)]
     sticker: StickerSummary,
@@ -107,11 +115,13 @@ struct StickerDetailResponse {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 struct StickerPackListResponse {
     packs: Vec<StickerPackSummary>,
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 struct FavoriteStickerListResponse {
     stickers: Vec<StickerSummary>,
 }

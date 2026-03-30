@@ -20,7 +20,7 @@ class MessageApiService {
     if (after != null) query['after'] = after.toString();
     if (around != null) query['around'] = around.toString();
     if (threadId != null && threadId.isNotEmpty) {
-      query['thread_id'] = threadId;
+      query['threadId'] = threadId;
     }
 
     final uri = Uri.parse(
@@ -58,12 +58,12 @@ class MessageApiService {
         '${DateTime.now().millisecondsSinceEpoch}-${Uri.base.hashCode}';
     final body = <String, dynamic>{
       'message': text,
-      'message_type': 'text',
-      'client_generated_id': clientGeneratedId,
-      'attachment_ids': attachmentIds,
+      'messageType': 'text',
+      'clientGeneratedId': clientGeneratedId,
+      'attachmentIds': attachmentIds,
     };
     if (replyToId != null) {
-      body['reply_to_id'] = replyToId;
+      body['replyToId'] = replyToId;
     }
 
     final response = await http.post(
@@ -94,7 +94,7 @@ class MessageApiService {
       headers: apiHeaders,
       body: jsonEncode(<String, dynamic>{
         'message': newText,
-        'attachment_ids': attachmentIds,
+        'attachmentIds': attachmentIds,
       }),
     );
     if (response.statusCode != 200) {
@@ -123,7 +123,7 @@ class MessageApiService {
     final response = await http.post(
       uri,
       headers: apiHeaders,
-      body: jsonEncode({'message_id': messageId}),
+      body: jsonEncode({'messageId': messageId}),
     );
     if (response.statusCode != 200) {
       throw Exception(

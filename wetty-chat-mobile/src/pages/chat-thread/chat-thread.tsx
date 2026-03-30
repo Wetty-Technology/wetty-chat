@@ -114,7 +114,7 @@ function areMessageListsEquivalent(left: MessageResponse[], right: MessageRespon
 }
 
 function isAudioMessage(message: MessageResponse): boolean {
-  return message.message_type === 'audio';
+  return message.messageType === 'audio';
 }
 
 function buildOptimisticUploadedAttachments(uploadedAttachments: ComposeUploadedAttachment[]): {
@@ -131,7 +131,7 @@ function buildOptimisticUploadedAttachments(uploadedAttachments: ComposeUploaded
       url: previewUrl,
       kind: attachment.mimeType,
       size: attachment.size,
-      file_name: attachment.file.name,
+      fileName: attachment.file.name,
       width: attachment.width ?? null,
       height: attachment.height ?? null,
     };
@@ -162,7 +162,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   const dispatch = useDispatch();
   const currentUserId = useSelector((state: RootState) => state.user.uid);
   const currentUserName = useSelector((state: RootState) => state.user.username);
-  const currentUserAvatarUrl = useSelector((state: RootState) => state.user.avatar_url);
+  const currentUserAvatarUrl = useSelector((state: RootState) => state.user.avatarUrl);
   const wsConnected = useSelector((state: RootState) => state.connection.wsConnected);
   const isDesktop = useIsDesktop();
   const storedName = useSelector((state: RootState) => selectChatName(state, chatId));
@@ -174,10 +174,10 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
     if (!chatId || storedName != null) return;
     getGroupInfo(chatId)
       .then((res) => {
-        const { id, muted_until, ...meta } = res.data;
+        const { id, mutedUntil, ...meta } = res.data;
         void id;
         dispatch(setChatMeta({ chatId: chatId, meta }));
-        dispatch(setChatMutedUntil({ chatId, mutedUntil: muted_until ?? null }));
+        dispatch(setChatMutedUntil({ chatId, mutedUntil: mutedUntil ?? null }));
       })
       .catch(() => {});
   }, [chatId, storedName, dispatch]);
@@ -315,7 +315,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   }, [chatId, chatRows, storeChatId, threadId]);
 
   const getMessageKey = useCallback(
-    (message: MessageResponse) => `msg:${message.client_generated_id || message.id}`,
+    (message: MessageResponse) => `msg:${message.clientGeneratedId || message.id}`,
     [],
   );
 
@@ -335,7 +335,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
     const recentMessages = messages.slice(-30);
     const lastOwnMessage = [...recentMessages]
       .reverse()
-      .find((message) => message.sender.uid === currentUserId && !message.is_deleted);
+      .find((message) => message.sender.uid === currentUserId && !message.isDeleted);
 
     if (!lastOwnMessage) {
       return false;
@@ -410,10 +410,10 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
           forceReopen,
         });
       }
-      getMessages(chatId, threadId ? { thread_id: threadId } : undefined)
+      getMessages(chatId, threadId ? { threadId } : undefined)
         .then((res) => {
           const list = res.data.messages ?? [];
-          const nextCursor = res.data.next_cursor ?? null;
+          const nextCursor = res.data.nextCursor ?? null;
           const prevCursor = null;
           const currentState = store.getState();
           const currentMessages = selectMessagesForChat(currentState, storeChatId);
@@ -505,7 +505,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
     const gen = selectChatGeneration(st, storeChatId);
     loadingMoreRef.current = true;
     setLoadingMore(true);
-    getMessages(chatId, { before: cursor, max: 50, thread_id: threadId })
+    getMessages(chatId, { before: cursor, max: 50, threadId })
       .then((res) => {
         if (selectChatGeneration(store.getState(), storeChatId) !== gen) return;
         const list = res.data.messages ?? [];
@@ -514,10 +514,10 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
             fetchedCount: list.length,
             oldestId: list[0]?.id ?? null,
             newestId: list[list.length - 1]?.id ?? null,
-            nextCursor: res.data.next_cursor ?? null,
+            nextCursor: res.data.nextCursor ?? null,
           });
         }
-        dispatch(prependMessages({ chatId: storeChatId, messages: list, nextCursor: res.data.next_cursor ?? null }));
+        dispatch(prependMessages({ chatId: storeChatId, messages: list, nextCursor: res.data.nextCursor ?? null }));
         loadingMoreRef.current = false;
         setLoadingMore(false);
       })
@@ -535,11 +535,11 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
     const gen = selectChatGeneration(st, storeChatId);
     loadingNewerRef.current = true;
     setLoadingNewer(true);
-    getMessages(chatId, { after: prevCursor, max: 50, thread_id: threadId })
+    getMessages(chatId, { after: prevCursor, max: 50, threadId })
       .then((res) => {
         if (selectChatGeneration(store.getState(), storeChatId) !== gen) return;
         const list = res.data.messages ?? [];
-        dispatch(appendMessages({ chatId: storeChatId, messages: list, prevCursor: res.data.prev_cursor ?? null }));
+        dispatch(appendMessages({ chatId: storeChatId, messages: list, prevCursor: res.data.prevCursor ?? null }));
       })
       .catch((err: Error) => {
         showToast(err.message || t`Failed to load newer messages`);
@@ -557,15 +557,15 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
       let optimistic: typeof existing;
       if (currentlyReacted) {
         optimistic = existing
-          .map((r) => (r.emoji === emoji ? { ...r, count: r.count - 1, reacted_by_me: false } : r))
+          .map((r) => (r.emoji === emoji ? { ...r, count: r.count - 1, reactedByMe: false } : r))
           .filter((r) => r.count > 0);
         deleteReaction(chatId, msg.id, emoji).catch(() => {});
       } else {
         const found = existing.find((r) => r.emoji === emoji);
         if (found) {
-          optimistic = existing.map((r) => (r.emoji === emoji ? { ...r, count: r.count + 1, reacted_by_me: true } : r));
+          optimistic = existing.map((r) => (r.emoji === emoji ? { ...r, count: r.count + 1, reactedByMe: true } : r));
         } else {
-          optimistic = [...existing, { emoji, count: 1, reacted_by_me: true }];
+          optimistic = [...existing, { emoji, count: 1, reactedByMe: true }];
         }
         putReaction(chatId, msg.id, emoji).catch(() => {});
       }
@@ -584,7 +584,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
         return;
       }
       // Message not in current window — fetch centered window
-      getMessages(chatId, { around: messageId, max: 50, thread_id: threadId })
+      getMessages(chatId, { around: messageId, max: 50, threadId })
         .then((res) => {
           const list = res.data.messages ?? [];
           const targetMessage = list.find((message) => message.id === messageId) ?? null;
@@ -598,7 +598,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
               messageId,
               fetchedCount: list.length,
               targetFound: targetMessage != null,
-              targetClientGeneratedId: targetMessage?.client_generated_id ?? null,
+              targetClientGeneratedId: targetMessage?.clientGeneratedId ?? null,
               anchorKey,
             });
           }
@@ -607,8 +607,8 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
             pushWindow({
               chatId: storeChatId,
               messages: list,
-              nextCursor: res.data.next_cursor ?? null,
-              prevCursor: res.data.prev_cursor ?? null,
+              nextCursor: res.data.nextCursor ?? null,
+              prevCursor: res.data.prevCursor ?? null,
             }),
           );
           setInitialAnchor((currentAnchor) => ({
@@ -630,15 +630,15 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   const uploadAttachment = useCallback(async ({ file, dimensions, onProgress, signal }: ComposeUploadInput) => {
     const res = await requestUploadUrl({
       filename: file.name,
-      content_type: file.type || 'application/octet-stream',
+      contentType: file.type || 'application/octet-stream',
       size: file.size,
       ...dimensions,
     });
 
-    const { upload_url, attachment_id, upload_headers } = res.data;
-    await uploadFileToS3(upload_url, file, upload_headers, { onProgress, signal });
+    const { uploadUrl, attachmentId, uploadHeaders } = res.data;
+    await uploadFileToS3(uploadUrl, file, uploadHeaders, { onProgress, signal });
 
-    return { attachmentId: attachment_id };
+    return { attachmentId };
   }, []);
 
   const handleSend = useCallback(
@@ -676,14 +676,14 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
             ...currentMessage,
             message: text,
             attachments: [...existingAttachments, ...optimisticUploadedAttachments],
-            has_attachments: attachmentIds.length > 0,
-            is_edited: true,
+            hasAttachments: attachmentIds.length > 0,
+            isEdited: true,
           };
 
           dispatch(messagePatched({ chatId, messageId, message: optimisticMsg }));
           setEditingSession(null);
 
-          updateMessage(chatId, messageId, { message: text, attachment_ids: attachmentIds })
+          updateMessage(chatId, messageId, { message: text, attachmentIds })
             .then((res) => {
               dispatch(messagePatched({ chatId, messageId, message: res.data }));
             })
@@ -702,33 +702,33 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
         const optimistic: MessageResponse = {
           id: clientGeneratedId,
           message: text,
-          message_type: 'text',
-          reply_root_id: threadId ?? null,
-          reply_to_message: replyingTo
+          messageType: 'text',
+          replyRootId: threadId ?? null,
+          replyToMessage: replyingTo
             ? {
                 id: replyingTo.id,
                 message: replyingTo.message,
-                message_type: replyingTo.message_type,
+                messageType: replyingTo.messageType,
                 sticker: replyingTo.sticker,
                 sender: replyingTo.sender,
-                is_deleted: replyingTo.is_deleted,
+                isDeleted: replyingTo.isDeleted,
                 attachments: replyingTo.attachments,
               }
             : undefined,
-          client_generated_id: clientGeneratedId,
+          clientGeneratedId,
           sender: {
             uid: currentUserId || 0,
             gender: 0,
             name: currentUserName,
-            avatar_url: currentUserAvatarUrl || undefined,
+            avatarUrl: currentUserAvatarUrl || undefined,
           },
-          chat_id: chatId,
-          created_at: new Date().toISOString(),
-          is_edited: false,
-          is_deleted: false,
-          has_attachments: attachmentIds.length > 0,
+          chatId,
+          createdAt: new Date().toISOString(),
+          isEdited: false,
+          isDeleted: false,
+          hasAttachments: attachmentIds.length > 0,
           attachments: optimisticUploadedAttachments,
-          thread_info: undefined,
+          threadInfo: undefined,
         };
         dispatch(
           messageAdded({
@@ -758,10 +758,10 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
 
         const messagePayload = {
           message: text,
-          message_type: 'text' as const,
-          client_generated_id: clientGeneratedId,
-          reply_to_id: replyingTo?.id,
-          attachment_ids: attachmentIds,
+          messageType: 'text' as const,
+          clientGeneratedId,
+          replyToId: replyingTo?.id,
+          attachmentIds,
         };
 
         const sendPromise = threadId
@@ -773,13 +773,13 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
             const postResponse = res.data;
             const confirmed: MessageResponse = {
               ...postResponse,
-              reply_to_message: postResponse.reply_to_message
+              replyToMessage: postResponse.replyToMessage
                 ? {
-                    ...optimistic.reply_to_message,
-                    ...postResponse.reply_to_message,
-                    attachments: postResponse.reply_to_message.attachments ?? optimistic.reply_to_message?.attachments,
+                    ...optimistic.replyToMessage,
+                    ...postResponse.replyToMessage,
+                    attachments: postResponse.replyToMessage.attachments ?? optimistic.replyToMessage?.attachments,
                   }
-                : optimistic.reply_to_message,
+                : optimistic.replyToMessage,
             };
             dispatch(
               messageConfirmed({
@@ -798,7 +798,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
               messagePatched({
                 chatId,
                 messageId: clientGeneratedId,
-                message: { ...optimistic, is_deleted: true },
+                message: { ...optimistic, isDeleted: true },
               }),
             );
           })
@@ -813,34 +813,34 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
         const optimistic: MessageResponse = {
           id: clientGeneratedId,
           message: null,
-          message_type: 'sticker',
+          messageType: 'sticker',
           sticker: payload.sticker,
-          reply_root_id: threadId ?? null,
-          reply_to_message: replyingTo
+          replyRootId: threadId ?? null,
+          replyToMessage: replyingTo
             ? {
                 id: replyingTo.id,
                 message: replyingTo.message,
-                message_type: replyingTo.message_type,
+                messageType: replyingTo.messageType,
                 sticker: replyingTo.sticker,
                 sender: replyingTo.sender,
-                is_deleted: replyingTo.is_deleted,
+                isDeleted: replyingTo.isDeleted,
                 attachments: replyingTo.attachments,
               }
             : undefined,
-          client_generated_id: clientGeneratedId,
+          clientGeneratedId,
           sender: {
             uid: currentUserId || 0,
             gender: 0,
             name: currentUserName,
-            avatar_url: currentUserAvatarUrl || undefined,
+            avatarUrl: currentUserAvatarUrl || undefined,
           },
-          chat_id: chatId,
-          created_at: new Date().toISOString(),
-          is_edited: false,
-          is_deleted: false,
-          has_attachments: false,
+          chatId,
+          createdAt: new Date().toISOString(),
+          isEdited: false,
+          isDeleted: false,
+          hasAttachments: false,
           attachments: [],
-          thread_info: undefined,
+          threadInfo: undefined,
         };
         dispatch(
           messageAdded({
@@ -859,11 +859,11 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
         }
 
         const messagePayload = {
-          message_type: 'sticker' as const,
-          sticker_id: payload.sticker.id,
-          client_generated_id: clientGeneratedId,
-          reply_to_id: replyingTo?.id,
-          attachment_ids: [],
+          messageType: 'sticker' as const,
+          stickerId: payload.sticker.id,
+          clientGeneratedId,
+          replyToId: replyingTo?.id,
+          attachmentIds: [],
         };
 
         const sendPromise = threadId
@@ -876,13 +876,13 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
             const confirmed: MessageResponse = {
               ...postResponse,
               sticker: postResponse.sticker ?? payload.sticker,
-              reply_to_message: postResponse.reply_to_message
+              replyToMessage: postResponse.replyToMessage
                 ? {
-                    ...optimistic.reply_to_message,
-                    ...postResponse.reply_to_message,
-                    attachments: postResponse.reply_to_message.attachments ?? optimistic.reply_to_message?.attachments,
+                    ...optimistic.replyToMessage,
+                    ...postResponse.replyToMessage,
+                    attachments: postResponse.replyToMessage.attachments ?? optimistic.replyToMessage?.attachments,
                   }
-                : optimistic.reply_to_message,
+                : optimistic.replyToMessage,
             };
             dispatch(
               messageConfirmed({
@@ -901,7 +901,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
               messagePatched({
                 chatId,
                 messageId: clientGeneratedId,
-                message: { ...optimistic, is_deleted: true },
+                message: { ...optimistic, isDeleted: true },
               }),
             );
           });
@@ -916,33 +916,33 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
       const optimistic: MessageResponse = {
         id: clientGeneratedId,
         message: '',
-        message_type: 'audio',
-        reply_root_id: threadId ?? null,
-        reply_to_message: replyingTo
+        messageType: 'audio',
+        replyRootId: threadId ?? null,
+        replyToMessage: replyingTo
           ? {
               id: replyingTo.id,
               message: replyingTo.message,
-              message_type: replyingTo.message_type,
+              messageType: replyingTo.messageType,
               sticker: replyingTo.sticker,
               sender: replyingTo.sender,
-              is_deleted: replyingTo.is_deleted,
+              isDeleted: replyingTo.isDeleted,
               attachments: replyingTo.attachments,
             }
           : undefined,
-        client_generated_id: clientGeneratedId,
+        clientGeneratedId,
         sender: {
           uid: currentUserId || 0,
           gender: 0,
           name: currentUserName,
-          avatar_url: currentUserAvatarUrl || undefined,
+          avatarUrl: currentUserAvatarUrl || undefined,
         },
-        chat_id: chatId,
-        created_at: new Date().toISOString(),
-        is_edited: false,
-        is_deleted: false,
-        has_attachments: true,
+        chatId,
+        createdAt: new Date().toISOString(),
+        isEdited: false,
+        isDeleted: false,
+        hasAttachments: true,
         attachments: optimisticAudioAttachments,
-        thread_info: undefined,
+        threadInfo: undefined,
       };
       dispatch(
         messageAdded({
@@ -962,10 +962,10 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
 
       const messagePayload = {
         message: '',
-        message_type: 'audio' as const,
-        client_generated_id: clientGeneratedId,
-        reply_to_id: replyingTo?.id,
-        attachment_ids: [attachmentId],
+        messageType: 'audio' as const,
+        clientGeneratedId,
+        replyToId: replyingTo?.id,
+        attachmentIds: [attachmentId],
       };
 
       const sendPromise = threadId
@@ -977,13 +977,13 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
           const postResponse = res.data;
           const confirmed: MessageResponse = {
             ...postResponse,
-            reply_to_message: postResponse.reply_to_message
+            replyToMessage: postResponse.replyToMessage
               ? {
-                  ...optimistic.reply_to_message,
-                  ...postResponse.reply_to_message,
-                  attachments: postResponse.reply_to_message.attachments ?? optimistic.reply_to_message?.attachments,
+                  ...optimistic.replyToMessage,
+                  ...postResponse.replyToMessage,
+                  attachments: postResponse.replyToMessage.attachments ?? optimistic.replyToMessage?.attachments,
                 }
-              : optimistic.reply_to_message,
+              : optimistic.replyToMessage,
           };
           dispatch(
             messageConfirmed({
@@ -999,12 +999,12 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
         .catch((err: Error) => {
           showToast(err.message || t`Failed to send`);
           dispatch(
-            messagePatched({
-              chatId,
-              messageId: clientGeneratedId,
-              message: { ...optimistic, is_deleted: true },
-            }),
-          );
+              messagePatched({
+                chatId,
+                messageId: clientGeneratedId,
+                message: { ...optimistic, isDeleted: true },
+              }),
+            );
         })
         .finally(() => {
           revoke();
@@ -1044,7 +1044,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
     if (!overlayMessage) return [];
     const msg = overlayMessage.message;
     const audioMessage = isAudioMessage(msg);
-    const stickerMessage = msg.message_type === 'sticker';
+    const stickerMessage = msg.messageType === 'sticker';
     const isOwn = msg.sender.uid === currentUserId;
     const actions: MessageOverlayAction[] = [];
 
@@ -1068,7 +1068,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
         setReplyingTo(msg);
       },
     });
-    if (!threadId && !msg.thread_info) {
+    if (!threadId && !msg.threadInfo) {
       actions.push({
         key: 'thread',
         label: t`Start Thread`,
@@ -1102,7 +1102,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
                 text: t`Delete`,
                 role: 'destructive' as const,
                 handler: () => {
-                  const deletedOptimistic = { ...msg, is_deleted: true };
+                  const deletedOptimistic = { ...msg, isDeleted: true };
                   dispatch(messagePatched({ chatId, messageId: msg.id, message: deletedOptimistic }));
                   deleteMessage(chatId, msg.id).catch((e: any) => {
                     dispatch(messagePatched({ chatId, messageId: msg.id, message: msg }));
@@ -1226,15 +1226,15 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
           onError={(message) => showToast(message, 2200, { positionAnchor: 'message-compose-bar' })}
           onFocusChange={handleComposeFocusChange}
           replyTo={
-            replyingTo
+          replyingTo
               ? {
                   messageId: replyingTo.id,
                   username: replyingTo.sender.name ?? `User ${replyingTo.sender.uid}`,
-                  messageType: replyingTo.message_type,
+                  messageType: replyingTo.messageType,
                   text: replyingTo.message,
                   attachments: replyingTo.attachments,
                   firstAttachmentKind: replyingTo.attachments?.[0]?.kind,
-                  isDeleted: replyingTo.is_deleted,
+                  isDeleted: replyingTo.isDeleted,
                 }
               : undefined
           }
@@ -1259,13 +1259,13 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
             senderName: msg.sender.name ?? `User ${msg.sender.uid}`,
             isSent: msg.sender.uid === currentUserId,
             showName: true,
-            timestamp: msg.created_at,
-            edited: msg.is_edited,
+            timestamp: msg.createdAt,
+            edited: msg.isEdited,
             isConfirmed: !msg.id.startsWith('cg_'),
-            replyTo: msg.reply_to_message
+            replyTo: msg.replyToMessage
               ? {
-                  senderName: msg.reply_to_message.sender.name ?? `User ${msg.reply_to_message.sender.uid}`,
-                  preview: msg.reply_to_message,
+                  senderName: msg.replyToMessage.sender.name ?? `User ${msg.replyToMessage.sender.uid}`,
+                  preview: msg.replyToMessage,
                 }
               : undefined,
             sourceRect: overlayMessage.sourceRect,
@@ -1273,13 +1273,13 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
             reactions: {
               emojis: QUICK_REACTION_EMOJIS,
               onReact: (emoji: string) => {
-                handleReactionToggle(msg, emoji, !!msg.reactions?.some((r) => r.emoji === emoji && r.reacted_by_me));
+                handleReactionToggle(msg, emoji, !!msg.reactions?.some((r) => r.emoji === emoji && r.reactedByMe));
               },
             },
             onClose: () => setOverlayMessage(null),
           } as const;
 
-          if (msg.message_type === 'sticker') {
+          if (msg.messageType === 'sticker') {
             return (
               <MessageOverlay messageType="sticker" stickerUrl={msg.sticker?.media.url ?? ''} {...sharedOverlayProps} />
             );
@@ -1287,8 +1287,8 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
 
           return (
             <MessageOverlay
-              messageType={msg.message_type as 'text' | 'audio'}
-              message={msg.is_deleted ? t`[Deleted]` : (msg.message ?? '')}
+              messageType={msg.messageType as 'text' | 'audio'}
+              message={msg.isDeleted ? t`[Deleted]` : (msg.message ?? '')}
               attachments={msg.attachments}
               {...sharedOverlayProps}
             />

@@ -116,10 +116,10 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
         <IonList inset>
           {ownedPacks.map((pack) => (
             <IonItem key={pack.id} button detail onClick={() => handleOpenPack(pack.id)}>
-              {pack.preview_sticker ? (
+              {pack.previewSticker ? (
                 <img
                   slot="start"
-                  src={pack.preview_sticker.media.url}
+                  src={pack.previewSticker.media.url}
                   alt=""
                   style={{ width: 32, height: 32, objectFit: 'contain', borderRadius: 4 }}
                 />
@@ -128,7 +128,7 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
               )}
               <IonLabel>{pack.name}</IonLabel>
               <IonNote slot="end" color="medium">
-                {pack.sticker_count}
+                {pack.stickerCount}
               </IonNote>
             </IonItem>
           ))}
@@ -156,19 +156,19 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
           ) : (
             subscribedPacks.map((pack) => (
               <IonItem key={pack.id} button detail onClick={() => handleOpenPack(pack.id)}>
-                {pack.preview_sticker ? (
-                  <img
-                    slot="start"
-                    src={pack.preview_sticker.media.url}
-                    alt=""
-                    style={{ width: 32, height: 32, objectFit: 'contain', borderRadius: 4 }}
-                  />
+              {pack.previewSticker ? (
+                <img
+                  slot="start"
+                  src={pack.previewSticker.media.url}
+                  alt=""
+                  style={{ width: 32, height: 32, objectFit: 'contain', borderRadius: 4 }}
+                />
                 ) : (
                   <IonIcon aria-hidden="true" icon={cubeOutline} slot="start" color="medium" />
                 )}
                 <IonLabel>{pack.name}</IonLabel>
                 <IonNote slot="end" color="medium">
-                  {pack.sticker_count}
+                {pack.stickerCount}
                 </IonNote>
               </IonItem>
             ))

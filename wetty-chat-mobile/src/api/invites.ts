@@ -8,21 +8,21 @@ export type InviteType = 'generic' | 'targeted' | 'membership';
 export interface InviteInfoResponse {
   id: string;
   code: string;
-  chat_id: string;
-  invite_type: InviteType;
-  creator_uid: number;
-  target_uid: number | null;
-  required_chat_id: string | null;
-  created_at: string;
-  expires_at: string | null;
-  revoked_at: string | null;
-  used_at: string | null;
+  chatId: string;
+  inviteType: InviteType;
+  creatorUid: number | null;
+  targetUid: number | null;
+  requiredChatId: string | null;
+  createdAt: string;
+  expiresAt: string | null;
+  revokedAt: string | null;
+  usedAt: string | null;
 }
 
 export interface InvitePreviewResponse {
   invite: InviteInfoResponse;
   chat: GroupInfoResponse;
-  already_member: boolean;
+  alreadyMember: boolean;
 }
 
 export interface RedeemInviteBody {
@@ -38,19 +38,19 @@ export interface ListInvitesResponse {
 }
 
 export interface CreateInviteBody {
-  chat_id: string;
-  invite_type: InviteType;
-  target_uid?: number;
-  required_chat_id?: string;
-  expires_at?: string | null;
+  chatId: string;
+  inviteType: InviteType;
+  targetUid?: number;
+  requiredChatId?: string;
+  expiresAt?: string | null;
 }
 
 export interface SendInviteMessageBody {
-  source_chat_id: string;
-  destination_chat_id: string;
-  invite_id?: string;
-  expires_at?: string | null;
-  client_generated_id: string;
+  sourceChatId: string;
+  destinationChatId: string;
+  inviteId?: string;
+  expiresAt?: string | null;
+  clientGeneratedId: string;
 }
 
 export interface SendInviteMessageResponse {
@@ -59,7 +59,7 @@ export interface SendInviteMessageResponse {
 }
 
 export function getInvitePreview(inviteCode: string): Promise<AxiosResponse<InvitePreviewResponse>> {
-  return apiClient.get('/invites/invite', { params: { invite_code: inviteCode } });
+  return apiClient.get('/invites/invite', { params: { inviteCode } });
 }
 
 export function redeemInvite(body: RedeemInviteBody): Promise<AxiosResponse<RedeemInviteResponse>> {
@@ -68,7 +68,7 @@ export function redeemInvite(body: RedeemInviteBody): Promise<AxiosResponse<Rede
 
 export function getInvites(
   params: {
-    group_id?: string;
+    groupId?: string;
     limit?: number;
   } = {},
 ): Promise<AxiosResponse<ListInvitesResponse>> {

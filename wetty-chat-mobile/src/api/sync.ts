@@ -56,8 +56,8 @@ export async function syncApp() {
         } else {
           // For main chats, optimize: only fetch if chatsList indicates a newer message
           const chatListItem = chats.find((c: ChatListEntry) => c.id === apiChatId);
-          if (chatListItem && chatListItem.last_message) {
-            const serverId = BigInt(chatListItem.last_message.id);
+          if (chatListItem && chatListItem.lastMessage) {
+            const serverId = BigInt(chatListItem.lastMessage.id);
             const localId = BigInt(lastMsg.id);
             if (serverId <= localId) {
               continue; // Local state is up to date for this chat
@@ -70,7 +70,7 @@ export async function syncApp() {
           const messagesRes = await getMessages(apiChatId, {
             after: lastMsg.id,
             max: 50,
-            thread_id: threadId,
+            threadId,
           });
 
           if (messagesRes.data.messages && messagesRes.data.messages.length > 0) {
@@ -78,16 +78,16 @@ export async function syncApp() {
               appendMessages({
                 chatId: storeChatId,
                 messages: messagesRes.data.messages,
-                prevCursor: messagesRes.data.prev_cursor ?? null,
+                prevCursor: messagesRes.data.prevCursor ?? null,
               }),
             );
-          } else if (messagesRes.data.prev_cursor !== undefined) {
+          } else if (messagesRes.data.prevCursor !== undefined) {
             // No new messages, but update the prev cursor just in case
             store.dispatch(
               appendMessages({
                 chatId: storeChatId,
                 messages: [],
-                prevCursor: messagesRes.data.prev_cursor ?? null,
+                prevCursor: messagesRes.data.prevCursor ?? null,
               }),
             );
           }
