@@ -30,6 +30,12 @@ interface EmojiInputProps {
 
 const MOBILE_BREAKPOINT = '(max-width: 767px)';
 
+function getGraphemes(str: string): string[] {
+  if (!str) return [];
+  const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+  return Array.from(segmenter.segment(str)).map((s) => s.segment);
+}
+
 export function EmojiInput({
   value,
   onChange,
@@ -59,8 +65,10 @@ export function EmojiInput({
   }, []);
 
   const handleEmojiClick = (emojiData: EmojiClickData) => {
-    if (value.length >= maxEmojiCount) return;
-    onChange(`${value}${emojiData.emoji}`.slice(0, maxEmojiCount));
+    const currentGraphemes = getGraphemes(value);
+    if (currentGraphemes.length >= maxEmojiCount) return;
+    const nextGraphemes = getGraphemes(`${value}${emojiData.emoji}`);
+    onChange(nextGraphemes.slice(0, maxEmojiCount).join(''));
   };
 
   const picker = (
@@ -86,11 +94,15 @@ export function EmojiInput({
           label={`${label}${required ? ' *' : ''}`}
           labelPlacement="stacked"
           placeholder={placeholder}
-          maxlength={maxEmojiCount}
           counter
+          maxlength={maxEmojiCount * 10}
+          counterFormatter={() => `${getGraphemes(value).length} / ${maxEmojiCount}`}
           errorText={errorText ?? t`Please choose at least one emoji`}
           className={`${styles.input}${invalid ? ' ion-invalid ion-touched' : ''}`}
-          onIonInput={(event) => onChange((event.detail.value ?? '').replace(/\s+/g, ''))}
+          onIonInput={(event) => {
+            const cleanValue = (event.detail.value ?? '').replace(/\s+/g, '');
+            onChange(getGraphemes(cleanValue).slice(0, maxEmojiCount).join(''));
+          }}
         />
         <IonButton
           type="button"
