@@ -53,8 +53,11 @@ class _PendingAttachment {
 
 class _ChatDetailPageState extends State<ChatDetailPage>
     with WidgetsBindingObserver {
+  static const bool _isReversedMessageList = true;
   late final ChatDetailViewModel _viewModel;
   final ItemScrollController _itemScrollController = ItemScrollController();
+  final ScrollOffsetController _scrollOffsetController =
+      ScrollOffsetController();
   final ItemPositionsListener _itemPositionsListener =
       ItemPositionsListener.create();
   final ScrollController _inputScrollController = ScrollController();
@@ -66,6 +69,8 @@ class _ChatDetailPageState extends State<ChatDetailPage>
   bool _isUploadingAttachment = false;
   bool _isProgrammaticScrollActive = false;
   int _scrollOperationToken = 0;
+  static const double _tallMessageHeightThreshold = 0.55;
+  final GlobalKey _messageListKey = GlobalKey();
 
   @override
   void initState() {
@@ -326,6 +331,50 @@ class _ChatDetailPageState extends State<ChatDetailPage>
     return alignment.clamp(0.0, 1.0).toDouble();
   }
 
+  double _messageJumpAlignment(ItemPosition position) {
+    final height = position.itemTrailingEdge - position.itemLeadingEdge;
+    if (height >= _tallMessageHeightThreshold) {
+      return _safeAlignment(0.5);
+    }
+
+    return _safeAlignment(0.5 - height);
+  }
+
+  bool _isTallMessage(ItemPosition position) {
+    final height = position.itemTrailingEdge - position.itemLeadingEdge;
+    return height >= _tallMessageHeightThreshold;
+  }
+
+  double _messageStartEdge(ItemPosition position) {
+    return _isReversedMessageList
+        ? position.itemTrailingEdge
+        : position.itemLeadingEdge;
+  }
+
+  Future<void> _adjustTallMessagePosition(
+    int targetIdx, {
+    required int token,
+  }) async {
+    final viewportHeight = _messageListKey.currentContext?.size?.height;
+    if (viewportHeight == null || viewportHeight <= 0) return;
+
+    final positions = _itemPositionsListener.itemPositions.value;
+    final targetPos = positions.where((p) => p.index == targetIdx).toList();
+    if (targetPos.isEmpty) return;
+
+    final pos = targetPos.first;
+    if (!_isTallMessage(pos)) return;
+
+    final deltaPixels = (_messageStartEdge(pos) - 0.5) * viewportHeight;
+    if (deltaPixels.abs() < 1 || !_canApplyScroll(token)) return;
+
+    await _scrollOffsetController.animateScroll(
+      offset: deltaPixels,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+    );
+  }
+
   Future<void> _waitForNextFrame() {
     final completer = Completer<void>();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -573,10 +622,14 @@ class _ChatDetailPageState extends State<ChatDetailPage>
         if (targetPos.isEmpty) return;
 
         final pos = targetPos.first;
-        final height = pos.itemTrailingEdge - pos.itemLeadingEdge;
+        if (_isTallMessage(pos)) {
+          await _adjustTallMessagePosition(targetIdx, token: token);
+          return;
+        }
+
         await _itemScrollController.scrollTo(
           index: targetIdx,
-          alignment: _safeAlignment(0.5 - height),
+          alignment: _messageJumpAlignment(pos),
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
@@ -910,7 +963,9 @@ class _ChatDetailPageState extends State<ChatDetailPage>
     final itemCount = items.length + (showTopLoader ? 1 : 0);
 
     return ScrollablePositionedList.builder(
+      key: _messageListKey,
       itemScrollController: _itemScrollController,
+      scrollOffsetController: _scrollOffsetController,
       itemPositionsListener: _itemPositionsListener,
       reverse: true,
       padding: const EdgeInsets.only(top: _titleBarHeight),
