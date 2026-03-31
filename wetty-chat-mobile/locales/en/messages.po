@@ -213,8 +213,8 @@ msgid "Choose a new image to replace the current avatar."
 msgstr "Choose a new image to replace the current avatar."
 
 #: src/components/shared/EmojiInput.tsx
-msgid "Choose Emoji"
-msgstr "Choose Emoji"
+#~ msgid "Choose Emoji"
+#~ msgstr "Choose Emoji"
 
 #: src/components/chat/settings/ShareInviteModal.tsx
 msgid "Choose the member group first"
@@ -236,8 +236,8 @@ msgid "Close"
 msgstr "Close"
 
 #: src/components/shared/EmojiInput.tsx
-msgid "Close emoji picker"
-msgstr "Close emoji picker"
+#~ msgid "Close emoji picker"
+#~ msgstr "Close emoji picker"
 
 #: src/components/chat/ImageViewer.tsx
 msgid "Close viewer"
@@ -888,6 +888,10 @@ msgstr "No stickers"
 msgid "No subscribed packs"
 msgstr "No subscribed packs"
 
+#: src/pages/threads.tsx
+msgid "No threads yet"
+msgstr "No threads yet"
+
 #: src/components/invites/InvitePreviewCard.tsx
 msgid "Not now"
 msgstr "Not now"
@@ -1084,6 +1088,10 @@ msgstr "Remove this pack from your collection?"
 msgid "Remove this sticker from the pack?"
 msgstr "Remove this sticker from the pack?"
 
+#: src/components/chat/ThreadListRow.tsx
+msgid "replied to:"
+msgstr "replied to:"
+
 #: src/components/chat/messages/ChatBubbleBase.tsx
 #: src/components/chat/messages/StickerBubble.tsx
 msgid "replies"
@@ -1279,6 +1287,21 @@ msgstr "This is how your messages will look in chat."
 #: src/pages/chat-thread/chat-thread.tsx
 msgid "Thread"
 msgstr "Thread"
+
+#. placeholder {0}: thread.chatName
+#: src/components/chat/ThreadListRow.tsx
+msgid "Thread in {0}"
+msgstr "Thread in {0}"
+
+#: src/layouts/DesktopSplitLayout.tsx
+#: src/layouts/MobileLayout.tsx
+#: src/pages/threads.tsx
+msgid "Threads"
+msgstr "Threads"
+
+#: src/pages/threads.tsx
+msgid "Threads you create or reply to will appear here"
+msgstr "Threads you create or reply to will appear here"
 
 #. placeholder {0}: index + 1
 #: src/components/chat/ImageViewer.tsx

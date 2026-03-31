@@ -188,10 +188,6 @@ msgstr "選擇目標群組"
 msgid "Choose a new image to replace the current avatar."
 msgstr "選擇一張新圖片以取代目前頭像。"
 
-#: src/components/shared/EmojiInput.tsx
-msgid "Choose Emoji"
-msgstr "選擇表情"
-
 #: src/components/chat/settings/ShareInviteModal.tsx
 msgid "Choose the member group first"
 msgstr "請先選擇成員群組"
@@ -210,10 +206,6 @@ msgstr "此裝置無法使用剪貼簿"
 #: src/components/invites/InviteMessageModal.tsx
 msgid "Close"
 msgstr "關閉"
-
-#: src/components/shared/EmojiInput.tsx
-msgid "Close emoji picker"
-msgstr "關閉表情選擇器"
 
 #: src/components/chat/ImageViewer.tsx
 msgid "Close viewer"
@@ -621,11 +613,6 @@ msgid "Invite Code"
 msgstr "邀請碼"
 
 #: src/components/chat/settings/ShareInviteModal.tsx
-#: src/pages/chat-thread/manage-invites.tsx
-#~ msgid "Invite code copied"
-#~ msgstr "邀請碼已複製"
-
-#: src/components/chat/settings/ShareInviteModal.tsx
 msgid "Invite Link"
 msgstr "邀請連結"
 
@@ -776,14 +763,6 @@ msgstr "靜音"
 msgid "Mute notifications"
 msgstr "靜音通知"
 
-#: src/components/chat/settings/ChatMuteSettingItem.tsx
-#~ msgid "Muted indefinitely"
-#~ msgstr "已永久靜音"
-
-#: src/components/chat/settings/ChatMuteSettingItem.tsx
-#~ msgid "Muted until {0}"
-#~ msgstr "已靜音至 {0}"
-
 #: src/pages/settings/stickers.tsx
 msgid "My Packs"
 msgstr "我的表情包"
@@ -863,6 +842,10 @@ msgstr "沒有表情"
 #: src/pages/settings/stickers.tsx
 msgid "No subscribed packs"
 msgstr "沒有已訂閱的表情包"
+
+#: src/pages/threads.tsx
+msgid "No threads yet"
+msgstr "尚無話題"
 
 #: src/components/invites/InvitePreviewCard.tsx
 msgid "Not now"
@@ -1060,6 +1043,10 @@ msgstr "要將這個表情包從你的收藏中移除嗎？"
 msgid "Remove this sticker from the pack?"
 msgstr "要從表情包中移除此表情嗎？"
 
+#: src/components/chat/ThreadListRow.tsx
+msgid "replied to:"
+msgstr "回覆了："
+
 #: src/components/chat/messages/ChatBubbleBase.tsx
 #: src/components/chat/messages/StickerBubble.tsx
 msgid "replies"
@@ -1255,6 +1242,21 @@ msgstr "這是你的訊息在聊天中的顯示效果。"
 #: src/pages/chat-thread/chat-thread.tsx
 msgid "Thread"
 msgstr "話題"
+
+#. placeholder {0}: thread.chatName
+#: src/components/chat/ThreadListRow.tsx
+msgid "Thread in {0}"
+msgstr "{0} 中的話題"
+
+#: src/layouts/DesktopSplitLayout.tsx
+#: src/layouts/MobileLayout.tsx
+#: src/pages/threads.tsx
+msgid "Threads"
+msgstr "話題"
+
+#: src/pages/threads.tsx
+msgid "Threads you create or reply to will appear here"
+msgstr "你建立或回覆的話題會顯示在這裡"
 
 #. placeholder {0}: index + 1
 #: src/components/chat/ImageViewer.tsx
