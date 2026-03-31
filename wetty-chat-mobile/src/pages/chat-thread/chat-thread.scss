@@ -1,8 +1,14 @@
 /* Chat thread page */
 
 .chat-thread-content {
-  --background: var(--ion-background-color-step-50, #ece5dd);
+  --background: url('/assets/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png') calc(50% + 13.5px) calc(50% + 3.5px) / 530px 974px;
   position: relative;
+}
+
+@media (prefers-color-scheme: dark) {
+  .chat-thread-content {
+    --background: linear-gradient(#000000DA), url('/assets/bg-chat-tile-dark_a4be512e7195b6b733d9110b408f075d.png') center;
+  }
 }
 
 .chat-thread-title {
