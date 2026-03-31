@@ -1851,6 +1851,83 @@ async fn mark_as_read(
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
+struct MarkAsUnreadResponse {
+    #[serde(serialize_with = "crate::serde_i64_string::opt::serialize")]
+    last_read_message_id: Option<i64>,
+    unread_count: i64,
+}
+
+/// POST /chats/:chat_id/unread — Mark a chat as unread by rewinding the read pointer.
+async fn mark_as_unread(
+    CurrentUid(uid): CurrentUid,
+    State(state): State<AppState>,
+    Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
+) -> Result<Json<MarkAsUnreadResponse>, (StatusCode, &'static str)> {
+    let conn = &mut state.db.get().map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Database connection failed",
+        )
+    })?;
+
+    check_membership(conn, chat_id, uid)?;
+
+    use crate::schema::messages::dsl;
+    let last_two: Vec<i64> = messages::table
+        .filter(
+            dsl::chat_id
+                .eq(chat_id)
+                .and(dsl::reply_root_id.is_null())
+                .and(dsl::deleted_at.is_null()),
+        )
+        .order(dsl::id.desc())
+        .limit(2)
+        .select(dsl::id)
+        .load(conn)
+        .map_err(|e| {
+            tracing::error!("mark as unread query: {:?}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to mark as unread",
+            )
+        })?;
+
+    // If < 2 public messages, set to NULL (entire chat unread); otherwise second-to-last
+    let new_read_id = if last_two.len() >= 2 {
+        Some(last_two[1])
+    } else {
+        None
+    };
+
+    use crate::schema::group_membership::dsl as gm_dsl;
+    diesel::update(
+        group_membership::table.filter(gm_dsl::chat_id.eq(chat_id).and(gm_dsl::uid.eq(uid))),
+    )
+    .set(gm_dsl::last_read_message_id.eq(new_read_id))
+    .execute(conn)
+    .map_err(|e| {
+        tracing::error!("mark as unread update: {:?}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to mark as unread",
+        )
+    })?;
+
+    // Unread count is always 1 when we rewind to second-to-last, or total messages if NULL
+    let unread_count = if new_read_id.is_some() {
+        1
+    } else {
+        last_two.len() as i64
+    };
+
+    Ok(Json(MarkAsUnreadResponse {
+        last_read_message_id: new_read_id,
+        unread_count,
+    }))
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UnreadCountResponse {
     unread_count: i64,
 }
@@ -2189,6 +2266,7 @@ pub fn router() -> Router<crate::AppState> {
                         ),
                 )
                 .route("/read", post(mark_as_read))
+                .route("/unread", post(mark_as_unread))
                 .route("/threads/{thread_id}/messages", post(post_thread_message)),
         )
 }
