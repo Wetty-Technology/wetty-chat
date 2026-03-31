@@ -37,7 +37,18 @@ const EXTERNAL_ASSET_EXTENSION_RE =
   /\.(?:avif|css|eot|gif|heic|ico|jpeg|jpg|js|json|m4a|mp3|mp4|ogg|otf|png|svg|ttf|wav|webm|webp|woff2?)(?:$|\?)/i;
 
 const appOrigin = self.location.origin;
-const apiBaseUrl = new URL(__API_BASE__, self.registration.scope);
+const apiBase = (() => {
+  if (typeof __API_BASE__ !== 'undefined') {
+    return __API_BASE__;
+  }
+
+  if (import.meta.env.DEV) {
+    return '/_api';
+  }
+
+  throw new Error('Missing __API_BASE__ in service worker');
+})();
+const apiBaseUrl = new URL(apiBase, self.registration.scope);
 const normalizedApiBasePath = normalizeBasePath(apiBaseUrl.pathname);
 
 function normalizeBasePath(pathname: string): string {
@@ -260,6 +271,7 @@ self.addEventListener('push', (event) => {
         const notificationData = buildNotificationNavigationData({
           chatId: payload.data?.chatId,
           messageId: payload.data?.messageId,
+          threadRootId: payload.data?.threadRootId,
           target: payload.data?.target,
         });
         const chatId = notificationData.chatId;
@@ -296,12 +308,14 @@ self.addEventListener('notificationclick', (event) => {
   const notificationData = extractNotificationNavigationData(event.notification.data);
   const target = resolveNotificationTarget({
     chatId: notificationData.chatId,
+    threadRootId: notificationData.threadRootId,
     target: notificationData.target,
   });
   const launchUrl = buildNotificationLaunchUrl(self.registration.scope, target);
   const message: NotificationOpenMessage = {
     type: 'OPEN_NOTIFICATION_TARGET',
     chatId: notificationData.chatId,
+    threadRootId: notificationData.threadRootId,
     target,
   };
 
