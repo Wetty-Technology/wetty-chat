@@ -64,6 +64,8 @@ class _ChatDetailPageState extends State<ChatDetailPage>
   final AttachmentService _attachmentService = AttachmentService();
   final List<_PendingAttachment> _pendingAttachments = [];
   bool _isUploadingAttachment = false;
+  bool _isProgrammaticScrollActive = false;
+  int _scrollOperationToken = 0;
 
   @override
   void initState() {
@@ -106,6 +108,8 @@ class _ChatDetailPageState extends State<ChatDetailPage>
 
   int? _lastJumpedId;
 
+  /// registered via _viewModel.addListener(_onViewModelChanged);
+  /// every time the view model calls notifyListeners(), this method will be called
   void _onViewModelChanged() {
     if (!mounted) return;
 
@@ -135,6 +139,9 @@ class _ChatDetailPageState extends State<ChatDetailPage>
   }
 
   void _onItemPositionsChanged() {
+    if (_isProgrammaticScrollActive) {
+      return;
+    }
     if (_viewModel.isLoadingMore ||
         _viewModel.isLoading ||
         _viewModel.displayItems.isEmpty) {
@@ -184,11 +191,16 @@ class _ChatDetailPageState extends State<ChatDetailPage>
     final changed = await _viewModel.loadMoreMessages();
     if (!changed || anchor == null || !mounted) return;
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+    await _runProgrammaticScroll((token) async {
+      await _waitForNextFrame();
+      if (!_canApplyScroll(token)) return;
+
       final anchorIndex = _viewModel.findWindowIndex(anchor.key);
       if (anchorIndex == null) return;
-      _itemScrollController.jumpTo(index: anchorIndex, alignment: anchor.value);
+      _itemScrollController.jumpTo(
+        index: anchorIndex,
+        alignment: _safeAlignment(anchor.value),
+      );
     });
   }
 
@@ -232,11 +244,16 @@ class _ChatDetailPageState extends State<ChatDetailPage>
     final changed = await _viewModel.loadNewerMessages();
     if (!changed || anchor == null || !mounted) return;
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+    await _runProgrammaticScroll((token) async {
+      await _waitForNextFrame();
+      if (!_canApplyScroll(token)) return;
+
       final anchorIndex = _viewModel.findWindowIndex(anchor.key);
       if (anchorIndex == null) return;
-      _itemScrollController.jumpTo(index: anchorIndex, alignment: anchor.value);
+      _itemScrollController.jumpTo(
+        index: anchorIndex,
+        alignment: _safeAlignment(anchor.value),
+      );
     });
   }
 
@@ -282,17 +299,56 @@ class _ChatDetailPageState extends State<ChatDetailPage>
   }
 
   Future<void> _scrollToBottom() async {
-    await _viewModel.jumpToBottom();
-    if (!mounted || _viewModel.displayItems.isEmpty) return;
+    await _runProgrammaticScroll((token) async {
+      await _viewModel.jumpToBottom();
+      if (!_canApplyScroll(token) || _viewModel.displayItems.isEmpty) return;
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _itemScrollController.scrollTo(
+      await _waitForNextFrame();
+      if (!_canApplyScroll(token)) return;
+
+      _itemScrollController.jumpTo(index: 0, alignment: 0);
+      await Future<void>.delayed(const Duration(milliseconds: 16));
+      if (!_canApplyScroll(token)) return;
+
+      await _itemScrollController.scrollTo(
         index: 0,
+        alignment: 0,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
       );
     });
+  }
+
+  bool _canApplyScroll(int token) =>
+      mounted && token == _scrollOperationToken && _itemScrollController.isAttached;
+
+  double _safeAlignment(double alignment) {
+    return alignment.clamp(0.0, 1.0).toDouble();
+  }
+
+  Future<void> _waitForNextFrame() {
+    final completer = Completer<void>();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!completer.isCompleted) {
+        completer.complete();
+      }
+    });
+    return completer.future;
+  }
+
+  Future<void> _runProgrammaticScroll(
+    Future<void> Function(int token) operation,
+  ) async {
+    final token = ++_scrollOperationToken;
+    _isProgrammaticScrollActive = true;
+    try {
+      await operation(token);
+    } finally {
+      await Future<void>.delayed(const Duration(milliseconds: 350));
+      if (mounted && token == _scrollOperationToken) {
+        _isProgrammaticScrollActive = false;
+      }
+    }
   }
 
   void _clearInputMessage() {
@@ -504,79 +560,70 @@ class _ChatDetailPageState extends State<ChatDetailPage>
   }
 
   Future<void> _jumpToMessage(int messageId) async {
-    final found = await _viewModel.jumpToMessage(messageId);
-    if (!found || !mounted) return;
+    await _runProgrammaticScroll((token) async {
+      final found = await _viewModel.jumpToMessage(messageId);
+      if (!found || !_canApplyScroll(token)) return;
 
-    final idx = _viewModel.findWindowIndex(messageId);
-    if (idx == null) return;
+      final idx = _viewModel.findWindowIndex(messageId);
+      if (idx == null) return;
 
-    // Helper for precise centering scroll.
-    void performRefinedScroll(int targetIdx) {
-      final positions = _itemPositionsListener.itemPositions.value;
-      final targetPos = positions.where((p) => p.index == targetIdx).toList();
-      if (targetPos.isNotEmpty) {
+      Future<void> performRefinedScroll(int targetIdx) async {
+        final positions = _itemPositionsListener.itemPositions.value;
+        final targetPos = positions.where((p) => p.index == targetIdx).toList();
+        if (targetPos.isEmpty) return;
+
         final pos = targetPos.first;
-        final h = pos.itemTrailingEdge - pos.itemLeadingEdge;
-        _itemScrollController.scrollTo(
+        final height = pos.itemTrailingEdge - pos.itemLeadingEdge;
+        await _itemScrollController.scrollTo(
           index: targetIdx,
-          alignment: 0.5 - h,
+          alignment: _safeAlignment(0.5 - height),
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
       }
-    }
 
-    // If the item is already visible, center it immediately.
-    final currentVisible = _itemPositionsListener.itemPositions.value
-        .where((p) => p.index == idx)
-        .toList();
-    if (currentVisible.isNotEmpty) {
-      performRefinedScroll(idx);
-      return;
-    }
+      final currentVisible = _itemPositionsListener.itemPositions.value
+          .where((p) => p.index == idx)
+          .toList();
+      if (currentVisible.isNotEmpty) {
+        await performRefinedScroll(idx);
+        return;
+      }
 
-    // Item not visible. Wait for a frame to ensure SPL recognizes the new data.
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) return;
+      await _waitForNextFrame();
+      if (!_canApplyScroll(token)) return;
+
       final idx2 = _viewModel.findWindowIndex(messageId);
       if (idx2 == null) return;
 
-      // Bring item into viewport.
       _itemScrollController.jumpTo(index: idx2, alignment: 0.5);
 
-      // Yield to let the layout engine report new positions.
-      await Future.delayed(Duration.zero);
-      if (!mounted) return;
+      await Future<void>.delayed(Duration.zero);
+      if (!_canApplyScroll(token)) return;
 
-      var p = _itemPositionsListener.itemPositions.value
+      var positions = _itemPositionsListener.itemPositions.value
           .where((pos) => pos.index == idx2)
           .toList();
 
-      // Retry if layout is slow (rare).
-      if (p.isEmpty) {
-        await Future.delayed(const Duration(milliseconds: 16));
-        if (!mounted) return;
-        p = _itemPositionsListener.itemPositions.value
+      if (positions.isEmpty) {
+        await Future<void>.delayed(const Duration(milliseconds: 16));
+        if (!_canApplyScroll(token)) return;
+        positions = _itemPositionsListener.itemPositions.value
             .where((pos) => pos.index == idx2)
             .toList();
       }
 
-      if (p.isNotEmpty) {
-        final h = p.first.itemTrailingEdge - p.first.itemLeadingEdge;
-        _itemScrollController.scrollTo(
-          index: idx2,
-          alignment: 0.5 - h,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      } else {
-        _itemScrollController.scrollTo(
-          index: idx2,
-          alignment: 0.5,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+      if (positions.isNotEmpty) {
+        await performRefinedScroll(idx2);
+        return;
       }
+
+      await _itemScrollController.scrollTo(
+        index: idx2,
+        alignment: 0.5,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
     });
   }
 
