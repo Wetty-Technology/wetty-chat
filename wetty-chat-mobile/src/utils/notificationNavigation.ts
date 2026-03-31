@@ -1,6 +1,6 @@
-export const NOTIFICATION_BOOTSTRAP_PATH = '/push-open';
 const DEFAULT_NOTIFICATION_TARGET = '/chats';
 const INTERNAL_TARGET_PATTERN = /^\/(?:chats|settings|demo)(?:\/|$)/;
+export const NOTIFICATION_QUERY_PARAM = 'notification';
 
 export interface NotificationNavigationData {
   chatId?: string;
@@ -20,7 +20,7 @@ function normalizeNotificationTarget(target: string | null | undefined): string 
   }
 
   const trimmed = target.trim();
-  if (!trimmed.startsWith('/') || trimmed.startsWith(NOTIFICATION_BOOTSTRAP_PATH)) {
+  if (!trimmed.startsWith('/')) {
     return null;
   }
 
@@ -51,8 +51,8 @@ export function resolveNotificationTarget({
 }
 
 export function buildNotificationLaunchUrl(scope: string, target: string): string {
-  const launchUrl = new URL('push-open', scope);
-  launchUrl.searchParams.set('target', target);
+  const launchUrl = new URL(target, scope);
+  launchUrl.searchParams.set(NOTIFICATION_QUERY_PARAM, '1');
   return launchUrl.toString();
 }
 

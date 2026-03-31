@@ -18,12 +18,12 @@ import { usePushNotificationBootstrap } from './hooks/usePushNotifications';
 import { DesktopSplitLayout } from './layouts/DesktopSplitLayout';
 import OobePage from '@/pages/oobe';
 import LandingPage from './pages/landing';
-import PushOpenPage from '@/pages/push-open';
 import { initWebSocket } from '@/api/ws';
 import { syncJwtTokenToIdb } from '@/utils/jwtToken';
 import { useDeviceToken } from './hooks/useDeviceToken';
 import { appHistory } from '@/utils/navigationHistory';
 import { useNotificationOpenHandler } from '@/hooks/useNotificationOpenHandler';
+import { useNotificationEntryNormalizer } from '@/hooks/useNotificationEntryNormalizer';
 
 const OOBE_STORAGE_KEY = 'oobe';
 
@@ -34,14 +34,12 @@ function hasCompletedOobe() {
 function AppRouter({ isDesktop }: { isDesktop: boolean }) {
   const isOobeRoute = useRouteMatch('/oobe');
   const isLandingRoute = useRouteMatch('/landing');
-  const isPushOpenRoute = useRouteMatch('/push-open');
+  useNotificationEntryNormalizer(isDesktop);
 
   if (isLandingRoute?.isExact) {
     return <LandingPage />;
   } else if (isOobeRoute?.isExact) {
     return <OobePage />;
-  } else if (isPushOpenRoute?.isExact) {
-    return <PushOpenPage isDesktop={isDesktop} />;
   } else if (!hasCompletedOobe()) {
     return <Redirect to="/oobe" />;
   }
