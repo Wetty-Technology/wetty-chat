@@ -1277,7 +1277,6 @@ fn validate_message_payload(
 }
 
 #[derive(serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct ThreadIdPath {
     chat_id: i64,
     #[serde(deserialize_with = "crate::serde_i64_string::deserialize")]
@@ -1517,7 +1516,6 @@ mod tests {
 }
 
 #[derive(serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct MessageIdPath {
     chat_id: i64,
     #[serde(deserialize_with = "crate::serde_i64_string::deserialize")]
