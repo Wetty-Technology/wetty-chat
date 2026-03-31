@@ -1,20 +1,8 @@
-import { useEffect, useState } from 'react';
-import {
-  IonButton,
-  IonButtons,
-  IonContent,
-  IonHeader,
-  IonIcon,
-  IonInput,
-  IonModal,
-  IonPopover,
-  IonTitle,
-  IonToolbar,
-} from '@ionic/react';
+import { useState } from 'react';
+import { IonButton, IonIcon, IonInput, IonPopover } from '@ionic/react';
 import EmojiPicker, { EmojiStyle, Theme, type EmojiClickData } from 'emoji-picker-react';
-import { happyOutline, close } from 'ionicons/icons';
+import { happyOutline } from 'ionicons/icons';
 import { t } from '@lingui/core/macro';
-import { Trans } from '@lingui/react/macro';
 import styles from './EmojiInput.module.scss';
 
 interface EmojiInputProps {
@@ -27,8 +15,6 @@ interface EmojiInputProps {
   errorText?: string;
   maxEmojiCount?: number;
 }
-
-const MOBILE_BREAKPOINT = '(max-width: 767px)';
 
 function getGraphemes(str: string): string[] {
   if (!str) return [];
@@ -48,21 +34,6 @@ export function EmojiInput({
 }: EmojiInputProps) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [triggerEvent, setTriggerEvent] = useState<Event | undefined>();
-  const [isCompact, setIsCompact] = useState(false);
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia(MOBILE_BREAKPOINT);
-    const handleChange = () => {
-      setIsCompact(mediaQuery.matches);
-    };
-
-    handleChange();
-    mediaQuery.addEventListener('change', handleChange);
-
-    return () => {
-      mediaQuery.removeEventListener('change', handleChange);
-    };
-  }, []);
 
   const handleEmojiClick = (emojiData: EmojiClickData) => {
     const currentGraphemes = getGraphemes(value);
@@ -70,21 +41,6 @@ export function EmojiInput({
     const nextGraphemes = getGraphemes(`${value}${emojiData.emoji}`);
     onChange(nextGraphemes.slice(0, maxEmojiCount).join(''));
   };
-
-  const picker = (
-    <div className={styles.pickerCard}>
-      <EmojiPicker
-        onEmojiClick={handleEmojiClick}
-        theme={Theme.AUTO}
-        emojiStyle={EmojiStyle.NATIVE}
-        lazyLoadEmojis
-        searchPlaceholder={t`Search emoji`}
-        previewConfig={{ showPreview: false }}
-        skinTonesDisabled
-        width="100%"
-      />
-    </div>
-  );
 
   return (
     <>
@@ -118,37 +74,30 @@ export function EmojiInput({
         </IonButton>
       </div>
 
-      {isCompact ? (
-        <IonModal isOpen={isPickerOpen} onDidDismiss={() => setIsPickerOpen(false)}>
-          <IonHeader>
-            <IonToolbar>
-              <IonTitle>
-                <Trans>Choose Emoji</Trans>
-              </IonTitle>
-              <IonButtons slot="end">
-                <IonButton onClick={() => setIsPickerOpen(false)} aria-label={t`Close emoji picker`}>
-                  <IonIcon slot="icon-only" icon={close} />
-                </IonButton>
-              </IonButtons>
-            </IonToolbar>
-          </IonHeader>
-          <IonContent className={styles.modalContent}>{picker}</IonContent>
-        </IonModal>
-      ) : (
-        <IonPopover
-          isOpen={isPickerOpen}
-          event={triggerEvent}
-          onDidDismiss={() => {
-            setIsPickerOpen(false);
-            setTriggerEvent(undefined);
-          }}
-          alignment="end"
-          side="bottom"
-          className={styles.popover}
-        >
-          {picker}
-        </IonPopover>
-      )}
+      <IonPopover
+        isOpen={isPickerOpen}
+        event={triggerEvent}
+        onDidDismiss={() => {
+          setIsPickerOpen(false);
+          setTriggerEvent(undefined);
+        }}
+        alignment="end"
+        side="bottom"
+        className={styles.popover}
+      >
+        <div className={styles.pickerCard}>
+          <EmojiPicker
+            onEmojiClick={handleEmojiClick}
+            theme={Theme.AUTO}
+            emojiStyle={EmojiStyle.NATIVE}
+            lazyLoadEmojis
+            searchPlaceholder={t`Search emoji`}
+            previewConfig={{ showPreview: false }}
+            skinTonesDisabled
+            width="100%"
+          />
+        </div>
+      </IonPopover>
     </>
   );
 }

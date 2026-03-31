@@ -17,13 +17,6 @@
   border-radius: 16px;
 }
 
-.modalContent {
-  --padding-top: 12px;
-  --padding-bottom: 12px;
-  --padding-start: 12px;
-  --padding-end: 12px;
-}
-
 .popover {
   --width: min(360px, calc(100vw - 24px));
   --box-shadow: 0 18px 48px rgba(15, 23, 42, 0.18);
