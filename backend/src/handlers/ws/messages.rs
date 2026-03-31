@@ -1,4 +1,5 @@
 use crate::handlers::chats::{MessageResponse, ReactionSummary};
+use chrono::{DateTime, Utc};
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize)]
@@ -9,6 +10,7 @@ pub enum ServerWsMessage {
     MessageDeleted(MessageResponse),
     ReactionUpdated(ReactionUpdatePayload),
     PresenceUpdate(PresenceUpdatePayload),
+    ThreadUpdate(ThreadUpdatePayload),
 }
 
 impl ServerWsMessage {
@@ -19,6 +21,7 @@ impl ServerWsMessage {
             Self::MessageDeleted(_) => "messageDeleted",
             Self::ReactionUpdated(_) => "reactionUpdated",
             Self::PresenceUpdate(_) => "presenceUpdate",
+            Self::ThreadUpdate(_) => "threadUpdate",
         }
     }
 }
@@ -37,6 +40,17 @@ pub struct ReactionUpdatePayload {
 #[serde(rename_all = "camelCase")]
 pub struct PresenceUpdatePayload {
     pub active_connections: u32,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ThreadUpdatePayload {
+    #[serde(with = "crate::serde_i64_string")]
+    pub thread_root_id: i64,
+    #[serde(with = "crate::serde_i64_string")]
+    pub chat_id: i64,
+    pub last_reply_at: DateTime<Utc>,
+    pub reply_count: i64,
 }
 
 #[cfg(test)]

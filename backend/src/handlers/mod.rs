@@ -5,6 +5,7 @@ pub mod invites;
 pub mod members;
 pub mod push;
 pub mod stickers;
+pub mod threads;
 pub mod users;
 pub mod ws;
 
@@ -15,6 +16,7 @@ pub fn api_router() -> Router<AppState> {
     Router::new()
         .nest("/ws", ws::router())
         .nest("/chats", chats::router())
+        .nest("/threads", threads::router())
         .nest("/group", groups::router())
         .nest("/invites", invites::router())
         .nest("/push", push::router())

@@ -190,6 +190,16 @@ diesel::table! {
 }
 
 diesel::table! {
+    thread_subscriptions (chat_id, thread_root_id, uid) {
+        chat_id -> Int8,
+        thread_root_id -> Int8,
+        uid -> Int4,
+        last_read_message_id -> Nullable<Int8>,
+        subscribed_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     sticker_pack_stickers (pack_id, sticker_id) {
         pack_id -> Int8,
         sticker_id -> Int8,
@@ -264,6 +274,8 @@ diesel::joinable!(messages -> stickers (sticker_id));
 diesel::joinable!(sticker_pack_stickers -> sticker_packs (pack_id));
 diesel::joinable!(sticker_pack_stickers -> stickers (sticker_id));
 diesel::joinable!(stickers -> media (media_id));
+diesel::joinable!(thread_subscriptions -> groups (chat_id));
+diesel::joinable!(thread_subscriptions -> messages (thread_root_id));
 diesel::joinable!(user_favorite_stickers -> stickers (sticker_id));
 diesel::joinable!(user_sticker_pack_subscriptions -> sticker_packs (pack_id));
 
@@ -281,6 +293,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     sticker_pack_stickers,
     sticker_packs,
     stickers,
+    thread_subscriptions,
     user_extra,
     user_favorite_stickers,
     user_sticker_pack_subscriptions,

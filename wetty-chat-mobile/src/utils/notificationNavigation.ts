@@ -5,12 +5,14 @@ const INTERNAL_TARGET_PATTERN = /^\/(?:chats|settings|demo)(?:\/|$)/;
 export interface NotificationNavigationData {
   chatId?: string;
   messageId?: string;
+  threadRootId?: string;
   target?: string;
 }
 
 export interface NotificationOpenMessage {
   type: 'OPEN_NOTIFICATION_TARGET';
   chatId?: string;
+  threadRootId?: string;
   target?: string;
 }
 
@@ -40,14 +42,38 @@ export function buildNotificationChatTarget(chatId: string | null | undefined): 
   return `/chats/chat/${encodeURIComponent(trimmed)}`;
 }
 
+export function buildNotificationThreadTarget(
+  chatId: string | null | undefined,
+  threadRootId: string | null | undefined,
+): string | null {
+  if (typeof chatId !== 'string' || typeof threadRootId !== 'string') {
+    return null;
+  }
+
+  const trimmedChat = chatId.trim();
+  const trimmedThread = threadRootId.trim();
+  if (!trimmedChat || !trimmedThread) {
+    return null;
+  }
+
+  return `/chats/chat/${encodeURIComponent(trimmedChat)}/thread/${encodeURIComponent(trimmedThread)}`;
+}
+
 export function resolveNotificationTarget({
   chatId,
+  threadRootId,
   target,
 }: {
   chatId?: string | null;
+  threadRootId?: string | null;
   target?: string | null;
 }): string {
-  return buildNotificationChatTarget(chatId) ?? normalizeNotificationTarget(target) ?? DEFAULT_NOTIFICATION_TARGET;
+  return (
+    buildNotificationThreadTarget(chatId, threadRootId) ??
+    buildNotificationChatTarget(chatId) ??
+    normalizeNotificationTarget(target) ??
+    DEFAULT_NOTIFICATION_TARGET
+  );
 }
 
 export function buildNotificationLaunchUrl(scope: string, target: string): string {
@@ -59,11 +85,13 @@ export function buildNotificationLaunchUrl(scope: string, target: string): strin
 export function buildNotificationNavigationData({
   chatId,
   messageId,
+  threadRootId,
   target,
 }: NotificationNavigationData): NotificationNavigationData {
   return {
     ...(chatId ? { chatId } : {}),
     ...(messageId ? { messageId } : {}),
+    ...(threadRootId ? { threadRootId } : {}),
     ...(target ? { target } : {}),
   };
 }
@@ -77,6 +105,7 @@ export function extractNotificationNavigationData(data: unknown): NotificationNa
   const candidate = data as NotificationNavigationData;
   const hasChatId = 'chatId' in candidate;
   const hasMessageId = 'messageId' in candidate;
+  const hasThreadRootId = 'threadRootId' in candidate;
   const hasTarget = 'target' in candidate;
 
   if (hasChatId && typeof candidate.chatId !== 'string') {
@@ -89,6 +118,11 @@ export function extractNotificationNavigationData(data: unknown): NotificationNa
     return {};
   }
 
+  if (hasThreadRootId && typeof candidate.threadRootId !== 'string') {
+    console.warn('[notification] invalid threadRootId in notification payload', { data });
+    return {};
+  }
+
   if (hasTarget && typeof candidate.target !== 'string') {
     console.warn('[notification] invalid target in notification payload', { data });
     return {};
@@ -97,6 +131,7 @@ export function extractNotificationNavigationData(data: unknown): NotificationNa
   return {
     chatId: candidate.chatId,
     messageId: candidate.messageId,
+    threadRootId: candidate.threadRootId,
     target: candidate.target,
   };
 }

@@ -3,6 +3,7 @@ import { syncApp } from '@/api/sync';
 import type { MessageResponse, ReactionSummary } from '@/api/messages';
 import { setActiveConnections, setWsConnected } from '@/store/connectionSlice';
 import { selectEffectiveLocale } from '@/store/settingsSlice';
+import { updateThreadFromWs, type ThreadUpdatePayload } from '@/store/threadsSlice';
 import store from '@/store/index';
 import { messageAdded, messageConfirmed, messagePatched, reactionsUpdated } from '@/store/messageEvents';
 import { getStoredJwtToken } from '@/utils/jwtToken';
@@ -116,6 +117,13 @@ function showLocalNotification(message: MessageResponse): void {
   if (currentUid != null && message.sender.uid === currentUid) return;
   if (message.isDeleted) return;
 
+  // Skip local notification for thread replies if user is not subscribed
+  if (message.replyRootId) {
+    const threadItems = store.getState().threads.items;
+    const isSubscribed = threadItems.some((t) => t.threadRootMessage.id === message.replyRootId);
+    if (!isSubscribed) return;
+  }
+
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
 
   const chatEntry = store.getState().chats.byId[message.chatId];
@@ -144,6 +152,7 @@ function showLocalNotification(message: MessageResponse): void {
           data: buildNotificationNavigationData({
             chatId: message.chatId,
             messageId: message.id,
+            threadRootId: message.replyRootId ?? undefined,
           }),
         });
 
@@ -345,6 +354,14 @@ async function connectWebSocket(): Promise<void> {
         if (message.type === 'presenceUpdate' && message.payload != null) {
           const payload = message.payload as { activeConnections: number };
           store.dispatch(setActiveConnections(payload.activeConnections));
+          return;
+        }
+
+        if (message.type === 'threadUpdate' && message.payload != null) {
+          const payload = message.payload as ThreadUpdatePayload;
+          if (payload.threadRootId && payload.chatId) {
+            store.dispatch(updateThreadFromWs(payload));
+          }
         }
       } catch {
         // ignore malformed websocket messages

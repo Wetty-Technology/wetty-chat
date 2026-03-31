@@ -1,10 +1,12 @@
-import { IonIcon, IonLabel, IonRouterOutlet, IonTabBar, IonTabButton, IonTabs } from '@ionic/react';
+import { IonBadge, IonIcon, IonLabel, IonRouterOutlet, IonTabBar, IonTabButton, IonTabs } from '@ionic/react';
 import { Trans } from '@lingui/react/macro';
-import { chatbubbles, flask, settings } from 'ionicons/icons';
+import { chatbubbleEllipses, chatbubbles, flask, settings } from 'ionicons/icons';
 import { useMemo } from 'react';
+import { useSelector } from 'react-redux';
 import { Redirect, Route, useLocation } from 'react-router-dom';
 
 import ChatsPage from '@/pages/chats';
+import ThreadsPage from '@/pages/threads';
 import { CreateChatPage } from '@/pages/create-chat';
 import InvitePreviewPage from '@/pages/invite-preview';
 import JoinChatPage from '@/pages/join-chat';
@@ -22,13 +24,17 @@ import ComponentDemoPage from '@/pages/component-demo';
 
 import { safariSafeRouteAnimation } from '@/utils/navigationHistory';
 import { useFeatureGate } from '@/hooks/useFeatureGate';
+import { selectTotalUnreadThreadCount } from '@/store/threadsSlice';
+import { selectTotalUnreadChatCount } from '@/store/chatsSlice';
 import styles from './MobileLayout.module.scss';
 
-const TAB_ROOT_PATHS = ['/', '/chats', '/settings', '/demo'];
+const TAB_ROOT_PATHS = ['/', '/chats', '/threads', '/settings', '/demo'];
 
 const MobileLayout: React.FC = () => {
   const location = useLocation();
   const isFeatureGateEnabled = useFeatureGate();
+  const unreadThreadCount = useSelector(selectTotalUnreadThreadCount);
+  const unreadChatCount = useSelector(selectTotalUnreadChatCount);
   const isTabRoot = TAB_ROOT_PATHS.includes(location.pathname);
 
   const tabBarButtons = useMemo(() => {
@@ -38,6 +44,14 @@ const MobileLayout: React.FC = () => {
         <IonLabel>
           <Trans>Chats</Trans>
         </IonLabel>
+        {unreadChatCount > 0 && <IonBadge color="primary">{unreadChatCount > 99 ? '99+' : unreadChatCount}</IonBadge>}
+      </IonTabButton>,
+      <IonTabButton tab="threads" href="/threads" key="threads">
+        <IonIcon icon={chatbubbleEllipses} />
+        <IonLabel>
+          <Trans>Threads</Trans>
+        </IonLabel>
+        {unreadThreadCount > 0 && <IonBadge color="primary">{unreadThreadCount}</IonBadge>}
       </IonTabButton>,
       <IonTabButton tab="settings" href="/settings" key="settings">
         <IonIcon icon={settings} />
@@ -57,11 +71,12 @@ const MobileLayout: React.FC = () => {
     }
 
     return buttons;
-  }, [isFeatureGateEnabled]);
+  }, [isFeatureGateEnabled, unreadThreadCount, unreadChatCount]);
 
   return (
     <IonTabs className={`${isTabRoot ? '' : styles.tabBarHidden}`}>
       <IonRouterOutlet animation={safariSafeRouteAnimation}>
+        <Route path="/threads" exact component={ThreadsPage} />
         <Route path="/chats" exact component={ChatsPage} />
         <Route path="/chats/new" exact component={CreateChatPage} />
         <Route path="/chats/join" exact component={JoinChatPage} />

@@ -32,6 +32,7 @@ export function useNotificationOpenHandler(isDesktop: boolean): void {
 
       const target = resolveNotificationTarget({
         chatId: event.data.chatId,
+        threadRootId: event.data.threadRootId,
         target: event.data.target,
       });
 

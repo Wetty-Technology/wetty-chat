@@ -571,6 +571,7 @@ pub(crate) async fn send_prepared_message(
             })
         }),
         message_id: response.id,
+        thread_root_id: response.reply_root_id,
     });
 
     Ok(SendMessageResult {
@@ -1393,6 +1394,31 @@ async fn post_thread_message(
     let response = send_result.response;
     let member_uids = send_result.member_uids;
 
+    // Auto-subscribe the replying user to this thread
+    if let Err(e) =
+        crate::services::threads::ensure_thread_subscription(conn, chat_id, thread_id, uid)
+    {
+        tracing::warn!("auto-subscribe replier to thread: {:?}", e);
+    }
+
+    // Auto-subscribe the root message author
+    if let Ok(root_sender_uid) = messages::table
+        .filter(dsl::id.eq(thread_id))
+        .select(messages::sender_uid)
+        .first::<i32>(conn)
+    {
+        if root_sender_uid != uid {
+            if let Err(e) = crate::services::threads::ensure_thread_subscription(
+                conn,
+                chat_id,
+                thread_id,
+                root_sender_uid,
+            ) {
+                tracing::warn!("auto-subscribe root author to thread: {:?}", e);
+            }
+        }
+    }
+
     // Mark the root message as having a thread
     let root_msg_updated: Option<Message> =
         diesel::update(messages::table.filter(dsl::id.eq(thread_id)))
@@ -1410,6 +1436,37 @@ async fn post_thread_message(
             crate::handlers::ws::messages::ServerWsMessage::MessageUpdated(root_response.clone()),
         );
         state.ws_registry.broadcast_to_uids(&member_uids, ws_msg);
+    }
+
+    // Broadcast ThreadUpdate to all subscribers of this thread
+    if let Ok(subscriber_uids) =
+        crate::services::threads::get_thread_subscriber_uids(conn, chat_id, thread_id)
+    {
+        if !subscriber_uids.is_empty() {
+            let reply_count: i64 = messages::table
+                .filter(
+                    messages::reply_root_id
+                        .eq(thread_id)
+                        .and(messages::deleted_at.is_null()),
+                )
+                .count()
+                .get_result(conn)
+                .unwrap_or(0);
+
+            let thread_update = std::sync::Arc::new(
+                crate::handlers::ws::messages::ServerWsMessage::ThreadUpdate(
+                    crate::handlers::ws::messages::ThreadUpdatePayload {
+                        thread_root_id: thread_id,
+                        chat_id,
+                        last_reply_at: response.created_at,
+                        reply_count,
+                    },
+                ),
+            );
+            state
+                .ws_registry
+                .broadcast_to_uids(&subscriber_uids, thread_update);
+        }
     }
 
     Ok((StatusCode::CREATED, Json(response)))
@@ -2280,6 +2337,10 @@ pub fn router() -> Router<crate::AppState> {
                 )
                 .route("/read", post(mark_as_read))
                 .route("/unread", post(mark_as_unread))
-                .route("/threads/{thread_id}/messages", post(post_thread_message)),
+                .route("/threads/{thread_id}/messages", post(post_thread_message))
+                .nest(
+                    "/threads/{thread_root_id}",
+                    super::threads::subscribe_router(),
+                ),
         )
 }

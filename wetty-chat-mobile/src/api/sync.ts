@@ -1,7 +1,9 @@
 import { type ChatListEntry, getChats } from '@/api/chats';
 import { getMessages } from '@/api/messages';
+import { getUnreadThreadCount } from '@/api/threads';
 import { setChatsList } from '@/store/chatsSlice';
 import { appendMessages } from '@/store/messagesSlice';
+import { setTotalUnreadCount } from '@/store/threadsSlice';
 import store from '@/store/index';
 import { syncAppBadgeCount } from '@/utils/badges';
 import { APP_SYNC_DEBOUNCE_MS } from '@/constants/chatTiming';
@@ -34,6 +36,14 @@ export async function syncApp() {
       store.dispatch(setChatsList(chats));
 
       await syncAppBadgeCount();
+
+      // 1b. Sync Threads Unread Count
+      try {
+        const threadsRes = await getUnreadThreadCount();
+        store.dispatch(setTotalUnreadCount(threadsRes.data.unreadThreadCount));
+      } catch (err) {
+        console.error('Failed to sync thread unread count', err);
+      }
 
       // 2. Sync Active Message Windows
       const state = store.getState();

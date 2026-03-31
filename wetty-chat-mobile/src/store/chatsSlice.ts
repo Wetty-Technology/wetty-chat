@@ -321,4 +321,15 @@ export const selectAllChats = createSelector([selectChatsById], (byId): ChatList
     });
 });
 
+export const selectTotalUnreadChatCount = createSelector([selectChatsById], (byId): number => {
+  let total = 0;
+  for (const entry of Object.values(byId)) {
+    const meta = getEffectiveListMeta(entry);
+    if (meta.inList) {
+      total += meta.unreadCount ?? 0;
+    }
+  }
+  return total;
+});
+
 export default chatsSlice.reducer;

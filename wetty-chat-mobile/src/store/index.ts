@@ -2,6 +2,7 @@ import { configureStore, createListenerMiddleware } from '@reduxjs/toolkit';
 import connectionReducer from './connectionSlice';
 import messagesReducer from './messagesSlice';
 import settingsReducer, { type SettingsState } from './settingsSlice';
+import threadsReducer from './threadsSlice';
 import chatsReducer, {
   projectChatMessageAdded,
   projectChatMessageConfirmed,
@@ -71,6 +72,7 @@ export function createStore(initialSettings?: Partial<SettingsState>) {
       messages: messagesReducer,
       settings: settingsReducer,
       chats: chatsReducer,
+      threads: threadsReducer,
       user: userReducer,
     },
     preloadedState: initialSettings

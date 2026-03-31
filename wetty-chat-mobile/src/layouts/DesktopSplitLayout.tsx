@@ -1,9 +1,21 @@
-import { type ReactNode, useCallback, useRef } from 'react';
+import { type ReactNode, useCallback, useRef, useState } from 'react';
 import { matchPath, useHistory, useLocation } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { Trans } from '@lingui/react/macro';
-import { IonButton, IonButtons, IonHeader, IonIcon, IonModal, IonTitle, IonToolbar } from '@ionic/react';
+import {
+  IonBadge,
+  IonButton,
+  IonButtons,
+  IonHeader,
+  IonIcon,
+  IonModal,
+  IonSegment,
+  IonSegmentButton,
+  IonToolbar,
+} from '@ionic/react';
 import { addCircleOutline, settings } from 'ionicons/icons';
 import { ChatList } from '@/components/chat/ChatList';
+import { ThreadsListCore } from '@/pages/threads';
 import ChatThreadCore from '@/pages/chat-thread/chat-thread';
 import ChatSettingsCore from '@/pages/chat-thread/chat-settings';
 import ChatMembersCore from '@/pages/chat-thread/chat-members';
@@ -21,6 +33,8 @@ import type { ChatThreadRouteState } from '@/types/chatThreadNavigation';
 import styles from './DesktopSplitLayout.module.scss';
 import { HeaderActionMenu, type HeaderActionMenuItem } from '@/components/HeaderActionMenu';
 import { useFeatureGate } from '@/hooks/useFeatureGate';
+import { selectTotalUnreadThreadCount } from '@/store/threadsSlice';
+import { selectTotalUnreadChatCount } from '@/store/chatsSlice';
 
 type DesktopRouteState = ChatThreadRouteState;
 
@@ -159,10 +173,15 @@ function ChatModal({
   );
 }
 
+type SidebarView = 'chats' | 'threads';
+
 export function DesktopSplitLayout() {
   const history = useHistory();
   const location = useLocation<DesktopRouteState | undefined>();
   const isFeatureGateEnabled = useFeatureGate();
+  const unreadThreadCount = useSelector(selectTotalUnreadThreadCount);
+  const unreadChatCount = useSelector(selectTotalUnreadChatCount);
+  const [sidebarView, setSidebarView] = useState<SidebarView>('chats');
   const skipNextGlobalSettingsDismiss = useRef(false);
   const headerActions: HeaderActionMenuItem[] = [
     ...(isFeatureGateEnabled
@@ -257,6 +276,13 @@ export function DesktopSplitLayout() {
     [backgroundPath, history],
   );
 
+  const handleThreadSelect = useCallback(
+    (chatId: string, threadRootId: string) => {
+      history.replace(`/chats/chat/${chatId}/thread/${threadRootId}`);
+    },
+    [history],
+  );
+
   let subPageOverlay: ReactNode = null;
 
   if (threadMatch) {
@@ -281,15 +307,38 @@ export function DesktopSplitLayout() {
                 <IonIcon slot="icon-only" icon={settings} />
               </IonButton>
             </IonButtons>
-            <IonTitle>
-              <Trans>Chats</Trans>
-            </IonTitle>
+            <IonSegment value={sidebarView} onIonChange={(e) => setSidebarView(e.detail.value as SidebarView)}>
+              <IonSegmentButton value="chats">
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <Trans>Chats</Trans>
+                  {unreadChatCount > 0 && (
+                    <IonBadge color="primary">{unreadChatCount > 99 ? '99+' : unreadChatCount}</IonBadge>
+                  )}
+                </span>
+              </IonSegmentButton>
+              <IonSegmentButton value="threads">
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <Trans>Threads</Trans>
+                  {unreadThreadCount > 0 && (
+                    <IonBadge color="primary">{unreadThreadCount > 99 ? '99+' : unreadThreadCount}</IonBadge>
+                  )}
+                </span>
+              </IonSegmentButton>
+            </IonSegment>
             <IonButtons slot="end">
-              <HeaderActionMenu icon={addCircleOutline} actions={headerActions} />
+              {sidebarView === 'chats' ? (
+                <HeaderActionMenu icon={addCircleOutline} actions={headerActions} />
+              ) : (
+                <span style={{ width: 48 }} />
+              )}
             </IonButtons>
           </IonToolbar>
         </IonHeader>
-        <ChatList activeChatId={activeChatId} onChatSelect={handleChatSelect} />
+        {sidebarView === 'chats' ? (
+          <ChatList activeChatId={activeChatId} onChatSelect={handleChatSelect} />
+        ) : (
+          <ThreadsListCore onThreadSelect={handleThreadSelect} />
+        )}
       </div>
       <div className={styles.desktopSplitRight}>
         {/* Base layer: always render ChatThreadCore when a chat is selected */}

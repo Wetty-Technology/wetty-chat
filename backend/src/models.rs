@@ -486,6 +486,26 @@ pub struct NewUserGroupExtra {
 }
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize, Insertable)]
+#[diesel(table_name = schema::thread_subscriptions)]
+pub struct ThreadSubscription {
+    pub chat_id: i64,
+    pub thread_root_id: i64,
+    pub uid: i32,
+    pub last_read_message_id: Option<i64>,
+    pub subscribed_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Insertable)]
+#[diesel(table_name = schema::thread_subscriptions)]
+pub struct NewThreadSubscription {
+    pub chat_id: i64,
+    pub thread_root_id: i64,
+    pub uid: i32,
+    pub last_read_message_id: Option<i64>,
+    pub subscribed_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Queryable, Selectable, Serialize, Insertable)]
 #[diesel(table_name = schema::push_subscriptions)]
 pub struct PushSubscription {
     pub id: i64,

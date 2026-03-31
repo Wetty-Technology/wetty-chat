@@ -24,6 +24,7 @@ import {
   createOutline,
   informationCircleOutline,
   notificationsOffOutline,
+  notifications,
   people,
   trashOutline,
 } from 'ionicons/icons';
@@ -90,6 +91,13 @@ import { useIsDesktop } from '@/hooks/platformHooks';
 import { ChatMessageRow } from '@/components/chat/messages/ChatMessageRow';
 import type { ChatThreadRouteState, ChatThreadResumeRequest } from '@/types/chatThreadNavigation';
 import { READ_REQUEST_COOLDOWN_MS } from '@/constants/chatTiming';
+import {
+  markThreadAsRead as apiMarkThreadAsRead,
+  getThreadSubscriptionStatus,
+  subscribeToThread,
+  unsubscribeFromThread,
+} from '@/api/threads';
+import { markThreadRead as markThreadReadAction, removeThread } from '@/store/threadsSlice';
 
 const QUICK_REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🎉'];
 
@@ -224,6 +232,37 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   const [lastFullyVisibleMessageId, setLastFullyVisibleMessageId] = useState<string | null>(null);
 
   const chatRows = useChatRows(messages, formatDateSeparator);
+
+  // Thread subscription state
+  const [threadSubscribed, setThreadSubscribed] = useState<boolean | null>(null);
+  const [threadSubLoading, setThreadSubLoading] = useState(false);
+
+  useEffect(() => {
+    if (!threadId || !chatId) return;
+    setThreadSubscribed(null);
+    getThreadSubscriptionStatus(chatId, threadId)
+      .then((res) => setThreadSubscribed(res.data.subscribed))
+      .catch(() => setThreadSubscribed(null));
+  }, [chatId, threadId]);
+
+  const handleToggleThreadSubscription = useCallback(async () => {
+    if (!threadId || !chatId || threadSubscribed == null) return;
+    setThreadSubLoading(true);
+    try {
+      if (threadSubscribed) {
+        await unsubscribeFromThread(chatId, threadId);
+        setThreadSubscribed(false);
+        dispatch(removeThread({ threadRootId: threadId }));
+      } else {
+        await subscribeToThread(chatId, threadId);
+        setThreadSubscribed(true);
+      }
+    } catch (err) {
+      console.error('Failed to toggle thread subscription', err);
+    } finally {
+      setThreadSubLoading(false);
+    }
+  }, [chatId, threadId, threadSubscribed, dispatch]);
 
   const [atBottom, setAtBottom] = useState(() => threadId || initialResumeRequest == null);
   const [replyingTo, setReplyingTo] = useState<MessageResponse | null>(null);
@@ -463,6 +502,52 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
       }
     };
   }, [chatId, flushPendingReadTarget, lastFullyVisibleMessageId, lastReadMessageId, threadId]);
+
+  // Thread-specific mark-as-read: fires when viewing a thread and messages become visible.
+  // Unlike chat read tracking (which is purely scroll-based), this also fires on mount
+  // once the initial messages are rendered and the last visible message is known.
+  const threadReadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastThreadReadIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!threadId || !chatId) return;
+    if (!lastFullyVisibleMessageId) return;
+    if (lastFullyVisibleMessageId === lastThreadReadIdRef.current) return;
+
+    // Debounce to avoid excessive API calls during rapid scrolling
+    if (threadReadTimerRef.current) {
+      clearTimeout(threadReadTimerRef.current);
+    }
+
+    threadReadTimerRef.current = setTimeout(() => {
+      threadReadTimerRef.current = null;
+      lastThreadReadIdRef.current = lastFullyVisibleMessageId;
+      apiMarkThreadAsRead(threadId, lastFullyVisibleMessageId)
+        .then(() => {
+          dispatch(markThreadReadAction({ threadRootId: threadId }));
+        })
+        .catch((err) => {
+          console.error('Failed to mark thread as read', err);
+          lastThreadReadIdRef.current = null;
+        });
+    }, READ_REQUEST_COOLDOWN_MS);
+
+    return () => {
+      if (threadReadTimerRef.current) {
+        clearTimeout(threadReadTimerRef.current);
+        threadReadTimerRef.current = null;
+      }
+    };
+  }, [chatId, threadId, lastFullyVisibleMessageId, dispatch]);
+
+  // Reset thread read state when switching threads
+  useEffect(() => {
+    lastThreadReadIdRef.current = null;
+    if (threadReadTimerRef.current) {
+      clearTimeout(threadReadTimerRef.current);
+      threadReadTimerRef.current = null;
+    }
+  }, [storeChatId]);
 
   useEffect(() => {
     if (threadId) return;
@@ -763,6 +848,10 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   const handleSend = useCallback(
     (payload: ComposeSendPayload) => {
       if (!chatId) return;
+      // Optimistically mark as subscribed — backend auto-subscribes on reply
+      if (threadId && !threadSubscribed) {
+        setThreadSubscribed(true);
+      }
       if (payload.kind === 'text') {
         const { text, attachmentIds, existingAttachments, uploadedAttachments } = payload;
         const { attachments: optimisticUploadedAttachments, revoke } =
@@ -1133,6 +1222,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
       chatId,
       storeChatId,
       threadId,
+      threadSubscribed,
       dispatch,
       showToast,
       replyingTo,
@@ -1294,12 +1384,26 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
             </span>
           </IonTitle>
           <IonButtons slot="end">
-            <IonButton onClick={() => history.push(`/chats/chat/${chatId}/members`)}>
-              <IonIcon slot="icon-only" icon={people} />
-            </IonButton>
-            <IonButton onClick={() => history.push(`/chats/chat/${chatId}/settings`)}>
-              <IonIcon slot="icon-only" icon={informationCircleOutline} />
-            </IonButton>
+            {threadId ? (
+              threadSubscribed != null && (
+                <IonButton
+                  onClick={handleToggleThreadSubscription}
+                  disabled={threadSubLoading}
+                  color={threadSubscribed ? undefined : 'medium'}
+                >
+                  <IonIcon slot="icon-only" icon={threadSubscribed ? notifications : notificationsOffOutline} />
+                </IonButton>
+              )
+            ) : (
+              <>
+                <IonButton onClick={() => history.push(`/chats/chat/${chatId}/members`)}>
+                  <IonIcon slot="icon-only" icon={people} />
+                </IonButton>
+                <IonButton onClick={() => history.push(`/chats/chat/${chatId}/settings`)}>
+                  <IonIcon slot="icon-only" icon={informationCircleOutline} />
+                </IonButton>
+              </>
+            )}
           </IonButtons>
           {!wsConnected && <IonProgressBar type="indeterminate" />}
         </IonToolbar>

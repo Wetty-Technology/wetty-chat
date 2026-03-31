@@ -57,6 +57,8 @@ pub struct PushMessagePreview {
 struct PushPayloadData {
     chat_id: String,
     message_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    thread_root_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -81,6 +83,7 @@ pub struct PushJob {
     pub message_preview: PushMessagePreview,
     pub legacy_message_preview: Option<String>,
     pub message_id: i64,
+    pub thread_root_id: Option<i64>,
 }
 
 pub struct PushService {
@@ -296,15 +299,33 @@ async fn process_push_job(
     use crate::schema::group_membership;
     use crate::schema::group_membership::dsl as gm_dsl;
 
-    // 1. Get all member UIDs and their mute state for the chat.
-    let members: Vec<(i32, Option<chrono::DateTime<chrono::Utc>>)> = group_membership::table
-        .filter(gm_dsl::chat_id.eq(job.chat_id))
-        .select((group_membership::uid, group_membership::muted_until))
-        .load(&mut conn)
-        .map_err(|e| format!("Failed to load member UIDs: {:?}", e))?;
+    let now = chrono::Utc::now();
+
+    // 1. Get candidate UIDs and their mute state.
+    //    For thread replies: only thread subscribers.
+    //    For top-level messages: all chat members.
+    let members: Vec<(i32, Option<chrono::DateTime<chrono::Utc>>)> =
+        if let Some(thread_root_id) = job.thread_root_id {
+            use crate::schema::thread_subscriptions::dsl as ts_dsl;
+            ts_dsl::thread_subscriptions
+                .inner_join(
+                    group_membership::table.on(gm_dsl::chat_id
+                        .eq(ts_dsl::chat_id)
+                        .and(gm_dsl::uid.eq(ts_dsl::uid))),
+                )
+                .filter(ts_dsl::thread_root_id.eq(thread_root_id))
+                .select((ts_dsl::uid, group_membership::muted_until))
+                .load(&mut conn)
+                .map_err(|e| format!("Failed to load thread subscriber UIDs: {:?}", e))?
+        } else {
+            group_membership::table
+                .filter(gm_dsl::chat_id.eq(job.chat_id))
+                .select((group_membership::uid, group_membership::muted_until))
+                .load(&mut conn)
+                .map_err(|e| format!("Failed to load member UIDs: {:?}", e))?
+        };
 
     // 2. Filter out the sender, muted users, and users with fresh active app presence.
-    let now = chrono::Utc::now();
     let target_uids: Vec<i32> = members
         .into_iter()
         .filter(|(uid, _)| *uid != job.sender_uid)
@@ -413,6 +434,7 @@ fn build_push_payload(job: &PushJob, unread_count: i64, body_text: &str) -> Push
         data: PushPayloadData {
             chat_id: job.chat_id.to_string(),
             message_id: job.message_id.to_string(),
+            thread_root_id: job.thread_root_id.map(|id| id.to_string()),
         },
     }
 }
@@ -533,6 +555,7 @@ mod tests {
             },
             legacy_message_preview: Some("[Sticker] 🙂".to_string()),
             message_id: 99,
+            thread_root_id: None,
         };
 
         let payload = build_push_payload(&job, 3, "alice: [Sticker] 🙂");
