@@ -176,7 +176,7 @@ export function StickerPackDetailCore({ packId, backAction }: StickerPackDetailC
       buttons: [
         { text: t`Cancel`, role: 'cancel' },
         {
-          text: t`Delete`,
+          text: t({ message: 'Delete', context: 'sticker pack' }),
           role: 'destructive',
           handler: async () => {
             try {

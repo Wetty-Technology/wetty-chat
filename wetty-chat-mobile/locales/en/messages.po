@@ -301,7 +301,11 @@ msgstr "Create new sticker pack"
 
 #: src/pages/chat-thread/chat-thread.tsx
 #: src/pages/chat-thread/chat-thread.tsx
+msgid "Delete"
+msgstr "Delete"
+
 #: src/pages/settings/sticker-pack-detail.tsx
+msgctxt "sticker pack"
 msgid "Delete"
 msgstr "Delete"
 

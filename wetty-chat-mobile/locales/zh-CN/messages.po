@@ -277,9 +277,13 @@ msgstr "创建新的表情包"
 
 #: src/pages/chat-thread/chat-thread.tsx
 #: src/pages/chat-thread/chat-thread.tsx
-#: src/pages/settings/sticker-pack-detail.tsx
 msgid "Delete"
 msgstr "撤回"
+
+#: src/pages/settings/sticker-pack-detail.tsx
+msgctxt "sticker pack"
+msgid "Delete"
+msgstr "删除"
 
 #: src/pages/chat-thread/chat-thread.tsx
 msgid "Delete Message"
