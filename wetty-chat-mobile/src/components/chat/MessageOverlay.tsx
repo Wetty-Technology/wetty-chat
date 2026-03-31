@@ -88,6 +88,24 @@ export function MessageOverlay(props: MessageOverlayProps) {
 
     let top = sourceRect.top - bubbleOffsetTop;
 
+    // Check if there's enough space below for the actions
+    const actionListEl = content.querySelector('[data-action-list]') as HTMLElement | null;
+    const reactionBarEl = content.querySelector('[data-reaction-bar]') as HTMLElement | null;
+    if (actionListEl) {
+      const spaceBelow = offsetTop + vh - sourceRect.bottom;
+      // If space below is less than actionList height + padding, try to move actionList above
+      if (spaceBelow < actionListEl.offsetHeight + pad) {
+        // We move the action list to the top and reaction bar to the bottom
+        actionListEl.style.order = '-1';
+        if (reactionBarEl) {
+          reactionBarEl.style.order = '1';
+        }
+        // Re-read bubbleOffsetTop since the layout just changed!
+        const newBubbleOffsetTop = bubbleEl ? bubbleEl.offsetTop : 0;
+        top = sourceRect.top - newBubbleOffsetTop;
+      }
+    }
+
     // For sent messages, align right edge to source right edge
     let left = isSent ? sourceRect.right - contentRect.width : sourceRect.left;
 
@@ -191,7 +209,7 @@ export function MessageOverlay(props: MessageOverlayProps) {
       >
         {/* Reaction bar — hidden for stickers */}
         {!isSticker && reactions && (
-          <div className={styles.reactionBar}>
+          <div className={styles.reactionBar} data-reaction-bar="true">
             {reactions.emojis.map((emoji) => (
               <button
                 key={emoji}
@@ -212,7 +230,7 @@ export function MessageOverlay(props: MessageOverlayProps) {
         {bubbleClone}
 
         {/* Action list */}
-        <div className={styles.actionList}>
+        <div className={styles.actionList} data-action-list="true">
           {actions.map((action) => (
             <button
               key={action.key}
