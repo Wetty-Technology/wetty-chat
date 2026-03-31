@@ -99,6 +99,7 @@ class MessageStore extends ChangeNotifier {
 
   List<MessageItem> get displayItems {
     _cachedItems ??= _buildFlatList();
+    debugPrint('displayItems: $_cachedItems');
     return _cachedItems!;
   }
 
