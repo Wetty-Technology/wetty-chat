@@ -80,7 +80,7 @@ export function MessageOverlay(props: MessageOverlayProps) {
     const offsetTop = visualViewport?.offsetTop ?? 0;
     const offsetLeft = visualViewport?.offsetLeft ?? 0;
 
-    let contentWidth = content.offsetWidth;
+    const contentWidth = content.offsetWidth;
     let contentHeight = content.offsetHeight;
 
     // Start at the original bubble position, offset by the bubble clone's
