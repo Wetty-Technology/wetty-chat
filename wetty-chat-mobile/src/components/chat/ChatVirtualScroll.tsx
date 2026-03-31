@@ -64,11 +64,11 @@ const JUMP_TARGET_HIGHLIGHT_MS = 1000;
 function logVirtualScroll(event: string, details?: Record<string, unknown>) {
   if (!debugVirtualScroll) return;
   if (details) {
-    console.log(`[ChatVirtualScroll] ${event}`, details);
+    console.debug(`[ChatVirtualScroll] ${event}`, details);
     return;
   }
 
-  console.log(`[ChatVirtualScroll] ${event}`);
+  console.debug(`[ChatVirtualScroll] ${event}`);
 }
 
 function formatAnchorForLog(anchor: ChatVirtualScrollProps['initialAnchor']) {
@@ -854,10 +854,10 @@ export function ChatVirtualScroll({
         clientHeight: container.clientHeight,
         pendingBatch: pendingBatch
           ? {
-              reason: pendingBatch.reason,
-              direction: pendingBatch.direction,
-              size: pendingBatch.keys.length,
-            }
+            reason: pendingBatch.reason,
+            direction: pendingBatch.direction,
+            size: pendingBatch.keys.length,
+          }
           : null,
         pendingScrollToBottom: pendingScrollToBottomRef.current,
         pendingScrollToBottomSource: pendingScrollToBottomSourceRef.current,
@@ -1152,10 +1152,10 @@ export function ChatVirtualScroll({
             : null,
           pendingBatch: pendingBatch
             ? {
-                reason: pendingBatch.reason,
-                direction: pendingBatch.direction,
-                size: pendingBatch.keys.length,
-              }
+              reason: pendingBatch.reason,
+              direction: pendingBatch.direction,
+              size: pendingBatch.keys.length,
+            }
             : null,
           pendingScrollToBottom: pendingScrollToBottomRef.current,
           pendingScrollToBottomBehavior: pendingScrollToBottomBehaviorRef.current,
@@ -1437,12 +1437,12 @@ export function ChatVirtualScroll({
       mounted,
       pendingBatch: pendingBatch
         ? {
-            reason: pendingBatch.reason,
-            direction: pendingBatch.direction,
-            size: pendingBatch.keys.length,
-            firstKey: pendingBatch.keys[0] ?? null,
-            lastKey: pendingBatch.keys[pendingBatch.keys.length - 1] ?? null,
-          }
+          reason: pendingBatch.reason,
+          direction: pendingBatch.direction,
+          size: pendingBatch.keys.length,
+          firstKey: pendingBatch.keys[0] ?? null,
+          lastKey: pendingBatch.keys[pendingBatch.keys.length - 1] ?? null,
+        }
         : null,
       scrollTop: container.scrollTop,
       scrollHeight: container.scrollHeight,
@@ -1459,11 +1459,11 @@ export function ChatVirtualScroll({
       bootstrapRevealState:
         phase === 'BOOTSTRAP'
           ? {
-              mountedSize: rangeSize(mounted),
-              mountedIntersectsViewport,
-              mountedVisibleHeight,
-              pendingBatchSize: pendingBatch?.keys.length ?? 0,
-            }
+            mountedSize: rangeSize(mounted),
+            mountedIntersectsViewport,
+            mountedVisibleHeight,
+            pendingBatchSize: pendingBatch?.keys.length ?? 0,
+          }
           : null,
     });
   }, [

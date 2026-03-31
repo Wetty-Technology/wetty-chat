@@ -3,6 +3,14 @@ import { cleanupOutdatedCaches, createHandlerBoundToURL, precacheAndRoute } from
 import { NavigationRoute, registerRoute } from 'workbox-routing';
 import { getHighWaterMark, kvGet, setHighWaterMark } from './utils/db';
 import { formatNotificationBody, getNotificationPreviewLabels, type PreviewMessage } from './utils/messagePreview';
+import {
+  buildNotificationNavigationData,
+  buildNotificationLaunchUrl,
+  extractNotificationNavigationData,
+  type NotificationNavigationData,
+  resolveNotificationTarget,
+  type NotificationOpenMessage,
+} from './utils/notificationNavigation';
 
 declare let self: ServiceWorkerGlobalScope;
 
@@ -12,10 +20,7 @@ interface PushPayload {
   body?: string;
   senderName?: string;
   messagePreview?: PreviewMessage;
-  data?: {
-    chatId?: string;
-    messageId?: string;
-  };
+  data?: NotificationNavigationData;
 }
 
 async function updateHighWaterMarkIdb(chatId: string, messageId: string): Promise<void> {
@@ -99,8 +104,13 @@ self.addEventListener('push', (event) => {
           }
         }
 
-        const chatId = payload.data?.chatId;
-        const messageId = payload.data?.messageId;
+        const notificationData = buildNotificationNavigationData({
+          chatId: payload.data?.chatId,
+          messageId: payload.data?.messageId,
+          target: payload.data?.target,
+        });
+        const chatId = notificationData.chatId;
+        const messageId = notificationData.messageId;
 
         if (chatId && messageId && (await isAlreadyNotified(String(chatId), String(messageId)))) {
           return;
@@ -117,7 +127,7 @@ self.addEventListener('push', (event) => {
           icon: '/icon/pwa-192x192.png',
           badge: '/icon/pwa-64x64.png',
           tag,
-          data: payload,
+          data: notificationData,
         });
       } catch (err) {
         console.error('Failed to parse push event payload', err);
@@ -128,16 +138,60 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  const notificationData = extractNotificationNavigationData(event.notification.data);
+  const target = resolveNotificationTarget({
+    chatId: notificationData.chatId,
+    target: notificationData.target,
+  });
+  const launchUrl = buildNotificationLaunchUrl(self.registration.scope, target);
+  const message: NotificationOpenMessage = {
+    type: 'OPEN_NOTIFICATION_TARGET',
+    chatId: notificationData.chatId,
+    target,
+  };
+
+  console.debug('[sw] notificationclick', {
+    scope: self.registration.scope,
+    target,
+    notificationData,
+    rawNotificationData: event.notification.data,
+  });
+
   // Attempt to focus the app main window if it is open, else open it
   event.waitUntil(
-    self.clients.matchAll({ type: 'window' }).then((clientList) => {
-      for (const client of clientList) {
-        if (client.url.startsWith(self.registration.scope) && 'focus' in client) {
-          return client.focus();
-        }
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      const appClients = clientList.filter((client) => client.url.startsWith(self.registration.scope));
+      const preferredClient =
+        appClients.find((client) => client.visibilityState === 'visible') ?? appClients[0];
+
+      console.debug('[sw] notificationclick clients', {
+        totalClients: clientList.length,
+        appClients: appClients.map((client) => ({
+          url: client.url,
+          visibilityState: client.visibilityState,
+          focused: client.focused,
+        })),
+        preferredClient: preferredClient
+          ? {
+              url: preferredClient.url,
+              visibilityState: preferredClient.visibilityState,
+              focused: preferredClient.focused,
+            }
+          : null,
+      });
+
+      if (preferredClient && 'focus' in preferredClient) {
+        console.debug('[sw] posting notification target to existing client', {
+          url: preferredClient.url,
+          target,
+        });
+        preferredClient.postMessage(message);
+        return preferredClient.focus();
       }
+
       if (self.clients.openWindow) {
-        return self.clients.openWindow(`${import.meta.env.BASE_URL}`);
+        console.debug('[sw] opening new client window', { launchUrl });
+        return self.clients.openWindow(launchUrl);
       }
     }),
   );

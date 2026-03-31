@@ -7,6 +7,7 @@ import store from '@/store/index';
 import { messageAdded, messageConfirmed, messagePatched, reactionsUpdated } from '@/store/messageEvents';
 import { getStoredJwtToken } from '@/utils/jwtToken';
 import { formatNotificationBody, getNotificationPreviewLabels } from '@/utils/messagePreview';
+import { buildNotificationNavigationData } from '@/utils/notificationNavigation';
 
 const WS_PATH = __API_BASE__ + '/ws';
 const PING_INTERVAL_MS = 10_000;
@@ -144,11 +145,10 @@ function showLocalNotification(message: MessageResponse): void {
           icon: '/icon/pwa-192x192.png',
           badge: '/icon/pwa-64x64.png',
           tag,
-          data: {
-            type: 'new_message',
+          data: buildNotificationNavigationData({
             chatId: message.chatId,
             messageId: message.id,
-          },
+          }),
         });
 
         // Inform the SW of the notified message so it can skip stale push notifications

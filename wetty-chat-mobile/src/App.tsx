@@ -18,10 +18,12 @@ import { usePushNotificationBootstrap } from './hooks/usePushNotifications';
 import { DesktopSplitLayout } from './layouts/DesktopSplitLayout';
 import OobePage from '@/pages/oobe';
 import LandingPage from './pages/landing';
+import PushOpenPage from '@/pages/push-open';
 import { initWebSocket } from '@/api/ws';
 import { syncJwtTokenToIdb } from '@/utils/jwtToken';
 import { useDeviceToken } from './hooks/useDeviceToken';
 import { appHistory } from '@/utils/navigationHistory';
+import { useNotificationOpenHandler } from '@/hooks/useNotificationOpenHandler';
 
 const OOBE_STORAGE_KEY = 'oobe';
 
@@ -32,11 +34,14 @@ function hasCompletedOobe() {
 function AppRouter({ isDesktop }: { isDesktop: boolean }) {
   const isOobeRoute = useRouteMatch('/oobe');
   const isLandingRoute = useRouteMatch('/landing');
+  const isPushOpenRoute = useRouteMatch('/push-open');
 
   if (isLandingRoute?.isExact) {
     return <LandingPage />;
   } else if (isOobeRoute?.isExact) {
     return <OobePage />;
+  } else if (isPushOpenRoute?.isExact) {
+    return <PushOpenPage isDesktop={isDesktop} />;
   } else if (!hasCompletedOobe()) {
     return <Redirect to="/oobe" />;
   }
@@ -50,6 +55,7 @@ function AppShell() {
   const token = useDeviceToken(true);
   useAppLifecycle();
   usePushNotificationBootstrap();
+  useNotificationOpenHandler(isDesktop);
   const { needRefresh, setNeedRefresh, updateServiceWorker } = useAppUpdate();
   const missingProdToken = import.meta.env.PROD && (!token || token.length === 0);
 
