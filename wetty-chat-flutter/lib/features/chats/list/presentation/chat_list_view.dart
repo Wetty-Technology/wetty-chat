@@ -2,13 +2,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../../app/theme/style_config.dart';
-import '../../../auth/application/auth_store.dart';
 import '../../detail/application/chat_draft_store.dart';
 import '../../detail/presentation/chat_detail_view.dart';
 import '../../models/chat_models.dart';
 import '../../models/message_models.dart';
 import '../application/chat_list_view_model.dart';
-import '../../../settings/presentation/settings_view.dart';
 import 'new_chat_view.dart';
 
 class ChatPage extends StatefulWidget {
@@ -21,22 +19,6 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   final ChatListViewModel _viewModel = ChatListViewModel();
   late final ScrollController _scrollController;
-
-  bool get _isDesktopRefreshPlatform {
-    if (kIsWeb) {
-      return false;
-    }
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.windows:
-      case TargetPlatform.macOS:
-        return true;
-      case TargetPlatform.android:
-      case TargetPlatform.iOS:
-      case TargetPlatform.linux:
-      case TargetPlatform.fuchsia:
-        return false;
-    }
-  }
 
   bool get _supportsPullToRefresh {
     if (kIsWeb) {
@@ -103,31 +85,6 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
-  Future<void> _confirmLogout() async {
-    final shouldLogout = await showCupertinoDialog<bool>(
-      context: context,
-      builder: (context) => CupertinoAlertDialog(
-        title: Text('退出登录？', style: appTextStyle(context)),
-        content: Text('这会清除当前设备保存的登录状态。', style: appTextStyle(context)),
-        actions: [
-          CupertinoDialogAction(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('取消', style: appTextStyle(context)),
-          ),
-          CupertinoDialogAction(
-            isDestructiveAction: true,
-            onPressed: () => Navigator.pop(context, true),
-            child: Text('退出登录', style: appTextStyle(context)),
-          ),
-        ],
-      ),
-    );
-
-    if (shouldLogout == true) {
-      await AuthStore.instance.clearToken();
-    }
-  }
-
   void _showToast(String message) {
     final overlay = Navigator.of(context).overlay;
     if (overlay == null) {
@@ -154,46 +111,14 @@ class _ChatPageState extends State<ChatPage> {
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
-        leading: CupertinoButton(
-          padding: EdgeInsets.zero,
-          onPressed: () => Navigator.push(
-            context,
-            CupertinoPageRoute(builder: (_) => const SettingsPage()),
-          ),
-          child: const Icon(CupertinoIcons.gear, size: IconSizes.iconSize),
-        ),
         middle: const Text('Chats'),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (_isDesktopRefreshPlatform)
-              CupertinoButton(
-                padding: EdgeInsets.zero,
-                onPressed: _viewModel.isRefreshing ? null : _refreshChats,
-                child: _viewModel.isRefreshing
-                    ? const CupertinoActivityIndicator(radius: 9)
-                    : const Icon(
-                        CupertinoIcons.refresh,
-                        size: IconSizes.iconSize,
-                      ),
-              ),
-            CupertinoButton(
-              padding: EdgeInsets.zero,
-              onPressed: _confirmLogout,
-              child: const Icon(
-                CupertinoIcons.square_arrow_right,
-                size: IconSizes.iconSize,
-              ),
-            ),
-            CupertinoButton(
-              padding: EdgeInsets.zero,
-              onPressed: _addChat,
-              child: const Icon(
-                CupertinoIcons.square_pencil,
-                size: IconSizes.iconSize,
-              ),
-            ),
-          ],
+        trailing: CupertinoButton(
+          padding: EdgeInsets.zero,
+          onPressed: _addChat,
+          child: const Icon(
+            CupertinoIcons.square_pencil,
+            size: IconSizes.iconSize,
+          ),
         ),
       ),
       child: SafeArea(child: _buildBody()),

@@ -2,7 +2,7 @@ import 'package:flutter/cupertino.dart';
 
 import 'theme/style_config.dart';
 import '../features/auth/auth.dart';
-import '../features/chats/chats.dart';
+import 'presentation/home_root_view.dart';
 
 class WettyChatApp extends StatelessWidget {
   const WettyChatApp({super.key, this.home});
@@ -16,7 +16,7 @@ class WettyChatApp extends StatelessWidget {
 
       /// For now, the home page directs to the chat list page
       // TODO: implement and verify the auth later
-      home: home ?? const ChatPage(),
+      home: home ?? const HomeRootPage(),
     );
   }
 }
@@ -30,7 +30,7 @@ class AuthGate extends StatelessWidget {
       animation: AuthStore.instance,
       builder: (context, _) {
         if (AuthStore.instance.hasToken) {
-          return const ChatPage();
+          return const HomeRootPage();
         }
         return const TokenImportPage();
       },

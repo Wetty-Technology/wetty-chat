@@ -6,19 +6,100 @@ import '../../../core/settings/app_settings_store.dart';
 class GeneralSettingsPage extends StatelessWidget {
   const GeneralSettingsPage({super.key});
 
+  Future<void> _showLanguagePicker(BuildContext context) async {
+    final currentLanguage = AppSettingsStore.instance.language;
+    await showCupertinoModalPopup<void>(
+      context: context,
+      builder: (context) => CupertinoActionSheet(
+        title: const Text('Language'),
+        actions: [
+          for (final language in AppLanguage.values)
+            CupertinoActionSheetAction(
+              isDefaultAction: language == currentLanguage,
+              onPressed: () {
+                AppSettingsStore.instance.setLanguage(language);
+                Navigator.of(context).pop();
+              },
+              child: Text(_languageLabel(language)),
+            ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+      ),
+    );
+  }
+
+  String _languageLabel(AppLanguage language) {
+    switch (language) {
+      case AppLanguage.system:
+        return 'System';
+      case AppLanguage.english:
+        return 'English';
+      case AppLanguage.chinese:
+        return 'Chinese';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
       backgroundColor: const Color(0xFFF2F2F7),
-      navigationBar: const CupertinoNavigationBar(middle: Text('通用')),
+      navigationBar: const CupertinoNavigationBar(middle: Text('General')),
       child: SafeArea(
         child: AnimatedBuilder(
           animation: AppSettingsStore.instance,
           builder: (context, _) {
             final scale = AppSettingsStore.instance.chatFontScale;
+            final language = AppSettingsStore.instance.language;
             return ListView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
               children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color: CupertinoColors.systemBackground.resolveFrom(
+                      context,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: CupertinoButton(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    onPressed: () => _showLanguagePicker(context),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Language',
+                            style: appTextStyle(
+                              context,
+                              fontSize: AppFontSizes.bodySmall,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          _languageLabel(language),
+                          style: appSecondaryTextStyle(
+                            context,
+                            fontSize: AppFontSizes.meta,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(
+                          CupertinoIcons.chevron_right,
+                          size: IconSizes.iconSize,
+                          color: CupertinoColors.systemGrey3.resolveFrom(
+                            context,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
@@ -30,7 +111,10 @@ class GeneralSettingsPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('消息字体大小', style: appSectionTitleTextStyle(context)),
+                      Text(
+                        'Messages Font Size',
+                        style: appSectionTitleTextStyle(context),
+                      ),
                       const SizedBox(height: 10),
                       SizedBox(
                         width: double.infinity,
@@ -49,14 +133,14 @@ class GeneralSettingsPage extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              '小',
+                              'Small',
                               style: appSecondaryTextStyle(
                                 context,
                                 fontSize: AppFontSizes.meta,
                               ),
                             ),
                             Text(
-                              '大',
+                              'Large',
                               style: appSecondaryTextStyle(
                                 context,
                                 fontSize: AppFontSizes.meta,
@@ -83,7 +167,7 @@ class GeneralSettingsPage extends StatelessWidget {
                             ),
                             alignment: Alignment.center,
                             child: Text(
-                              '风纪',
+                              'SC',
                               style: appOnDarkTextStyle(
                                 context,
                                 fontSize: AppFontSizes.meta,
@@ -106,7 +190,7 @@ class GeneralSettingsPage extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    '风纪委员',
+                                    'Sample User',
                                     style: appSecondaryTextStyle(
                                       context,
                                       fontSize: AppFontSizes.meta,
@@ -115,7 +199,7 @@ class GeneralSettingsPage extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '这是你的消息在聊天中的显示效果。',
+                                    'This is how your messages will look in chat.',
                                     style: appTextStyle(
                                       context,
                                       fontSize: AppFontSizes.body * scale,

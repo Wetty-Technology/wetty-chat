@@ -61,6 +61,7 @@ class ChatListViewModel extends ChangeNotifier {
   }
 
   Future<void> refreshChats({bool userInitiated = false}) async {
+    debugPrint("refreshing");
     if (_isLoading || _isLoadingMore || _isRefreshing) {
       return;
     }
@@ -69,6 +70,7 @@ class ChatListViewModel extends ChangeNotifier {
       notifyListeners();
     }
     try {
+      // TODO: may need to redesign the logic when have more chats
       final limit = chats.isEmpty ? 11 : chats.length;
       await _repository.loadChats(limit: limit);
       _errorMessage = null;
