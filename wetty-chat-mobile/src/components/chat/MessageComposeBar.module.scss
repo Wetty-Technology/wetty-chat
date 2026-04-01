@@ -1,3 +1,11 @@
+.toolbar {
+  --padding-start: 0;
+  --padding-end: 0;
+  --padding-top: 0;
+  --padding-bottom: 0;
+  --min-height: auto;
+}
+
 .bar {
   display: flex;
   align-items: flex-end;
@@ -40,7 +48,6 @@
   display: flex;
   flex-direction: row;
   align-items: flex-end;
-  min-height: 36px;
   padding-right: 4px;
 }
 
@@ -121,11 +128,6 @@
   font-size: 22px;
   color: var(--ion-text-color-step-500, #888);
   padding: 0;
-  transition: color 0.15s;
-}
-
-.stickerBtnActive {
-  color: var(--ion-color-primary, #3880ff);
 }
 
 .sendBtn {
@@ -163,33 +165,16 @@
   transform: translateX(1.5px);
 }
 
-.actionSlot {
-  width: 48px;
-  min-width: 48px;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-}
-
-.actionSpacer {
-  width: 36px;
-  height: 36px;
-}
-
-.recordButton {
-  margin: 0 6px;
+.recordingBtn {
+  --background: var(--ion-color-danger);
 }
 
 .voiceRecorder {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 36px;
-  padding: 0 4px 0 12px;
-}
-
-.voiceRecorderDraft {
-  gap: 6px;
+  min-height: 52px;
+  padding: 8px 12px;
 }
 
 .voiceRecorderMain {
@@ -229,12 +214,12 @@
 .voiceActions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .voiceActionBtn {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -245,10 +230,6 @@
   color: #fff;
 }
 
-.voiceActionBtn:disabled {
-  opacity: 0.55;
-}
-
 .voiceCancelBtn {
   background: var(--ion-color-medium, #8b919b);
 }
@@ -257,7 +238,7 @@
   background: var(--ion-color-primary, #3880ff);
 }
 
-.voiceDraftIcon {
+.voiceLockBadge {
   width: 28px;
   height: 28px;
   display: inline-flex;
@@ -269,13 +250,6 @@
   flex-shrink: 0;
 }
 
-.voiceDraftMeta {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 @keyframes voicePulse {
   0% {
     box-shadow: 0 0 0 0 rgba(217, 52, 43, 0.38);
@@ -283,5 +257,9 @@
 
   70% {
     box-shadow: 0 0 0 9px rgba(217, 52, 43, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(217, 52, 43, 0);
   }
 }
