@@ -68,10 +68,7 @@ class MessageRepository {
       before: oldestVisibleId,
       max: pageSize,
     );
-    store.addOlderPage(
-      olderThanId: oldestVisibleId,
-      items: response.messages,
-    );
+    store.addOlderPage(olderThanId: oldestVisibleId, items: response.messages);
     nextCursor = response.nextCursor;
     return store.takeOlderAdjacent(oldestVisibleId, pageSize);
   }
@@ -88,10 +85,7 @@ class MessageRepository {
       after: newestVisibleId,
       max: pageSize,
     );
-    store.addNewerPage(
-      newerThanId: newestVisibleId,
-      items: response.messages,
-    );
+    store.addNewerPage(newerThanId: newestVisibleId, items: response.messages);
     return store.takeNewerAdjacent(newestVisibleId, pageSize);
   }
 
@@ -100,11 +94,7 @@ class MessageRepository {
     int before = 75,
     int after = 75,
   }) async {
-    var cached = store.getWindowAround(
-      messageId,
-      before: before,
-      after: after,
-    );
+    var cached = store.getWindowAround(messageId, before: before, after: after);
     if (cached.isNotEmpty) return cached;
 
     final response = await _service.fetchMessages(
@@ -114,11 +104,7 @@ class MessageRepository {
     );
     store.addMessages(response.messages);
     nextCursor = response.nextCursor;
-    cached = store.getWindowAround(
-      messageId,
-      before: before,
-      after: after,
-    );
+    cached = store.getWindowAround(messageId, before: before, after: after);
     return cached;
   }
 

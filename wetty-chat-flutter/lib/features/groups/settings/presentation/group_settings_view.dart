@@ -2,7 +2,7 @@ import 'package:flutter/cupertino.dart';
 
 import '../../../../shared/presentation/app_divider.dart';
 
-/// Group Settings page 閳?edit group name, description, and save.
+/// Group Settings page: edit group name, description, and save.
 class GroupSettingsPage extends StatefulWidget {
   const GroupSettingsPage({
     super.key,

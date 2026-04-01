@@ -325,7 +325,9 @@ class _ChatDetailPageState extends State<ChatDetailPage>
   }
 
   bool _canApplyScroll(int token) =>
-      mounted && token == _scrollOperationToken && _itemScrollController.isAttached;
+      mounted &&
+      token == _scrollOperationToken &&
+      _itemScrollController.isAttached;
 
   double _safeAlignment(double alignment) {
     return alignment.clamp(0.0, 1.0).toDouble();

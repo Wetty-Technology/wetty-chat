@@ -49,11 +49,7 @@ class AttachmentService {
     if (height != null) body['height'] = height;
 
     final response = await http
-        .post(
-          uri,
-          headers: apiHeaders,
-          body: jsonEncode(body),
-        )
+        .post(uri, headers: apiHeaders, body: jsonEncode(body))
         .timeout(_requestTimeout);
     if (response.statusCode != 201) {
       throw Exception(
@@ -103,7 +99,8 @@ class AttachmentService {
   }
 
   Set<String> _extractSignedHeaders(Uri uri) {
-    final raw = uri.queryParameters['X-Amz-SignedHeaders'] ??
+    final raw =
+        uri.queryParameters['X-Amz-SignedHeaders'] ??
         uri.queryParameters['x-amz-signedheaders'] ??
         '';
     return raw
@@ -131,7 +128,8 @@ class AttachmentService {
 
   bool _isSignatureMismatch(Object e) {
     final msg = e.toString();
-    return msg.contains('SignatureDoesNotMatch') || msg.contains('SignatureDoes');
+    return msg.contains('SignatureDoesNotMatch') ||
+        msg.contains('SignatureDoes');
   }
 
   Future<void> _uploadOnce({
@@ -187,9 +185,7 @@ class AttachmentService {
       final response = await request.close().timeout(_uploadTimeout);
       if (response.statusCode < 200 || response.statusCode >= 300) {
         final body = await response.transform(utf8.decoder).join();
-        throw Exception(
-          'Failed to upload file: ${response.statusCode} $body',
-        );
+        throw Exception('Failed to upload file: ${response.statusCode} $body');
       }
     } finally {
       httpClient.close(force: true);

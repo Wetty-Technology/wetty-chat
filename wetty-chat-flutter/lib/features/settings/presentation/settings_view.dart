@@ -10,17 +10,21 @@ class SettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
       backgroundColor: const Color(0xFFF2F2F7),
-      navigationBar: const CupertinoNavigationBar(middle: Text('Settings')),
+      navigationBar: CupertinoNavigationBar(
+        middle: const Text('Settings'),
+        leading: CupertinoButton(
+          padding: EdgeInsets.zero,
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Icon(CupertinoIcons.back, size: 28),
+        ),
+      ),
       child: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           children: [
             Padding(
               padding: EdgeInsets.only(left: 2, bottom: 8),
-              child: Text(
-                '通用',
-                style: appSectionTitleTextStyle(context),
-              ),
+              child: Text('通用', style: appSectionTitleTextStyle(context)),
             ),
             Container(
               decoration: BoxDecoration(
@@ -57,7 +61,10 @@ class SettingsPage extends StatelessWidget {
                     Expanded(
                       child: Text(
                         '通用',
-                        style: appTextStyle(context, fontSize: AppFontSizes.bodySmall),
+                        style: appTextStyle(
+                          context,
+                          fontSize: AppFontSizes.bodySmall,
+                        ),
                       ),
                     ),
                     Icon(

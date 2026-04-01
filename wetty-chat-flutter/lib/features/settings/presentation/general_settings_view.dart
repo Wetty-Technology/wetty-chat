@@ -30,10 +30,7 @@ class GeneralSettingsPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        '消息字体大小',
-                        style: appSectionTitleTextStyle(context),
-                      ),
+                      Text('消息字体大小', style: appSectionTitleTextStyle(context)),
                       const SizedBox(height: 10),
                       SizedBox(
                         width: double.infinity,

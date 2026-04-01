@@ -11,12 +11,7 @@ class Sender {
   final String? avatarUrl;
   final int gender;
 
-  const Sender({
-    required this.uid,
-    this.name,
-    this.avatarUrl,
-    this.gender = 0,
-  });
+  const Sender({required this.uid, this.name, this.avatarUrl, this.gender = 0});
 
   factory Sender.fromJson(Map<String, dynamic> json) {
     return Sender(

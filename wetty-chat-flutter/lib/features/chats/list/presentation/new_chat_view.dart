@@ -36,9 +36,7 @@ class _NewChatPageState extends State<NewChatPage> {
     setState(() => _isCreating = true);
     final name = _nameController.text.trim();
     try {
-      final chat = await widget.createChat(
-        name: name.isEmpty ? null : name,
-      );
+      final chat = await widget.createChat(name: name.isEmpty ? null : name);
       if (!mounted) return;
       if (chat != null) {
         Navigator.of(context).pop(chat);
@@ -77,7 +75,7 @@ class _NewChatPageState extends State<NewChatPage> {
         leading: CupertinoButton(
           padding: EdgeInsets.zero,
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Back'),
+          child: const Icon(CupertinoIcons.back, size: 28),
         ),
       ),
       child: GestureDetector(

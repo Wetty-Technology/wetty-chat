@@ -14,7 +14,9 @@ class GroupMemberApiService {
     }
 
     final body = jsonDecode(response.body);
-    final list = body is List ? body : (body['members'] as List<dynamic>? ?? []);
+    final list = body is List
+        ? body
+        : (body['members'] as List<dynamic>? ?? []);
     return list
         .map((entry) => GroupMember.fromJson(entry as Map<String, dynamic>))
         .toList(growable: false);

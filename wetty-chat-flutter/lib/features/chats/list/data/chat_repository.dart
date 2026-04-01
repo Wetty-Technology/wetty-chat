@@ -38,8 +38,9 @@ class ChatRepository extends ChangeNotifier {
     final lastId = _chats.last.id;
     final res = await _service.fetchChats(limit: limit, after: lastId);
     final existingIds = _chats.map((c) => c.id).toSet();
-    final newChats =
-        res.chats.where((c) => !existingIds.contains(c.id)).toList();
+    final newChats = res.chats
+        .where((c) => !existingIds.contains(c.id))
+        .toList();
     _chats = [..._chats, ...newChats];
     _nextCursor = res.nextCursor;
     notifyListeners();
@@ -56,8 +57,7 @@ class ChatRepository extends ChangeNotifier {
   Future<ChatListItem?> createChat({String? name}) async {
     final response = await _service.createChat(name: name);
     if (response.statusCode == 201) {
-      final body =
-          jsonDecode(response.body) as Map<String, dynamic>;
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
       final id = body['id']?.toString() ?? '';
       final createdName = body['name'] as String?;
       return ChatListItem(id: id, name: createdName);

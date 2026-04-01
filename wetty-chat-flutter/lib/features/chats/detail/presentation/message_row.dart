@@ -286,10 +286,7 @@ class _MessageRowState extends State<MessageRow>
         contentChildren.add(
           Stack(
             children: [
-              SizedBox(
-                width: timeSpacerWidth,
-                height: minBubbleContentHeight,
-              ),
+              SizedBox(width: timeSpacerWidth, height: minBubbleContentHeight),
               Positioned(right: 0, bottom: 0, child: timeWidget),
             ],
           ),

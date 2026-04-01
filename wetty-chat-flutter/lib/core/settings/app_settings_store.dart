@@ -18,10 +18,9 @@ class AppSettingsStore extends ChangeNotifier {
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
     final stored = _prefs.getDouble(_chatFontScaleKey);
-    _chatFontScale = _snapChatFontScale((stored ?? 1.0).clamp(
-      minChatFontScale,
-      maxChatFontScale,
-    ));
+    _chatFontScale = _snapChatFontScale(
+      (stored ?? 1.0).clamp(minChatFontScale, maxChatFontScale),
+    );
   }
 
   void setChatFontScale(double value) {
@@ -36,8 +35,8 @@ class AppSettingsStore extends ChangeNotifier {
 
   static double _snapChatFontScale(double value) {
     if (chatFontScaleSteps <= 1) return value;
-    final step = (maxChatFontScale - minChatFontScale) /
-        (chatFontScaleSteps - 1);
+    final step =
+        (maxChatFontScale - minChatFontScale) / (chatFontScaleSteps - 1);
     final idx = ((value - minChatFontScale) / step).round();
     final clampedIdx = idx.clamp(0, chatFontScaleSteps - 1);
     return minChatFontScale + step * clampedIdx;
