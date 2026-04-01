@@ -290,7 +290,11 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
           >
             <span className={styles.packIcon} aria-hidden="true">
               {pack.previewUrl ? (
-                <img src={pack.previewUrl} alt="" className={styles.packIconImg} />
+                pack.previewUrl.toLowerCase().endsWith('.webm') ? (
+                  <video src={pack.previewUrl} className={styles.packIconImg} autoPlay loop muted playsInline />
+                ) : (
+                  <img src={pack.previewUrl} alt="" className={styles.packIconImg} />
+                )
               ) : (
                 <IonIcon icon={starOutline} />
               )}

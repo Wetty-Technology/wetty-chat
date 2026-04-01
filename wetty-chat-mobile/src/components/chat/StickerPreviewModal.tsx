@@ -110,7 +110,13 @@ function StickerPreviewModalContent({ stickerId, isDesktop, onDismiss }: Sticker
     return (
       <>
         <div className={styles.heroSection}>
-          {heroUrl && <img src={heroUrl} alt={t`Sticker preview`} className={styles.heroMedia} />}
+          {heroUrl && (
+            heroUrl.toLowerCase().endsWith('.webm') ? (
+              <video src={heroUrl} className={styles.heroMedia} autoPlay loop muted playsInline />
+            ) : (
+              <img src={heroUrl} alt={t`Sticker preview`} className={styles.heroMedia} />
+            )
+          )}
           {heroSticker && <span className={styles.heroEmoji}>{heroSticker.emoji}</span>}
         </div>
 
