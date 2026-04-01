@@ -11,8 +11,6 @@ import { ComposeInput } from './compose/ComposeInput';
 import { VoiceRecorderPanel } from './compose/VoiceRecorderPanel';
 import { useComposeAttachments } from './compose/useComposeAttachments';
 import { useVoiceRecorder } from './compose/useVoiceRecorder';
-import { useMentionAutocomplete } from './compose/useMentionAutocomplete';
-import { MentionAutocomplete } from './compose/MentionAutocomplete';
 import type { StickerSummary } from '@/api/stickers';
 import type {
   ComposeSendPayload,
@@ -33,7 +31,6 @@ export type {
 } from './compose/types';
 
 interface MessageComposeBarProps {
-  chatId?: string | number;
   onSend: (payload: ComposeSendPayload) => void;
   uploadAttachment: (input: ComposeUploadInput) => Promise<ComposeUploadResult>;
   replyTo?: ReplyTo;
@@ -62,7 +59,6 @@ export const MessageComposeBar = forwardRef<MessageComposeBarHandle, MessageComp
 const MessageComposeBarInner = forwardRef<MessageComposeBarHandle, MessageComposeBarProps>(
   function MessageComposeBarInner(
     {
-      chatId,
       onSend,
       uploadAttachment,
       replyTo,
@@ -82,15 +78,6 @@ const MessageComposeBarInner = forwardRef<MessageComposeBarHandle, MessageCompos
     const [stickerPickerOpen, setStickerPickerOpen] = useState(false);
     const stickerOverlayActiveRef = useRef(false);
 
-    const {
-      mentionState,
-      selectMention,
-      handleKeyDown: handleMentionKeyDown,
-      toWireFormat,
-      clearMentions,
-      onTextChange: onMentionTextChange,
-    } = useMentionAutocomplete(textareaRef, text, chatId);
-
     useImperativeHandle(
       ref,
       () => ({
@@ -103,10 +90,19 @@ const MessageComposeBarInner = forwardRef<MessageComposeBarHandle, MessageCompos
 
     const resizeTextarea = useCallback(() => {
       const ta = textareaRef.current;
+      const container = containerRef.current;
       if (!ta) return;
 
+      if (container) {
+        container.style.height = `${container.offsetHeight}px`;
+      }
+
       ta.style.height = 'auto';
-      ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`;
+      ta.style.height = `${Math.min(ta.scrollHeight, window.innerHeight / 3)}px`;
+
+      if (container) {
+        container.style.height = '';
+      }
     }, []);
 
     const {
@@ -127,7 +123,7 @@ const MessageComposeBarInner = forwardRef<MessageComposeBarHandle, MessageCompos
     }, [resizeTextarea, text]);
 
     const handleSend = useCallback(() => {
-      const trimmed = toWireFormat(text.trim());
+      const trimmed = text.trim();
       const uploadedDrafts = drafts.filter(
         (draftRecord) => draftRecord.draft.status === 'uploaded' && Boolean(draftRecord.draft.attachmentId),
       );
@@ -154,10 +150,9 @@ const MessageComposeBarInner = forwardRef<MessageComposeBarHandle, MessageCompos
       });
       setText('');
       clearAll();
-      clearMentions();
       const ta = textareaRef.current;
       if (ta) ta.style.height = 'auto';
-    }, [clearAll, clearMentions, drafts, existingAttachments, onSend, text, toWireFormat]);
+    }, [clearAll, drafts, existingAttachments, onSend, text]);
 
     const uploadedDrafts = drafts.filter((draftRecord) => draftRecord.draft.status === 'uploaded');
     const currentAttachmentIds = [
@@ -244,16 +239,7 @@ const MessageComposeBarInner = forwardRef<MessageComposeBarHandle, MessageCompos
     };
 
     return (
-      <div ref={containerRef} style={{ position: 'relative' }}>
-        {mentionState.isOpen && (
-          <MentionAutocomplete
-            results={mentionState.results}
-            selectedIndex={mentionState.selectedIndex}
-            loading={mentionState.loading}
-            query={mentionState.query}
-            onSelect={selectMention}
-          />
-        )}
+      <div ref={containerRef}>
         <div id="message-compose-bar" className={styles.bar}>
           <input
             type="file"
@@ -298,10 +284,7 @@ const MessageComposeBarInner = forwardRef<MessageComposeBarHandle, MessageCompos
               <ComposeInput
                 textareaRef={textareaRef}
                 text={text}
-                onTextChange={(value) => {
-                  setText(value);
-                  onMentionTextChange(value);
-                }}
+                onTextChange={setText}
                 onFocusChange={onFocusChange}
                 onSubmit={handleSend}
                 canRequestRecentEdit={canRequestRecentEdit}
@@ -311,7 +294,6 @@ const MessageComposeBarInner = forwardRef<MessageComposeBarHandle, MessageCompos
                 onCancelEdit={onCancelEdit}
                 onStickerPress={editing ? undefined : handleStickerPress}
                 isStickerActive={!editing && stickerPickerOpen}
-                onMentionKeyDown={handleMentionKeyDown}
               />
             )}
           </div>
