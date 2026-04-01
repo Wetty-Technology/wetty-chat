@@ -103,10 +103,19 @@ const MessageComposeBarInner = forwardRef<MessageComposeBarHandle, MessageCompos
 
     const resizeTextarea = useCallback(() => {
       const ta = textareaRef.current;
+      const container = containerRef.current;
       if (!ta) return;
 
+      if (container) {
+        container.style.height = `${container.offsetHeight}px`;
+      }
+
       ta.style.height = 'auto';
-      ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`;
+      ta.style.height = `${Math.min(ta.scrollHeight, window.innerHeight / 3)}px`;
+
+      if (container) {
+        container.style.height = '';
+      }
     }, []);
 
     const {
