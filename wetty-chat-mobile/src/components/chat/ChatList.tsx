@@ -311,7 +311,7 @@ export function ChatList({ activeChatId, isThreadsActive, onChatSelect, onThread
                   <div className={styles.chatsListTime}>{formatLastActivity(chat.lastMessageAt, locale)}</div>
                   <div className={styles.chatsListBadge}>
                     {chat.unreadCount > 0 && (
-                      <IonBadge mode="ios" color="primary">
+                      <IonBadge mode="ios" color={isChatMuted(chat) ? 'medium' : 'primary'}>
                         {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
                       </IonBadge>
                     )}

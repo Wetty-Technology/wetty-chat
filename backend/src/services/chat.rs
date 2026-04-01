@@ -45,6 +45,7 @@ pub fn get_unread_counts(
                AND m.id > COALESCE(gm.last_read_message_id, 0)
                AND m.deleted_at IS NULL
                AND m.reply_root_id IS NULL
+               AND (gm.muted_until IS NULL OR gm.muted_until <= NOW())
              LIMIT 100
          ) AS unread_messages ON TRUE
          GROUP BY input_uids.uid",

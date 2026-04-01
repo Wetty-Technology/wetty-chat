@@ -326,6 +326,8 @@ export const selectTotalUnreadChatCount = createSelector([selectChatsById], (byI
   for (const entry of Object.values(byId)) {
     const meta = getEffectiveListMeta(entry);
     if (meta.inList) {
+      const mutedUntil = resolveMutedUntil(entry?.listSnapshot, entry?.liveProjection);
+      if (mutedUntil && new Date(mutedUntil) > new Date()) continue;
       total += meta.unreadCount ?? 0;
     }
   }
