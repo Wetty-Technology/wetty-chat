@@ -32,15 +32,13 @@ const threadsSlice = createSlice({
       state.items = action.payload.threads;
       state.nextCursor = action.payload.nextCursor;
       state.isLoaded = true;
+      state.totalUnreadCount = state.items.reduce((sum, t) => sum + (t.unreadCount ?? 0), 0);
     },
     appendThreads(state, action: PayloadAction<{ threads: ThreadListItem[]; nextCursor: string | null }>) {
       const existingIds = new Set(state.items.map((t) => t.threadRootMessage.id));
       const newThreads = action.payload.threads.filter((t) => !existingIds.has(t.threadRootMessage.id));
       state.items.push(...newThreads);
       state.nextCursor = action.payload.nextCursor;
-    },
-    setTotalUnreadCount(state, action: PayloadAction<number>) {
-      state.totalUnreadCount = action.payload;
     },
     updateThreadFromWs(state, action: PayloadAction<ThreadUpdatePayload>) {
       const { threadRootId, lastReplyAt, replyCount } = action.payload;
@@ -53,7 +51,7 @@ const threadsSlice = createSlice({
         state.items.splice(idx, 1);
         state.items.unshift(thread);
       }
-      state.totalUnreadCount = state.items.filter((t) => t.unreadCount > 0).length;
+      state.totalUnreadCount = state.items.reduce((sum, t) => sum + (t.unreadCount ?? 0), 0);
     },
     updateThreadLastReply(state, action: PayloadAction<{ threadRootId: string; lastReply: ThreadReplyPreview }>) {
       const thread = state.items.find((t) => t.threadRootMessage.id === action.payload.threadRootId);
@@ -66,18 +64,18 @@ const threadsSlice = createSlice({
       if (thread) {
         thread.unreadCount = (thread.unreadCount ?? 0) + 1;
       }
-      state.totalUnreadCount = state.items.filter((t) => t.unreadCount > 0).length;
+      state.totalUnreadCount = state.items.reduce((sum, t) => sum + (t.unreadCount ?? 0), 0);
     },
     markThreadRead(state, action: PayloadAction<{ threadRootId: string }>) {
       const thread = state.items.find((t) => t.threadRootMessage.id === action.payload.threadRootId);
       if (thread) {
         thread.unreadCount = 0;
       }
-      state.totalUnreadCount = state.items.filter((t) => t.unreadCount > 0).length;
+      state.totalUnreadCount = state.items.reduce((sum, t) => sum + (t.unreadCount ?? 0), 0);
     },
     removeThread(state, action: PayloadAction<{ threadRootId: string }>) {
       state.items = state.items.filter((t) => t.threadRootMessage.id !== action.payload.threadRootId);
-      state.totalUnreadCount = state.items.filter((t) => t.unreadCount > 0).length;
+      state.totalUnreadCount = state.items.reduce((sum, t) => sum + (t.unreadCount ?? 0), 0);
     },
     clearThreads(state) {
       state.items = [];
@@ -90,7 +88,6 @@ const threadsSlice = createSlice({
 export const {
   setThreadsList,
   appendThreads,
-  setTotalUnreadCount,
   updateThreadFromWs,
   updateThreadLastReply,
   incrementThreadUnread,

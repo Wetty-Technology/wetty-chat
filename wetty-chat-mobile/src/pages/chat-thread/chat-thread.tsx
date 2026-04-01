@@ -1019,6 +1019,20 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
                 scope: threadId ? 'thread' : 'main',
               }),
             );
+
+            // Mark as read up to the message we just sent
+            if (threadId) {
+              dispatch(markThreadReadAction({ threadRootId: threadId }));
+              void apiMarkThreadAsRead(threadId, confirmed.id);
+            } else {
+              dispatch(setChatUnreadCount({ chatId, unreadCount: 0 }));
+              dispatch(setChatLastReadMessageId({ chatId, lastReadMessageId: confirmed.id }));
+              void markMessagesAsRead(chatId, confirmed.id).then((res) => {
+                dispatch(setChatUnreadCount({ chatId, unreadCount: res.data.unreadCount }));
+                dispatch(setChatLastReadMessageId({ chatId, lastReadMessageId: res.data.lastReadMessageId }));
+              });
+              void syncAppBadgeCount();
+            }
           })
           .catch((err: Error) => {
             showToast(err.message || t`Failed to send`);
@@ -1122,6 +1136,20 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
                 scope: threadId ? 'thread' : 'main',
               }),
             );
+
+            // Mark as read up to the message we just sent
+            if (threadId) {
+              dispatch(markThreadReadAction({ threadRootId: threadId }));
+              void apiMarkThreadAsRead(threadId, confirmed.id);
+            } else {
+              dispatch(setChatUnreadCount({ chatId, unreadCount: 0 }));
+              dispatch(setChatLastReadMessageId({ chatId, lastReadMessageId: confirmed.id }));
+              void markMessagesAsRead(chatId, confirmed.id).then((res) => {
+                dispatch(setChatUnreadCount({ chatId, unreadCount: res.data.unreadCount }));
+                dispatch(setChatLastReadMessageId({ chatId, lastReadMessageId: res.data.lastReadMessageId }));
+              });
+              void syncAppBadgeCount();
+            }
           })
           .catch((err: Error) => {
             showToast(err.message || t`Failed to send`);
@@ -1223,6 +1251,20 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
               scope: threadId ? 'thread' : 'main',
             }),
           );
+
+          // Mark as read up to the message we just sent
+          if (threadId) {
+            dispatch(markThreadReadAction({ threadRootId: threadId }));
+            void apiMarkThreadAsRead(threadId, confirmed.id);
+          } else {
+            dispatch(setChatUnreadCount({ chatId, unreadCount: 0 }));
+            dispatch(setChatLastReadMessageId({ chatId, lastReadMessageId: confirmed.id }));
+            void markMessagesAsRead(chatId, confirmed.id).then((res) => {
+              dispatch(setChatUnreadCount({ chatId, unreadCount: res.data.unreadCount }));
+              dispatch(setChatLastReadMessageId({ chatId, lastReadMessageId: res.data.lastReadMessageId }));
+            });
+            void syncAppBadgeCount();
+          }
         })
         .catch((err: Error) => {
           showToast(err.message || t`Failed to send`);
