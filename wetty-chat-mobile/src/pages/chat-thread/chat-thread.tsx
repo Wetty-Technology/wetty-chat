@@ -1465,6 +1465,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
       <IonFooter className="chat-thread-footer">
         <MessageComposeBar
           ref={composeBarRef}
+          chatId={chatId}
           onSend={handleSend}
           uploadAttachment={uploadAttachment}
           onError={(message) => showToast(message, 2200, { positionAnchor: 'message-compose-bar' })}

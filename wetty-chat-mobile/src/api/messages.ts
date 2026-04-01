@@ -55,6 +55,11 @@ export interface ReactionSummary {
   reactors?: ReactionReactor[];
 }
 
+export interface MentionInfo {
+  uid: number;
+  username: string | null;
+}
+
 export interface ReactionDetailResponse {
   reactions: { emoji: string; reactors: ReactionReactor[] }[];
 }
@@ -81,6 +86,7 @@ export interface MessageResponse {
   replyToMessage?: ReplyToMessage;
   attachments?: Attachment[];
   reactions?: ReactionSummary[];
+  mentions?: MentionInfo[];
 }
 
 export interface ListMessagesResponse {

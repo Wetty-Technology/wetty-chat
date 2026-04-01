@@ -12,7 +12,7 @@ import {
 import { t } from '@lingui/core/macro';
 import { useSelector } from 'react-redux';
 import styles from './ChatBubble.module.scss';
-import type { Attachment, ReactionSummary, UserGroupInfo } from '@/api/messages';
+import type { Attachment, MentionInfo, ReactionSummary, UserGroupInfo } from '@/api/messages';
 import { ImageViewer } from '@/components/chat/ImageViewer';
 import { formatMessagePreview, type PreviewMessage, getNotificationPreviewLabels } from '@/utils/messagePreview';
 import { selectChatFontSizeStyle, selectEffectiveLocale } from '@/store/settingsSlice';
@@ -61,6 +61,65 @@ function renderMessageWithLinks(message: string): ReactNode[] {
 
     return part;
   });
+}
+
+const MENTION_TEST = /@\[uid:\d+\]/;
+
+function renderMessageContent(
+  message: string,
+  mentions: MentionInfo[] | undefined,
+  currentUserUid: number | null | undefined,
+  onMentionClick: ((uid: number) => void) | undefined,
+): ReactNode[] {
+  if (!MENTION_TEST.test(message)) {
+    return renderMessageWithLinks(message);
+  }
+
+  const mentionMap = new Map<number, string>();
+  if (mentions) {
+    for (const m of mentions) {
+      if (m.username) mentionMap.set(m.uid, m.username);
+    }
+  }
+
+  const regex = /@\[uid:(\d+)\]/g;
+  const result: ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(message)) !== null) {
+    if (match.index > lastIndex) {
+      result.push(...renderMessageWithLinks(message.slice(lastIndex, match.index)));
+    }
+
+    const uid = parseInt(match[1], 10);
+    const username = mentionMap.get(uid);
+    const isSelf = currentUserUid != null && uid === currentUserUid;
+    const clickable = onMentionClick != null;
+    result.push(
+      <span
+        key={`mention-${uid}-${match.index}`}
+        className={`${styles.mention}${isSelf ? ` ${styles.mentionSelf}` : ''}${clickable ? ` ${styles.mentionClickable}` : ''}`}
+        onClick={
+          clickable
+            ? (e) => {
+                e.stopPropagation();
+                onMentionClick(uid);
+              }
+            : undefined
+        }
+      >
+        @{username ?? `User ${uid}`}
+      </span>,
+    );
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < message.length) {
+    result.push(...renderMessageWithLinks(message.slice(lastIndex)));
+  }
+
+  return result;
 }
 
 function getImageLayoutStyle(
@@ -122,6 +181,9 @@ export interface ChatBubbleBaseProps {
   interactionMode?: 'interactive' | 'read-only';
   bubbleProps?: BubblePropsOverride;
   bubbleRef?: Ref<HTMLDivElement>;
+  mentions?: MentionInfo[];
+  currentUserUid?: number | null;
+  onMentionClick?: (uid: number) => void;
 }
 
 export function ChatBubbleBase({
@@ -151,6 +213,9 @@ export function ChatBubbleBase({
   interactionMode = 'interactive',
   bubbleProps,
   bubbleRef,
+  mentions,
+  currentUserUid,
+  onMentionClick,
 }: ChatBubbleBaseProps) {
   const [viewingAttachmentIndex, setViewingAttachmentIndex] = useState<number | null>(null);
   const mouseDetected = useMouseDetected();
@@ -353,7 +418,9 @@ export function ChatBubbleBase({
         <div className={styles.attachmentsContainer}>{attachments.map(renderAttachment)}</div>
       )}
       <div className={styles.messageWrapper}>
-        <span className={styles.messageText}>{renderMessageWithLinks(message)}</span>
+        <span className={styles.messageText}>
+          {renderMessageContent(message, mentions, currentUserUid, interactive ? onMentionClick : undefined)}
+        </span>
         <span className={styles.timestampSpacer} />
         {timestamp && (
           <span className={styles.timestamp}>

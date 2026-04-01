@@ -84,6 +84,7 @@ pub struct PushJob {
     pub legacy_message_preview: Option<String>,
     pub message_id: i64,
     pub thread_root_id: Option<i64>,
+    pub mentioned_uids: Vec<i32>,
 }
 
 pub struct PushService {
@@ -325,11 +326,15 @@ async fn process_push_job(
                 .map_err(|e| format!("Failed to load member UIDs: {:?}", e))?
         };
 
-    // 2. Filter out the sender, muted users, and users with fresh active app presence.
+    // 2. Filter out the sender, muted users (unless mentioned), and users with fresh active app presence.
     let target_uids: Vec<i32> = members
         .into_iter()
         .filter(|(uid, _)| *uid != job.sender_uid)
-        .filter(|(_, muted_until)| {
+        .filter(|(uid, muted_until)| {
+            // Mentioned users bypass mute
+            if job.mentioned_uids.contains(uid) {
+                return true;
+            }
             // Not muted, or mute has expired
             muted_until.is_none_or(|t| t <= now)
         })
@@ -556,6 +561,7 @@ mod tests {
             legacy_message_preview: Some("[Sticker] 🙂".to_string()),
             message_id: 99,
             thread_root_id: None,
+            mentioned_uids: Vec::new(),
         };
 
         let payload = build_push_payload(&job, 3, "alice: [Sticker] 🙂");

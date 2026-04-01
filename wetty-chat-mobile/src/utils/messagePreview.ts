@@ -8,6 +8,11 @@ export interface PreviewStickerLike {
   emoji?: string | null;
 }
 
+export interface PreviewMentionLike {
+  uid: number;
+  username: string | null;
+}
+
 export interface PreviewMessage {
   message?: string | null;
   text?: string | null;
@@ -16,6 +21,7 @@ export interface PreviewMessage {
   attachments?: PreviewAttachmentLike[];
   firstAttachmentKind?: string | null;
   isDeleted?: boolean;
+  mentions?: PreviewMentionLike[];
 }
 
 export interface PreviewLabels {
@@ -65,6 +71,20 @@ const PREVIEW_LABELS_BY_LOCALE: Record<string, NotificationPreviewLabels> = {
   },
 };
 
+/** Replace `@[uid:N]` tokens with `@username` for display. */
+function renderMentionsAsText(text: string, mentions?: PreviewMentionLike[]): string {
+  const mentionMap = new Map<number, string>();
+  if (mentions) {
+    for (const m of mentions) {
+      if (m.username) mentionMap.set(m.uid, m.username);
+    }
+  }
+  return text.replace(/@\[uid:(\d+)\]/g, (_, idStr) => {
+    const uid = parseInt(idStr, 10);
+    return `@${mentionMap.get(uid) ?? `User ${uid}`}`;
+  });
+}
+
 function normalizePreviewMessage({
   message,
   text,
@@ -73,6 +93,7 @@ function normalizePreviewMessage({
   attachments,
   firstAttachmentKind,
   isDeleted,
+  mentions,
 }: PreviewMessage) {
   return {
     message: message ?? text,
@@ -81,6 +102,7 @@ function normalizePreviewMessage({
     attachments,
     firstAttachmentKind,
     isDeleted,
+    mentions,
   };
 }
 
@@ -107,7 +129,7 @@ export function getNotificationPreviewLabels(locale?: string | null): Notificati
 }
 
 export function formatMessagePreview(preview: PreviewMessage, labels: PreviewLabels): string {
-  const { message, messageType, sticker, attachments, firstAttachmentKind, isDeleted } =
+  const { message, messageType, sticker, attachments, firstAttachmentKind, isDeleted, mentions } =
     normalizePreviewMessage(preview);
 
   if (isDeleted) {
@@ -127,7 +149,7 @@ export function formatMessagePreview(preview: PreviewMessage, labels: PreviewLab
   }
 
   if (message?.trim()) {
-    return message;
+    return renderMentionsAsText(message, mentions);
   }
 
   if (attachments?.some((attachment) => attachment.kind.startsWith('audio/'))) {

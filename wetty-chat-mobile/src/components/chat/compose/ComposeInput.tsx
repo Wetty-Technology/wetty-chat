@@ -18,6 +18,7 @@ interface ComposeInputProps {
   onCancelEdit?: () => void;
   onStickerPress?: () => void;
   isStickerActive?: boolean;
+  onMentionKeyDown?: (event: KeyboardEvent) => boolean;
 }
 
 export function ComposeInput({
@@ -33,6 +34,7 @@ export function ComposeInput({
   onCancelEdit,
   onStickerPress,
   isStickerActive,
+  onMentionKeyDown,
 }: ComposeInputProps) {
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -40,6 +42,9 @@ export function ComposeInput({
 
     textarea.setAttribute('enterkeyhint', 'send');
     const onKeyDown = (event: KeyboardEvent) => {
+      // Let mention autocomplete consume the event first
+      if (onMentionKeyDown?.(event)) return;
+
       const isImeConfirm = event.isComposing || event.keyCode === 229 || event.which === 229;
       if (event.key === 'Enter' && !event.shiftKey && !isImeConfirm) {
         event.preventDefault();
@@ -63,7 +68,16 @@ export function ComposeInput({
 
     textarea.addEventListener('keydown', onKeyDown);
     return () => textarea.removeEventListener('keydown', onKeyDown);
-  }, [canRequestRecentEdit, editing, isUnchangedEdit, onCancelEdit, onRequestEditLastMessage, onSubmit, textareaRef]);
+  }, [
+    canRequestRecentEdit,
+    editing,
+    isUnchangedEdit,
+    onCancelEdit,
+    onMentionKeyDown,
+    onRequestEditLastMessage,
+    onSubmit,
+    textareaRef,
+  ]);
 
   return (
     <div className={styles.inputRow}>

@@ -47,6 +47,49 @@ use crate::{
 use crate::{AppState, MAX_CHATS_LIMIT, MAX_MESSAGES_LIMIT};
 use unicode_segmentation::UnicodeSegmentation;
 
+// ---------------------------------------------------------------------------
+// Mention extraction
+// ---------------------------------------------------------------------------
+
+/// Parsed mention info for serialization in `MessageResponse`.
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct MentionInfo {
+    pub uid: i32,
+    pub username: Option<String>,
+}
+
+/// Extract `@[uid:<N>]` tokens from a message string.
+fn extract_mention_uids(text: &str) -> Vec<i32> {
+    let mut uids = Vec::new();
+
+    let bytes = text.as_bytes();
+    let len = bytes.len();
+    let mut i = 0;
+
+    while i < len {
+        if bytes[i] == b'@' && i + 1 < len && bytes[i + 1] == b'[' {
+            if let Some(rest) = text.get(i + 2..) {
+                if let Some(close) = rest.find(']') {
+                    let inner = &rest[..close];
+                    if let Some(id_str) = inner.strip_prefix("uid:") {
+                        if let Ok(uid) = id_str.parse::<i32>() {
+                            if !uids.contains(&uid) {
+                                uids.push(uid);
+                            }
+                            i += 2 + close + 1;
+                            continue;
+                        }
+                    }
+                }
+            }
+        }
+        i += 1;
+    }
+
+    uids
+}
+
 // Queryable struct replaced by raw tuples
 
 #[derive(serde::Deserialize)]
@@ -362,6 +405,8 @@ pub struct MessageResponse {
     pub reply_to_message: Option<Box<ReplyToMessage>>,
     pub attachments: Vec<AttachmentResponse>,
     pub reactions: Vec<ReactionSummary>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub mentions: Vec<MentionInfo>,
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -556,6 +601,11 @@ pub(crate) async fn send_prepared_message(
         .select(groups::dsl::name)
         .first::<String>(conn)
         .unwrap_or_else(|_| "Chat".to_string());
+    let mentioned_uids = response
+        .message
+        .as_deref()
+        .map(extract_mention_uids)
+        .unwrap_or_default();
     state.push_service.enqueue(PushJob {
         chat_id: prepared.chat_id,
         sender_uid: prepared.sender_uid,
@@ -563,15 +613,20 @@ pub(crate) async fn send_prepared_message(
         chat_name,
         message_preview: push_message_preview_from_response(&response),
         legacy_message_preview: prepared.push_preview_override.or_else(|| {
-            response.message.clone().or_else(|| {
-                response
-                    .sticker
-                    .as_ref()
-                    .map(|sticker| sticker_preview_text(Some(&sticker.emoji)))
-            })
+            response
+                .message
+                .as_deref()
+                .map(|text| render_mentions_as_text(text, &response.mentions))
+                .or_else(|| {
+                    response
+                        .sticker
+                        .as_ref()
+                        .map(|sticker| sticker_preview_text(Some(&sticker.emoji)))
+                })
         }),
         message_id: response.id,
         thread_root_id: response.reply_root_id,
+        mentioned_uids,
     });
 
     Ok(SendMessageResult {
@@ -587,9 +642,49 @@ fn sticker_preview_text(emoji: Option<&str>) -> String {
     }
 }
 
+/// Replace `@[uid:N]` tokens with `@username` for human-readable previews.
+fn render_mentions_as_text(text: &str, mentions: &[MentionInfo]) -> String {
+    if mentions.is_empty() {
+        return text.to_string();
+    }
+    let mention_map: std::collections::HashMap<i32, &str> = mentions
+        .iter()
+        .filter_map(|m| m.username.as_deref().map(|name| (m.uid, name)))
+        .collect();
+
+    let mut result = String::with_capacity(text.len());
+    let bytes = text.as_bytes();
+    let len = bytes.len();
+    let mut i = 0;
+    while i < len {
+        if bytes[i] == b'@' && i + 1 < len && bytes[i + 1] == b'[' {
+            if let Some(rest) = text.get(i + 2..) {
+                if let Some(close) = rest.find(']') {
+                    let inner = &rest[..close];
+                    if let Some(id_str) = inner.strip_prefix("uid:") {
+                        if let Ok(uid) = id_str.parse::<i32>() {
+                            let name = mention_map.get(&uid).copied().unwrap_or("Unknown User");
+                            result.push('@');
+                            result.push_str(name);
+                            i += 2 + close + 1;
+                            continue;
+                        }
+                    }
+                }
+            }
+        }
+        result.push(bytes[i] as char);
+        i += 1;
+    }
+    result
+}
+
 fn push_message_preview_from_response(response: &MessageResponse) -> PushMessagePreview {
     PushMessagePreview {
-        message: response.message.clone(),
+        message: response
+            .message
+            .as_deref()
+            .map(|text| render_mentions_as_text(text, &response.mentions)),
         message_type: response.message_type.clone(),
         sticker: response.sticker.as_ref().and_then(|sticker| {
             (!sticker.emoji.trim().is_empty()).then(|| PushMessagePreviewSticker {
@@ -929,8 +1024,37 @@ pub async fn attach_metadata(
         }
     }
 
+    // --- Mentions ---
+    // Collect all mentioned UIDs across all messages so we can batch-resolve profiles.
+    let mut all_mentioned_uids = std::collections::HashSet::new();
+    let mut per_message_mentions: Vec<Vec<i32>> = Vec::with_capacity(messages_to_process.len());
+    for m in &messages_to_process {
+        if let Some(ref text) = m.message {
+            if m.deleted_at.is_none() {
+                let uids = extract_mention_uids(text);
+                for &uid in &uids {
+                    all_mentioned_uids.insert(uid);
+                }
+                per_message_mentions.push(uids);
+                continue;
+            }
+        }
+        per_message_mentions.push(Vec::new());
+    }
+    // Resolve profiles for mentioned UIDs not already loaded
+    let extra_mention_uids: Vec<i32> = all_mentioned_uids
+        .iter()
+        .copied()
+        .filter(|uid| !user_profiles.contains_key(uid))
+        .collect();
+    let mention_profiles = if extra_mention_uids.is_empty() {
+        std::collections::HashMap::new()
+    } else {
+        lookup_user_profiles(conn, &extra_mention_uids).unwrap_or_default()
+    };
+
     let mut responses = Vec::with_capacity(messages_to_process.len());
-    for m in messages_to_process {
+    for (idx, m) in messages_to_process.into_iter().enumerate() {
         let reply_to_message = m.reply_to_id.and_then(|reply_id| {
             reply_messages_map.get(&reply_id).map(|reply_msg| {
                 if reply_msg.has_attachments
@@ -1025,6 +1149,18 @@ pub async fn attach_metadata(
             reply_to_message,
             attachments,
             reactions: reaction_summaries_map.remove(&m.id).unwrap_or_default(),
+            mentions: {
+                per_message_mentions[idx]
+                    .iter()
+                    .map(|&uid| {
+                        let username = user_profiles
+                            .get(&uid)
+                            .or_else(|| mention_profiles.get(&uid))
+                            .and_then(|p| p.username.clone());
+                        MentionInfo { uid, username }
+                    })
+                    .collect()
+            },
         });
     }
     responses

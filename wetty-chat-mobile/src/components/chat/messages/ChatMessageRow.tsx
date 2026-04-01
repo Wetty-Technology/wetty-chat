@@ -121,6 +121,12 @@ export function ChatMessageRow({
       attachments={msg.attachments}
       reactions={msg.reactions}
       onReactionToggle={(emoji, currentlyReacted) => onReactionToggle(msg, emoji, currentlyReacted)}
+      mentions={msg.mentions}
+      currentUserUid={typeof currentUserId === 'number' ? currentUserId : null}
+      onMentionClick={(uid) => {
+        const mention = msg.mentions?.find((m) => m.uid === uid);
+        onAvatarClick({ uid, name: mention?.username ?? null, gender: 0 });
+      }}
     />
   );
 }
