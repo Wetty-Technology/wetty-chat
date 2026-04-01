@@ -374,7 +374,7 @@
   align-items: center;
   border-radius: 12px;
   background: var(--ion-color-light-shade);
-  color: var(--ion-color-light-shade);
+  color: var(--ion-color-light-contrast);
   font-size: 21px;
   line-height: 1;
   cursor: pointer;
@@ -387,17 +387,17 @@
 
 .reactionPillActive {
   background: var(--ion-color-primary-tint);
-  color: var(--ion-color-primary-tint);
+  color: var(--ion-color-primary-contrast);
 }
 
 .sent .reactionPill {
   background: var(--ion-color-primary-tint);
-  color: var(--ion-color-primary-tint);
+  color: var(--ion-color-primary-contrast);
 }
 
 .sent .reactionPillActive {
   background: var(--ion-color-primary-shade);
-  color: var(--ion-color-primary-shade);
+  color: var(--ion-color-primary-contrast);
 }
 
 .reactionEmoji {
