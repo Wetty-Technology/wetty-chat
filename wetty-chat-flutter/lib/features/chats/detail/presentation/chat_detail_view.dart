@@ -144,6 +144,16 @@ class _ChatDetailPageState extends State<ChatDetailPage>
     Navigator.pop(context, _viewModel.shouldRefreshChats);
   }
 
+  /// Handles visible-item updates from the message list viewport.
+  ///
+  /// Called when `ItemPositionsListener` reports that the set of visible items
+  /// has changed, such as after user scrolling, initial layout, or message list
+  /// updates. Ignores callbacks while a programmatic scroll is active or while
+  /// messages are still loading.
+  ///
+  /// For normal viewport changes, this updates the jump-to-bottom button state,
+  /// loads older or newer messages when the viewport reaches either edge of the
+  /// loaded window, and marks sufficiently visible messages as read.
   void _onItemPositionsChanged() {
     if (_isProgrammaticScrollActive) {
       return;
@@ -169,10 +179,11 @@ class _ChatDetailPageState extends State<ChatDetailPage>
     final maxIndex = positions
         .map((p) => p.index)
         .reduce((a, b) => a > b ? a : b);
-    final totalCount =
-        _viewModel.displayItems.length + (_viewModel.hasMoreMessages ? 1 : 0);
+    final messageCount = _viewModel.displayItems.length;
+    debugPrint("min: $minIndex, max: $maxIndex");
+    debugPrint("total: $messageCount");
 
-    if (maxIndex >= totalCount - 5) {
+    if (maxIndex >= messageCount - 5) {
       _loadOlderMessages();
     }
     if (minIndex <= 4 && _viewModel.hasNewerMessages && !isBottomVisible) {

@@ -29,6 +29,7 @@ class ChatDetailViewModel extends ChangeNotifier {
   bool _hasNewer = false;
   bool _isAtLiveEdge = true;
   bool _didSyncReadState = false;
+  bool _isApplyingExplicitWindowChange = false;
   ChatWindowMode _windowMode = ChatWindowMode.latest;
 
   ChatDetailViewModel({
@@ -82,7 +83,11 @@ class ChatDetailViewModel extends ChangeNotifier {
   int? get oldestVisibleId => _oldestVisibleId;
 
   void _onStoreChanged() {
-    if (_isLoading || _displayItems.isEmpty) return;
+    if (_isLoading ||
+        _displayItems.isEmpty ||
+        _isApplyingExplicitWindowChange) {
+      return;
+    }
 
     final rebuilt = _repository.rebuildWindow(
       limit: maxWindowSize,
@@ -163,6 +168,7 @@ class ChatDetailViewModel extends ChangeNotifier {
     }
 
     _isLoadingMore = true;
+    _isApplyingExplicitWindowChange = true;
     notifyListeners();
 
     try {
@@ -190,6 +196,7 @@ class ChatDetailViewModel extends ChangeNotifier {
       _errorMessage = e.toString();
       return false;
     } finally {
+      _isApplyingExplicitWindowChange = false;
       _isLoadingMore = false;
       notifyListeners();
     }
@@ -201,6 +208,7 @@ class ChatDetailViewModel extends ChangeNotifier {
     }
 
     _isLoadingMore = true;
+    _isApplyingExplicitWindowChange = true;
     notifyListeners();
 
     try {
@@ -236,6 +244,7 @@ class ChatDetailViewModel extends ChangeNotifier {
       _errorMessage = e.toString();
       return false;
     } finally {
+      _isApplyingExplicitWindowChange = false;
       _isLoadingMore = false;
       notifyListeners();
     }
@@ -245,6 +254,7 @@ class ChatDetailViewModel extends ChangeNotifier {
     if (_isLoadingMore) return;
 
     _isLoadingMore = true;
+    _isApplyingExplicitWindowChange = true;
     notifyListeners();
 
     try {
@@ -264,6 +274,7 @@ class ChatDetailViewModel extends ChangeNotifier {
     } catch (e) {
       _errorMessage = e.toString();
     } finally {
+      _isApplyingExplicitWindowChange = false;
       _isLoadingMore = false;
       notifyListeners();
     }
@@ -341,6 +352,7 @@ class ChatDetailViewModel extends ChangeNotifier {
     }
 
     _isLoadingMore = true;
+    _isApplyingExplicitWindowChange = true;
     notifyListeners();
 
     try {
@@ -365,6 +377,7 @@ class ChatDetailViewModel extends ChangeNotifier {
       _errorMessage = 'Failed to jump: $e';
       return false;
     } finally {
+      _isApplyingExplicitWindowChange = false;
       _isLoadingMore = false;
       notifyListeners();
     }
