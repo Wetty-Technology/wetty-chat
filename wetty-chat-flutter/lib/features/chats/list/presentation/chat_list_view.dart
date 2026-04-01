@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 
+import '../../../../app/presentation/root_navigation.dart';
 import '../../../../app/theme/style_config.dart';
 import '../../detail/application/chat_draft_store.dart';
 import '../../detail/presentation/chat_detail_view.dart';
@@ -73,11 +74,9 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Future<void> _addChat() async {
-    final newChat = await Navigator.push<ChatListItem>(
+    final newChat = await pushRootCupertinoPage<ChatListItem>(
       context,
-      CupertinoPageRoute(
-        builder: (_) => NewChatPage(createChat: _viewModel.createChat),
-      ),
+      NewChatPage(createChat: _viewModel.createChat),
     );
     if (newChat != null && mounted) {
       _viewModel.insertChat(newChat);
@@ -224,14 +223,12 @@ class _ChatPageState extends State<ChatPage> {
         GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () async {
-            final shouldRefresh = await Navigator.push<bool>(
+            final shouldRefresh = await pushRootCupertinoPage<bool>(
               context,
-              CupertinoPageRoute(
-                builder: (_) => ChatDetailPage(
-                  chatId: chat.id,
-                  chatName: chat.name ?? 'Chat ${chat.id}',
-                  unreadCount: chat.unreadCount,
-                ),
+              ChatDetailPage(
+                chatId: chat.id,
+                chatName: chat.name ?? 'Chat ${chat.id}',
+                unreadCount: chat.unreadCount,
               ),
             );
             if (shouldRefresh == true) {

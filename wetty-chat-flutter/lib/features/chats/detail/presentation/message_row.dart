@@ -18,6 +18,7 @@ class MessageRow extends StatefulWidget {
   const MessageRow({
     super.key,
     required this.message,
+    required this.chatFontScale,
     this.isHighlighted = false,
     this.onLongPress,
     this.onReply,
@@ -28,6 +29,7 @@ class MessageRow extends StatefulWidget {
   });
 
   final MessageItem message;
+  final double chatFontScale;
   final bool isHighlighted;
   final VoidCallback? onLongPress;
   final VoidCallback? onReply;
@@ -56,6 +58,8 @@ class _MessageRowState extends State<MessageRow>
     final currentUserId = ApiSession.currentUserId;
     return currentUserId != null && widget.message.sender.uid == currentUserId;
   }
+
+  double _scaled(double size) => size * widget.chatFontScale;
 
   TextStyle _bubbleStyle({
     Color? color,
@@ -191,7 +195,7 @@ class _MessageRowState extends State<MessageRow>
       textDirection: TextDirection.ltr,
     )..layout(maxWidth: double.infinity);
     final timeSpacerWidth = timePainter.width + 8;
-    final minBubbleContentHeight = AppFontSizes.bubbleText * 1.28;
+    final minBubbleContentHeight = _scaled(AppFontSizes.bubbleText) * 1.28;
 
     final contentChildren = <Widget>[
       if (!_isMe && widget.showSenderName)
@@ -205,7 +209,7 @@ class _MessageRowState extends State<MessageRow>
                   senderName,
                   style: _bubbleStyle(
                     fontWeight: FontWeight.w700,
-                    fontSize: AppFontSizes.body,
+                    fontSize: _scaled(AppFontSizes.body),
                     color: textColor,
                   ),
                   maxLines: 1,
@@ -247,7 +251,7 @@ class _MessageRowState extends State<MessageRow>
           '[Deleted]',
           style: _bubbleStyle(
             color: metaColor,
-            fontSize: AppFontSizes.body,
+            fontSize: _scaled(AppFontSizes.bubbleText),
             fontStyle: FontStyle.italic,
             fontWeight: _bubbleFontWeight,
           ),
@@ -266,7 +270,7 @@ class _MessageRowState extends State<MessageRow>
                       msgText,
                       _bubbleStyle(
                         color: textColor,
-                        fontSize: AppFontSizes.bubbleText,
+                        fontSize: _scaled(AppFontSizes.bubbleText),
                         height: 1.28,
                         fontWeight: _bubbleFontWeight,
                       ),
@@ -357,7 +361,7 @@ class _MessageRowState extends State<MessageRow>
           child: DefaultTextStyle(
             style: _bubbleStyle(
               color: textColor,
-              fontSize: AppFontSizes.bubbleText,
+              fontSize: _scaled(AppFontSizes.bubbleText),
               height: 1.28,
               fontWeight: _bubbleFontWeight,
             ),
@@ -544,7 +548,7 @@ class _MessageRowState extends State<MessageRow>
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: _bubbleStyle(
-                fontSize: AppFontSizes.bodySmall,
+                fontSize: _scaled(AppFontSizes.bodySmall),
                 fontWeight: _bubbleFontWeight,
                 color: CupertinoColors.label.resolveFrom(context),
               ),
@@ -594,7 +598,7 @@ class _MessageRowState extends State<MessageRow>
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: _bubbleStyle(
-              fontSize: AppFontSizes.replyQuote,
+              fontSize: _scaled(AppFontSizes.replyQuote),
               fontWeight: _bubbleFontWeight,
               color: CupertinoColors.secondaryLabel.resolveFrom(context),
             ),

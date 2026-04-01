@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 
+import '../../../app/presentation/root_navigation.dart';
 import '../../../app/theme/style_config.dart';
 import '../../../features/auth/application/auth_store.dart';
 import 'general_settings_view.dart';
@@ -16,7 +17,7 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   void _openPage(Widget page) {
-    Navigator.push(context, CupertinoPageRoute(builder: (_) => page));
+    pushRootCupertinoPage<void>(context, page);
   }
 
   Future<void> _confirmLogout() async {
@@ -53,7 +54,8 @@ class _SettingsPageState extends State<SettingsPage> {
             title: 'General',
             icon: CupertinoIcons.settings,
             iconColor: const Color(0xFF3A7DFF),
-            onTap: () => _openPage(const GeneralSettingsPage()),
+            // onTap: () => _openPage(const GeneralSettingsPage()),
+            onTap: () => (),
           ),
         ],
       ),

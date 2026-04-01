@@ -9,6 +9,7 @@ import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 import '../../../../app/theme/style_config.dart';
 import '../../../../core/network/api_config.dart';
+import '../../../../core/settings/app_settings_store.dart';
 import '../../../../shared/presentation/app_divider.dart';
 import '../../../groups/members/presentation/group_members_view.dart';
 import '../../../groups/settings/presentation/group_settings_view.dart';
@@ -776,165 +777,170 @@ class _ChatDetailPageState extends State<ChatDetailPage>
     final chatName = widget.chatName.isEmpty
         ? 'Chat ${widget.chatId}'
         : widget.chatName;
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) {
-          unawaited(_popWithResult());
-        }
-      },
-      child: CupertinoPageScaffold(
-        backgroundColor: const Color(0xFFECE5DD),
-        child: GestureDetector(
-          onTap: () => FocusScope.of(context).unfocus(),
-          child: Stack(
-            children: [
-              SafeArea(
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: Stack(
-                        children: [
-                          _buildBody(),
-                          if (_viewModel.showScrollToBottom)
-                            Positioned(
-                              right: 16,
-                              bottom: 16,
-                              child: CupertinoButton(
-                                padding: EdgeInsets.zero,
-                                onPressed: _scrollToBottom,
-                                child: Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: CupertinoColors.systemGrey5
-                                        .resolveFrom(context),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    CupertinoIcons.chevron_down,
-                                    size: 20,
-                                    color: CupertinoColors.label.resolveFrom(
-                                      context,
+    return AnimatedBuilder(
+      animation: AppSettingsStore.instance,
+      builder: (context, _) {
+        final chatFontScale = AppSettingsStore.instance.chatFontScale;
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop) {
+              unawaited(_popWithResult());
+            }
+          },
+          child: CupertinoPageScaffold(
+            backgroundColor: const Color(0xFFECE5DD),
+            child: GestureDetector(
+              onTap: () => FocusScope.of(context).unfocus(),
+              child: Stack(
+                children: [
+                  SafeArea(
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: Stack(
+                            children: [
+                              _buildBody(chatFontScale),
+                              if (_viewModel.showScrollToBottom)
+                                Positioned(
+                                  right: 16,
+                                  bottom: 16,
+                                  child: CupertinoButton(
+                                    padding: EdgeInsets.zero,
+                                    onPressed: _scrollToBottom,
+                                    child: Container(
+                                      width: 40,
+                                      height: 40,
+                                      decoration: BoxDecoration(
+                                        color: CupertinoColors.systemGrey5
+                                            .resolveFrom(context),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        CupertinoIcons.chevron_down,
+                                        size: 20,
+                                        color: CupertinoColors.label
+                                            .resolveFrom(context),
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 5),
-                      child: _buildInput(),
-                    ),
-                  ],
-                ),
-              ),
-              // Gradient title bar overlay
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment(0, 0.5),
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Color(0xFFECE5DD),
-                        Color(0xDFECE5DD),
-                        Color(0xCCECE5DD),
-                        Color(0x80ECE5DD),
-                        Color(0x40ECE5DD),
-                        Color(0x00ECE5DD),
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 5),
+                          child: _buildInput(),
+                        ),
                       ],
-                      stops: [0.0, 0.5, 0.6, 0.8, 0.9, 1.0],
                     ),
                   ),
-                  child: SafeArea(
-                    bottom: false,
-                    child: SizedBox(
-                      height: _titleBarHeight,
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 36),
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Text(
-                              chatName,
-                              textAlign: TextAlign.center,
-                              style: appTitleTextStyle(
-                                context,
-                                fontSize: AppFontSizes.appTitle,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Positioned(
-                              left: 8,
-                              child: CupertinoButton(
-                                padding: EdgeInsets.zero,
-                                onPressed: _popWithResult,
-                                child: const Icon(
-                                  CupertinoIcons.back,
-                                  size: 28,
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              right: 8,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  CupertinoButton(
-                                    padding: EdgeInsets.zero,
-                                    onPressed: () => Navigator.push(
-                                      context,
-                                      CupertinoPageRoute(
-                                        builder: (_) => GroupMembersPage(
-                                          chatId: widget.chatId,
-                                        ),
-                                      ),
-                                    ),
-                                    child: const Icon(
-                                      CupertinoIcons.person_2_fill,
-                                      size: 22,
-                                    ),
-                                  ),
-                                  CupertinoButton(
-                                    padding: EdgeInsets.zero,
-                                    onPressed: () => Navigator.push(
-                                      context,
-                                      CupertinoPageRoute(
-                                        builder: (_) => GroupSettingsPage(
-                                          chatId: widget.chatId,
-                                          currentName: widget.chatName,
-                                        ),
-                                      ),
-                                    ),
-                                    child: const Icon(
-                                      CupertinoIcons.gear_solid,
-                                      size: IconSizes.iconSize,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                  // Gradient title bar overlay
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment(0, 0.5),
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Color(0xFFECE5DD),
+                            Color(0xDFECE5DD),
+                            Color(0xCCECE5DD),
+                            Color(0x80ECE5DD),
+                            Color(0x40ECE5DD),
+                            Color(0x00ECE5DD),
                           ],
+                          stops: [0.0, 0.5, 0.6, 0.8, 0.9, 1.0],
+                        ),
+                      ),
+                      child: SafeArea(
+                        bottom: false,
+                        child: SizedBox(
+                          height: _titleBarHeight,
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 36),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Text(
+                                  chatName,
+                                  textAlign: TextAlign.center,
+                                  style: appTitleTextStyle(
+                                    context,
+                                    fontSize: AppFontSizes.appTitle,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Positioned(
+                                  left: 8,
+                                  child: CupertinoButton(
+                                    padding: EdgeInsets.zero,
+                                    onPressed: _popWithResult,
+                                    child: const Icon(
+                                      CupertinoIcons.back,
+                                      size: 28,
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  right: 8,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      CupertinoButton(
+                                        padding: EdgeInsets.zero,
+                                        onPressed: () => Navigator.push(
+                                          context,
+                                          CupertinoPageRoute(
+                                            builder: (_) => GroupMembersPage(
+                                              chatId: widget.chatId,
+                                            ),
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          CupertinoIcons.person_2_fill,
+                                          size: 22,
+                                        ),
+                                      ),
+                                      CupertinoButton(
+                                        padding: EdgeInsets.zero,
+                                        onPressed: () => Navigator.push(
+                                          context,
+                                          CupertinoPageRoute(
+                                            builder: (_) => GroupSettingsPage(
+                                              chatId: widget.chatId,
+                                              currentName: widget.chatName,
+                                            ),
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          CupertinoIcons.gear_solid,
+                                          size: IconSizes.iconSize,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(double chatFontScale) {
     if (_viewModel.isLoading) {
       return const Center(child: CupertinoActivityIndicator());
     }
@@ -1006,6 +1012,7 @@ class _ChatDetailPageState extends State<ChatDetailPage>
         final messageRow = MessageRow(
           key: ValueKey(msg.id),
           message: msg,
+          chatFontScale: chatFontScale,
           isHighlighted: isHighlighted,
           onLongPress: () => _showMessageActions(msg),
           onReply: () => _viewModel.setReplyTo(msg),
