@@ -13,6 +13,8 @@ class WettyChatApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return CupertinoApp(
       theme: appCupertinoTheme,
+      /// For now, the home page directs to the chat list page
+      // TODO: implement and verify the auth later
       home: home ?? const ChatPage(),
     );
   }

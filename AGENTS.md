@@ -15,3 +15,7 @@ When working on frontend reference @wetty-chat-mobile/AGENTS.md
 ### Backend
 Backend is a Rust + Axum project located in `backend` directory.
 When working on backend, load @backend/AGENTS.md
+
+### Flutter
+There's also a flutter mobile app located in `wetty-chat-flutter` directory.
+When working on flutter, load @wetty-chat-flutter/AGENTS.md
