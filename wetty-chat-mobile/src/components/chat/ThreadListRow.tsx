@@ -1,7 +1,5 @@
-import { IonBadge, IonIcon, IonItem } from '@ionic/react';
-import { chatbubblesOutline } from 'ionicons/icons';
-import { Trans } from '@lingui/react/macro';
-import type { ThreadListItem, ThreadParticipant, ThreadReplyPreview } from '@/api/threads';
+import { IonBadge, IonItem, IonLabel } from '@ionic/react';
+import type { ThreadListItem, ThreadReplyPreview } from '@/api/threads';
 import { OverlayAvatar } from '@/components/OverlayAvatar';
 import { formatMessagePreview, getNotificationPreviewLabels } from '@/utils/messagePreview';
 import styles from './ThreadListRow.module.scss';
@@ -30,16 +28,6 @@ function formatRelativeTime(isoString: string, locale: string): string {
   }
   return Intl.DateTimeFormat(locale, { year: 'numeric', month: 'short', day: 'numeric' }).format(date);
 }
-
-function formatParticipants(participants: ThreadParticipant[]): string {
-  if (participants.length === 0) return '';
-  const names = participants.map((p) => p.name ?? 'User');
-  if (names.length <= 2) {
-    return names.join(', ');
-  }
-  return `${names[0]}, ${names[1]} and ${names.length - 2} others`;
-}
-
 function formatReplyPreview(reply: ThreadReplyPreview, locale: string): string {
   // Build a preview-compatible object for formatMessagePreview
   return formatMessagePreview(
@@ -74,45 +62,34 @@ export function ThreadListRow({ thread, locale, isActive, onSelect }: ThreadList
       className={`${styles.threadRow} ${thread.unreadCount > 0 ? styles.unread : ''} ${isActive ? styles.active : ''}`}
       onClick={() => onSelect(thread.chatId, rootMsg.id)}
     >
-      <div className={styles.threadRowInner}>
-        {/* Row 1: header */}
-        <div className={styles.headerRow}>
-          <span className={styles.headerLeft}>
-            <IonIcon icon={chatbubblesOutline} className={styles.headerIcon} />
-            <Trans>Thread in {thread.chatName}</Trans>
-          </span>
-          <span className={styles.headerTime}>
-            {formatRelativeTime(thread.lastReplyAt, locale)}
-            {thread.unreadCount > 0 && (
-              <IonBadge color="primary" className={styles.unreadBadge}>
-                {thread.unreadCount}
-              </IonBadge>
-            )}
-          </span>
-        </div>
-
-        {/* Rows 2-4: avatar + content */}
-        <div className={styles.bodyRow}>
-          <OverlayAvatar
-            primaryName={thread.chatName}
-            primaryAvatarUrl={thread.chatAvatar}
-            secondaryName={rootMsg.sender.name ?? null}
-            secondaryAvatarUrl={rootMsg.sender.avatarUrl ?? null}
-            size={40}
-          />
-          <div className={styles.bodyContent}>
-            {/* This is commented out, so we can re-enable it later */}
-            {void formatParticipants}
-            {/* <div className={styles.participants}>{formatParticipants(thread.participants)}</div> */}
-            {/* Row 2: replied to */}
-            <div className={styles.repliedTo}>{rootPreview || rootMsg.sender.name}</div>
-            {/* Row 3: latest reply */}
-            {lastReply && lastReplyPreview && (
-              <div className={styles.latestReply}>
-                <span className={styles.latestReplySender}>{lastReply.sender.name ?? 'User'}:</span> {lastReplyPreview}
-              </div>
-            )}
-          </div>
+      {/* Rows 2-4: avatar + content */}
+      <span slot="start">
+        <OverlayAvatar
+          primaryName={thread.chatName}
+          primaryAvatarUrl={thread.chatAvatar}
+          secondaryName={rootMsg.sender.name ?? null}
+          secondaryAvatarUrl={rootMsg.sender.avatarUrl ?? null}
+          size={48}
+        />
+      </span>
+      <IonLabel className={styles.bodyContent}>
+        {/* Row 2: replied to */}
+        <div className={styles.repliedTo}>{rootPreview || rootMsg.sender.name}</div>
+        {/* Row 3: latest reply */}
+        {lastReply && lastReplyPreview && (
+          <p className={styles.latestReply}>
+            <span className={styles.latestReplySender}>{lastReply.sender.name ?? 'User'}:</span> {lastReplyPreview}
+          </p>
+        )}
+      </IonLabel>
+      <div slot="end" className={styles.chatsListEndSlot}>
+        <div className={styles.chatsListTime}>{formatRelativeTime(thread.lastReplyAt, locale)}</div>
+        <div className={styles.chatsListBadge}>
+          {thread.unreadCount > 0 && (
+            <IonBadge color="primary" className={styles.unreadBadge}>
+              {thread.unreadCount}
+            </IonBadge>
+          )}
         </div>
       </div>
     </IonItem>

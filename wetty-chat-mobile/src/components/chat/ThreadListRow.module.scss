@@ -101,7 +101,7 @@
 }
 
 .repliedTo {
-  font-size: 13px;
+  font-size: 0.875rem;
   color: var(--ion-color-medium);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -123,4 +123,28 @@
 
 .latestReplySender {
   font-weight: 500;
+  color: var(--ion-color-primary-contrast);
+}
+
+.chatsListEndSlot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 0;
+  height: 100%;
+}
+
+.chatsListTime {
+  font-size: 13px;
+  text-align: right;
+  flex-grow: 0;
+}
+
+.chatsListBadge {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  font-size: 12px;
 }

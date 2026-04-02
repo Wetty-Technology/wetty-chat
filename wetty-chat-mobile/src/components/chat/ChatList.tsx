@@ -269,12 +269,12 @@ export function ChatList({ activeChatId, activeThreadId, onChatSelect, onThreadS
           />
         </span>
         <IonLabel className={styles.chatsListLabel}>
-          <h2 className={styles.chatsListTitle}>
+          <h3 className={styles.chatsListTitle}>
             <span className={styles.chatsListTitleText}>{getChatDisplayName(chat.id, chat.name)}</span>
             {isChatMuted(chat) ? (
               <IonIcon aria-hidden="true" icon={notificationsOffOutline} className={styles.chatsListMutedIcon} />
             ) : null}
-          </h2>
+          </h3>
           <p className={styles.chatsListPreview}>{getMessagePreview(chat.lastMessage, locale)}</p>
         </IonLabel>
         <div slot="end" className={styles.chatsListEndSlot}>
