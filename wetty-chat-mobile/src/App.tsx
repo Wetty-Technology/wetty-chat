@@ -19,6 +19,7 @@ import { DesktopSplitLayout } from './layouts/DesktopSplitLayout';
 import OobePage from '@/pages/oobe';
 import LandingPage from './pages/landing';
 import PushOpenPage from '@/pages/push-open';
+import PermalinkPage from '@/pages/permalink';
 import { initWebSocket } from '@/api/ws';
 import { syncJwtTokenToIdb } from '@/utils/jwtToken';
 import { useDeviceToken } from './hooks/useDeviceToken';
@@ -35,6 +36,7 @@ function AppRouter({ isDesktop }: { isDesktop: boolean }) {
   const isOobeRoute = useRouteMatch('/oobe');
   const isLandingRoute = useRouteMatch('/landing');
   const isPushOpenRoute = useRouteMatch('/push-open');
+  const isPermalinkRoute = useRouteMatch<{ encoded: string }>('/m/:encoded');
 
   if (isLandingRoute?.isExact) {
     return <LandingPage />;
@@ -42,6 +44,8 @@ function AppRouter({ isDesktop }: { isDesktop: boolean }) {
     return <OobePage />;
   } else if (isPushOpenRoute?.isExact) {
     return <PushOpenPage isDesktop={isDesktop} />;
+  } else if (isPermalinkRoute) {
+    return <PermalinkPage isDesktop={isDesktop} />;
   } else if (!hasCompletedOobe()) {
     return <Redirect to="/oobe" />;
   }

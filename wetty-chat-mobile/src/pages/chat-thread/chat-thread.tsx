@@ -24,6 +24,7 @@ import {
   createOutline,
   informationCircleOutline,
   notificationsOffOutline,
+  linkOutline,
   notifications,
   people,
   trashOutline,
@@ -87,6 +88,7 @@ import { BackButton } from '@/components/BackButton';
 import type { BackAction } from '@/types/back-action';
 import { requestUploadUrl, uploadFileToS3 } from '@/api/upload';
 import { syncAppBadgeCount } from '@/utils/badges';
+import { buildPermalinkUrl } from '@/utils/permalinkUrl';
 import { useIsDesktop } from '@/hooks/platformHooks';
 import { useChatRole } from '@/components/chat/permissions/useChatRole';
 import { ChatMessageRow } from '@/components/chat/messages/ChatMessageRow';
@@ -171,7 +173,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   const storeChatId = threadId ? `${chatId}_thread_${threadId}` : chatId;
   const history = useHistory();
   const location = useLocation<ChatThreadRouteState | undefined>();
-  const initialResumeRequest = !threadId ? (location.state?.resumeRequest ?? null) : null;
+  const initialResumeRequest = location.state?.resumeRequest ?? null;
 
   const dispatch = useDispatch();
   const currentUserId = useSelector((state: RootState) => state.user.uid);
@@ -562,8 +564,6 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   }, [storeChatId]);
 
   useEffect(() => {
-    if (threadId) return;
-
     const resumeRequest = location.state?.resumeRequest;
     if (!resumeRequest) return;
     if (resumeRequest.token === consumedResumeTokenRef.current) return;
@@ -583,7 +583,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
       hash: location.hash,
       state: nextState,
     });
-  }, [threadId, history, location]);
+  }, [history, location]);
 
   const fetchLatestWindow = useCallback(
     (options?: { forceReopen?: boolean }) => {
@@ -1335,6 +1335,15 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
     }
 
     actions.push({
+      key: 'copy-link',
+      label: t`Copy Link`,
+      icon: linkOutline,
+      handler: () => {
+        navigator.clipboard.writeText(buildPermalinkUrl(chatId, msg.id));
+      },
+    });
+
+    actions.push({
       key: 'reply',
       label: t`Reply`,
       icon: arrowUndo,
@@ -1402,7 +1411,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
       });
     }
     if (stickerMessage) {
-      return actions.filter((a) => a.key === 'reply' || a.key === 'delete');
+      return actions.filter((a) => a.key === 'reply' || a.key === 'delete' || a.key === 'copy-link');
     }
     return actions;
   }, [

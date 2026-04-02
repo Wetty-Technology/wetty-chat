@@ -12,7 +12,7 @@ function clearPendingMobileNavigation() {
   pendingMobileNavigationIds = [];
 }
 
-export function navigateToNotificationTarget(target: string, isDesktop: boolean): void {
+export function navigateToNotificationTarget(target: string, isDesktop: boolean, state?: object): void {
   clearPendingMobileNavigation();
   const currentPath = appHistory.location.pathname;
 
@@ -30,7 +30,7 @@ export function navigateToNotificationTarget(target: string, isDesktop: boolean)
 
   if (isDesktop) {
     console.debug('[app] replacing desktop route', { target });
-    appHistory.replace(target);
+    appHistory.replace({ pathname: target, state });
     return;
   }
 
@@ -52,7 +52,7 @@ export function navigateToNotificationTarget(target: string, isDesktop: boolean)
         pendingMobileNavigationIds.push(
           window.setTimeout(() => {
             if (appHistory.location.pathname !== target) {
-              appHistory.push(target);
+              appHistory.push({ pathname: target, state });
             }
           }, 0),
         );
@@ -70,7 +70,7 @@ export function navigateToNotificationTarget(target: string, isDesktop: boolean)
           currentPath: appHistory.location.pathname,
           target,
         });
-        appHistory.push(target);
+        appHistory.push({ pathname: target, state });
       }
     }, 0),
   );
