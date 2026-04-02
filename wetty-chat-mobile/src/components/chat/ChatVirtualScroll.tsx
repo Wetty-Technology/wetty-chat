@@ -809,7 +809,7 @@ export function ChatVirtualScroll({
             intersectsBefore: item.intersectedViewportBefore,
             intersectsAfter: item.intersectsViewportAfter,
           }));
-        console.log(
+        console.debug(
           `[ChatVirtualScroll] batch-commit-rows ${JSON.stringify({
             reason: batch.reason,
             direction: batch.direction,
@@ -1220,7 +1220,7 @@ export function ChatVirtualScroll({
           mounted: mountedRef.current,
         };
         logVirtualScroll('scroll-jitter-detected', payload);
-        console.log(`[ChatVirtualScroll] scroll-jitter-json ${JSON.stringify(payload)}`);
+        console.debug(`[ChatVirtualScroll] scroll-jitter-json ${JSON.stringify(payload)}`);
       }
     }
 

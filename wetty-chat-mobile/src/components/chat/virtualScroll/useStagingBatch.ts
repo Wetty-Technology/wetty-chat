@@ -6,11 +6,11 @@ const debugStagingBatch = import.meta.env.DEV;
 function logStagingBatch(event: string, details?: Record<string, unknown>) {
   if (!debugStagingBatch) return;
   if (details) {
-    console.log(`[ChatVirtualScroll][StagingBatch] ${event}`, details);
+    console.debug(`[ChatVirtualScroll][StagingBatch] ${event}`, details);
     return;
   }
 
-  console.log(`[ChatVirtualScroll][StagingBatch] ${event}`);
+  console.debug(`[ChatVirtualScroll][StagingBatch] ${event}`);
 }
 
 export interface StagingBatchResult {
