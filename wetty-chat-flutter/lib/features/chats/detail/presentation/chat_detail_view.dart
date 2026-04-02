@@ -791,7 +791,8 @@ class _ChatDetailPageState extends State<ChatDetailPage>
     return AnimatedBuilder(
       animation: AppSettingsStore.instance,
       builder: (context, _) {
-        final chatFontScale = AppSettingsStore.instance.chatFontScale;
+        final chatMessageFontSize =
+            AppSettingsStore.instance.chatMessageFontSize;
         return PopScope(
           canPop: false,
           onPopInvokedWithResult: (didPop, _) {
@@ -811,7 +812,7 @@ class _ChatDetailPageState extends State<ChatDetailPage>
                         Expanded(
                           child: Stack(
                             children: [
-                              _buildBody(chatFontScale),
+                              _buildBody(chatMessageFontSize),
                               if (_viewModel.showScrollToBottom)
                                 Positioned(
                                   right: 16,
@@ -951,7 +952,7 @@ class _ChatDetailPageState extends State<ChatDetailPage>
     );
   }
 
-  Widget _buildBody(double chatFontScale) {
+  Widget _buildBody(double chatMessageFontSize) {
     if (_viewModel.isLoading) {
       return const Center(child: CupertinoActivityIndicator());
     }
@@ -1023,7 +1024,7 @@ class _ChatDetailPageState extends State<ChatDetailPage>
         final messageRow = MessageRow(
           key: ValueKey(msg.id),
           message: msg,
-          chatFontScale: chatFontScale,
+          chatMessageFontSize: chatMessageFontSize,
           isHighlighted: isHighlighted,
           onLongPress: () => _showMessageActions(msg),
           onReply: () => _viewModel.setReplyTo(msg),
