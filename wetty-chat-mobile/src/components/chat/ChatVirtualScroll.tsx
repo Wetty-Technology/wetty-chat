@@ -199,6 +199,7 @@ export function ChatVirtualScroll({
 
   const pendingScrollKeyRef = useRef<string | null>(null);
   const pendingScrollMessageIdRef = useRef<string | null>(null);
+  const initialAnchorConsumedRef = useRef(false);
   const pendingScrollBehaviorRef = useRef<ScrollBehavior>('auto');
   const pendingScrollToBottomRef = useRef(false);
   const pendingScrollToBottomBehaviorRef = useRef<ScrollBehavior>('auto');
@@ -932,7 +933,11 @@ export function ChatVirtualScroll({
         pendingScrollMessageId: pendingScrollMessageIdRef.current,
         initialAnchor: formatAnchorForLog(initialAnchorRef.current),
       });
-      if (!pendingScrollMessageIdRef.current && initialAnchorRef.current.type === 'message') {
+      if (
+        !pendingScrollMessageIdRef.current &&
+        !initialAnchorConsumedRef.current &&
+        initialAnchorRef.current.type === 'message'
+      ) {
         pendingScrollMessageIdRef.current = initialAnchorRef.current.messageId;
         pendingScrollBehaviorRef.current = 'auto';
         logVirtualScroll('recenter-seeded-pending-message-scroll', {
@@ -1327,6 +1332,12 @@ export function ChatVirtualScroll({
         const scrolled = scrollToKeyInternal(target.key, intent.scrollToMessageId.behavior);
         if (scrolled && pendingScrollMessageIdRef.current === intent.scrollToMessageId.messageId) {
           pendingScrollMessageIdRef.current = null;
+          if (
+            initialAnchorRef.current.type === 'message' &&
+            initialAnchorRef.current.messageId === intent.scrollToMessageId.messageId
+          ) {
+            initialAnchorConsumedRef.current = true;
+          }
         }
         if (scrolled) {
           triggerJumpTargetHighlight(target.key);
@@ -1610,6 +1621,7 @@ export function ChatVirtualScroll({
     recenterTargetIndexRef.current = null;
     pendingScrollKeyRef.current = null;
     pendingScrollMessageIdRef.current = null;
+    initialAnchorConsumedRef.current = false;
     pendingScrollToBottomRef.current = false;
     pendingScrollToBottomBehaviorRef.current = 'auto';
     pendingScrollToBottomSourceRef.current = null;
