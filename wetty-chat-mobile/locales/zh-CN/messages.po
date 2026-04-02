@@ -87,6 +87,11 @@ msgstr "已允许"
 msgid "Anyone with this invite link can use it until it expires or is revoked."
 msgstr "任何拥有此邀请链接的人都可以在链接过期或被撤销前使用它。"
 
+#. placeholder {0}: msg.sender.name ?? 'this user'
+#: src/pages/chat-thread/chat-thread.tsx
+msgid "Are you sure you want to delete this message from {0}?"
+msgstr "确定要删除 {0} 的这条消息吗？"
+
 #: src/pages/chat-thread/chat-thread.tsx
 msgid "Are you sure you want to delete this message?"
 msgstr "确定要撤回这条消息吗？"
@@ -94,6 +99,10 @@ msgstr "确定要撤回这条消息吗？"
 #: src/pages/chat-thread/chat-settings.tsx
 msgid "Are you sure you want to leave this group?"
 msgstr "确定要退出这个群组吗？"
+
+#: src/components/chat/PinBanner.tsx
+msgid "Are you sure you want to unpin this message?"
+msgstr "确定要取消置顶这条消息吗？"
 
 #: src/pages/settings.tsx
 msgid "Ask first"
@@ -138,6 +147,7 @@ msgstr "已阻止"
 
 #: src/components/chat/compose/AddStickerModal.tsx
 #: src/components/chat/compose/StickerPicker.tsx
+#: src/components/chat/PinBanner.tsx
 #: src/components/chat/settings/ChatMuteSettingItem.tsx
 #: src/components/chat/settings/ShareInviteModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
@@ -232,6 +242,10 @@ msgstr "复制"
 #: src/pages/chat-thread/manage-invites.tsx
 msgid "Copy code"
 msgstr "复制代码"
+
+#: src/pages/chat-thread/chat-thread.tsx
+msgid "Copy Link"
+msgstr "复制链接"
 
 #: src/components/chat/settings/ShareInviteModal.tsx
 msgid "Copy the link below, or choose a group to send it to right now."
@@ -329,6 +343,10 @@ msgstr "目标群组"
 msgid "Dismiss"
 msgstr "忽略"
 
+#: src/components/chat/PinListModal.tsx
+msgid "Done"
+msgstr "完成"
+
 #: src/components/chat/ImageViewer.tsx
 msgid "Download"
 msgstr "下载"
@@ -336,6 +354,10 @@ msgstr "下载"
 #: src/components/chat/ImageViewer.tsx
 msgid "Download image"
 msgstr "下载图片"
+
+#: src/components/chat/MessageComposeBar.tsx
+msgid "Drop images or videos"
+msgstr "拖放图片或视频"
 
 #: src/components/chat/compose/AddStickerModal.tsx
 msgid "e.g. 😊"
@@ -493,6 +515,14 @@ msgstr "加载表情失败"
 msgid "Failed to mute"
 msgstr "静音失败"
 
+#: src/pages/permalink.tsx
+msgid "Failed to open link"
+msgstr "打开链接失败"
+
+#: src/pages/chat-thread/chat-thread.tsx
+msgid "Failed to pin message"
+msgstr "置顶消息失败"
+
 #: src/components/chat/ChatList.tsx
 msgid "Failed to refresh chats"
 msgstr "刷新聊天失败"
@@ -541,6 +571,10 @@ msgstr "开启推送通知失败"
 #: src/components/chat/settings/ChatMuteSettingItem.tsx
 msgid "Failed to unmute"
 msgstr "取消静音失败"
+
+#: src/pages/chat-thread/chat-thread.tsx
+msgid "Failed to unpin message"
+msgstr "取消置顶消息失败"
 
 #: src/pages/settings/sticker-pack-detail.tsx
 msgid "Failed to unsubscribe"
@@ -599,6 +633,10 @@ msgstr "群组设置"
 #: src/components/chat/settings/ChatMuteSettingItem.tsx
 msgid "indefinitely"
 msgstr "永久"
+
+#: src/pages/permalink.tsx
+msgid "Invalid link"
+msgstr "无效链接"
 
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Invalid user ID"
@@ -747,12 +785,18 @@ msgid "Mention suggestions"
 msgstr "提及建议"
 
 #: src/components/chat/compose/ComposeInput.tsx
+#: src/components/chat/PinBanner.tsx
+#: src/components/chat/PinListModal.tsx
 msgid "Message"
 msgstr "消息"
 
 #: src/pages/chat-thread/chat-thread.tsx
 msgid "Message cannot be empty"
 msgstr "消息不能为空"
+
+#: src/pages/permalink.tsx
+msgid "Message not found"
+msgstr "未找到消息"
 
 #: src/pages/settings/general.tsx
 #: src/pages/settings/general.tsx
@@ -843,6 +887,10 @@ msgstr "暂无消息"
 msgid "No new replies"
 msgstr "没有新回复"
 
+#: src/components/chat/PinListModal.tsx
+msgid "No pinned messages"
+msgstr "暂无置顶消息"
+
 #: src/components/settings/CheckForUpdateItem.tsx
 msgid "No service worker registered"
 msgstr "未注册 Service Worker"
@@ -900,6 +948,10 @@ msgstr "打开表情选择器"
 msgid "Open this invite to view the group and join."
 msgstr "打开此邀请以查看群组并加入。"
 
+#: src/components/chat/PinBanner.tsx
+msgid "Open thread"
+msgstr "打开话题"
+
 #: src/components/chat/compose/AddStickerModal.tsx
 msgid "Optional"
 msgstr "可选"
@@ -920,6 +972,18 @@ msgstr "粘贴邀请码"
 #: src/pages/settings.tsx
 msgid "Permission"
 msgstr "权限"
+
+#: src/pages/chat-thread/chat-thread.tsx
+msgid "Pin"
+msgstr "置顶"
+
+#: src/components/chat/PinBanner.tsx
+msgid "Pinned message"
+msgstr "已置顶的消息"
+
+#: src/components/chat/PinListModal.tsx
+msgid "Pinned Messages"
+msgstr "置顶消息"
 
 #: src/pages/chat-thread/chat-settings.tsx
 msgid "Please choose an image file"
@@ -1054,10 +1118,6 @@ msgstr "要将这个表情包从你的收藏中移除吗？"
 #: src/pages/settings/sticker-pack-detail.tsx
 msgid "Remove this sticker from the pack?"
 msgstr "要从表情包中移除此表情吗？"
-
-#: src/components/chat/ThreadListRow.tsx
-#~ msgid "replied to:"
-#~ msgstr "回复了："
 
 #: src/components/chat/messages/ChatBubbleBase.tsx
 #: src/components/chat/messages/StickerBubble.tsx
@@ -1259,10 +1319,6 @@ msgstr "这是你的消息在聊天中的显示效果。"
 msgid "Thread"
 msgstr "话题"
 
-#: src/components/chat/ChatList.tsx
-#~ msgid "Thread conversations"
-#~ msgstr "话题对话"
-
 #. placeholder {0}: thread.chatName
 #: src/components/chat/ThreadListRow.tsx
 msgid "Thread in {0}"
@@ -1294,6 +1350,17 @@ msgstr "关闭推送通知"
 #: src/pages/settings.tsx
 msgid "Turn On Push Notifications"
 msgstr "开启推送通知"
+
+#: src/components/chat/PinBanner.tsx
+#: src/components/chat/PinBanner.tsx
+#: src/components/chat/PinListModal.tsx
+#: src/pages/chat-thread/chat-thread.tsx
+msgid "Unpin"
+msgstr "取消置顶"
+
+#: src/components/chat/PinBanner.tsx
+msgid "Unpin Message"
+msgstr "取消置顶消息"
 
 #: src/components/chat/ChatList.tsx
 msgid "Unread"
@@ -1358,6 +1425,10 @@ msgstr "用户 {0}"
 #: src/pages/chat-thread/chat-members.tsx
 msgid "User ID"
 msgstr "用户 ID"
+
+#: src/components/chat/PinBanner.tsx
+msgid "View all pinned messages"
+msgstr "查看全部置顶消息"
 
 #. placeholder {0}: index + 1
 #: src/components/chat/ImageViewer.tsx
