@@ -249,7 +249,7 @@ export function ChatList({ activeChatId, activeThreadId, onChatSelect, onThreadS
         id={chat.id}
         button
         detail={false}
-        className={`${styles.chatListItem} ${activeChatId === chat.id ? styles.active : ''}`}
+        className={`${styles.chatListItem} ${activeChatId === chat.id && !activeThreadId ? styles.active : ''}`}
         onClick={() =>
           onChatSelect(
             chat.id,
