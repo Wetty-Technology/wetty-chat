@@ -4,6 +4,7 @@ import { IonIcon, useIonAlert, useIonToast } from '@ionic/react';
 import { heart, heartDislike } from 'ionicons/icons';
 import { starOutline } from 'ionicons/icons';
 import { t } from '@lingui/core/macro';
+import { StickerImage } from '@/components/shared/StickerImage';
 import { AddStickerModal } from './AddStickerModal';
 import styles from './StickerPicker.module.scss';
 import {
@@ -290,11 +291,7 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
           >
             <span className={styles.packIcon} aria-hidden="true">
               {pack.previewUrl ? (
-                pack.previewUrl.toLowerCase().endsWith('.webm') ? (
-                  <video src={pack.previewUrl} className={styles.packIconImg} autoPlay loop muted playsInline />
-                ) : (
-                  <img src={pack.previewUrl} alt="" className={styles.packIconImg} />
-                )
+                <StickerImage src={pack.previewUrl} alt="" className={styles.packIconImg} />
               ) : (
                 <IonIcon icon={starOutline} />
               )}
@@ -404,11 +401,7 @@ function StickerButton({
         fireLongPress();
       }}
     >
-      {sticker.media.contentType.startsWith('video/') ? (
-        <video src={sticker.media.url} className={styles.stickerThumb} autoPlay loop muted playsInline />
-      ) : (
-        <img src={sticker.media.url} alt="" className={styles.stickerThumb} />
-      )}
+      <StickerImage src={sticker.media.url} alt="" className={styles.stickerThumb} />
     </button>
   );
 }

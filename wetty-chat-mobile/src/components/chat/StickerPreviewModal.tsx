@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { IonContent, IonIcon, IonModal } from '@ionic/react';
 import { close, addCircleOutline, removeCircleOutline } from 'ionicons/icons';
 import { t } from '@lingui/core/macro';
+import { StickerImage } from '@/components/shared/StickerImage';
 import { Trans } from '@lingui/react/macro';
 import {
   getStickerDetail,
@@ -110,12 +111,7 @@ function StickerPreviewModalContent({ stickerId, isDesktop, onDismiss }: Sticker
     return (
       <>
         <div className={styles.heroSection}>
-          {heroUrl &&
-            (heroUrl.toLowerCase().endsWith('.webm') ? (
-              <video src={heroUrl} className={styles.heroMedia} autoPlay loop muted playsInline />
-            ) : (
-              <img src={heroUrl} alt={t`Sticker preview`} className={styles.heroMedia} />
-            ))}
+          {heroUrl && <StickerImage src={heroUrl} alt={t`Sticker preview`} className={styles.heroMedia} />}
           {heroSticker && <span className={styles.heroEmoji}>{heroSticker.emoji}</span>}
         </div>
 
@@ -135,11 +131,7 @@ function StickerPreviewModalContent({ stickerId, isDesktop, onDismiss }: Sticker
               onClick={() => setSelectedStickerId(sticker.id)}
               aria-label={sticker.name || sticker.emoji}
             >
-              {sticker.media.contentType.startsWith('video/') ? (
-                <video src={sticker.media.url} className={styles.gridMedia} autoPlay loop muted playsInline />
-              ) : (
-                <img src={sticker.media.url} alt="" className={styles.gridMedia} />
-              )}
+              <StickerImage src={sticker.media.url} alt="" className={styles.gridMedia} />
             </button>
           ))}
         </div>

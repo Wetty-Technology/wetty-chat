@@ -2,6 +2,7 @@ import type { CSSProperties, HTMLAttributes, Ref } from 'react';
 import { IonIcon } from '@ionic/react';
 import { arrowUndo, chatbubbles, checkmarkCircle, checkmarkCircleOutline } from 'ionicons/icons';
 import { t } from '@lingui/core/macro';
+import { StickerImage } from '@/components/shared/StickerImage';
 import { useSelector } from 'react-redux';
 import styles from './ChatBubble.module.scss';
 import { formatMessagePreview, type PreviewMessage, getNotificationPreviewLabels } from '@/utils/messagePreview';
@@ -93,26 +94,13 @@ export function StickerBubble({
         </div>
       )}
       <div className={styles.stickerContainer}>
-        {stickerUrl.toLowerCase().endsWith('.webm') ? (
-          <video
-            src={stickerUrl}
-            autoPlay
-            loop
-            muted
-            playsInline
-            className={styles.stickerImage}
-            onClick={interactive && onStickerTap ? onStickerTap : undefined}
-            style={interactive && onStickerTap ? { cursor: 'pointer' } : undefined}
-          />
-        ) : (
-          <img
-            src={stickerUrl}
-            alt={t`Sticker`}
-            className={styles.stickerImage}
-            onClick={interactive && onStickerTap ? onStickerTap : undefined}
-            style={interactive && onStickerTap ? { cursor: 'pointer' } : undefined}
-          />
-        )}
+        <StickerImage
+          src={stickerUrl}
+          alt={t`Sticker`}
+          className={styles.stickerImage}
+          onClick={interactive && onStickerTap ? onStickerTap : undefined}
+          style={interactive && onStickerTap ? { cursor: 'pointer' } : undefined}
+        />
         {timestamp && (
           <span className={styles.stickerTimestamp}>
             {formatTime(timestamp)}

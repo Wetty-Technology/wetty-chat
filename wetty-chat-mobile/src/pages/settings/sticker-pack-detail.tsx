@@ -15,6 +15,7 @@ import {
 import { trashOutline } from 'ionicons/icons';
 import { useParams } from 'react-router-dom';
 import { t } from '@lingui/core/macro';
+import { StickerImage } from '@/components/shared/StickerImage';
 import { Trans } from '@lingui/react/macro';
 import { useHistory } from 'react-router-dom';
 import { useSelector } from 'react-redux';
@@ -251,11 +252,7 @@ export function StickerPackDetailCore({ packId, backAction }: StickerPackDetailC
               onClick={owned ? () => handleRemoveSticker(sticker) : undefined}
               style={{ cursor: owned ? 'pointer' : 'default' }}
             >
-              {sticker.media.contentType.startsWith('video/') ? (
-                <video src={sticker.media.url} className={styles.preview} autoPlay loop muted playsInline />
-              ) : (
-                <img src={sticker.media.url} alt="" className={styles.preview} />
-              )}
+              <StickerImage src={sticker.media.url} alt="" className={styles.preview} />
               {owned && (
                 <span className={styles.removeHint} aria-hidden="true">
                   ✕

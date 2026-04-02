@@ -21,6 +21,7 @@ import { addOutline, cubeOutline } from 'ionicons/icons';
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import { BackButton } from '@/components/BackButton';
+import { StickerImage } from '@/components/shared/StickerImage';
 import {
   createStickerPack,
   getOwnedStickerPacks,
@@ -117,7 +118,7 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
           {ownedPacks.map((pack) => (
             <IonItem key={pack.id} button detail onClick={() => handleOpenPack(pack.id)}>
               {pack.previewSticker ? (
-                <img
+                <StickerImage
                   slot="start"
                   src={pack.previewSticker.media.url}
                   alt=""
@@ -157,7 +158,7 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
             subscribedPacks.map((pack) => (
               <IonItem key={pack.id} button detail onClick={() => handleOpenPack(pack.id)}>
                 {pack.previewSticker ? (
-                  <img
+                  <StickerImage
                     slot="start"
                     src={pack.previewSticker.media.url}
                     alt=""
