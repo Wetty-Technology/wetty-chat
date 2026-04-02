@@ -1,0 +1,728 @@
+use axum::{
+    extract::{Path, Query, State},
+    http::StatusCode,
+    response::IntoResponse,
+    Json, Router,
+};
+use chrono::{DateTime, Utc};
+use diesel::prelude::*;
+use diesel::PgConnection;
+use serde::Serialize;
+
+use crate::{
+    errors::AppError,
+    extractors::DbConn,
+    handlers::{groups::load_requester_group_role, members::check_membership},
+    models::{GroupRole, Message, MessageType},
+    schema::{attachments, group_membership, groups, messages},
+    utils::{auth::CurrentUid, pagination::validate_limit},
+    AppState, MAX_MESSAGES_LIMIT,
+};
+
+use super::{
+    attach_metadata, extract_mention_uids, load_sticker_accessible_ids, send_prepared_message,
+    ChatIdPath, CreateMessageBody, MessageResponse, PreparedMessageSend,
+};
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ListMessagesQuery {
+    #[serde(
+        default,
+        deserialize_with = "crate::serde_i64_string::opt::deserialize"
+    )]
+    before: Option<i64>,
+    #[serde(
+        default,
+        deserialize_with = "crate::serde_i64_string::opt::deserialize"
+    )]
+    around: Option<i64>,
+    #[serde(
+        default,
+        deserialize_with = "crate::serde_i64_string::opt::deserialize"
+    )]
+    after: Option<i64>,
+    #[serde(default)]
+    max: Option<i64>,
+    #[serde(
+        default,
+        deserialize_with = "crate::serde_i64_string::opt::deserialize"
+    )]
+    thread_id: Option<i64>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ListMessagesResponse {
+    messages: Vec<MessageResponse>,
+    #[serde(with = "crate::serde_i64_string::opt")]
+    next_cursor: Option<i64>,
+    #[serde(with = "crate::serde_i64_string::opt")]
+    prev_cursor: Option<i64>,
+}
+
+#[derive(serde::Deserialize)]
+pub struct ThreadIdPath {
+    chat_id: i64,
+    #[serde(deserialize_with = "crate::serde_i64_string::deserialize")]
+    thread_id: i64,
+}
+
+#[derive(serde::Deserialize)]
+pub struct MessageIdPath {
+    chat_id: i64,
+    #[serde(deserialize_with = "crate::serde_i64_string::deserialize")]
+    message_id: i64,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateMessageBody {
+    message: String,
+    #[serde(default)]
+    attachment_ids: Vec<String>,
+}
+
+const SYSTEM_MESSAGE_TYPE_FORBIDDEN: &str = "System messages cannot be sent by clients";
+const INVITE_MESSAGE_TYPE_FORBIDDEN: &str = "Invite messages must be sent through invite APIs";
+
+fn validate_client_message_type(message_type: &MessageType) -> Result<(), AppError> {
+    if matches!(message_type, MessageType::System) {
+        return Err(AppError::BadRequest(SYSTEM_MESSAGE_TYPE_FORBIDDEN));
+    }
+
+    if matches!(message_type, MessageType::Invite) {
+        return Err(AppError::BadRequest(INVITE_MESSAGE_TYPE_FORBIDDEN));
+    }
+
+    Ok(())
+}
+
+fn validate_message_payload(
+    conn: &mut PgConnection,
+    uid: i32,
+    body: &CreateMessageBody,
+    attachment_ids: &[i64],
+) -> Result<(), AppError> {
+    if matches!(body.message_type, MessageType::Sticker) {
+        let sticker_id = body
+            .sticker_id
+            .ok_or(AppError::BadRequest("Sticker ID is required"))?;
+
+        if !attachment_ids.is_empty() {
+            return Err(AppError::BadRequest(
+                "Sticker messages cannot include attachments",
+            ));
+        }
+        if body
+            .message
+            .as_deref()
+            .is_some_and(|message| !message.trim().is_empty())
+        {
+            return Err(AppError::BadRequest("Sticker messages cannot include text"));
+        }
+
+        let accessible = load_sticker_accessible_ids(conn, uid, &[sticker_id])?;
+        if !accessible.contains(&sticker_id) {
+            return Err(AppError::Forbidden("Sticker is not available to this user"));
+        }
+    } else if body.sticker_id.is_some() {
+        return Err(AppError::BadRequest(
+            "Sticker ID is only valid for sticker messages",
+        ));
+    }
+
+    Ok(())
+}
+
+/// GET /chats/:chat_id/messages — List messages in a chat (cursor-based).
+async fn get_messages(
+    CurrentUid(uid): CurrentUid,
+    State(state): State<AppState>,
+    Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
+    mut conn: DbConn,
+    Query(q): Query<ListMessagesQuery>,
+) -> Result<Json<ListMessagesResponse>, AppError> {
+    let conn = &mut *conn;
+
+    check_membership(conn, chat_id, uid)?;
+
+    let max = validate_limit(q.max, MAX_MESSAGES_LIMIT);
+
+    use crate::schema::messages::dsl;
+
+    let q_thread_id = q.thread_id;
+    macro_rules! base_query {
+        () => {{
+            let mut b = messages::table
+                .into_boxed()
+                .filter(dsl::chat_id.eq(chat_id).and(dsl::deleted_at.is_null()));
+            if let Some(tid) = q_thread_id {
+                b = b.filter(dsl::reply_root_id.eq(tid).or(dsl::id.eq(tid)));
+            } else {
+                b = b.filter(dsl::reply_root_id.is_null());
+            }
+            b
+        }};
+    }
+
+    // around=<id>: fetch a window centered on the target message
+    if let Some(target) = q.around {
+        let half = max / 2;
+
+        // Messages with id >= target, ordered ASC (target first, then newer)
+        let newer_rows: Vec<Message> = base_query!()
+            .filter(dsl::id.ge(target))
+            .order(dsl::id.asc())
+            .limit(half + 2)
+            .select(Message::as_select())
+            .load(conn)?;
+
+        // Messages with id < target, ordered DESC (closest to target first)
+        let older_rows: Vec<Message> = base_query!()
+            .filter(dsl::id.lt(target))
+            .order(dsl::id.desc())
+            .limit(half + 1)
+            .select(Message::as_select())
+            .load(conn)?;
+
+        let has_older = older_rows.len() as i64 > half;
+        let has_newer = newer_rows.len() as i64 > half + 1;
+
+        let older_to_use: Vec<Message> = older_rows.into_iter().take(half as usize).collect();
+        let newer_to_use: Vec<Message> = newer_rows.into_iter().take((half + 1) as usize).collect();
+
+        // next_cursor = oldest id (for loading older), prev_cursor = newest id (for loading newer)
+        let next_cursor = has_older
+            .then(|| older_to_use.last().map(|m| m.id))
+            .flatten();
+        let prev_cursor = has_newer
+            .then(|| newer_to_use.last().map(|m| m.id))
+            .flatten();
+
+        // Combine: older reversed (oldest first) + newer (target first, ascending)
+        let mut combined: Vec<Message> = older_to_use.into_iter().rev().collect();
+        combined.extend(newer_to_use);
+
+        let messages_vec = attach_metadata(conn, combined, &state, uid).await;
+
+        return Ok(Json(ListMessagesResponse {
+            messages: messages_vec,
+            next_cursor,
+            prev_cursor,
+        }));
+    }
+
+    // after=<id>: fetch messages newer than `after`, ascending order
+    if let Some(after) = q.after {
+        let rows: Vec<Message> = base_query!()
+            .filter(dsl::id.gt(after))
+            .order(dsl::id.asc())
+            .limit(max + 1)
+            .select(Message::as_select())
+            .load(conn)?;
+
+        let has_more = rows.len() as i64 > max;
+        let messages_to_process: Vec<Message> = rows.into_iter().take(max as usize).collect();
+        let prev_cursor = has_more
+            .then(|| messages_to_process.last().map(|m| m.id))
+            .flatten();
+
+        let messages_vec = attach_metadata(conn, messages_to_process, &state, uid).await;
+
+        return Ok(Json(ListMessagesResponse {
+            messages: messages_vec,
+            next_cursor: None,
+            prev_cursor,
+        }));
+    }
+
+    // Default: before cursor, descending (newest first in response, reversed by client)
+    let rows: Vec<Message> = match q.before {
+        None => base_query!()
+            .order(dsl::id.desc())
+            .limit(max + 1)
+            .select(Message::as_select())
+            .load(conn),
+        Some(before) => base_query!()
+            .filter(dsl::id.lt(before))
+            .order(dsl::id.desc())
+            .limit(max + 1)
+            .select(Message::as_select())
+            .load(conn),
+    }?;
+
+    let has_more = rows.len() as i64 > max;
+    let messages_to_process: Vec<Message> = rows.into_iter().take(max as usize).collect();
+    let next_cursor = has_more
+        .then(|| messages_to_process.last().map(|m| m.id))
+        .flatten();
+
+    // Reverse to return ASC (oldest first)
+    let messages_to_process: Vec<Message> = messages_to_process.into_iter().rev().collect();
+
+    let messages_vec = attach_metadata(conn, messages_to_process, &state, uid).await;
+
+    Ok(Json(ListMessagesResponse {
+        messages: messages_vec,
+        next_cursor,
+        prev_cursor: None,
+    }))
+}
+
+/// GET /chats/:chat_id/messages/:message_id — Get a single message.
+async fn get_message(
+    CurrentUid(uid): CurrentUid,
+    State(state): State<AppState>,
+    Path(MessageIdPath {
+        chat_id,
+        message_id,
+    }): Path<MessageIdPath>,
+    mut conn: DbConn,
+) -> Result<Json<MessageResponse>, AppError> {
+    let conn = &mut *conn;
+
+    check_membership(conn, chat_id, uid)?;
+
+    use crate::schema::messages::dsl;
+    let message: Message = messages::table
+        .filter(
+            dsl::id
+                .eq(message_id)
+                .and(dsl::chat_id.eq(chat_id))
+                .and(dsl::deleted_at.is_null()),
+        )
+        .select(Message::as_select())
+        .first(conn)
+        .optional()?
+        .ok_or(AppError::NotFound("Message not found"))?;
+
+    let messages_vec = attach_metadata(conn, vec![message], &state, uid).await;
+    let response = messages_vec.into_iter().next().unwrap();
+
+    Ok(Json(response))
+}
+
+/// POST /chats/:chat_id/messages — Send a message.
+async fn post_message(
+    CurrentUid(uid): CurrentUid,
+    State(state): State<AppState>,
+    Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
+    mut conn: DbConn,
+    Json(body): Json<CreateMessageBody>,
+) -> Result<impl IntoResponse, AppError> {
+    let conn = &mut *conn;
+
+    check_membership(conn, chat_id, uid)?;
+    validate_client_message_type(&body.message_type)?;
+    let attachment_ids: Vec<i64> = body
+        .attachment_ids
+        .iter()
+        .filter_map(|s| s.parse().ok())
+        .collect();
+    validate_message_payload(conn, uid, &body, &attachment_ids)?;
+    let send_result = send_prepared_message(
+        conn,
+        &state,
+        PreparedMessageSend {
+            chat_id,
+            sender_uid: uid,
+            message: if matches!(body.message_type, MessageType::Sticker) {
+                None
+            } else {
+                body.message
+            },
+            message_type: body.message_type,
+            sticker_id: body.sticker_id,
+            reply_to_id: body.reply_to_id,
+            reply_root_id: None,
+            client_generated_id: body.client_generated_id,
+            attachment_ids,
+            update_group_last_message: true,
+            push_preview_override: None,
+        },
+    )
+    .await?;
+
+    Ok((StatusCode::CREATED, Json(send_result.response)))
+}
+
+/// POST /chats/:chat_id/threads/:thread_id/messages — Send a message in a thread.
+pub(super) async fn post_thread_message(
+    CurrentUid(uid): CurrentUid,
+    State(state): State<AppState>,
+    Path(ThreadIdPath { chat_id, thread_id }): Path<ThreadIdPath>,
+    mut conn: DbConn,
+    Json(body): Json<CreateMessageBody>,
+) -> Result<impl IntoResponse, AppError> {
+    let conn = &mut *conn;
+
+    check_membership(conn, chat_id, uid)?;
+    validate_client_message_type(&body.message_type)?;
+
+    // Fast-path: check if root message actually exists
+    use crate::schema::messages::dsl;
+    let root_msg_exists: bool = diesel::select(diesel::dsl::exists(
+        messages::table.filter(dsl::id.eq(thread_id).and(dsl::chat_id.eq(chat_id))),
+    ))
+    .get_result(conn)?;
+
+    if !root_msg_exists {
+        return Err(AppError::NotFound("Thread root message not found"));
+    }
+    let attachment_ids: Vec<i64> = body
+        .attachment_ids
+        .iter()
+        .filter_map(|s| s.parse().ok())
+        .collect();
+    validate_message_payload(conn, uid, &body, &attachment_ids)?;
+    let send_result = send_prepared_message(
+        conn,
+        &state,
+        PreparedMessageSend {
+            chat_id,
+            sender_uid: uid,
+            message: if matches!(body.message_type, MessageType::Sticker) {
+                None
+            } else {
+                body.message
+            },
+            message_type: body.message_type,
+            sticker_id: body.sticker_id,
+            reply_to_id: body.reply_to_id,
+            reply_root_id: Some(thread_id),
+            client_generated_id: body.client_generated_id,
+            attachment_ids,
+            update_group_last_message: false,
+            push_preview_override: None,
+        },
+    )
+    .await?;
+    let response = send_result.response;
+    let member_uids = send_result.member_uids;
+
+    // Auto-subscribe the replying user to this thread
+    if let Err(e) =
+        crate::services::threads::ensure_thread_subscription(conn, chat_id, thread_id, uid)
+    {
+        tracing::warn!("auto-subscribe replier to thread: {:?}", e);
+    }
+
+    // Auto-subscribe the root message author
+    if let Ok(root_sender_uid) = messages::table
+        .filter(dsl::id.eq(thread_id))
+        .select(messages::sender_uid)
+        .first::<i32>(conn)
+    {
+        if root_sender_uid != uid {
+            if let Err(e) = crate::services::threads::ensure_thread_subscription(
+                conn,
+                chat_id,
+                thread_id,
+                root_sender_uid,
+            ) {
+                tracing::warn!("auto-subscribe root author to thread: {:?}", e);
+            }
+        }
+    }
+
+    // Auto-subscribe mentioned users to this thread
+    if let Some(ref text) = response.message {
+        for mentioned_uid in extract_mention_uids(text) {
+            if mentioned_uid != uid {
+                if let Err(e) = crate::services::threads::ensure_thread_subscription(
+                    conn,
+                    chat_id,
+                    thread_id,
+                    mentioned_uid,
+                ) {
+                    tracing::warn!(
+                        "auto-subscribe mentioned user {mentioned_uid} to thread: {e:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    // Mark the root message as having a thread
+    let root_msg_updated: Option<Message> =
+        diesel::update(messages::table.filter(dsl::id.eq(thread_id)))
+            .set(dsl::has_thread.eq(true))
+            .get_result(conn)
+            .ok();
+
+    if let Some(root_msg) = root_msg_updated {
+        let root_response = attach_metadata(conn, vec![root_msg], &state, uid)
+            .await
+            .into_iter()
+            .next()
+            .unwrap();
+        let ws_msg = std::sync::Arc::new(
+            crate::handlers::ws::messages::ServerWsMessage::MessageUpdated(root_response.clone()),
+        );
+        state.ws_registry.broadcast_to_uids(&member_uids, ws_msg);
+    }
+
+    // Broadcast ThreadUpdate to all subscribers of this thread
+    if let Ok(subscriber_uids) =
+        crate::services::threads::get_thread_subscriber_uids(conn, chat_id, thread_id)
+    {
+        if !subscriber_uids.is_empty() {
+            let reply_count: i64 = messages::table
+                .filter(
+                    messages::reply_root_id
+                        .eq(thread_id)
+                        .and(messages::deleted_at.is_null()),
+                )
+                .count()
+                .get_result(conn)
+                .unwrap_or(0);
+
+            let thread_update = std::sync::Arc::new(
+                crate::handlers::ws::messages::ServerWsMessage::ThreadUpdate(
+                    crate::handlers::ws::messages::ThreadUpdatePayload {
+                        thread_root_id: thread_id,
+                        chat_id,
+                        last_reply_at: response.created_at,
+                        reply_count,
+                    },
+                ),
+            );
+            state
+                .ws_registry
+                .broadcast_to_uids(&subscriber_uids, thread_update);
+        }
+    }
+
+    Ok((StatusCode::CREATED, Json(response)))
+}
+
+/// PATCH /chats/:chat_id/messages/:message_id — Edit a message.
+async fn patch_message(
+    CurrentUid(uid): CurrentUid,
+    State(state): State<AppState>,
+    Path(MessageIdPath {
+        chat_id,
+        message_id,
+    }): Path<MessageIdPath>,
+    mut conn: DbConn,
+    Json(body): Json<UpdateMessageBody>,
+) -> Result<Json<MessageResponse>, AppError> {
+    let conn = &mut *conn;
+
+    check_membership(conn, chat_id, uid)?;
+
+    // Verify message exists and belongs to the user
+    use crate::schema::messages::dsl;
+    let message: Message = messages::table
+        .filter(dsl::id.eq(message_id).and(dsl::chat_id.eq(chat_id)))
+        .select(Message::as_select())
+        .first(conn)
+        .optional()?
+        .ok_or(AppError::NotFound("Message not found"))?;
+
+    if message.sender_uid != uid {
+        return Err(AppError::Forbidden("You can only edit your own messages"));
+    }
+
+    if message.deleted_at.is_some() {
+        return Err(AppError::BadRequest("Cannot edit deleted message"));
+    }
+
+    if body.message.trim().is_empty() && body.attachment_ids.is_empty() {
+        return Err(AppError::BadRequest("Message cannot be empty"));
+    }
+
+    let attachment_ids: Vec<i64> = body
+        .attachment_ids
+        .iter()
+        .filter_map(|s| s.parse().ok())
+        .collect();
+
+    use crate::schema::attachments::dsl as a_dsl;
+    diesel::update(attachments::table.filter(a_dsl::message_id.eq(message_id)))
+        .set(a_dsl::message_id.eq::<Option<i64>>(None))
+        .execute(conn)?;
+
+    if !attachment_ids.is_empty() {
+        diesel::update(attachments::table.filter(a_dsl::id.eq_any(&attachment_ids)))
+            .set(a_dsl::message_id.eq(message_id))
+            .execute(conn)?;
+    }
+
+    // Update message
+    let now = Utc::now();
+    let updated_message: Message = diesel::update(messages::table.filter(dsl::id.eq(message_id)))
+        .set((
+            dsl::message.eq(&body.message),
+            dsl::has_attachments.eq(!attachment_ids.is_empty()),
+            dsl::updated_at.eq(Some(now)),
+        ))
+        .returning(Message::as_returning())
+        .get_result(conn)?;
+
+    let response = attach_metadata(conn, vec![updated_message], &state, uid)
+        .await
+        .into_iter()
+        .next()
+        .unwrap();
+
+    // Broadcast update to all members
+    let member_uids: Vec<i32> = {
+        use crate::schema::group_membership as gm_dsl;
+        group_membership::table
+            .filter(gm_dsl::chat_id.eq(chat_id))
+            .select(group_membership::uid)
+            .load(conn)?
+    };
+    let ws_msg = std::sync::Arc::new(
+        crate::handlers::ws::messages::ServerWsMessage::MessageUpdated(response.clone()),
+    );
+    state.ws_registry.broadcast_to_uids(&member_uids, ws_msg);
+
+    Ok(Json(response))
+}
+
+/// DELETE /chats/:chat_id/messages/:message_id — Delete a message (soft delete).
+async fn delete_message(
+    CurrentUid(uid): CurrentUid,
+    State(state): State<AppState>,
+    Path(MessageIdPath {
+        chat_id,
+        message_id,
+    }): Path<MessageIdPath>,
+    mut conn: DbConn,
+) -> Result<StatusCode, AppError> {
+    let conn = &mut *conn;
+
+    check_membership(conn, chat_id, uid)?;
+
+    // Verify message exists and belongs to the user
+    use crate::schema::messages::dsl;
+    let message: Message = messages::table
+        .filter(dsl::id.eq(message_id).and(dsl::chat_id.eq(chat_id)))
+        .select(Message::as_select())
+        .first(conn)
+        .optional()?
+        .ok_or(AppError::NotFound("Message not found"))?;
+
+    if message.sender_uid != uid {
+        // Not the sender — allow if requester is an admin
+        let role = load_requester_group_role(conn, chat_id, uid)?;
+        if role != Some(GroupRole::Admin) {
+            return Err(AppError::Forbidden("You can only delete your own messages"));
+        }
+    }
+
+    if message.deleted_at.is_some() {
+        return Err(AppError::Gone("Message already deleted"));
+    }
+
+    // Soft delete message
+    let now = Utc::now();
+    let deleted_message: Message = diesel::update(messages::table.filter(dsl::id.eq(message_id)))
+        .set(dsl::deleted_at.eq(Some(now)))
+        .returning(Message::as_returning())
+        .get_result(conn)?;
+
+    // If the deleted message was the group's last_message_id, recalculate it
+    {
+        use crate::schema::groups::dsl as g_dsl;
+        let group_last_msg: Option<i64> = groups::table
+            .filter(g_dsl::id.eq(chat_id))
+            .select(g_dsl::last_message_id)
+            .first::<Option<i64>>(conn)?;
+
+        if group_last_msg == Some(message_id) {
+            let prev_message: Option<(i64, DateTime<Utc>)> = messages::table
+                .filter(dsl::chat_id.eq(chat_id))
+                .filter(dsl::deleted_at.is_null())
+                .filter(dsl::reply_root_id.is_null())
+                .order(dsl::id.desc())
+                .select((dsl::id, dsl::created_at))
+                .first(conn)
+                .optional()?;
+
+            match prev_message {
+                Some((prev_id, prev_at)) => {
+                    diesel::update(groups::table.filter(g_dsl::id.eq(chat_id)))
+                        .set((
+                            g_dsl::last_message_id.eq(Some(prev_id)),
+                            g_dsl::last_message_at.eq(Some(prev_at)),
+                        ))
+                        .execute(conn)?;
+                }
+                None => {
+                    diesel::update(groups::table.filter(g_dsl::id.eq(chat_id)))
+                        .set((
+                            g_dsl::last_message_id.eq(None::<i64>),
+                            g_dsl::last_message_at.eq(None::<DateTime<Utc>>),
+                        ))
+                        .execute(conn)?;
+                }
+            }
+        }
+    }
+
+    let response = attach_metadata(conn, vec![deleted_message], &state, uid)
+        .await
+        .into_iter()
+        .next()
+        .unwrap();
+
+    // Broadcast deletion to all members
+    let member_uids: Vec<i32> = {
+        use crate::schema::group_membership as gm_dsl;
+        group_membership::table
+            .filter(gm_dsl::chat_id.eq(chat_id))
+            .select(group_membership::uid)
+            .load(conn)?
+    };
+    let ws_msg = std::sync::Arc::new(
+        crate::handlers::ws::messages::ServerWsMessage::MessageDeleted(response.clone()),
+    );
+    state.ws_registry.broadcast_to_uids(&member_uids, ws_msg);
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+pub fn router() -> Router<crate::AppState> {
+    use axum::routing::*;
+    Router::new()
+        .route("/", get(get_messages).post(post_message))
+        .route(
+            "/{message_id}",
+            get(get_message).patch(patch_message).delete(delete_message),
+        )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        validate_client_message_type, INVITE_MESSAGE_TYPE_FORBIDDEN, SYSTEM_MESSAGE_TYPE_FORBIDDEN,
+    };
+    use crate::errors::AppError;
+    use crate::models::MessageType;
+
+    #[test]
+    fn rejects_system_message_type_from_clients() {
+        let err = validate_client_message_type(&MessageType::System)
+            .expect_err("system should be rejected");
+        assert!(matches!(err, AppError::BadRequest(msg) if msg == SYSTEM_MESSAGE_TYPE_FORBIDDEN));
+    }
+
+    #[test]
+    fn allows_standard_message_types_from_clients() {
+        assert!(validate_client_message_type(&MessageType::Text).is_ok());
+        assert!(validate_client_message_type(&MessageType::Audio).is_ok());
+        assert!(validate_client_message_type(&MessageType::File).is_ok());
+        assert!(validate_client_message_type(&MessageType::Sticker).is_ok());
+    }
+
+    #[test]
+    fn rejects_invite_message_type_from_generic_message_api() {
+        let err = validate_client_message_type(&MessageType::Invite)
+            .expect_err("invite should be rejected");
+        assert!(matches!(err, AppError::BadRequest(msg) if msg == INVITE_MESSAGE_TYPE_FORBIDDEN));
+    }
+}

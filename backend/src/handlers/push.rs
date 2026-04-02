@@ -8,6 +8,8 @@ use chrono::Utc;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
+use crate::errors::AppError;
+use crate::extractors::DbConn;
 use crate::models::NewPushSubscription;
 use crate::schema::push_subscriptions;
 use crate::utils::auth::{ClientId, CurrentUid};
@@ -42,18 +44,14 @@ async fn post_subscribe(
     CurrentUid(uid): CurrentUid,
     ClientId(client_id): ClientId,
     State(state): State<AppState>,
+    mut conn: DbConn,
     Json(body): Json<SubscribeBody>,
-) -> Result<impl IntoResponse, (StatusCode, &'static str)> {
-    let conn = &mut state.db.get().map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Database connection failed",
-        )
-    })?;
+) -> Result<impl IntoResponse, AppError> {
+    let conn = &mut *conn;
 
     let sub_id = ids::next_message_id(state.id_gen.as_ref())
         .await
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "ID generation failed"))?;
+        .map_err(|_| AppError::Internal("ID generation failed"))?;
 
     let new_sub = NewPushSubscription {
         id: sub_id,
@@ -87,13 +85,6 @@ async fn post_subscribe(
             .execute(conn)?;
 
         Ok(())
-    })
-    .map_err(|e| {
-        tracing::error!("upsert subscription: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to save subscription",
-        )
     })?;
 
     Ok(StatusCode::CREATED)
@@ -108,29 +99,17 @@ pub struct UnsubscribeBody {
 async fn post_unsubscribe(
     CurrentUid(uid): CurrentUid,
     ClientId(client_id): ClientId,
-    State(state): State<AppState>,
+    mut conn: DbConn,
     Json(_body): Json<UnsubscribeBody>,
-) -> Result<impl IntoResponse, (StatusCode, &'static str)> {
-    let conn = &mut state.db.get().map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Database connection failed",
-        )
-    })?;
+) -> Result<impl IntoResponse, AppError> {
+    let conn = &mut *conn;
 
     diesel::delete(
         push_subscriptions::table
             .filter(push_subscriptions::dsl::user_id.eq(uid))
             .filter(push_subscriptions::dsl::client_id.eq(Some(client_id))),
     )
-    .execute(conn)
-    .map_err(|e| {
-        tracing::error!("delete subscription: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to delete subscription",
-        )
-    })?;
+    .execute(conn)?;
 
     Ok(StatusCode::OK)
 }
@@ -150,29 +129,17 @@ pub struct SubscriptionStatusResponse {
 async fn get_subscription_status(
     CurrentUid(uid): CurrentUid,
     ClientId(client_id): ClientId,
-    State(state): State<AppState>,
+    mut conn: DbConn,
     Query(query): Query<SubscriptionStatusQuery>,
-) -> Result<Json<SubscriptionStatusResponse>, (StatusCode, &'static str)> {
-    let conn = &mut state.db.get().map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Database connection failed",
-        )
-    })?;
+) -> Result<Json<SubscriptionStatusResponse>, AppError> {
+    let conn = &mut *conn;
 
     let has_active_subscription = diesel::select(diesel::dsl::exists(
         push_subscriptions::table
             .filter(push_subscriptions::dsl::user_id.eq(uid))
             .filter(push_subscriptions::dsl::client_id.eq(Some(client_id.clone()))),
     ))
-    .get_result::<bool>(conn)
-    .map_err(|e| {
-        tracing::error!("load push subscription status: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to load subscription status",
-        )
-    })?;
+    .get_result::<bool>(conn)?;
 
     let has_matching_endpoint = query
         .endpoint
@@ -186,14 +153,7 @@ async fn get_subscription_status(
             ))
             .get_result::<bool>(conn)
         })
-        .transpose()
-        .map_err(|e| {
-            tracing::error!("load push subscription endpoint status: {:?}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to load subscription status",
-            )
-        })?;
+        .transpose()?;
 
     Ok(Json(SubscriptionStatusResponse {
         has_active_subscription,

@@ -9,6 +9,8 @@ use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
+use crate::errors::AppError;
+use crate::extractors::DbConn;
 use crate::services::media::{build_storage_key, presign_public_upload};
 use crate::utils::auth::CurrentUid;
 use crate::utils::ids;
@@ -39,14 +41,11 @@ pub async fn get_presigned_url(
     bucket: &str,
     key: &str,
     expires_in: Duration,
-) -> Result<String, (StatusCode, &'static str)> {
+) -> Result<String, AppError> {
     let presigning_config =
         PresigningConfig::expires_in(expires_in.to_std().unwrap()).map_err(|e| {
             tracing::error!("presigning config error: {:?}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to configure presigned URL",
-            )
+            AppError::Internal("Failed to configure presigned URL")
         })?;
 
     let presigned_request = s3_client
@@ -57,10 +56,7 @@ pub async fn get_presigned_url(
         .await
         .map_err(|e| {
             tracing::error!("Failed to generate presigned GET URL: {:?}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to generate attachment URL",
-            )
+            AppError::Internal("Failed to generate attachment URL")
         })?;
 
     Ok(presigned_request.uri().to_string())
@@ -69,8 +65,11 @@ pub async fn get_presigned_url(
 async fn post_upload_url(
     CurrentUid(_uid): CurrentUid,
     State(state): State<AppState>,
+    mut conn: DbConn,
     Json(payload): Json<UploadUrlRequest>,
-) -> Result<impl IntoResponse, (StatusCode, &'static str)> {
+) -> Result<impl IntoResponse, AppError> {
+    let conn = &mut *conn;
+
     let s3_client = &state.s3_client;
     let bucket = &state.s3_bucket_name;
     let prefix = &state.s3_attachment_prefix;
@@ -79,7 +78,7 @@ async fn post_upload_url(
         .await
         .map_err(|e| {
             tracing::error!("next_message_id for attachment: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to generate ID")
+            AppError::Internal("Failed to generate ID")
         })?;
 
     let s3_item_id = uuid::Uuid::new_v4().to_string();
@@ -88,13 +87,6 @@ async fn post_upload_url(
     let expires_in = Duration::minutes(15);
     let presigned_upload =
         presign_public_upload(s3_client, bucket, &key, &payload.content_type, expires_in).await?;
-
-    let conn = &mut state.db.get().map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Database connection failed",
-        )
-    })?;
 
     let new_attachment = NewAttachment {
         id,
@@ -111,14 +103,7 @@ async fn post_upload_url(
 
     diesel::insert_into(attachments::table)
         .values(&new_attachment)
-        .execute(conn)
-        .map_err(|e| {
-            tracing::error!("Failed to insert attachment: {:?}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to create attachment record",
-            )
-        })?;
+        .execute(conn)?;
 
     let response = UploadUrlResponse {
         attachment_id: id.to_string(),

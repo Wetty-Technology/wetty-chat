@@ -4,7 +4,7 @@ use diesel::PgConnection;
 use std::collections::HashMap;
 use tracing::warn;
 
-const MAX_UNREAD_COUNT: i64 = 100;
+pub const MAX_UNREAD_COUNT: i64 = 100;
 
 #[derive(QueryableByName)]
 struct UnreadCountRow {

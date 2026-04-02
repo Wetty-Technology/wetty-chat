@@ -1,10 +1,8 @@
-use axum::{
-    extract::State,
-    http::{HeaderMap, StatusCode},
-    Json,
-};
+use axum::{extract::State, http::HeaderMap, Json};
 use serde::Serialize;
 
+use crate::errors::AppError;
+use crate::extractors::DbConn;
 use crate::services::user::{lookup_user_avatars, lookup_user_profiles};
 use crate::utils::auth::{
     encode_auth_token, extract_auth_context, required_client_id, AuthClaims, AuthSource, CurrentUid,
@@ -29,18 +27,11 @@ pub struct AuthTokenResponse {
 async fn get_me(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
-) -> Result<Json<MeResponse>, (StatusCode, &'static str)> {
-    let conn = &mut state.db.get().map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Database connection failed",
-        )
-    })?;
+    mut conn: DbConn,
+) -> Result<Json<MeResponse>, AppError> {
+    let conn = &mut *conn;
 
-    let profiles = lookup_user_profiles(conn, &[uid]).map_err(|e| {
-        tracing::error!("get me profile: {:?}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
-    })?;
+    let profiles = lookup_user_profiles(conn, &[uid])?;
     let profile = profiles.get(&uid);
     let username = profile
         .and_then(|profile| profile.username.clone())
@@ -60,12 +51,12 @@ async fn get_me(
 async fn get_auth_token(
     State(state): State<AppState>,
     headers: HeaderMap,
-) -> Result<Json<AuthTokenResponse>, (StatusCode, &'static str)> {
+) -> Result<Json<AuthTokenResponse>, AppError> {
     let auth = extract_auth_context(&headers, &state)?;
     let client_id = match auth.client_id {
         Some(client_id) => client_id,
         None if auth.source == AuthSource::Legacy => required_client_id(&headers)?,
-        None => return Err((StatusCode::BAD_REQUEST, "Missing X-Client-Id header")),
+        None => return Err(AppError::BadRequest("Missing X-Client-Id header")),
     };
 
     let token = encode_auth_token(

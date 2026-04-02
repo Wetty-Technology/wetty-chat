@@ -9,16 +9,21 @@ use serde::Serialize;
 use serde_json::json;
 use std::collections::HashMap;
 
+use diesel::PgConnection;
+
+use crate::errors::AppError;
+use crate::extractors::DbConn;
 use crate::handlers::groups::load_requester_group_role;
 use crate::models::{
     GroupJoinReason, GroupMembership, GroupRole, NewGroupMembership, UserGroupInfo,
 };
 use crate::schema::{self, group_membership};
+
 use crate::services::user::{
     lookup_user_avatars, lookup_user_profiles, parse_user_search_query, search_group_member_uids,
     UserSearchMode,
 };
-use crate::utils::auth::CurrentUid;
+use crate::utils::{auth::CurrentUid, pagination::validate_limit};
 use crate::{AppState, MAX_MEMBERS_LIMIT};
 
 #[derive(serde::Deserialize)]
@@ -79,15 +84,9 @@ fn build_member_responses(
     conn: &mut diesel::PgConnection,
     state: &AppState,
     page_rows: Vec<(i32, GroupRole, DateTime<Utc>)>,
-) -> Result<Vec<MemberResponse>, (StatusCode, &'static str)> {
+) -> Result<Vec<MemberResponse>, AppError> {
     let uids: Vec<i32> = page_rows.iter().map(|(uid, _, _)| *uid).collect();
-    let profiles = lookup_user_profiles(conn, &uids).map_err(|e| {
-        tracing::error!("load member profiles: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to load member profiles",
-        )
-    })?;
+    let profiles = lookup_user_profiles(conn, &uids)?;
     let mut avatars = lookup_user_avatars(state, &uids);
 
     Ok(page_rows
@@ -109,54 +108,42 @@ fn build_member_responses(
 
 /// Check if user is a member of the chat; return 403 if not.
 pub(super) fn check_membership(
-    conn: &mut diesel::r2d2::PooledConnection<
-        diesel::r2d2::ConnectionManager<diesel::PgConnection>,
-    >,
+    conn: &mut PgConnection,
     chat_id: i64,
     uid: i32,
-) -> Result<(), (StatusCode, &'static str)> {
+) -> Result<(), AppError> {
     use crate::schema::group_membership::dsl;
 
     let exists = group_membership::table
         .filter(dsl::chat_id.eq(chat_id).and(dsl::uid.eq(uid)))
         .count()
-        .get_result::<i64>(conn)
-        .map_err(|e| {
-            tracing::error!("check membership: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
-        })?;
+        .get_result::<i64>(conn)?;
 
     if exists == 0 {
-        return Err((StatusCode::FORBIDDEN, "Not a member of this chat"));
+        return Err(AppError::Forbidden("Not a member of this chat"));
     }
 
     Ok(())
 }
 
 /// Check if user is an admin of the chat; return 403 if not a member or not admin.
-fn check_admin_role(
-    conn: &mut diesel::r2d2::PooledConnection<
-        diesel::r2d2::ConnectionManager<diesel::PgConnection>,
-    >,
+pub(super) fn require_admin_role(
+    conn: &mut PgConnection,
     chat_id: i64,
     uid: i32,
-) -> Result<(), (StatusCode, &'static str)> {
+) -> Result<(), AppError> {
     use crate::schema::group_membership::dsl;
 
     let role: Option<GroupRole> = group_membership::table
         .filter(dsl::chat_id.eq(chat_id).and(dsl::uid.eq(uid)))
         .select(dsl::role)
         .first(conn)
-        .optional()
-        .map_err(|e| {
-            tracing::error!("check admin role: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
-        })?;
+        .optional()?;
 
     match role {
         Some(GroupRole::Admin) => Ok(()),
-        Some(_) => Err((StatusCode::FORBIDDEN, "Admin role required")),
-        None => Err((StatusCode::FORBIDDEN, "Not a member of this chat")),
+        Some(_) => Err(AppError::Forbidden("Admin role required")),
+        None => Err(AppError::Forbidden("Not a member of this chat")),
     }
 }
 
@@ -165,14 +152,10 @@ async fn get_members(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
     Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
+    mut conn: DbConn,
     Query(q): Query<ListMembersQuery>,
-) -> Result<Json<ListMembersResponse>, (StatusCode, &'static str)> {
-    let conn = &mut state.db.get().map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Database connection failed",
-        )
-    })?;
+) -> Result<Json<ListMembersResponse>, AppError> {
+    let conn = &mut *conn;
 
     // Require membership to see members list
     check_membership(conn, chat_id, uid)?;
@@ -184,19 +167,11 @@ async fn get_members(
         Some(GroupRole::Admin)
     );
 
-    let limit = q
-        .limit
-        .map(|l| std::cmp::min(l, MAX_MEMBERS_LIMIT))
-        .unwrap_or(MAX_MEMBERS_LIMIT)
-        .max(1);
+    let limit = validate_limit(q.limit, MAX_MEMBERS_LIMIT);
     let search_mode = q.mode.unwrap_or(UserSearchMode::Autocomplete);
     let search = parse_user_search_query(q.q.as_deref(), search_mode);
 
-    let member_uids = search_group_member_uids(conn, chat_id, q.after, limit + 1, search.as_ref())
-        .map_err(|e| {
-            tracing::error!("search group members: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to list members")
-        })?;
+    let member_uids = search_group_member_uids(conn, chat_id, q.after, limit + 1, search.as_ref())?;
 
     let has_more = member_uids.len() as i64 > limit;
     let page_uids: Vec<i32> = member_uids.into_iter().take(limit as usize).collect();
@@ -207,11 +182,7 @@ async fn get_members(
                 .and(gm_dsl::uid.eq_any(&page_uids)),
         )
         .select(GroupMembership::as_select())
-        .load(conn)
-        .map_err(|e| {
-            tracing::error!("load member rows: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to list members")
-        })?;
+        .load(conn)?;
 
     let rows_by_uid: HashMap<i32, GroupMembership> =
         rows.into_iter().map(|row| (row.uid, row)).collect();
@@ -241,26 +212,19 @@ async fn post_add_member(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
     Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
+    mut conn: DbConn,
     Json(body): Json<AddMemberBody>,
-) -> Result<(StatusCode, Json<MemberResponse>), (StatusCode, &'static str)> {
-    let conn = &mut state.db.get().map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Database connection failed",
-        )
-    })?;
+) -> Result<(StatusCode, Json<MemberResponse>), AppError> {
+    let conn = &mut *conn;
 
     // Check if requester is admin
-    check_admin_role(conn, chat_id, uid)?;
+    require_admin_role(conn, chat_id, uid)?;
 
-    let profiles = lookup_user_profiles(conn, &[body.uid]).map_err(|e| {
-        tracing::error!("load target user profile: {:?}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
-    })?;
+    let profiles = lookup_user_profiles(conn, &[body.uid])?;
     let profile = profiles.get(&body.uid);
 
     if profile.is_none() {
-        return Err((StatusCode::BAD_REQUEST, "User not found"));
+        return Err(AppError::BadRequest("User not found"));
     }
 
     // Check if already a member
@@ -269,15 +233,11 @@ async fn post_add_member(
         schema::group_membership::table
             .filter(gm_dsl::chat_id.eq(chat_id).and(gm_dsl::uid.eq(body.uid)))
             .count()
-            .get_result::<i64>(conn)
-            .map_err(|e| {
-                tracing::error!("check already member: {:?}", e);
-                (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
-            })?
+            .get_result::<i64>(conn)?
     };
 
     if already_member > 0 {
-        return Err((StatusCode::CONFLICT, "User is already a member"));
+        return Err(AppError::Conflict("User is already a member"));
     }
 
     let role = body.role.unwrap_or(GroupRole::Member);
@@ -294,11 +254,7 @@ async fn post_add_member(
 
     diesel::insert_into(group_membership::table)
         .values(&new_membership)
-        .execute(conn)
-        .map_err(|e| {
-            tracing::error!("insert membership: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to add member")
-        })?;
+        .execute(conn)?;
 
     let avatar_url = lookup_user_avatars(&state, &[body.uid])
         .remove(&body.uid)
@@ -321,22 +277,17 @@ async fn post_add_member(
 /// DELETE /group/:chat_id/members/:uid — Remove a member from the chat (caller must be admin).
 async fn delete_remove_member(
     CurrentUid(uid): CurrentUid,
-    State(state): State<AppState>,
     Path(MemberPath {
         chat_id,
         uid: target_uid,
     }): Path<MemberPath>,
-) -> Result<StatusCode, (StatusCode, &'static str)> {
-    let conn = &mut state.db.get().map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Database connection failed",
-        )
-    })?;
+    mut conn: DbConn,
+) -> Result<StatusCode, AppError> {
+    let conn = &mut *conn;
 
     // Allow if requester is admin OR removing themselves
     if uid != target_uid {
-        check_admin_role(conn, chat_id, uid)?;
+        require_admin_role(conn, chat_id, uid)?;
     } else {
         check_membership(conn, chat_id, uid)?;
     }
@@ -346,24 +297,16 @@ async fn delete_remove_member(
     let is_member = group_membership::table
         .filter(gm_dsl::chat_id.eq(chat_id).and(gm_dsl::uid.eq(target_uid)))
         .count()
-        .get_result::<i64>(conn)
-        .map_err(|e| {
-            tracing::error!("check member exists: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
-        })?;
+        .get_result::<i64>(conn)?;
 
     if is_member == 0 {
-        return Err((StatusCode::NOT_FOUND, "Member not found"));
+        return Err(AppError::NotFound("Member not found"));
     }
 
     diesel::delete(
         group_membership::table.filter(gm_dsl::chat_id.eq(chat_id).and(gm_dsl::uid.eq(target_uid))),
     )
-    .execute(conn)
-    .map_err(|e| {
-        tracing::error!("delete membership: {:?}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "Failed to remove member")
-    })?;
+    .execute(conn)?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -376,21 +319,17 @@ async fn patch_member(
         chat_id,
         uid: target_uid,
     }): Path<MemberPath>,
+    mut conn: DbConn,
     Json(body): Json<UpdateMemberBody>,
-) -> Result<Json<MemberResponse>, (StatusCode, &'static str)> {
-    let conn = &mut state.db.get().map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Database connection failed",
-        )
-    })?;
+) -> Result<Json<MemberResponse>, AppError> {
+    let conn = &mut *conn;
 
     // Check if requester is admin
-    check_admin_role(conn, chat_id, requester_uid)?;
+    require_admin_role(conn, chat_id, requester_uid)?;
 
     // Prevent self-demotion
     if requester_uid == target_uid {
-        return Err((StatusCode::BAD_REQUEST, "Cannot change your own role"));
+        return Err(AppError::BadRequest("Cannot change your own role"));
     }
 
     // Check if target is a member
@@ -398,14 +337,10 @@ async fn patch_member(
     let is_member = group_membership::table
         .filter(gm_dsl::chat_id.eq(chat_id).and(gm_dsl::uid.eq(target_uid)))
         .count()
-        .get_result::<i64>(conn)
-        .map_err(|e| {
-            tracing::error!("check member exists: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
-        })?;
+        .get_result::<i64>(conn)?;
 
     if is_member == 0 {
-        return Err((StatusCode::NOT_FOUND, "Member not found"));
+        return Err(AppError::NotFound("Member not found"));
     }
 
     // Update role
@@ -413,35 +348,15 @@ async fn patch_member(
         group_membership::table.filter(gm_dsl::chat_id.eq(chat_id).and(gm_dsl::uid.eq(target_uid))),
     )
     .set(gm_dsl::role.eq(&body.role))
-    .execute(conn)
-    .map_err(|e| {
-        tracing::error!("update member role: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to update member role",
-        )
-    })?;
+    .execute(conn)?;
 
     // Get updated member info
     let (role, joined_at): (GroupRole, DateTime<Utc>) = group_membership::table
         .filter(gm_dsl::chat_id.eq(chat_id).and(gm_dsl::uid.eq(target_uid)))
         .select((gm_dsl::role, gm_dsl::joined_at))
-        .first(conn)
-        .map_err(|e| {
-            tracing::error!("get updated member: {:?}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to get updated member",
-            )
-        })?;
+        .first(conn)?;
 
-    let profiles = lookup_user_profiles(conn, &[target_uid]).map_err(|e| {
-        tracing::error!("load updated member profile: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to load updated member profile",
-        )
-    })?;
+    let profiles = lookup_user_profiles(conn, &[target_uid])?;
     let profile = profiles.get(&target_uid);
 
     let avatar_url = lookup_user_avatars(&state, &[target_uid])

@@ -5,19 +5,22 @@ use axum::{
 };
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
+use diesel::PgConnection;
 use diesel::PgTextExpressionMethods;
 use serde::Serialize;
 use std::collections::BTreeMap;
 
-use crate::handlers::members::check_membership;
+use crate::errors::AppError;
+use crate::extractors::DbConn;
+use crate::handlers::members::{check_membership, require_admin_role};
 use crate::models::{
     GroupJoinReason, GroupRole, GroupVisibility, Media, MediaPurpose, NewGroup, NewGroupMembership,
     NewMedia, UpdateGroup,
 };
 use crate::schema::{group_membership, groups, media};
 use crate::services::media::{build_public_object_url, build_storage_key, presign_public_upload};
-use crate::utils::auth::CurrentUid;
 use crate::utils::ids;
+use crate::utils::{auth::CurrentUid, pagination::validate_limit};
 use crate::AppState;
 
 /// Maximum mute duration: 7 days in seconds.
@@ -168,8 +171,6 @@ pub(super) struct MuteResponse {
     muted_until: DateTime<Utc>,
 }
 
-type DbConn = diesel::r2d2::PooledConnection<diesel::r2d2::ConnectionManager<diesel::PgConnection>>;
-
 fn parse_group_search_query(
     raw_query: Option<&str>,
     mode: GroupSearchMode,
@@ -192,50 +193,33 @@ fn parse_group_search_query(
 }
 
 pub(super) fn load_requester_group_role(
-    conn: &mut DbConn,
+    conn: &mut PgConnection,
     chat_id: i64,
     uid: i32,
-) -> Result<Option<GroupRole>, (StatusCode, &'static str)> {
+) -> Result<Option<GroupRole>, AppError> {
     use crate::schema::group_membership::dsl as gm_dsl;
 
-    group_membership::table
+    Ok(group_membership::table
         .filter(gm_dsl::chat_id.eq(chat_id).and(gm_dsl::uid.eq(uid)))
         .select(gm_dsl::role)
         .first(conn)
-        .optional()
-        .map_err(|e| {
-            tracing::error!("load requester group role: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
-        })
-}
-
-fn require_admin_role(
-    conn: &mut DbConn,
-    chat_id: i64,
-    uid: i32,
-) -> Result<(), (StatusCode, &'static str)> {
-    let role = load_requester_group_role(conn, chat_id, uid)?;
-
-    match role {
-        Some(GroupRole::Admin) => Ok(()),
-        Some(_) => Err((StatusCode::FORBIDDEN, "Admin role required")),
-        None => Err((StatusCode::FORBIDDEN, "Not a member of this chat")),
-    }
+        .optional()?)
 }
 
 pub(super) fn load_group_info(
-    conn: &mut DbConn,
+    conn: &mut PgConnection,
     state: &AppState,
     chat_id: i64,
     requester_uid: i32,
-) -> Result<GroupInfoResponse, (StatusCode, &'static str)> {
+) -> Result<GroupInfoResponse, AppError> {
     use crate::schema::groups::dsl as groups_dsl;
 
     let group: crate::models::Group = groups::table
         .filter(groups_dsl::id.eq(chat_id))
         .select(crate::models::Group::as_select())
         .first(conn)
-        .map_err(|_| (StatusCode::NOT_FOUND, "Chat not found"))?;
+        .optional()?
+        .ok_or(AppError::NotFound("Chat not found"))?;
 
     let avatar_image = match group.avatar_image_id {
         Some(avatar_image_id) => media::table
@@ -246,14 +230,7 @@ pub(super) fn load_group_info(
             )
             .select(Media::as_select())
             .first(conn)
-            .optional()
-            .map_err(|e| {
-                tracing::error!("load avatar image: {:?}", e);
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "Failed to load avatar image",
-                )
-            })?,
+            .optional()?,
         None => None,
     };
 
@@ -278,11 +255,14 @@ pub(super) fn load_group_info(
 async fn post_group(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
+    mut conn: DbConn,
     Json(body): Json<CreateChatBody>,
-) -> Result<impl IntoResponse, (StatusCode, &'static str)> {
+) -> Result<impl IntoResponse, AppError> {
+    let conn = &mut *conn;
+
     let id = ids::next_gid(state.id_gen.as_ref()).await.map_err(|e| {
         tracing::error!("ferroid next_gid: {:?}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "ID generation failed")
+        AppError::Internal("ID generation failed")
     })?;
 
     let now = Utc::now();
@@ -290,13 +270,6 @@ async fn post_group(
         .name
         .filter(|s| !s.trim().is_empty())
         .unwrap_or_else(String::new);
-
-    let conn = &mut state.db.get().map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Database connection failed",
-        )
-    })?;
 
     diesel::insert_into(groups::table)
         .values(&NewGroup {
@@ -307,11 +280,7 @@ async fn post_group(
             created_at: now,
             visibility: GroupVisibility::Public,
         })
-        .execute(conn)
-        .map_err(|e| {
-            tracing::error!("insert group: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create chat")
-        })?;
+        .execute(conn)?;
 
     diesel::insert_into(group_membership::table)
         .values(&NewGroupMembership {
@@ -322,11 +291,7 @@ async fn post_group(
             join_reason: GroupJoinReason::Creator,
             join_reason_extra: None,
         })
-        .execute(conn)
-        .map_err(|e| {
-            tracing::error!("insert membership: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create chat")
-        })?;
+        .execute(conn)?;
 
     Ok((
         StatusCode::CREATED,
@@ -342,20 +307,12 @@ async fn post_group(
 async fn get_groups(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
+    mut conn: DbConn,
     Query(q): Query<ListGroupsQuery>,
-) -> Result<Json<ListGroupsResponse>, (StatusCode, &'static str)> {
-    let conn = &mut state.db.get().map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Database connection failed",
-        )
-    })?;
+) -> Result<Json<ListGroupsResponse>, AppError> {
+    let conn = &mut *conn;
 
-    let limit = q
-        .limit
-        .map(|value| std::cmp::min(value, MAX_GROUP_SELECTOR_LIMIT))
-        .unwrap_or(MAX_GROUP_SELECTOR_LIMIT)
-        .max(1);
+    let limit = validate_limit(q.limit, MAX_GROUP_SELECTOR_LIMIT);
     let scope = q.scope.unwrap_or(GroupSelectorScope::Joined);
     let search = parse_group_search_query(
         q.q.as_deref(),
@@ -413,11 +370,7 @@ async fn get_groups(
     let rows: Vec<Row> = query
         .order_by(groups::id.asc())
         .limit(limit + 1)
-        .load(conn)
-        .map_err(|e| {
-            tracing::error!("list groups: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to list groups")
-        })?;
+        .load(conn)?;
 
     let has_more = rows.len() as i64 > limit;
     let page_rows: Vec<Row> = rows.into_iter().take(limit as usize).collect();
@@ -450,13 +403,9 @@ async fn get_group(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
     Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
-) -> Result<Json<GroupInfoResponse>, (StatusCode, &'static str)> {
-    let conn = &mut state.db.get().map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Database connection failed",
-        )
-    })?;
+    mut conn: DbConn,
+) -> Result<Json<GroupInfoResponse>, AppError> {
+    let conn = &mut *conn;
 
     check_membership(conn, chat_id, uid)?;
 
@@ -468,28 +417,24 @@ async fn post_avatar_upload_url(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
     Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
+    mut conn: DbConn,
     Json(payload): Json<AvatarUploadUrlRequest>,
-) -> Result<impl IntoResponse, (StatusCode, &'static str)> {
+) -> Result<impl IntoResponse, AppError> {
+    let conn = &mut *conn;
+
     if !payload.content_type.starts_with("image/") {
-        return Err((StatusCode::BAD_REQUEST, "Avatar uploads must be images"));
+        return Err(AppError::BadRequest("Avatar uploads must be images"));
     }
     if payload.size <= 0 || payload.size > MAX_GROUP_AVATAR_BYTES {
-        return Err((StatusCode::BAD_REQUEST, "Avatar size is invalid"));
+        return Err(AppError::BadRequest("Avatar size is invalid"));
     }
-
-    let conn = &mut state.db.get().map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Database connection failed",
-        )
-    })?;
     require_admin_role(conn, chat_id, uid)?;
 
     let id = ids::next_message_id(state.id_gen.as_ref())
         .await
         .map_err(|e| {
             tracing::error!("next_message_id for group avatar: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to generate ID")
+            AppError::Internal("Failed to generate ID")
         })?;
 
     let s3_item_id = uuid::Uuid::new_v4().to_string();
@@ -518,14 +463,7 @@ async fn post_avatar_upload_url(
             purpose: MediaPurpose::Avatar,
             reference: Some(chat_id.to_string()),
         })
-        .execute(conn)
-        .map_err(|e| {
-            tracing::error!("insert avatar image: {:?}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to create avatar record",
-            )
-        })?;
+        .execute(conn)?;
 
     Ok((
         StatusCode::CREATED,
@@ -542,14 +480,10 @@ async fn patch_group(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
     Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
+    mut conn: DbConn,
     Json(body): Json<UpdateChatBody>,
-) -> Result<Json<GroupInfoResponse>, (StatusCode, &'static str)> {
-    let conn = &mut state.db.get().map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Database connection failed",
-        )
-    })?;
+) -> Result<Json<GroupInfoResponse>, AppError> {
+    let conn = &mut *conn;
 
     require_admin_role(conn, chat_id, uid)?;
 
@@ -557,7 +491,8 @@ async fn patch_group(
         .filter(groups::id.eq(chat_id))
         .select(crate::models::Group::as_select())
         .first(conn)
-        .map_err(|_| (StatusCode::NOT_FOUND, "Chat not found"))?;
+        .optional()?
+        .ok_or(AppError::NotFound("Chat not found"))?;
 
     if let Some(Some(image_id)) = body.avatar_image_id {
         let owned_image_exists = media::table
@@ -568,13 +503,9 @@ async fn patch_group(
                     .and(media::deleted_at.is_null()),
             )
             .count()
-            .get_result::<i64>(conn)
-            .map_err(|e| {
-                tracing::error!("validate avatar image: {:?}", e);
-                (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
-            })?;
+            .get_result::<i64>(conn)?;
         if owned_image_exists == 0 {
-            return Err((StatusCode::BAD_REQUEST, "Invalid avatar image"));
+            return Err(AppError::BadRequest("Invalid avatar image"));
         }
     }
 
@@ -605,10 +536,6 @@ async fn patch_group(
         }
 
         Ok(())
-    })
-    .map_err(|e| {
-        tracing::error!("update group: {:?}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update chat")
     })?;
 
     Ok(Json(load_group_info(conn, &state, chat_id, uid)?))
@@ -617,16 +544,11 @@ async fn patch_group(
 /// PUT /group/:chat_id/mute — Mute notifications for a chat.
 async fn put_mute(
     CurrentUid(uid): CurrentUid,
-    State(state): State<AppState>,
     Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
+    mut conn: DbConn,
     Json(body): Json<MuteBody>,
-) -> Result<Json<MuteResponse>, (StatusCode, &'static str)> {
-    let conn = &mut state.db.get().map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Database connection failed",
-        )
-    })?;
+) -> Result<Json<MuteResponse>, AppError> {
+    let conn = &mut *conn;
 
     check_membership(conn, chat_id, uid)?;
 
@@ -635,7 +557,7 @@ async fn put_mute(
             Utc::now() + chrono::Duration::seconds(secs)
         }
         Some(secs) if secs > MAX_MUTE_DURATION_SECS => {
-            return Err((StatusCode::BAD_REQUEST, "Duration exceeds 7 day maximum"));
+            return Err(AppError::BadRequest("Duration exceeds 7 day maximum"));
         }
         _ => indefinite_mute_until(),
     };
@@ -645,11 +567,7 @@ async fn put_mute(
         group_membership::table.filter(gm_dsl::chat_id.eq(chat_id).and(gm_dsl::uid.eq(uid))),
     )
     .set(gm_dsl::muted_until.eq(muted_until))
-    .execute(conn)
-    .map_err(|e| {
-        tracing::error!("set muted_until: {:?}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "Failed to mute chat")
-    })?;
+    .execute(conn)?;
 
     Ok(Json(MuteResponse { muted_until }))
 }
@@ -657,15 +575,10 @@ async fn put_mute(
 /// DELETE /group/:chat_id/mute — Unmute notifications for a chat.
 async fn delete_mute(
     CurrentUid(uid): CurrentUid,
-    State(state): State<AppState>,
     Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
-) -> Result<StatusCode, (StatusCode, &'static str)> {
-    let conn = &mut state.db.get().map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Database connection failed",
-        )
-    })?;
+    mut conn: DbConn,
+) -> Result<StatusCode, AppError> {
+    let conn = &mut *conn;
 
     check_membership(conn, chat_id, uid)?;
 
@@ -674,11 +587,7 @@ async fn delete_mute(
         group_membership::table.filter(gm_dsl::chat_id.eq(chat_id).and(gm_dsl::uid.eq(uid))),
     )
     .set(gm_dsl::muted_until.eq(None::<DateTime<Utc>>))
-    .execute(conn)
-    .map_err(|e| {
-        tracing::error!("clear muted_until: {:?}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "Failed to unmute chat")
-    })?;
+    .execute(conn)?;
 
     Ok(StatusCode::NO_CONTENT)
 }

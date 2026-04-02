@@ -8,6 +8,8 @@ use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::errors::AppError;
+use crate::extractors::DbConn;
 use crate::handlers::chats::{attach_metadata, MessageResponse, PreparedMessageSend};
 use crate::handlers::members::check_membership;
 use crate::handlers::ws::messages::{PinUpdatePayload, ServerWsMessage};
@@ -61,13 +63,11 @@ async fn list_pins(
     State(state): State<AppState>,
     Path(path): Path<ChatIdPath>,
     CurrentUid(uid): CurrentUid,
-) -> Result<Json<ListPinsResponse>, (StatusCode, &'static str)> {
-    let mut conn = state.db.get().map_err(|e| {
-        tracing::error!("db pool: {:?}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
-    })?;
+    mut conn: DbConn,
+) -> Result<Json<ListPinsResponse>, AppError> {
+    let conn = &mut *conn;
 
-    check_membership(&mut conn, path.chat_id, uid)?;
+    check_membership(conn, path.chat_id, uid)?;
 
     let now = Utc::now();
     let pins: Vec<PinnedMessage> = pinned_messages::table
@@ -78,11 +78,7 @@ async fn list_pins(
                 .or(pinned_messages::expires_at.gt(now)),
         )
         .order(pinned_messages::pinned_at.desc())
-        .load(&mut conn)
-        .map_err(|e| {
-            tracing::error!("list pins: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
-        })?;
+        .load(conn)?;
 
     if pins.is_empty() {
         return Ok(Json(ListPinsResponse { pins: vec![] }));
@@ -91,13 +87,9 @@ async fn list_pins(
     let message_ids: Vec<i64> = pins.iter().map(|p| p.message_id).collect();
     let msgs: Vec<Message> = messages::table
         .filter(messages::id.eq_any(&message_ids))
-        .load(&mut conn)
-        .map_err(|e| {
-            tracing::error!("load pinned messages: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
-        })?;
+        .load(conn)?;
 
-    let enriched = attach_metadata(&mut conn, msgs, &state, uid).await;
+    let enriched = attach_metadata(conn, msgs, &state, uid).await;
 
     let mut msg_map: std::collections::HashMap<i64, MessageResponse> =
         enriched.into_iter().map(|m| (m.id, m)).collect();
@@ -125,14 +117,12 @@ async fn create_pin(
     State(state): State<AppState>,
     Path(path): Path<ChatIdPath>,
     CurrentUid(uid): CurrentUid,
+    mut conn: DbConn,
     Json(body): Json<CreatePinBody>,
-) -> Result<(StatusCode, Json<PinResponse>), (StatusCode, &'static str)> {
-    let mut conn = state.db.get().map_err(|e| {
-        tracing::error!("db pool: {:?}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
-    })?;
+) -> Result<(StatusCode, Json<PinResponse>), AppError> {
+    let conn = &mut *conn;
 
-    check_membership(&mut conn, path.chat_id, uid)?;
+    check_membership(conn, path.chat_id, uid)?;
 
     // Verify message exists in this chat and is not deleted
     let msg: Message = messages::table
@@ -142,13 +132,9 @@ async fn create_pin(
                 .and(messages::chat_id.eq(path.chat_id))
                 .and(messages::deleted_at.is_null()),
         )
-        .first(&mut conn)
-        .optional()
-        .map_err(|e| {
-            tracing::error!("find message for pin: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
-        })?
-        .ok_or((StatusCode::NOT_FOUND, "Message not found"))?;
+        .first(conn)
+        .optional()?
+        .ok_or(AppError::NotFound("Message not found"))?;
 
     // Check pin count
     let now = Utc::now();
@@ -160,21 +146,17 @@ async fn create_pin(
                 .or(pinned_messages::expires_at.gt(now)),
         )
         .count()
-        .get_result(&mut conn)
-        .map_err(|e| {
-            tracing::error!("count pins: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
-        })?;
+        .get_result(conn)?;
 
     if pin_count >= MAX_PINS_PER_CHAT {
-        return Err((StatusCode::CONFLICT, "Maximum number of pins reached"));
+        return Err(AppError::Conflict("Maximum number of pins reached"));
     }
 
     let pin_id = ids::next_message_id(state.id_gen.as_ref())
         .await
         .map_err(|e| {
             tracing::error!("ferroid pin id: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "ID generation failed")
+            AppError::Internal("ID generation failed")
         })?;
 
     let new_pin = NewPinnedMessage {
@@ -189,20 +171,20 @@ async fn create_pin(
     let pin: PinnedMessage = diesel::insert_into(pinned_messages::table)
         .values(&new_pin)
         .returning(PinnedMessage::as_returning())
-        .get_result(&mut conn)
+        .get_result(conn)
         .map_err(|e| {
             if e.to_string().contains("unique") || e.to_string().contains("duplicate") {
-                return (StatusCode::CONFLICT, "Message is already pinned");
+                return AppError::Conflict("Message is already pinned");
             }
             tracing::error!("insert pin: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
+            AppError::Internal("Database error")
         })?;
 
-    let enriched = attach_metadata(&mut conn, vec![msg], &state, uid).await;
-    let msg_response = enriched.into_iter().next().ok_or((
-        StatusCode::INTERNAL_SERVER_ERROR,
-        "Failed to build message response",
-    ))?;
+    let enriched = attach_metadata(conn, vec![msg], &state, uid).await;
+    let msg_response = enriched
+        .into_iter()
+        .next()
+        .ok_or(AppError::Internal("Failed to build message response"))?;
 
     let pin_response = PinResponse {
         id: pin.id,
@@ -215,7 +197,7 @@ async fn create_pin(
 
     // Send system message
     let _ = crate::handlers::chats::send_prepared_message(
-        &mut conn,
+        conn,
         &state,
         PreparedMessageSend {
             chat_id: path.chat_id,
@@ -237,11 +219,7 @@ async fn create_pin(
     let member_uids: Vec<i32> = group_membership::table
         .filter(group_membership::chat_id.eq(path.chat_id))
         .select(group_membership::uid)
-        .load(&mut conn)
-        .map_err(|e| {
-            tracing::error!("list members for pin broadcast: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
-        })?;
+        .load(conn)?;
 
     let ws_msg = std::sync::Arc::new(ServerWsMessage::PinAdded(PinUpdatePayload {
         chat_id: path.chat_id,
@@ -258,13 +236,11 @@ async fn delete_pin(
     State(state): State<AppState>,
     Path(path): Path<PinIdPath>,
     CurrentUid(uid): CurrentUid,
-) -> Result<StatusCode, (StatusCode, &'static str)> {
-    let mut conn = state.db.get().map_err(|e| {
-        tracing::error!("db pool: {:?}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
-    })?;
+    mut conn: DbConn,
+) -> Result<StatusCode, AppError> {
+    let conn = &mut *conn;
 
-    check_membership(&mut conn, path.chat_id, uid)?;
+    check_membership(conn, path.chat_id, uid)?;
 
     let pin: PinnedMessage = pinned_messages::table
         .filter(
@@ -272,24 +248,16 @@ async fn delete_pin(
                 .eq(path.pin_id)
                 .and(pinned_messages::chat_id.eq(path.chat_id)),
         )
-        .first(&mut conn)
-        .optional()
-        .map_err(|e| {
-            tracing::error!("find pin: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
-        })?
-        .ok_or((StatusCode::NOT_FOUND, "Pin not found"))?;
+        .first(conn)
+        .optional()?
+        .ok_or(AppError::NotFound("Pin not found"))?;
 
     diesel::delete(pinned_messages::table.filter(pinned_messages::id.eq(path.pin_id)))
-        .execute(&mut conn)
-        .map_err(|e| {
-            tracing::error!("delete pin: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
-        })?;
+        .execute(conn)?;
 
     // Send system message
     let _ = crate::handlers::chats::send_prepared_message(
-        &mut conn,
+        conn,
         &state,
         PreparedMessageSend {
             chat_id: path.chat_id,
@@ -311,11 +279,7 @@ async fn delete_pin(
     let member_uids: Vec<i32> = group_membership::table
         .filter(group_membership::chat_id.eq(path.chat_id))
         .select(group_membership::uid)
-        .load(&mut conn)
-        .map_err(|e| {
-            tracing::error!("list members for unpin broadcast: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
-        })?;
+        .load(conn)?;
 
     let ws_msg = std::sync::Arc::new(ServerWsMessage::PinRemoved(PinUpdatePayload {
         chat_id: path.chat_id,

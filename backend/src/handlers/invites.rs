@@ -8,9 +8,13 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use uuid::Uuid;
 
+use diesel::PgConnection;
+
+use crate::errors::AppError;
+use crate::extractors::DbConn;
 use crate::handlers::chats::{send_prepared_message, MessageResponse, PreparedMessageSend};
 use crate::handlers::groups::{load_group_info, GroupInfoResponse};
-use crate::handlers::members::check_membership;
+use crate::handlers::members::{check_membership, require_admin_role};
 use crate::models::{
     GroupJoinReason, GroupRole, Invite, InviteType, MessageType, NewGroupMembership, NewInvite,
 };
@@ -25,8 +29,6 @@ const INVITE_CODE_LEN: usize = 10;
 const INVITE_CODE_ALPHABET: &[u8] = b"ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
 const INVALID_INVITE_CODE_MESSAGE: &str = "Invalid invite code";
 const INVALID_INVITE_MESSAGE: &str = "Invalid invite";
-
-type DbConn = diesel::r2d2::PooledConnection<diesel::r2d2::ConnectionManager<diesel::PgConnection>>;
 
 #[derive(Deserialize)]
 struct InviteIdPath {
@@ -234,52 +236,25 @@ fn generate_invite_code() -> String {
     code
 }
 
-fn require_admin_role(
-    conn: &mut DbConn,
-    chat_id: i64,
-    uid: i32,
-) -> Result<(), (StatusCode, &'static str)> {
-    use crate::schema::group_membership::dsl as gm_dsl;
-
-    let role: Option<GroupRole> = group_membership::table
-        .filter(gm_dsl::chat_id.eq(chat_id).and(gm_dsl::uid.eq(uid)))
-        .select(gm_dsl::role)
-        .first(conn)
-        .optional()
-        .map_err(|e| {
-            tracing::error!("check admin role: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
-        })?;
-
-    match role {
-        Some(GroupRole::Admin) => Ok(()),
-        Some(_) => Err((StatusCode::FORBIDDEN, "Admin role required")),
-        None => Err((StatusCode::FORBIDDEN, "Not a member of this chat")),
-    }
-}
-
-fn validate_create_body(body: &CreateInviteBody) -> Result<(), (StatusCode, &'static str)> {
+fn validate_create_body(body: &CreateInviteBody) -> Result<(), AppError> {
     match body.invite_type {
         InviteType::Generic => {
             if body.target_uid.is_some() || body.required_chat_id.is_some() {
-                return Err((
-                    StatusCode::BAD_REQUEST,
+                return Err(AppError::BadRequest(
                     "Generic invites cannot have target_uid or required_chat_id",
                 ));
             }
         }
         InviteType::Targeted => {
             if body.target_uid.is_none() || body.required_chat_id.is_some() {
-                return Err((
-                    StatusCode::BAD_REQUEST,
+                return Err(AppError::BadRequest(
                     "Targeted invites require target_uid and cannot have required_chat_id",
                 ));
             }
         }
         InviteType::Membership => {
             if body.target_uid.is_some() || body.required_chat_id.is_none() {
-                return Err((
-                    StatusCode::BAD_REQUEST,
+                return Err(AppError::BadRequest(
                     "Membership invites require required_chat_id and cannot have target_uid",
                 ));
             }
@@ -296,20 +271,13 @@ fn is_unique_violation(error: &diesel::result::Error) -> bool {
     )
 }
 
-fn load_invite_by_id(
-    conn: &mut DbConn,
-    invite_id: i64,
-) -> Result<Invite, (StatusCode, &'static str)> {
+fn load_invite_by_id(conn: &mut PgConnection, invite_id: i64) -> Result<Invite, AppError> {
     invites::table
         .filter(invites::id.eq(invite_id))
         .select(Invite::as_select())
         .first::<Invite>(conn)
-        .optional()
-        .map_err(|e| {
-            tracing::error!("load invite by id: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
-        })?
-        .ok_or((StatusCode::BAD_REQUEST, INVALID_INVITE_MESSAGE))
+        .optional()?
+        .ok_or(AppError::BadRequest(INVALID_INVITE_MESSAGE))
 }
 
 fn validate_invite_is_active(invite: &Invite, now: DateTime<Utc>) -> bool {
@@ -317,15 +285,15 @@ fn validate_invite_is_active(invite: &Invite, now: DateTime<Utc>) -> bool {
 }
 
 async fn create_generic_invite(
-    conn: &mut DbConn,
+    conn: &mut PgConnection,
     state: &AppState,
     chat_id: i64,
     uid: i32,
     expires_at: Option<DateTime<Utc>>,
-) -> Result<Invite, (StatusCode, &'static str)> {
+) -> Result<Invite, AppError> {
     let id = ids::next_id(state.id_gen.as_ref()).await.map_err(|e| {
         tracing::error!("next_id for invite: {:?}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "ID generation failed")
+        AppError::Internal("ID generation failed")
     })?;
 
     let now = Utc::now();
@@ -358,26 +326,26 @@ async fn create_generic_invite(
             Err(error) if is_unique_violation(&error) => continue,
             Err(error) => {
                 tracing::error!("insert invite: {:?}", error);
-                return Err((StatusCode::INTERNAL_SERVER_ERROR, "Failed to create invite"));
+                return Err(AppError::Internal("Failed to create invite"));
             }
         }
     }
 
     inserted.ok_or_else(|| {
         tracing::error!("failed to generate unique invite code after retries");
-        (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create invite")
+        AppError::Internal("Failed to create invite")
     })
 }
 
 async fn create_invite_from_body(
-    conn: &mut DbConn,
+    conn: &mut PgConnection,
     state: &AppState,
     uid: i32,
     body: &CreateInviteBody,
-) -> Result<Invite, (StatusCode, &'static str)> {
+) -> Result<Invite, AppError> {
     let id = ids::next_id(state.id_gen.as_ref()).await.map_err(|e| {
         tracing::error!("next_id for invite: {:?}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "ID generation failed")
+        AppError::Internal("ID generation failed")
     })?;
 
     let now = Utc::now();
@@ -410,19 +378,19 @@ async fn create_invite_from_body(
             Err(error) if is_unique_violation(&error) => continue,
             Err(error) => {
                 tracing::error!("insert invite: {:?}", error);
-                return Err((StatusCode::INTERNAL_SERVER_ERROR, "Failed to create invite"));
+                return Err(AppError::Internal("Failed to create invite"));
             }
         }
     }
 
     inserted.ok_or_else(|| {
         tracing::error!("failed to generate unique invite code after retries");
-        (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create invite")
+        AppError::Internal("Failed to create invite")
     })
 }
 
 fn preview_eligibility(
-    conn: &mut DbConn,
+    conn: &mut PgConnection,
     invite: &Invite,
     uid: i32,
 ) -> Result<PreviewEligibility, PreviewInviteError> {
@@ -473,16 +441,12 @@ fn preview_eligibility(
 async fn post_invite(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
+    mut conn: DbConn,
     Json(body): Json<CreateInviteBody>,
-) -> Result<(StatusCode, Json<InviteResponse>), (StatusCode, &'static str)> {
-    validate_create_body(&body)?;
+) -> Result<(StatusCode, Json<InviteResponse>), AppError> {
+    let conn = &mut *conn;
 
-    let conn = &mut state.db.get().map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Database connection failed",
-        )
-    })?;
+    validate_create_body(&body)?;
 
     require_admin_role(conn, body.chat_id, uid)?;
     let invite = create_invite_from_body(conn, &state, uid, &body).await?;
@@ -493,14 +457,10 @@ async fn post_invite(
 async fn post_send_invite_message(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
+    mut conn: DbConn,
     Json(body): Json<SendInviteMessageBody>,
-) -> Result<(StatusCode, Json<SendInviteMessageResponse>), (StatusCode, &'static str)> {
-    let conn = &mut state.db.get().map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Database connection failed",
-        )
-    })?;
+) -> Result<(StatusCode, Json<SendInviteMessageResponse>), AppError> {
+    let conn = &mut *conn;
 
     require_admin_role(conn, body.source_chat_id, uid)?;
     check_membership(conn, body.destination_chat_id, uid)?;
@@ -510,13 +470,12 @@ async fn post_send_invite_message(
         let invite = load_invite_by_id(conn, invite_id)?;
         require_admin_role(conn, invite.chat_id, uid)?;
         if invite.chat_id != body.source_chat_id {
-            return Err((
-                StatusCode::BAD_REQUEST,
+            return Err(AppError::BadRequest(
                 "Invite does not belong to source chat",
             ));
         }
         if !validate_invite_is_active(&invite, now) {
-            return Err((StatusCode::BAD_REQUEST, "Invite is no longer active"));
+            return Err(AppError::BadRequest("Invite is no longer active"));
         }
         invite
     } else {
@@ -553,15 +512,10 @@ async fn post_send_invite_message(
 
 async fn get_invites(
     CurrentUid(uid): CurrentUid,
-    State(state): State<AppState>,
+    mut conn: DbConn,
     Query(query): Query<ListInvitesQuery>,
-) -> Result<Json<ListInvitesResponse>, (StatusCode, &'static str)> {
-    let conn = &mut state.db.get().map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Database connection failed",
-        )
-    })?;
+) -> Result<Json<ListInvitesResponse>, AppError> {
+    let conn = &mut *conn;
 
     let mut base_query = invites::table
         .into_boxed()
@@ -577,11 +531,7 @@ async fn get_invites(
 
     let rows = base_query
         .select(Invite::as_select())
-        .load::<Invite>(conn)
-        .map_err(|e| {
-            tracing::error!("list invites: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to list invites")
-        })?;
+        .load::<Invite>(conn)?;
 
     Ok(Json(ListInvitesResponse {
         invites: rows.into_iter().map(invite_to_response).collect(),
@@ -590,15 +540,10 @@ async fn get_invites(
 
 async fn get_invite(
     CurrentUid(uid): CurrentUid,
-    State(state): State<AppState>,
     Path(InviteIdPath { invite_id }): Path<InviteIdPath>,
-) -> Result<Json<InviteResponse>, (StatusCode, &'static str)> {
-    let conn = &mut state.db.get().map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Database connection failed",
-        )
-    })?;
+    mut conn: DbConn,
+) -> Result<Json<InviteResponse>, AppError> {
+    let conn = &mut *conn;
 
     let invite = load_invite_by_id(conn, invite_id)?;
     require_admin_role(conn, invite.chat_id, uid)?;
@@ -609,41 +554,33 @@ async fn get_invite(
 async fn get_invite_by_code(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
+    mut conn: DbConn,
     Query(query): Query<GetInviteByCodeQuery>,
-) -> Result<Json<InvitePreviewResponse>, (StatusCode, &'static str)> {
-    let conn = &mut state.db.get().map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Database connection failed",
-        )
-    })?;
+) -> Result<Json<InvitePreviewResponse>, AppError> {
+    let conn = &mut *conn;
 
     let invite_code = query.invite_code.trim();
     if invite_code.is_empty() {
-        return Err((StatusCode::BAD_REQUEST, INVALID_INVITE_CODE_MESSAGE));
+        return Err(AppError::BadRequest(INVALID_INVITE_CODE_MESSAGE));
     }
 
     let invite = invites::table
         .filter(invites::code.eq(invite_code))
         .select(Invite::as_select())
         .first::<Invite>(conn)
-        .optional()
-        .map_err(|e| {
-            tracing::error!("load invite by code: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
-        })?
-        .ok_or((StatusCode::BAD_REQUEST, INVALID_INVITE_CODE_MESSAGE))?;
+        .optional()?
+        .ok_or(AppError::BadRequest(INVALID_INVITE_CODE_MESSAGE))?;
 
     if !validate_invite_is_active(&invite, Utc::now()) {
-        return Err((StatusCode::BAD_REQUEST, INVALID_INVITE_CODE_MESSAGE));
+        return Err(AppError::BadRequest(INVALID_INVITE_CODE_MESSAGE));
     }
 
     let eligibility = preview_eligibility(conn, &invite, uid).map_err(|error| match error {
-        PreviewInviteError::InvalidCode => (StatusCode::BAD_REQUEST, INVALID_INVITE_CODE_MESSAGE),
-        PreviewInviteError::Forbidden => (StatusCode::FORBIDDEN, "Not eligible for this invite"),
+        PreviewInviteError::InvalidCode => AppError::BadRequest(INVALID_INVITE_CODE_MESSAGE),
+        PreviewInviteError::Forbidden => AppError::Forbidden("Not eligible for this invite"),
         PreviewInviteError::Db(other) => {
             tracing::error!("preview invite eligibility: {:?}", other);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to load invite")
+            AppError::Internal("Failed to load invite")
         }
     })?;
 
@@ -658,58 +595,40 @@ async fn get_invite_by_code(
 
 async fn patch_invite(
     CurrentUid(uid): CurrentUid,
-    State(state): State<AppState>,
     Path(InviteIdPath { invite_id }): Path<InviteIdPath>,
+    mut conn: DbConn,
     Json(body): Json<PatchInviteBody>,
-) -> Result<Json<InviteResponse>, (StatusCode, &'static str)> {
-    let conn = &mut state.db.get().map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Database connection failed",
-        )
-    })?;
+) -> Result<Json<InviteResponse>, AppError> {
+    let conn = &mut *conn;
 
     let invite = load_invite_by_id(conn, invite_id)?;
     require_admin_role(conn, invite.chat_id, uid)?;
 
     let next_expires_at = body
         .expires_at
-        .ok_or((StatusCode::BAD_REQUEST, "expires_at is required"))?;
+        .ok_or(AppError::BadRequest("expires_at is required"))?;
 
     let updated = diesel::update(invites::table.filter(invites::id.eq(invite_id)))
         .set(invites::expires_at.eq(next_expires_at))
         .returning(Invite::as_returning())
-        .get_result::<Invite>(conn)
-        .map_err(|e| {
-            tracing::error!("patch invite expiration: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update invite")
-        })?;
+        .get_result::<Invite>(conn)?;
 
     Ok(Json(invite_to_response(updated)))
 }
 
 async fn delete_invite(
     CurrentUid(uid): CurrentUid,
-    State(state): State<AppState>,
     Path(InviteIdPath { invite_id }): Path<InviteIdPath>,
-) -> Result<StatusCode, (StatusCode, &'static str)> {
-    let conn = &mut state.db.get().map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Database connection failed",
-        )
-    })?;
+    mut conn: DbConn,
+) -> Result<StatusCode, AppError> {
+    let conn = &mut *conn;
 
     let invite = load_invite_by_id(conn, invite_id)?;
     require_admin_role(conn, invite.chat_id, uid)?;
 
     diesel::update(invites::table.filter(invites::id.eq(invite_id)))
         .set(invites::revoked_at.eq(Utc::now()))
-        .execute(conn)
-        .map_err(|e| {
-            tracing::error!("delete invite: {:?}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to revoke invite")
-        })?;
+        .execute(conn)?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -717,18 +636,14 @@ async fn delete_invite(
 async fn post_redeem_invite(
     CurrentUid(uid): CurrentUid,
     State(state): State<AppState>,
+    mut conn: DbConn,
     Json(body): Json<RedeemInviteBody>,
-) -> Result<Json<RedeemInviteResponse>, (StatusCode, &'static str)> {
-    let conn = &mut state.db.get().map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Database connection failed",
-        )
-    })?;
+) -> Result<Json<RedeemInviteResponse>, AppError> {
+    let conn = &mut *conn;
 
     let code = body.code.trim();
     if code.is_empty() {
-        return Err((StatusCode::BAD_REQUEST, INVALID_INVITE_CODE_MESSAGE));
+        return Err(AppError::BadRequest(INVALID_INVITE_CODE_MESSAGE));
     }
 
     let outcome = conn
@@ -825,19 +740,17 @@ async fn post_redeem_invite(
             Ok(RedeemInviteOutcome::Joined(invite.chat_id))
         })
         .map_err(|error| match error {
-            RedeemInviteError::InvalidCode => {
-                (StatusCode::BAD_REQUEST, INVALID_INVITE_CODE_MESSAGE)
-            }
+            RedeemInviteError::InvalidCode => AppError::BadRequest(INVALID_INVITE_CODE_MESSAGE),
             RedeemInviteError::Db(other) => {
                 tracing::error!("redeem invite: {:?}", other);
-                (StatusCode::INTERNAL_SERVER_ERROR, "Failed to redeem invite")
+                AppError::Internal("Failed to redeem invite")
             }
         })?;
 
     let chat_id = match outcome {
         RedeemInviteOutcome::Joined(chat_id) => chat_id,
         RedeemInviteOutcome::AlreadyMember => {
-            return Err((StatusCode::CONFLICT, "Already a member of this chat"));
+            return Err(AppError::Conflict("Already a member of this chat"));
         }
     };
 

@@ -21,6 +21,8 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilte
 use utils::auth::{X_APP_VERSION, X_CLIENT_ID, X_USER_ID};
 
 mod db_tracing;
+pub(crate) mod errors;
+pub(crate) mod extractors;
 mod handlers;
 mod metrics;
 mod models;
