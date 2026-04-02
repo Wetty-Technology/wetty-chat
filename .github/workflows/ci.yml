@@ -53,7 +53,7 @@ jobs:
       - name: cargo clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
 
-  frontend:
+  frontend-typecheck:
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
@@ -71,30 +71,80 @@ jobs:
         run: npm ci
       - name: npm run typecheck
         run: npm run typecheck
+
+  frontend-lint:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: wetty-chat-mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: wetty-chat-mobile/package-lock.json
+      - name: npm ci
+        run: npm ci
       - name: npm run lint
         run: npm run lint
+
+  frontend-format:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: wetty-chat-mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: wetty-chat-mobile/package-lock.json
+      - name: npm ci
+        run: npm ci
+      - name: npm run format:ci
+        run: npm run format:ci
 
   check:
     name: check
     needs:
       - changes
       - backend
-      - frontend
+      - frontend-typecheck
+      - frontend-lint
+      - frontend-format
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Validate CI results
         run: |
           backend_result="${{ needs.backend.result }}"
-          frontend_result="${{ needs.frontend.result }}"
+          frontend_typecheck_result="${{ needs.frontend-typecheck.result }}"
+          frontend_lint_result="${{ needs.frontend-lint.result }}"
+          frontend_format_result="${{ needs.frontend-format.result }}"
 
           echo "backend result: ${backend_result}"
-          echo "frontend result: ${frontend_result}"
+          echo "frontend typecheck result: ${frontend_typecheck_result}"
+          echo "frontend lint result: ${frontend_lint_result}"
+          echo "frontend format result: ${frontend_format_result}"
 
           if [[ "${backend_result}" != "success" && "${backend_result}" != "skipped" ]]; then
             exit 1
           fi
 
-          if [[ "${frontend_result}" != "success" && "${frontend_result}" != "skipped" ]]; then
+          if [[ "${frontend_typecheck_result}" != "success" && "${frontend_typecheck_result}" != "skipped" ]]; then
+            exit 1
+          fi
+
+          if [[ "${frontend_lint_result}" != "success" && "${frontend_lint_result}" != "skipped" ]]; then
+            exit 1
+          fi
+
+          if [[ "${frontend_format_result}" != "success" && "${frontend_format_result}" != "skipped" ]]; then
             exit 1
           fi

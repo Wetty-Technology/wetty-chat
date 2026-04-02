@@ -4,8 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "format": "prettier src --write",
-    "format:ci": "prettier src --check",
+    "format": "prettier . --write",
+    "format:ci": "prettier . --check",
     "dev": "vite -c vite.config.dev.ts",
     "build": "tsc -b && vite build -c vite.config.staging.ts --mode development",
     "dev:online": "API_PROXY_TARGET=https://chahui.app/_api vite -c vite.config.dev.ts --mode development",

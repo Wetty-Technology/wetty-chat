@@ -12,20 +12,23 @@ try {
   // Ignore
 }
 
-export default mergeConfig(createBaseConfig({ assetCdnOrigin: ASSET_URL }), defineConfig({
-  experimental: {
-    renderBuiltUrl(filename, { type }) {
-      if (type === 'public') {
-        return `/${filename}`;
-      }
+export default mergeConfig(
+  createBaseConfig({ assetCdnOrigin: ASSET_URL }),
+  defineConfig({
+    experimental: {
+      renderBuiltUrl(filename, { type }) {
+        if (type === 'public') {
+          return `/${filename}`;
+        }
 
-      return `${ASSET_URL}/${filename}`;
+        return `${ASSET_URL}/${filename}`;
+      },
     },
-  },
-  define: {
-    __ASSET_BASE__: JSON.stringify(ASSET_URL),
-    __API_BASE__: JSON.stringify(API_BASE_URL),
-    __APP_VERSION__: JSON.stringify(commitHash),
-    __FEATURE_GATES_ENABLED__: JSON.stringify(false),
-  },
-}));
+    define: {
+      __ASSET_BASE__: JSON.stringify(ASSET_URL),
+      __API_BASE__: JSON.stringify(API_BASE_URL),
+      __APP_VERSION__: JSON.stringify(commitHash),
+      __FEATURE_GATES_ENABLED__: JSON.stringify(false),
+    },
+  }),
+);

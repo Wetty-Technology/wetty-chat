@@ -22,8 +22,8 @@ export function createBaseConfig(options: BaseConfigOptions = {}) {
     },
     css: {
       modules: {
-        localsConvention: "camelCase",
-      }
+        localsConvention: 'camelCase',
+      },
     },
     plugins: [
       patchCssModules({
@@ -32,7 +32,7 @@ export function createBaseConfig(options: BaseConfigOptions = {}) {
       }),
       react({
         babel: {
-          plugins: ["@lingui/babel-plugin-lingui-macro"],
+          plugins: ['@lingui/babel-plugin-lingui-macro'],
         },
       }),
       lingui(),
@@ -49,53 +49,55 @@ export function createBaseConfig(options: BaseConfigOptions = {}) {
           theme_color: '#f7f7f7',
           background_color: '#f5f1e9',
           display: 'standalone',
-          "icons": [
+          icons: [
             {
-              "src": "/icon/icon.svg",
-              "sizes": "any",
-              "type": "image/svg+xml",
-              "purpose": "any"
+              src: '/icon/icon.svg',
+              sizes: 'any',
+              type: 'image/svg+xml',
+              purpose: 'any',
             },
             {
-              "src": "/icon-maskable/icon.svg",
-              "sizes": "any",
-              "type": "image/svg+xml",
-              "purpose": "maskable"
+              src: '/icon-maskable/icon.svg',
+              sizes: 'any',
+              type: 'image/svg+xml',
+              purpose: 'maskable',
             },
             {
-              "src": "/icon/pwa-192x192.png",
-              "sizes": "192x192",
-              "type": "image/png",
-              "purpose": "any"
+              src: '/icon/pwa-192x192.png',
+              sizes: '192x192',
+              type: 'image/png',
+              purpose: 'any',
             },
             {
-              "src": "/icon/pwa-512x512.png",
-              "sizes": "512x512",
-              "type": "image/png",
-              "purpose": "any"
+              src: '/icon/pwa-512x512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'any',
             },
             {
-              "src": "/icon-maskable/pwa-512x512.png",
-              "sizes": "512x512",
-              "type": "image/png",
-              "purpose": "maskable"
-            }
-          ]
+              src: '/icon-maskable/pwa-512x512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'maskable',
+            },
+          ],
         },
         injectManifest: {
           maximumFileSizeToCacheInBytes: 5000000,
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,wasm}'],
-          ...(assetCdnOrigin ? {
-            modifyURLPrefix: {
-              'assets/': `${assetCdnOrigin}/assets/`,
-            },
-          } : {}),
+          ...(assetCdnOrigin
+            ? {
+                modifyURLPrefix: {
+                  'assets/': `${assetCdnOrigin}/assets/`,
+                },
+              }
+            : {}),
         },
         devOptions: {
           enabled: true,
           type: 'module',
-        }
-      })
+        },
+      }),
     ],
     resolve: {
       alias: {
