@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 
 import '../../../app/theme/style_config.dart';
 import '../../../core/settings/app_settings_store.dart';
+import 'settings_components.dart';
 
 class FontSizeSettingsPage extends StatelessWidget {
   const FontSizeSettingsPage({super.key});
@@ -15,7 +16,8 @@ class FontSizeSettingsPage extends StatelessWidget {
         child: AnimatedBuilder(
           animation: AppSettingsStore.instance,
           builder: (context, _) {
-            final scale = AppSettingsStore.instance.chatFontScale;
+            final messageFontSize =
+                AppSettingsStore.instance.chatMessageFontSize;
             return ListView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
               children: [
@@ -35,38 +37,13 @@ class FontSizeSettingsPage extends StatelessWidget {
                         style: appSectionTitleTextStyle(context),
                       ),
                       const SizedBox(height: 10),
-                      SizedBox(
-                        width: double.infinity,
-                        child: CupertinoSlider(
-                          min: AppSettingsStore.minChatFontScale,
-                          max: AppSettingsStore.maxChatFontScale,
-                          value: scale,
-                          onChanged: (value) {
-                            AppSettingsStore.instance.setChatFontScale(value);
-                          },
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 2),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Small',
-                              style: appSecondaryTextStyle(
-                                context,
-                                fontSize: AppFontSizes.meta,
-                              ),
-                            ),
-                            Text(
-                              'Large',
-                              style: appSecondaryTextStyle(
-                                context,
-                                fontSize: AppFontSizes.meta,
-                              ),
-                            ),
-                          ],
-                        ),
+                      MessageFontSizeSlider(
+                        value: messageFontSize,
+                        onChanged: (value) {
+                          AppSettingsStore.instance.setChatMessageFontSize(
+                            value,
+                          );
+                        },
                       ),
                       const SizedBox(height: 12),
                       Container(
@@ -121,7 +98,7 @@ class FontSizeSettingsPage extends StatelessWidget {
                                     'This is how your messages will look in chat.',
                                     style: appTextStyle(
                                       context,
-                                      fontSize: AppFontSizes.body * scale,
+                                      fontSize: messageFontSize,
                                     ),
                                   ),
                                 ],

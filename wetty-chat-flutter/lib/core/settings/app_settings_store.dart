@@ -22,36 +22,40 @@ class AppSettingsStore extends ChangeNotifier {
   AppSettingsStore._();
   static final AppSettingsStore instance = AppSettingsStore._();
 
-  static const String _chatFontScaleKey = 'chat_font_scale';
+  static const String _chatMessageFontSizeKey = 'chat_message_font_size';
   static const String _languageKey = 'app_language';
-  static const double minChatFontScale = 0.85;
-  static const double maxChatFontScale = 1.3;
-  static const int chatFontScaleSteps = 5;
+  static const double minChatMessageFontSize = 14;
+  static const double maxChatMessageFontSize = 18;
+  static const int chatMessageFontSizeSteps = 5;
+  static const double defaultChatMessageFontSize = 16;
 
   late SharedPreferences _prefs;
-  double _chatFontScale = 1.0;
+  double _chatMessageFontSize = defaultChatMessageFontSize;
   AppLanguage _language = AppLanguage.system;
 
-  double get chatFontScale => _chatFontScale;
+  double get chatMessageFontSize => _chatMessageFontSize;
   AppLanguage get language => _language;
 
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
-    final stored = _prefs.getDouble(_chatFontScaleKey);
-    _chatFontScale = _snapChatFontScale(
-      (stored ?? 1.0).clamp(minChatFontScale, maxChatFontScale),
+    final stored = _prefs.getDouble(_chatMessageFontSizeKey);
+    _chatMessageFontSize = _snapChatMessageFontSize(
+      (stored ?? defaultChatMessageFontSize).clamp(
+        minChatMessageFontSize,
+        maxChatMessageFontSize,
+      ),
     );
     _language = AppLanguage.fromStorage(_prefs.getString(_languageKey));
   }
 
-  void setChatFontScale(double value) {
-    final next = _snapChatFontScale(
-      value.clamp(minChatFontScale, maxChatFontScale),
+  void setChatMessageFontSize(double value) {
+    final next = _snapChatMessageFontSize(
+      value.clamp(minChatMessageFontSize, maxChatMessageFontSize),
     );
-    if (next == _chatFontScale) return;
-    _chatFontScale = next;
+    if (next == _chatMessageFontSize) return;
+    _chatMessageFontSize = next;
     notifyListeners();
-    _prefs.setDouble(_chatFontScaleKey, _chatFontScale);
+    _prefs.setDouble(_chatMessageFontSizeKey, _chatMessageFontSize);
   }
 
   void setLanguage(AppLanguage language) {
@@ -61,12 +65,13 @@ class AppSettingsStore extends ChangeNotifier {
     _prefs.setString(_languageKey, _language.storageValue);
   }
 
-  static double _snapChatFontScale(double value) {
-    if (chatFontScaleSteps <= 1) return value;
+  static double _snapChatMessageFontSize(double value) {
+    if (chatMessageFontSizeSteps <= 1) return value;
     final step =
-        (maxChatFontScale - minChatFontScale) / (chatFontScaleSteps - 1);
-    final idx = ((value - minChatFontScale) / step).round();
-    final clampedIdx = idx.clamp(0, chatFontScaleSteps - 1);
-    return minChatFontScale + step * clampedIdx;
+        (maxChatMessageFontSize - minChatMessageFontSize) /
+        (chatMessageFontSizeSteps - 1);
+    final idx = ((value - minChatMessageFontSize) / step).round();
+    final clampedIdx = idx.clamp(0, chatMessageFontSizeSteps - 1);
+    return minChatMessageFontSize + step * clampedIdx;
   }
 }
