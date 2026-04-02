@@ -4,10 +4,7 @@ import '../../../app/theme/style_config.dart';
 import '../../../core/settings/app_settings_store.dart';
 
 class SettingsSectionData {
-  const SettingsSectionData({
-    required this.title,
-    required this.items,
-  });
+  const SettingsSectionData({required this.title, required this.items});
 
   final String title;
   final List<SettingsItemData> items;
@@ -40,10 +37,7 @@ class SettingsItemData {
 }
 
 class SettingsSectionCard extends StatelessWidget {
-  const SettingsSectionCard({
-    super.key,
-    required this.section,
-  });
+  const SettingsSectionCard({super.key, required this.section});
 
   final SettingsSectionData section;
 
@@ -81,10 +75,7 @@ class SettingsSectionCard extends StatelessWidget {
 }
 
 class SettingsActionRow extends StatelessWidget {
-  const SettingsActionRow({
-    super.key,
-    required this.item,
-  });
+  const SettingsActionRow({super.key, required this.item});
 
   final SettingsItemData item;
 
@@ -155,8 +146,8 @@ class MessageFontSizeSlider extends StatefulWidget {
   final double value;
   final ValueChanged<double> onChanged;
 
-  static const double _trackInset = 8;
-  static const double _thumbRadius = 10;
+  static const double _horizontalPadding = 20;
+  static const double _thumbRadius = 12;
   static const double _markerHeight = 8;
   static const double _markerWidth = 3;
   static const double _trackHeight = 2;
@@ -168,17 +159,45 @@ class MessageFontSizeSlider extends StatefulWidget {
 class _MessageFontSizeSliderState extends State<MessageFontSizeSlider> {
   double? _dragValue;
 
+  double get _minValue => AppSettingsStore.minChatMessageFontSize;
+  double get _maxValue => AppSettingsStore.maxChatMessageFontSize;
+  int get _stepCount => AppSettingsStore.chatMessageFontSizeSteps;
+
+  double _effectiveValue() => (_dragValue ?? widget.value).clamp(
+    _minValue,
+    _maxValue,
+  );
+
+  double _valueForIndex(int index) => _minValue + index;
+
+  double _trackWidth(double width) =>
+      (width - (MessageFontSizeSlider._horizontalPadding * 2)).clamp(1.0, width);
+
+  double _normalizedPosition(double x, double width) {
+    final trackWidth = _trackWidth(width);
+    final raw = (x - MessageFontSizeSlider._horizontalPadding) / trackWidth;
+    return raw.clamp(0.0, 1.0);
+  }
+
+  double _snappedValueForPosition(double x, double width) {
+    final idx = (_normalizedPosition(x, width) * (_stepCount - 1))
+        .round()
+        .clamp(0, _stepCount - 1);
+    return _valueForIndex(idx);
+  }
+
+  void _setDragValue(double value) {
+    if (_dragValue == value) return;
+    setState(() {
+      _dragValue = value;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final backgroundColor = CupertinoColors.systemBackground.resolveFrom(
-      context,
-    );
     final inactiveColor = CupertinoColors.systemGrey4.resolveFrom(context);
     final activeColor = CupertinoColors.activeBlue.resolveFrom(context);
-    final markerCount = AppSettingsStore.chatMessageFontSizeSteps;
-    final min = AppSettingsStore.minChatMessageFontSize;
-    final max = AppSettingsStore.maxChatMessageFontSize;
-    final sliderValue = (_dragValue ?? widget.value).clamp(min, max);
+    final currentValue = _effectiveValue();
 
     return Column(
       children: [
@@ -188,129 +207,125 @@ class _MessageFontSizeSliderState extends State<MessageFontSizeSlider> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final sliderWidth = constraints.maxWidth;
-              final trackStart = MessageFontSizeSlider._trackInset;
+              final trackStart = MessageFontSizeSlider._horizontalPadding;
               final trackEnd =
-                  sliderWidth - MessageFontSizeSlider._trackInset;
-              final markerStart =
-                  MessageFontSizeSlider._trackInset +
-                  MessageFontSizeSlider._thumbRadius;
-              final markerEnd =
-                  sliderWidth -
-                  MessageFontSizeSlider._trackInset -
-                  MessageFontSizeSlider._thumbRadius;
-              final markerStep = markerCount > 1
-                  ? (markerEnd - markerStart) / (markerCount - 1)
+                  sliderWidth - MessageFontSizeSlider._horizontalPadding;
+              final markerStep = _stepCount > 1
+                  ? (trackEnd - trackStart) / (_stepCount - 1)
                   : 0.0;
-              final leftMaskWidth = (markerStart -
-                      (MessageFontSizeSlider._markerWidth / 2) -
-                      trackStart)
-                  .clamp(
-                    0.0,
+              final thumbCenter = trackStart +
+                  (((currentValue - _minValue) / (_maxValue - _minValue)) *
+                      (trackEnd - trackStart));
+              const sliderHeight = 28.0;
+              final trackTop =
+                  (sliderHeight - MessageFontSizeSlider._trackHeight) / 2;
+              final thumbTop =
+                  (sliderHeight - (MessageFontSizeSlider._thumbRadius * 2)) / 2;
+
+              return GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTapDown: (details) {
+                  final nextValue = _snappedValueForPosition(
+                    details.localPosition.dx,
                     sliderWidth,
                   );
-              final rightMaskLeft =
-                  (markerEnd + (MessageFontSizeSlider._markerWidth / 2)).clamp(
-                0.0,
-                sliderWidth,
-              );
-              final rightMaskWidth = (trackEnd - rightMaskLeft).clamp(
-                0.0,
-                sliderWidth,
-              );
-              const sliderHeight = 28.0;
-
-              return Stack(
-                alignment: Alignment.center,
-                children: [
-                  IgnorePointer(
-                    child: Stack(
-                      children: [
-                        ...List.generate(markerCount, (index) {
-                          final markerValue = min + index;
-                          final isHighlighted = markerValue <= sliderValue;
-                          final markerCenter = markerStart + markerStep * index;
-                          return Positioned(
-                            left: markerCenter -
-                                (MessageFontSizeSlider._markerWidth / 2),
-                            top:
-                                (sliderHeight -
-                                        MessageFontSizeSlider._markerHeight) /
-                                    2,
-                            child: Container(
-                              width: MessageFontSizeSlider._markerWidth,
-                              height: MessageFontSizeSlider._markerHeight,
-                              decoration: BoxDecoration(
-                                color: isHighlighted
-                                    ? activeColor
-                                    : inactiveColor,
-                                borderRadius: BorderRadius.circular(
-                                  MessageFontSizeSlider._markerWidth,
-                                ),
-                              ),
-                            ),
-                          );
-                        }),
-                      ],
+                  widget.onChanged(nextValue);
+                },
+                onHorizontalDragStart: (details) {
+                  final nextValue = _snappedValueForPosition(
+                    details.localPosition.dx,
+                    sliderWidth,
+                  );
+                  _setDragValue(nextValue);
+                  widget.onChanged(nextValue);
+                },
+                onHorizontalDragUpdate: (details) {
+                  final nextValue = _snappedValueForPosition(
+                    details.localPosition.dx,
+                    sliderWidth,
+                  );
+                  _setDragValue(nextValue);
+                  widget.onChanged(nextValue);
+                },
+                onHorizontalDragEnd: (_) {
+                  setState(() {
+                    _dragValue = null;
+                  });
+                },
+                onHorizontalDragCancel: () {
+                  setState(() {
+                    _dragValue = null;
+                  });
+                },
+                child: Stack(
+                  children: [
+                    Positioned(
+                      left: trackStart,
+                      top: trackTop,
+                      child: Container(
+                        width: trackEnd - trackStart,
+                        height: MessageFontSizeSlider._trackHeight,
+                        decoration: BoxDecoration(
+                          color: inactiveColor,
+                          borderRadius: BorderRadius.circular(
+                            MessageFontSizeSlider._trackHeight,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                  Positioned.fill(
-                    child: CupertinoSlider(
-                      min: min,
-                      max: max,
-                      value: sliderValue,
-                      activeColor: activeColor,
-                      thumbColor: CupertinoColors.white,
-                      onChangeStart: (_) {
-                        setState(() {
-                          _dragValue = sliderValue;
-                        });
-                      },
-                      onChanged: (nextValue) {
-                        setState(() {
-                          _dragValue = nextValue;
-                        });
-                        widget.onChanged(nextValue);
-                      },
-                      onChangeEnd: (_) {
-                        setState(() {
-                          _dragValue = null;
-                        });
-                      },
+                    Positioned(
+                      left: trackStart,
+                      top: trackTop,
+                      child: Container(
+                        width: (thumbCenter - trackStart).clamp(
+                          0.0,
+                          trackEnd - trackStart,
+                        ),
+                        height: MessageFontSizeSlider._trackHeight,
+                        decoration: BoxDecoration(
+                          color: activeColor,
+                          borderRadius: BorderRadius.circular(
+                            MessageFontSizeSlider._trackHeight,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                  IgnorePointer(
-                    child: Stack(
-                      children: [
-                        if (leftMaskWidth > 0)
-                          Positioned(
-                            left: trackStart,
-                            top:
-                                (sliderHeight -
-                                        MessageFontSizeSlider._trackHeight) /
-                                    2,
-                            child: Container(
-                              width: leftMaskWidth,
-                              height: MessageFontSizeSlider._trackHeight,
-                              color: backgroundColor,
+                    ...List.generate(_stepCount, (index) {
+                      final markerValue = _valueForIndex(index);
+                      final isHighlighted = markerValue <= currentValue;
+                      final markerCenter = trackStart + markerStep * index;
+                      return Positioned(
+                        left: markerCenter -
+                            (MessageFontSizeSlider._markerWidth / 2),
+                        top:
+                            (sliderHeight - MessageFontSizeSlider._markerHeight) /
+                                2,
+                        child: Container(
+                          width: MessageFontSizeSlider._markerWidth,
+                          height: MessageFontSizeSlider._markerHeight,
+                          decoration: BoxDecoration(
+                            color: isHighlighted ? activeColor : inactiveColor,
+                            borderRadius: BorderRadius.circular(
+                              MessageFontSizeSlider._markerWidth,
                             ),
                           ),
-                        if (rightMaskWidth > 0)
-                          Positioned(
-                            left: rightMaskLeft,
-                            top:
-                                (sliderHeight -
-                                        MessageFontSizeSlider._trackHeight) /
-                                    2,
-                            child: Container(
-                              width: rightMaskWidth,
-                              height: MessageFontSizeSlider._trackHeight,
-                              color: backgroundColor,
-                            ),
-                          ),
-                      ],
+                        ),
+                      );
+                    }),
+                    Positioned(
+                      left: thumbCenter - MessageFontSizeSlider._thumbRadius,
+                      top: thumbTop,
+                      child: Container(
+                        width: MessageFontSizeSlider._thumbRadius * 2,
+                        height: MessageFontSizeSlider._thumbRadius * 2,
+                        decoration: const BoxDecoration(
+                          color: CupertinoColors.activeBlue,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               );
             },
           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:wetty_chat_flutter/shared/presentation/app_divider.dart';
 
 import '../../../app/theme/style_config.dart';
 import '../../../core/settings/app_settings_store.dart';
@@ -46,11 +47,9 @@ class FontSizeSettingsPage extends StatelessWidget {
                         },
                       ),
                       const SizedBox(height: 12),
-                      Container(
-                        height: 0.5,
-                        color: CupertinoColors.separator.resolveFrom(context),
-                      ),
+                      AppDivider(),
                       const SizedBox(height: 12),
+                      // show the example display
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
