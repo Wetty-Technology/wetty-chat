@@ -242,6 +242,13 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
     initialResumeRequest,
   );
   const [lastFullyVisibleMessageId, setLastFullyVisibleMessageId] = useState<string | null>(null);
+  const [firstVisibleMessageId, setFirstVisibleMessageId] = useState<string | null>(null);
+
+  const topVisibleMessageDate = useMemo(() => {
+    if (!firstVisibleMessageId) return null;
+    const msg = messages.find((m) => m.id === firstVisibleMessageId);
+    return msg?.createdAt ?? null;
+  }, [firstVisibleMessageId, messages]);
 
   const chatRows = useChatRows(messages, formatDateSeparator);
 
@@ -1509,6 +1516,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
         {!threadId && (
           <PinBanner
             chatId={chatId}
+            topVisibleMessageDate={topVisibleMessageDate}
             onClickPin={jumpToMessage}
             onClickThread={(messageId) => history.push(`/chats/chat/${chatId}/thread/${messageId}`)}
             onClickCounter={() => setPinListOpen(true)}
@@ -1526,6 +1534,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
             bottomPadding={16}
             onAtBottomChange={setAtBottom}
             onLastFullyVisibleMessageChange={setLastFullyVisibleMessageId}
+            onFirstVisibleMessageChange={setFirstVisibleMessageId}
           />
           <IonFab
             vertical="bottom"

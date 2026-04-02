@@ -180,6 +180,7 @@ export function ChatVirtualScroll({
   bottomPadding = 0,
   onAtBottomChange,
   onLastFullyVisibleMessageChange,
+  onFirstVisibleMessageChange,
 }: ChatVirtualScrollProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -192,6 +193,7 @@ export function ChatVirtualScroll({
   const layoutIntentRef = useRef<LayoutIntent | null>(null);
   const isAtBottomRef = useRef(true);
   const lastFullyVisibleMessageIdRef = useRef<string | null>(null);
+  const firstVisibleMessageIdRef = useRef<string | null>(null);
   const initialAnchorRef = useRef(initialAnchor);
   initialAnchorRef.current = initialAnchor;
 
@@ -440,12 +442,17 @@ export function ChatVirtualScroll({
         lastFullyVisibleMessageIdRef.current = null;
         onLastFullyVisibleMessageChange?.(null);
       }
+      if (firstVisibleMessageIdRef.current !== null) {
+        firstVisibleMessageIdRef.current = null;
+        onFirstVisibleMessageChange?.(null);
+      }
       return;
     }
 
     const containerRect = container.getBoundingClientRect();
     const mounted = mountedRef.current;
     let nextMessageId: string | null = null;
+    let firstMessageId: string | null = null;
 
     if (mounted) {
       for (let index = mounted.end; index >= mounted.start; index -= 1) {
@@ -459,17 +466,29 @@ export function ChatVirtualScroll({
         if (rowRect.height <= 0) continue;
 
         const fullyVisible = rowRect.top >= containerRect.top - 0.5 && rowRect.bottom <= containerRect.bottom + 0.5;
-        if (!fullyVisible) continue;
+        const partiallyVisible = rowRect.bottom > containerRect.top && rowRect.top < containerRect.bottom;
 
-        nextMessageId = row.messageId;
-        break;
+        if (partiallyVisible) {
+          // Since we scan from bottom to top, the last one we see is the first visible from the top
+          firstMessageId = row.messageId;
+        }
+
+        if (fullyVisible && nextMessageId === null) {
+          nextMessageId = row.messageId;
+        }
       }
     }
 
-    if (nextMessageId === lastFullyVisibleMessageIdRef.current) return;
-    lastFullyVisibleMessageIdRef.current = nextMessageId;
-    onLastFullyVisibleMessageChange?.(nextMessageId);
-  }, [onLastFullyVisibleMessageChange, rows]);
+    if (nextMessageId !== lastFullyVisibleMessageIdRef.current) {
+      lastFullyVisibleMessageIdRef.current = nextMessageId;
+      onLastFullyVisibleMessageChange?.(nextMessageId);
+    }
+
+    if (firstMessageId !== firstVisibleMessageIdRef.current) {
+      firstVisibleMessageIdRef.current = firstMessageId;
+      onFirstVisibleMessageChange?.(firstMessageId);
+    }
+  }, [onLastFullyVisibleMessageChange, onFirstVisibleMessageChange, rows]);
 
   const scrollToBottomInternal = useCallback((behavior: ScrollBehavior = 'auto') => {
     const container = containerRef.current;

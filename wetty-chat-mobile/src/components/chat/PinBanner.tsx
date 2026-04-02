@@ -1,10 +1,10 @@
 import { IonIcon, useIonAlert } from '@ionic/react';
 import { chatbubbles, close, listOutline, pin } from 'ionicons/icons';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { t } from '@lingui/core/macro';
 import type { RootState } from '@/store/index';
-import { selectLatestPin, selectPinsForChat } from '@/store/pinsSlice';
+import { selectPinsForChat } from '@/store/pinsSlice';
 import { selectEffectiveLocale } from '@/store/settingsSlice';
 import { deletePin } from '@/api/pins';
 import { formatMessagePreview, getNotificationPreviewLabels } from '@/utils/messagePreview';
@@ -12,22 +12,44 @@ import styles from './PinBanner.module.scss';
 
 interface PinBannerProps {
   chatId: string;
+  topVisibleMessageDate?: string | null;
   onClickPin: (messageId: string) => void;
   onClickThread: (messageId: string) => void;
   onClickCounter: () => void;
 }
 
-export function PinBanner({ chatId, onClickPin, onClickThread, onClickCounter }: PinBannerProps) {
+export function PinBanner({
+  chatId,
+  topVisibleMessageDate,
+  onClickPin,
+  onClickThread,
+  onClickCounter,
+}: PinBannerProps) {
   const [presentAlert] = useIonAlert();
-  const latestPin = useSelector((state: RootState) => selectLatestPin(state, chatId));
   const pins = useSelector((state: RootState) => selectPinsForChat(state, chatId));
   const locale = useSelector(selectEffectiveLocale);
+
+  const activePin = useMemo(() => {
+    if (pins.length === 0) return null;
+    if (!topVisibleMessageDate) return pins[0];
+
+    const visibleTime = new Date(topVisibleMessageDate).getTime();
+    // Assuming pins are already sorted descending by message.createdAt in Redux (newest at index 0)
+    for (const p of pins) {
+      // Find the most recent pin that is older than or equal to the current top visible message
+      if (new Date(p.message.createdAt).getTime() <= visibleTime) {
+        return p;
+      }
+    }
+    // If all pins are newer than our current viewport, maybe just show the oldest one
+    return pins[pins.length - 1];
+  }, [pins, topVisibleMessageDate]);
 
   const handleUnpin = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      if (!latestPin) return;
+      if (!activePin) return;
       presentAlert({
         header: t`Unpin Message`,
         message: t`Would you like to unpin this message?`,
@@ -37,23 +59,23 @@ export function PinBanner({ chatId, onClickPin, onClickThread, onClickCounter }:
             text: t`Unpin`,
             role: 'destructive',
             handler: () => {
-              deletePin(chatId, latestPin.id).catch(() => {});
+              deletePin(chatId, activePin.id).catch(() => {});
             },
           },
         ],
       });
     },
-    [chatId, latestPin, presentAlert],
+    [chatId, activePin, presentAlert],
   );
 
   const handleThreadClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      if (latestPin) {
-        onClickThread(latestPin.message.id);
+      if (activePin) {
+        onClickThread(activePin.message.id);
       }
     },
-    [latestPin, onClickThread],
+    [activePin, onClickThread],
   );
 
   const handleCounterClick = useCallback(
@@ -64,9 +86,9 @@ export function PinBanner({ chatId, onClickPin, onClickThread, onClickCounter }:
     [onClickCounter],
   );
 
-  if (!latestPin) return null;
+  if (!activePin) return null;
 
-  const msg = latestPin.message;
+  const msg = activePin.message;
   const previewText = formatMessagePreview(msg, getNotificationPreviewLabels(locale)) || t`Message`;
 
   return (

@@ -87,6 +87,7 @@ export interface ChatVirtualScrollProps {
   bottomPadding?: number;
   onAtBottomChange?: (atBottom: boolean) => void;
   onLastFullyVisibleMessageChange?: (messageId: string | null) => void;
+  onFirstVisibleMessageChange?: (messageId: string | null) => void;
 }
 
 // ── Constants ──

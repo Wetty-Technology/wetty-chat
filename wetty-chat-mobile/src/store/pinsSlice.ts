@@ -24,8 +24,11 @@ const pinsSlice = createSlice({
   initialState,
   reducers: {
     setPins(state, action: PayloadAction<{ chatId: string; pins: PinResponse[] }>) {
+      const sortedPins = [...action.payload.pins].sort(
+        (a, b) => new Date(b.message.createdAt).getTime() - new Date(a.message.createdAt).getTime(),
+      );
       state.byChatId[action.payload.chatId] = {
-        pins: action.payload.pins,
+        pins: sortedPins,
         loaded: true,
       };
     },
@@ -35,7 +38,8 @@ const pinsSlice = createSlice({
       if (entry) {
         // Avoid duplicates
         if (!entry.pins.some((p) => p.id === action.payload.id)) {
-          entry.pins.unshift(action.payload);
+          entry.pins.push(action.payload);
+          entry.pins.sort((a, b) => new Date(b.message.createdAt).getTime() - new Date(a.message.createdAt).getTime());
         }
       } else {
         state.byChatId[chatId] = { pins: [action.payload], loaded: true };
