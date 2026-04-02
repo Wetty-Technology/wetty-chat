@@ -19,6 +19,10 @@ class SettingsItemData {
     required this.iconColor,
     required this.onTap,
     this.trailingText,
+    this.trailingTextSize,
+    this.titleColor,
+    this.titleFontSize,
+    this.titleFontWeight,
     this.isDestructive = false,
   });
 
@@ -27,6 +31,10 @@ class SettingsItemData {
   final Color iconColor;
   final VoidCallback onTap;
   final String? trailingText;
+  final double? trailingTextSize;
+  final Color? titleColor;
+  final double? titleFontSize;
+  final FontWeight? titleFontWeight;
   final bool isDestructive;
 }
 
@@ -81,7 +89,7 @@ class SettingsActionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final labelColor = item.isDestructive
+    final defaultLabelColor = item.isDestructive
         ? CupertinoColors.destructiveRed.resolveFrom(context)
         : CupertinoColors.label.resolveFrom(context);
 
@@ -90,6 +98,7 @@ class SettingsActionRow extends StatelessWidget {
       onPressed: item.onTap,
       child: Row(
         children: [
+          // the entry icon
           Container(
             width: 30,
             height: 30,
@@ -100,22 +109,25 @@ class SettingsActionRow extends StatelessWidget {
             child: Icon(item.icon, size: 18, color: item.iconColor),
           ),
           const SizedBox(width: 10),
+          // the entry title
           Expanded(
             child: Text(
               item.title,
               style: appTextStyle(
                 context,
-                fontSize: AppFontSizes.bodySmall,
-                color: labelColor,
+                fontSize: item.titleFontSize ?? AppFontSizes.bodySmall,
+                color: item.titleColor ?? defaultLabelColor,
+                fontWeight: item.titleFontWeight,
               ),
             ),
           ),
+          // the trailing text
           if (item.trailingText != null) ...[
             Text(
               item.trailingText!,
               style: appSecondaryTextStyle(
                 context,
-                fontSize: AppFontSizes.meta,
+                fontSize: item.trailingTextSize ?? AppFontSizes.meta,
               ),
             ),
             const SizedBox(width: 8),

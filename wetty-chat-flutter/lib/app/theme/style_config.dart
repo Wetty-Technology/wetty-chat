@@ -4,7 +4,7 @@ class AppFontSizes {
   const AppFontSizes._();
 
   static const double appTitle = 17;
-  static const double sectionTitle = 18;
+  static const double sectionTitle = 17;
   static const double chatEntryTitle = 16;
   static const double body = 14;
   static const double bodySmall = 13;

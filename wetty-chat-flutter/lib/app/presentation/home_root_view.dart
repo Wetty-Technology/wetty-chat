@@ -1,5 +1,4 @@
 import 'package:flutter/cupertino.dart';
-import 'package:wetty_chat_flutter/shared/presentation/app_divider.dart';
 
 import '../../features/chats/chats.dart';
 import '../../features/settings/settings.dart';
@@ -15,8 +14,8 @@ class _HomeRootPageState extends State<HomeRootPage> {
   int _selectedIndex = 0;
 
   static const _tabs = [
-    _HomeTabData(icon: CupertinoIcons.chat_bubble_2, label: 'Chats'),
-    _HomeTabData(icon: CupertinoIcons.gear, label: 'Settings'),
+    _HomeTabData(icon: CupertinoIcons.chat_bubble_2_fill, label: 'Chats'),
+    _HomeTabData(icon: CupertinoIcons.gear_alt_fill, label: 'Settings'),
   ];
 
   late final List<Widget> _tabViews = const [
