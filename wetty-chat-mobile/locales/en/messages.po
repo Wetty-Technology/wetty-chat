@@ -128,16 +128,6 @@ msgstr "Are you sure you want to delete this message?"
 msgid "Are you sure you want to leave this group?"
 msgstr "Are you sure you want to leave this group?"
 
-#: src/pages/chat-thread/chat-thread.tsx
-msgid "Pin this message in the group?"
-msgstr "Pin this message in the group?"
-
-#: src/components/chat/PinBanner.tsx
-#: src/components/chat/PinListModal.tsx
-#: src/pages/chat-thread/chat-thread.tsx
-msgid "Would you like to unpin this message?"
-msgstr "Would you like to unpin this message?"
-
 #: src/pages/settings.tsx
 msgid "Ask first"
 msgstr "Ask first"
@@ -641,6 +631,11 @@ msgstr "Failed to upload avatar"
 msgid "Favorites"
 msgstr "Favorites"
 
+#: src/components/chat/compose/StickerPicker.tsx
+#: src/pages/settings/sticker-pack-detail.tsx
+msgid "File is too large. Maximum sticker size is 10 MB."
+msgstr "File is too large. Maximum sticker size is 10 MB."
+
 #: src/components/chat/settings/ChatMuteSettingItem.tsx
 msgid "Forever"
 msgstr "Forever"
@@ -1046,6 +1041,10 @@ msgstr "Pin"
 msgid "Pin Message"
 msgstr "Pin Message"
 
+#: src/pages/chat-thread/chat-thread.tsx
+msgid "Pin this message in the group?"
+msgstr "Pin this message in the group?"
+
 #: src/components/chat/PinBanner.tsx
 msgid "Pinned message"
 msgstr "Pinned message"
@@ -1396,10 +1395,9 @@ msgstr "Thread"
 #~ msgid "Thread conversations"
 #~ msgstr "Thread conversations"
 
-#. placeholder {0}: thread.chatName
 #: src/components/chat/ThreadListRow.tsx
-msgid "Thread in {0}"
-msgstr "Thread in {0}"
+#~ msgid "Thread in {0}"
+#~ msgstr "Thread in {0}"
 
 #: src/components/chat/ChatListSegment.tsx
 #: src/pages/threads.tsx
@@ -1534,6 +1532,12 @@ msgstr "Waiting for microphone…"
 #: src/components/invites/InvitePreviewCard.tsx
 msgid "We could not join this chat right now."
 msgstr "We could not join this chat right now."
+
+#: src/components/chat/PinBanner.tsx
+#: src/components/chat/PinListModal.tsx
+#: src/pages/chat-thread/chat-thread.tsx
+msgid "Would you like to unpin this message?"
+msgstr "Would you like to unpin this message?"
 
 #: src/pages/chat-thread/chat-thread.tsx
 msgid "Yesterday"

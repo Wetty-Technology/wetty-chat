@@ -104,16 +104,6 @@ msgstr "确定要撤回这条消息吗？"
 msgid "Are you sure you want to leave this group?"
 msgstr "确定要退出这个群组吗？"
 
-#: src/pages/chat-thread/chat-thread.tsx
-msgid "Pin this message in the group?"
-msgstr "确定要置顶此消息吗？"
-
-#: src/components/chat/PinBanner.tsx
-#: src/components/chat/PinListModal.tsx
-#: src/pages/chat-thread/chat-thread.tsx
-msgid "Would you like to unpin this message?"
-msgstr "确定要取消置顶此消息吗？"
-
 #: src/pages/settings.tsx
 msgid "Ask first"
 msgstr "先询问"
@@ -213,10 +203,6 @@ msgstr "选择一张新图片以替换当前头像。"
 #: src/components/chat/settings/ShareInviteModal.tsx
 msgid "Choose the member group first"
 msgstr "请先选择成员群组"
-
-#: src/components/chat/ChatList.tsx
-#~ msgid "Click to view new replies"
-#~ msgstr "点击查看新回复"
 
 #: src/components/chat/settings/ShareInviteModal.tsx
 #: src/pages/chat-thread/manage-invites.tsx
@@ -608,6 +594,11 @@ msgstr "上传头像失败"
 #: src/components/chat/compose/StickerPicker.tsx
 msgid "Favorites"
 msgstr "收藏"
+
+#: src/components/chat/compose/StickerPicker.tsx
+#: src/pages/settings/sticker-pack-detail.tsx
+msgid "File is too large. Maximum sticker size is 10 MB."
+msgstr "文件过大。贴纸文件大小上限为 10 MB。"
 
 #: src/components/chat/settings/ChatMuteSettingItem.tsx
 msgid "Forever"
@@ -1001,6 +992,10 @@ msgstr "置顶"
 msgid "Pin Message"
 msgstr "置顶消息"
 
+#: src/pages/chat-thread/chat-thread.tsx
+msgid "Pin this message in the group?"
+msgstr "确定要置顶此消息吗？"
+
 #: src/components/chat/PinBanner.tsx
 msgid "Pinned message"
 msgstr "已置顶的消息"
@@ -1343,11 +1338,6 @@ msgstr "这是你的消息在聊天中的显示效果。"
 msgid "Thread"
 msgstr "话题"
 
-#. placeholder {0}: thread.chatName
-#: src/components/chat/ThreadListRow.tsx
-msgid "Thread in {0}"
-msgstr "{0} 中的话题"
-
 #: src/components/chat/ChatListSegment.tsx
 #: src/pages/threads.tsx
 msgid "Threads"
@@ -1481,6 +1471,12 @@ msgstr "正在等待麦克风…"
 #: src/components/invites/InvitePreviewCard.tsx
 msgid "We could not join this chat right now."
 msgstr "我们现在无法让你加入此聊天。"
+
+#: src/components/chat/PinBanner.tsx
+#: src/components/chat/PinListModal.tsx
+#: src/pages/chat-thread/chat-thread.tsx
+msgid "Would you like to unpin this message?"
+msgstr "确定要取消置顶此消息吗？"
 
 #: src/pages/chat-thread/chat-thread.tsx
 msgid "Yesterday"
