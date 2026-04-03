@@ -28,9 +28,11 @@
   }
 }
 
-.unread {
+.unread:not(.active) {
   --background: rgba(var(--ion-color-primary-rgb), 0.04);
+}
 
+.unread {
   .participants {
     font-weight: 600;
   }

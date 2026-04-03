@@ -100,10 +100,11 @@ import { READ_REQUEST_COOLDOWN_MS } from '@/constants/chatTiming';
 import {
   markThreadAsRead as apiMarkThreadAsRead,
   getThreadSubscriptionStatus,
+  getThreads,
   subscribeToThread,
   unsubscribeFromThread,
 } from '@/api/threads';
-import { markThreadRead as markThreadReadAction, removeThread } from '@/store/threadsSlice';
+import { markThreadRead as markThreadReadAction, removeThread, setThreadsList } from '@/store/threadsSlice';
 import { listPins, createPin, deletePin } from '@/api/pins';
 import { setPins, selectPinsForChat, selectPinsLoaded } from '@/store/pinsSlice';
 import { PinBanner } from '@/components/chat/PinBanner';
@@ -275,6 +276,10 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
       } else {
         await subscribeToThread(chatId, threadId);
         setThreadSubscribed(true);
+        // Refresh threads list so the newly subscribed thread appears
+        getThreads({ limit: 20 })
+          .then((res) => dispatch(setThreadsList({ threads: res.data.threads, nextCursor: res.data.nextCursor })))
+          .catch(() => {});
       }
     } catch (err) {
       console.error('Failed to toggle thread subscription', err);
