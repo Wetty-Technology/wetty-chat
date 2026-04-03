@@ -82,6 +82,8 @@ class ChatDetailViewModel extends ChangeNotifier {
   int? get newestVisibleId => _newestVisibleId;
   int? get oldestVisibleId => _oldestVisibleId;
 
+  /// this function is invoked when the MessageStore is changed,
+  /// and the view model should update the display items
   void _onStoreChanged() {
     if (_isLoading ||
         _displayItems.isEmpty ||

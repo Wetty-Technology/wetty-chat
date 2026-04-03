@@ -24,16 +24,17 @@ class ChatRepository extends ChangeNotifier {
   String? get nextCursor => _nextCursor;
   bool get hasMore => _nextCursor != null && _nextCursor!.isNotEmpty;
 
-  /// Load the first page of chats.
-  Future<void> loadChats({int limit = 11}) async {
-    final res = await _service.fetchChats(limit: limit);
+  /// Load the first page of chats. 
+  /// (Need to reconsider if we need the chats limit.)
+  Future<void> loadChats({int limit = 20}) async {
+    final res = await _service.fetchChats();
     _chats = res.chats;
     _nextCursor = res.nextCursor;
     notifyListeners();
   }
 
   /// Load more chats (next page).
-  Future<void> loadMoreChats({int limit = 11}) async {
+  Future<void> loadMoreChats({int limit = 20}) async {
     if (!hasMore || _chats.isEmpty) return;
     final lastId = _chats.last.id;
     final res = await _service.fetchChats(limit: limit, after: lastId);

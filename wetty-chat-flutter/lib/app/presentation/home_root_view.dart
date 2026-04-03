@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 
+import '../theme/style_config.dart';
 import '../../features/chats/chats.dart';
 import '../../features/settings/settings.dart';
 
@@ -29,9 +30,10 @@ class _HomeRootPageState extends State<HomeRootPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: CupertinoColors.systemBackground.resolveFrom(context),
+        color: colors.backgroundPrimary,
       ),
       child: Column(
         children: [
@@ -69,15 +71,12 @@ class _BottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderColor = CupertinoColors.separator.resolveFrom(context);
-    final backgroundColor = CupertinoColors.systemBackground.resolveFrom(
-      context,
-    );
+    final colors = context.appColors;
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: backgroundColor,
-        border: Border(top: BorderSide(color: borderColor, width: 0.5)),
+        color: colors.backgroundSecondary,
+        border: Border(top: BorderSide(color: colors.separator, width: 0.5)),
       ),
       child: SafeArea(
         top: false,
@@ -114,8 +113,8 @@ class _BottomNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final activeColor = CupertinoColors.activeBlue.resolveFrom(context);
-    final inactiveColor = CupertinoColors.inactiveGray.resolveFrom(context);
+    final activeColor = context.appColors.accentPrimary;
+    final inactiveColor = context.appColors.inactive;
     final color = isSelected ? activeColor : inactiveColor;
 
     return GestureDetector(

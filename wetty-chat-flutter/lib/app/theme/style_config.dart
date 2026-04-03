@@ -22,14 +22,120 @@ class IconSizes {
   static const double iconSize = 22;
 }
 
+class AppColors {
+  const AppColors({
+    required this.backgroundPrimary,
+    required this.backgroundSecondary,
+    required this.surfaceCard,
+    required this.surfaceMuted,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.textOnAccent,
+    required this.separator,
+    required this.accentPrimary,
+    required this.inactive,
+    required this.chatSentBubble,
+    required this.chatReceivedBubble,
+    required this.chatSentMeta,
+    required this.chatReceivedMeta,
+    required this.chatLinkOnSent,
+    required this.chatLinkOnReceived,
+    required this.chatReplyActionBackground,
+    required this.chatAttachmentChipSent,
+    required this.chatAttachmentChipReceived,
+    required this.chatThreadChipSent,
+    required this.chatThreadChipReceived,
+    required this.avatarBackground,
+    required this.inputSurface,
+    required this.inputBorder,
+  });
+
+  final Color backgroundPrimary;
+  final Color backgroundSecondary;
+  final Color surfaceCard;
+  final Color surfaceMuted;
+  final Color textPrimary;
+  final Color textSecondary;
+  final Color textOnAccent;
+  final Color separator;
+  final Color accentPrimary;
+  final Color inactive;
+  final Color chatSentBubble;
+  final Color chatReceivedBubble;
+  final Color chatSentMeta;
+  final Color chatReceivedMeta;
+  final Color chatLinkOnSent;
+  final Color chatLinkOnReceived;
+  final Color chatReplyActionBackground;
+  final Color chatAttachmentChipSent;
+  final Color chatAttachmentChipReceived;
+  final Color chatThreadChipSent;
+  final Color chatThreadChipReceived;
+  final Color avatarBackground;
+  final Color inputSurface;
+  final Color inputBorder;
+
+  static const light = AppColors(
+    backgroundPrimary: Color(0xFFF7F5F2),
+    backgroundSecondary: Color(0xFFFFFFFF),
+    surfaceCard: Color(0xFFFFFFFF),
+    surfaceMuted: Color(0xFFF3F4F6),
+    textPrimary: CupertinoColors.black,
+    textSecondary: Color(0xFF6B7280),
+    textOnAccent: CupertinoColors.white,
+    separator: Color(0xFFDADDE3),
+    accentPrimary: Color(0xFF007AFF),
+    inactive: Color(0xFF8E8E93),
+    chatSentBubble: Color(0xFF007AFF),
+    chatReceivedBubble: Color(0xFFFFFFFF),
+    chatSentMeta: Color(0xD6FFFFFF),
+    chatReceivedMeta: Color(0xFF6B7280),
+    chatLinkOnSent: Color(0xFFD9EBFF),
+    chatLinkOnReceived: Color(0xFF007AFF),
+    chatReplyActionBackground: Color(0xFFE9EDF3),
+    chatAttachmentChipSent: Color(0xFFDCEBFF),
+    chatAttachmentChipReceived: Color(0xFFF1EAE3),
+    chatThreadChipSent: Color(0xFFDCEBFF),
+    chatThreadChipReceived: Color(0xFFF1EAE3),
+    avatarBackground: Color(0xFFD1D5DB),
+    inputSurface: Color(0xFFF3F4F6),
+    inputBorder: Color(0xFFD1D5DB),
+  );
+
+  static const dark = AppColors(
+    backgroundPrimary: Color(0xFF111214),
+    backgroundSecondary: Color(0xFF18191C),
+    surfaceCard: Color(0xFF1C1C1E),
+    surfaceMuted: Color(0xFF2C2C2E),
+    textPrimary: CupertinoColors.white,
+    textSecondary: Color(0xFFAEAEB2),
+    textOnAccent: CupertinoColors.white,
+    separator: Color(0xFF3A3A3C),
+    accentPrimary: Color(0xFF2B7FFF),
+    inactive: Color(0xFF8E8E93),
+    chatSentBubble: Color(0xFF2B7FFF),
+    chatReceivedBubble: Color(0xFF2C2C2E),
+    chatSentMeta: Color(0xBEFFFFFF),
+    chatReceivedMeta: Color(0xFFAEAEB2),
+    chatLinkOnSent: Color(0xFFD9EBFF),
+    chatLinkOnReceived: Color(0xFF66A8FF),
+    chatReplyActionBackground: Color(0xFF2C3440),
+    chatAttachmentChipSent: Color(0xFF1C4FA3),
+    chatAttachmentChipReceived: Color(0xFF35363A),
+    chatThreadChipSent: Color(0xFF1C4FA3),
+    chatThreadChipReceived: Color(0xFF35363A),
+    avatarBackground: Color(0xFF4B5563),
+    inputSurface: Color(0xFF222327),
+    inputBorder: Color(0xFF3A3A3C),
+  );
+}
+
 const appBaseTextStyle = TextStyle(
   color: CupertinoColors.label,
   fontWeight: FontWeight.w400,
 );
 
 const appCupertinoTheme = CupertinoThemeData(
-  // TODO: follow the system settings
-  brightness: Brightness.light,
   textTheme: CupertinoTextThemeData(
     textStyle: appBaseTextStyle,
     actionTextStyle: TextStyle(
@@ -55,6 +161,14 @@ const appCupertinoTheme = CupertinoThemeData(
   ),
 );
 
+extension AppThemeContext on BuildContext {
+  Brightness get appBrightness => MediaQuery.platformBrightnessOf(this);
+
+  bool get isDarkMode => appBrightness == Brightness.dark;
+
+  AppColors get appColors => isDarkMode ? AppColors.dark : AppColors.light;
+}
+
 TextStyle appTextStyle(
   BuildContext context, {
   Color? color,
@@ -66,7 +180,7 @@ TextStyle appTextStyle(
   Color? decorationColor,
 }) {
   return CupertinoTheme.of(context).textTheme.textStyle.copyWith(
-    color: color ?? CupertinoColors.label.resolveFrom(context),
+    color: color ?? context.appColors.textPrimary,
     fontSize: fontSize ?? AppFontSizes.body,
     fontWeight: fontWeight,
     height: height,
@@ -85,7 +199,7 @@ TextStyle appSecondaryTextStyle(
 }) {
   return appTextStyle(
     context,
-    color: CupertinoColors.secondaryLabel.resolveFrom(context),
+    color: context.appColors.textSecondary,
     fontSize: fontSize,
     fontWeight: fontWeight,
     height: height,
@@ -133,7 +247,7 @@ TextStyle appBubbleMetaTextStyle(
 }) {
   return appBubbleTextStyle(
     context,
-    color: color ?? CupertinoColors.secondaryLabel.resolveFrom(context),
+    color: color ?? context.appColors.textSecondary,
     fontSize: fontSize,
     fontWeight: fontWeight,
   );
