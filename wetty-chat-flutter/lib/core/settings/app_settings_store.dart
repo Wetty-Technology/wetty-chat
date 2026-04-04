@@ -1,21 +1,47 @@
+import 'dart:ui';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../l10n/app_localizations.dart';
 
 enum AppLanguage {
   system('system'),
   english('english'),
-  chinese('chinese');
+  chineseCN('chinese_cn'),
+  chineseTW('chinese_tw');
 
   const AppLanguage(this.storageValue);
 
   final String storageValue;
 
   static AppLanguage fromStorage(String? value) {
+    // Migrate old 'chinese' value to 'chinese_cn'
+    if (value == 'chinese') return AppLanguage.chineseCN;
     return AppLanguage.values.firstWhere(
       (language) => language.storageValue == value,
       orElse: () => AppLanguage.system,
     );
   }
+
+  /// Returns the locale for this language setting, or null for system default.
+  Locale? toLocale() {
+    return switch (this) {
+      AppLanguage.system => null,
+      AppLanguage.english => const Locale('en'),
+      AppLanguage.chineseCN => const Locale('zh', 'CN'),
+      AppLanguage.chineseTW => const Locale('zh', 'TW'),
+    };
+  }
+}
+
+extension AppLanguageDisplayName on AppLanguage {
+  String displayName(AppLocalizations l10n) => switch (this) {
+    AppLanguage.system => l10n.languageSystem,
+    AppLanguage.english => l10n.languageEnglish,
+    AppLanguage.chineseCN => l10n.languageChineseCN,
+    AppLanguage.chineseTW => l10n.languageChineseTW,
+  };
 }
 
 class AppSettingsStore extends ChangeNotifier {
