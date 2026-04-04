@@ -68,6 +68,7 @@ pub(crate) struct AppState {
     ws_registry: Arc<services::ws_registry::ConnectionRegistry>,
     push_service: Arc<services::push::PushService>,
     client_tracking: Arc<services::client_tracking::ClientTrackingService>,
+    background_service: Arc<services::background::BackgroundService>,
     s3_client: aws_sdk_s3::Client,
     s3_bucket_name: String,
     s3_attachment_prefix: String,
@@ -171,6 +172,11 @@ async fn main() {
         ),
         client_tracking: services::client_tracking::ClientTrackingService::start(
             pool.clone(),
+            metrics.clone(),
+        ),
+        background_service: services::background::BackgroundService::start(
+            pool.clone(),
+            ws_registry.clone(),
             metrics.clone(),
         ),
         s3_client,

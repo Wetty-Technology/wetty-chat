@@ -16,7 +16,8 @@ import chatsReducer, {
 } from './chatsSlice';
 import pinsReducer from './pinsSlice';
 import userReducer from './userSlice';
-import { messageAdded, messageConfirmed, messagePatched } from './messageEvents';
+import type { MessageResponse } from '@/api/messages';
+import { messageAdded, messageConfirmed, messagePatched, messagesBulkDeleted } from './messageEvents';
 import { findLatestEligibleRootMessage, isOptimisticMessageId } from './messageProjection';
 
 const listenerMiddleware = createListenerMiddleware();
@@ -177,6 +178,35 @@ listenerMiddleware.startListening({
             }),
           );
         }
+      }
+    }
+  },
+});
+
+listenerMiddleware.startListening({
+  actionCreator: messagesBulkDeleted,
+  effect: async (action, api) => {
+    const state = api.getState() as RootState;
+    const { chatId, messageIds } = action.payload;
+    const idSet = new Set(messageIds);
+
+    // Update chat list preview — find the new latest eligible message
+    const fallbackMessage = findLatestEligibleRootMessage(state.messages.chats[chatId]?.windows);
+    if (fallbackMessage) {
+      api.dispatch(
+        projectChatMessagePatched({
+          chatId,
+          messageId: messageIds[0],
+          message: { isDeleted: true } as MessageResponse,
+          fallbackMessage,
+        }),
+      );
+    }
+
+    // Remove threads whose root was deleted
+    for (const thread of state.threads.items) {
+      if (idSet.has(thread.threadRootMessage.id)) {
+        api.dispatch(removeThread({ threadRootId: thread.threadRootMessage.id }));
       }
     }
   },

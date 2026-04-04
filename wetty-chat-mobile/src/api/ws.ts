@@ -8,7 +8,13 @@ import { addPin, removePin } from '@/store/pinsSlice';
 import type { PinResponse } from '@/api/pins';
 import { getThreads } from '@/api/threads';
 import store from '@/store/index';
-import { messageAdded, messageConfirmed, messagePatched, reactionsUpdated } from '@/store/messageEvents';
+import {
+  messageAdded,
+  messageConfirmed,
+  messagePatched,
+  messagesBulkDeleted,
+  reactionsUpdated,
+} from '@/store/messageEvents';
 import { getStoredJwtToken } from '@/utils/jwtToken';
 import { formatNotificationBody, getNotificationPreviewLabels } from '@/utils/messagePreview';
 import { buildNotificationNavigationData } from '@/utils/notificationNavigation';
@@ -334,6 +340,19 @@ async function connectWebSocket(): Promise<void> {
               message: payload,
             }),
           );
+          return;
+        }
+
+        if (message.type === 'messagesBulkDeleted' && message.payload != null) {
+          const payload = message.payload as { chatId: string; messageIds: string[] };
+          if (payload.chatId && payload.messageIds?.length) {
+            store.dispatch(
+              messagesBulkDeleted({
+                chatId: payload.chatId,
+                messageIds: payload.messageIds,
+              }),
+            );
+          }
           return;
         }
 

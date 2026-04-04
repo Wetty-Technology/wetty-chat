@@ -33,7 +33,13 @@ export interface ReactionsUpdatedPayload {
   reactions: ReactionSummary[];
 }
 
+export interface MessagesBulkDeletedPayload {
+  chatId: string;
+  messageIds: string[];
+}
+
 export const messageAdded = createAction<MessageAddedPayload>('messages/messageAdded');
 export const messageConfirmed = createAction<MessageConfirmedPayload>('messages/messageConfirmed');
 export const messagePatched = createAction<MessagePatchedPayload>('messages/messagePatched');
+export const messagesBulkDeleted = createAction<MessagesBulkDeletedPayload>('messages/messagesBulkDeleted');
 export const reactionsUpdated = createAction<ReactionsUpdatedPayload>('messages/reactionsUpdated');

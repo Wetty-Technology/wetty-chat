@@ -460,7 +460,7 @@ fn truncate_preview(preview: &str) -> String {
     }
 }
 
-fn panic_payload_message(payload: &(dyn std::any::Any + Send)) -> String {
+pub(crate) fn panic_payload_message(payload: &(dyn std::any::Any + Send)) -> String {
     if let Some(message) = payload.downcast_ref::<&'static str>() {
         (*message).to_string()
     } else if let Some(message) = payload.downcast_ref::<String>() {

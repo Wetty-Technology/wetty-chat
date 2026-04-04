@@ -1,3 +1,4 @@
+pub mod background;
 pub mod chat;
 pub mod client_tracking;
 pub mod image_processing;

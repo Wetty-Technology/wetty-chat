@@ -281,15 +281,27 @@ export default function ChatMembersCore({ chatId: propChatId, backAction }: Chat
     presentAlert({
       header: t`Remove Member`,
       message: t`Remove ${displayName} from this group?`,
+      inputs: [
+        { type: 'radio', label: t`Keep messages`, value: 'none', checked: true },
+        { type: 'radio', label: t`Delete messages from last 24 hours`, value: 'last24h' },
+        { type: 'radio', label: t`Delete all messages`, value: 'all' },
+      ],
       buttons: [
         { text: t`Cancel`, role: 'cancel' },
         {
           text: t`Remove`,
           role: 'destructive',
-          handler: () => {
-            removeMember(chatId, member.uid)
+          handler: (value: string) => {
+            const deleteMessages = value !== 'none' ? value : undefined;
+            removeMember(chatId, member.uid, deleteMessages)
               .then(() => {
-                showToast(t`Member removed`, 2000);
+                const msg =
+                  deleteMessages === 'all'
+                    ? t`Member removed, deleting all messages...`
+                    : deleteMessages === 'last24h'
+                      ? t`Member removed, deleting recent messages...`
+                      : t`Member removed`;
+                showToast(msg, 2000);
                 resetAndReloadMembers();
               })
               .catch((err: Error) => {

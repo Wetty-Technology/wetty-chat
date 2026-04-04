@@ -71,6 +71,8 @@ pub(crate) struct Metrics {
     app_version_requests_total: IntCounterVec,
     app_version_unique_clients: IntGaugeVec,
     app_version_clients: DashMap<String, DashSet<String>>,
+    background_jobs_total: IntCounterVec,
+    background_job_duration_seconds: HistogramVec,
 }
 
 impl Metrics {
@@ -288,6 +290,29 @@ impl Metrics {
         )
         .expect("app_version_unique_clients metric should be valid");
 
+        let background_jobs_total = IntCounterVec::new(
+            opts!(
+                "background_jobs_total",
+                "Total number of background jobs processed"
+            ),
+            &["job_kind", "result"],
+        )
+        .expect("background_jobs_total metric should be valid");
+        let background_job_duration_seconds = HistogramVec::new(
+            histogram_opts!(
+                "background_job_duration_seconds",
+                "Background job runtime in seconds",
+                vec![0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0]
+            ),
+            &["job_kind", "result"],
+        )
+        .expect("background_job_duration_seconds metric should be valid");
+        // Pre-initialize label combinations so metrics appear in output before first use.
+        background_jobs_total.with_label_values(&["bulk_delete_messages", "success"]);
+        background_jobs_total.with_label_values(&["bulk_delete_messages", "failure"]);
+        background_job_duration_seconds.with_label_values(&["bulk_delete_messages", "success"]);
+        background_job_duration_seconds.with_label_values(&["bulk_delete_messages", "failure"]);
+
         registry
             .register(Box::new(http_requests_total.clone()))
             .expect("http_requests_total registration should succeed");
@@ -384,6 +409,12 @@ impl Metrics {
         registry
             .register(Box::new(app_version_unique_clients.clone()))
             .expect("app_version_unique_clients registration should succeed");
+        registry
+            .register(Box::new(background_jobs_total.clone()))
+            .expect("background_jobs_total registration should succeed");
+        registry
+            .register(Box::new(background_job_duration_seconds.clone()))
+            .expect("background_job_duration_seconds registration should succeed");
 
         Self {
             registry,
@@ -420,6 +451,8 @@ impl Metrics {
             app_version_requests_total,
             app_version_unique_clients,
             app_version_clients: DashMap::new(),
+            background_jobs_total,
+            background_job_duration_seconds,
         }
     }
 
@@ -478,6 +511,20 @@ impl Metrics {
             .inc();
         self.push_notification_job_duration_seconds
             .with_label_values(&[result])
+            .observe(duration_seconds);
+    }
+
+    pub(crate) fn record_background_job(
+        &self,
+        job_kind: &str,
+        result: &str,
+        duration_seconds: f64,
+    ) {
+        self.background_jobs_total
+            .with_label_values(&[job_kind, result])
+            .inc();
+        self.background_job_duration_seconds
+            .with_label_values(&[job_kind, result])
             .observe(duration_seconds);
     }
 
@@ -747,6 +794,8 @@ mod tests {
         assert!(body.contains("activity_today_legacy_subscriptions_purged"));
         assert!(body.contains("app_version_requests_total"));
         assert!(body.contains("app_version_unique_clients"));
+        assert!(body.contains("background_jobs_total"));
+        assert!(body.contains("background_job_duration_seconds"));
     }
 
     #[tokio::test]

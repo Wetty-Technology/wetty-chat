@@ -126,8 +126,14 @@ export function addMember(chatId: string | number, body: AddMemberBody): Promise
   return apiClient.post(`/group/${chatId}/members`, body);
 }
 
-export function removeMember(chatId: string | number, uid: number): Promise<AxiosResponse<void>> {
-  return apiClient.delete(`/group/${chatId}/members/${uid}`);
+export function removeMember(
+  chatId: string | number,
+  uid: number,
+  deleteMessages?: string,
+): Promise<AxiosResponse<void>> {
+  return apiClient.delete(`/group/${chatId}/members/${uid}`, {
+    params: deleteMessages ? { deleteMessages } : undefined,
+  });
 }
 
 export function leaveGroup(chatId: string | number, uid: number): Promise<AxiosResponse<void>> {

@@ -1,6 +1,6 @@
 import { createSelector, createSlice } from '@reduxjs/toolkit';
 import type { MessageResponse } from '@/api/messages';
-import { messageAdded, messageConfirmed, messagePatched, reactionsUpdated } from './messageEvents';
+import { messageAdded, messageConfirmed, messagePatched, messagesBulkDeleted, reactionsUpdated } from './messageEvents';
 import { compareMessageOrder } from './messageProjection';
 
 const MAX_WINDOWS = 5;
@@ -363,6 +363,29 @@ const messagesSlice = createSlice({
       })
       .addCase(messagePatched, (state, action) => {
         patchMessageInWindows(state, action.payload.chatId, action.payload.messageId, action.payload.message);
+      })
+      .addCase(messagesBulkDeleted, (state, action) => {
+        const { chatId, messageIds } = action.payload;
+        const idSet = new Set(messageIds);
+
+        for (const [storeKey, chat] of Object.entries(state.chats)) {
+          if (storeKey !== chatId && !storeKey.startsWith(`${chatId}_thread_`)) continue;
+
+          for (const win of chat.windows) {
+            win.messages = win.messages.filter((m) => !idSet.has(m.id));
+
+            // Mark replyToMessage references as deleted
+            for (const msg of win.messages) {
+              if (msg.replyToMessage && idSet.has(msg.replyToMessage.id)) {
+                msg.replyToMessage.isDeleted = true;
+                msg.replyToMessage.message = null;
+                msg.replyToMessage.attachments = [];
+              }
+            }
+          }
+
+          chat.generation += 1;
+        }
       })
       .addCase(reactionsUpdated, (state, action) => {
         const { chatId, messageId, reactions } = action.payload;

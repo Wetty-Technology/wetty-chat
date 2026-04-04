@@ -4,7 +4,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use diesel::prelude::*;
 use diesel::PgConnection;
 use serde::Serialize;
@@ -729,33 +729,7 @@ async fn delete_message(
             .first::<Option<i64>>(conn)?;
 
         if group_last_msg == Some(message_id) {
-            let prev_message: Option<(i64, DateTime<Utc>)> = messages::table
-                .filter(dsl::chat_id.eq(chat_id))
-                .filter(dsl::deleted_at.is_null())
-                .filter(dsl::reply_root_id.is_null())
-                .order(dsl::id.desc())
-                .select((dsl::id, dsl::created_at))
-                .first(conn)
-                .optional()?;
-
-            match prev_message {
-                Some((prev_id, prev_at)) => {
-                    diesel::update(groups::table.filter(g_dsl::id.eq(chat_id)))
-                        .set((
-                            g_dsl::last_message_id.eq(Some(prev_id)),
-                            g_dsl::last_message_at.eq(Some(prev_at)),
-                        ))
-                        .execute(conn)?;
-                }
-                None => {
-                    diesel::update(groups::table.filter(g_dsl::id.eq(chat_id)))
-                        .set((
-                            g_dsl::last_message_id.eq(None::<i64>),
-                            g_dsl::last_message_at.eq(None::<DateTime<Utc>>),
-                        ))
-                        .execute(conn)?;
-                }
-            }
+            super::recalculate_group_last_message(conn, chat_id)?;
         }
     }
 

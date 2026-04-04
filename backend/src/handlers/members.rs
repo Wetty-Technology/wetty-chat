@@ -304,6 +304,14 @@ async fn post_add_member(
     ))
 }
 
+/// Query parameters for the remove-member endpoint.
+#[derive(serde::Deserialize, utoipa::IntoParams)]
+#[serde(rename_all = "camelCase")]
+struct RemoveMemberQuery {
+    /// Optional: "last24h" to delete messages from last 24 hours, "all" to delete all messages.
+    delete_messages: Option<String>,
+}
+
 /// DELETE /group/:chat_id/members/:uid — Remove a member from the chat (caller must be admin).
 #[utoipa::path(
     delete,
@@ -312,6 +320,7 @@ async fn post_add_member(
     params(
         ("chat_id" = i64, Path, description = "Chat ID"),
         ("uid" = i32, Path, description = "User ID of the member"),
+        RemoveMemberQuery,
     ),
     responses(
         (status = NO_CONTENT),
@@ -324,12 +333,15 @@ async fn delete_remove_member(
         chat_id,
         uid: target_uid,
     }): Path<MemberPath>,
+    Query(query): Query<RemoveMemberQuery>,
+    State(state): State<AppState>,
     mut conn: DbConn,
 ) -> Result<StatusCode, AppError> {
     let conn = &mut *conn;
 
     // Allow if requester is admin OR removing themselves
-    if uid != target_uid {
+    let is_admin_removing_other = uid != target_uid;
+    if is_admin_removing_other {
         require_admin_role(conn, chat_id, uid)?;
     } else {
         check_membership(conn, chat_id, uid)?;
@@ -350,6 +362,27 @@ async fn delete_remove_member(
         group_membership::table.filter(gm_dsl::chat_id.eq(chat_id).and(gm_dsl::uid.eq(target_uid))),
     )
     .execute(conn)?;
+
+    // Enqueue bulk message deletion if requested (only when admin removes someone else)
+    if is_admin_removing_other {
+        if let Some(ref scope_str) = query.delete_messages {
+            use crate::services::background::{BackgroundJob, DeleteScope};
+            let scope = match scope_str.as_str() {
+                "last24h" => Some(DeleteScope::Last24Hours),
+                "all" => Some(DeleteScope::All),
+                _ => None,
+            };
+            if let Some(scope) = scope {
+                state
+                    .background_service
+                    .enqueue(BackgroundJob::BulkDeleteMessages {
+                        chat_id,
+                        target_uid,
+                        scope,
+                    });
+            }
+        }
+    }
 
     Ok(StatusCode::NO_CONTENT)
 }

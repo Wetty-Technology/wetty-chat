@@ -4,11 +4,19 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct BulkDeletedPayload {
+    pub chat_id: String,
+    pub message_ids: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 #[serde(tag = "type", content = "payload", rename_all = "camelCase")]
 pub enum ServerWsMessage {
     Message(MessageResponse),
     MessageUpdated(MessageResponse),
     MessageDeleted(MessageResponse),
+    MessagesBulkDeleted(BulkDeletedPayload),
     ReactionUpdated(ReactionUpdatePayload),
     PresenceUpdate(PresenceUpdatePayload),
     ThreadUpdate(ThreadUpdatePayload),
@@ -22,6 +30,7 @@ impl ServerWsMessage {
             Self::Message(_) => "message",
             Self::MessageUpdated(_) => "messageUpdated",
             Self::MessageDeleted(_) => "messageDeleted",
+            Self::MessagesBulkDeleted(_) => "messagesBulkDeleted",
             Self::ReactionUpdated(_) => "reactionUpdated",
             Self::PresenceUpdate(_) => "presenceUpdate",
             Self::ThreadUpdate(_) => "threadUpdate",
