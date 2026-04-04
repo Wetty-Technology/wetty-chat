@@ -282,6 +282,9 @@ msgstr "建立新表情包"
 msgid "Owned"
 msgstr "我的"
 
+msgid "Auto-sort packs by recent use"
+msgstr "根據最近使用自動排序"
+
 #: src/components/chat/compose/StickerPicker.tsx
 msgid "Create new sticker pack"
 msgstr "建立新的表情包"

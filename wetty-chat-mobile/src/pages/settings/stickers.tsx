@@ -10,6 +10,7 @@ import {
   IonList,
   IonPage,
   IonTitle,
+  IonToggle,
   IonToolbar,
   useIonAlert,
   useIonToast,
@@ -43,6 +44,13 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
   const [presentToast] = useIonToast();
   const [ownedPacks, setOwnedPacks] = useState<StickerPackSummary[]>([]);
   const [allPacks, setAllPacks] = useState<StickerPackSummary[]>([]);
+  const [autoSort, setAutoSort] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('autoSortStickerPacks') === 'true';
+    } catch {
+      return false;
+    }
+  });
   const [packOrder, setPackOrder] = useState<string[]>(() => {
     try {
       return JSON.parse(localStorage.getItem('stickerPackOrder') || '[]');
@@ -150,6 +158,27 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
         </IonToolbar>
       </IonHeader>
       <IonContent color="light" className="ion-no-padding">
+        <IonList inset>
+          <IonItem lines="none">
+            <IonLabel>
+              <Trans>Auto-sort packs by recent use</Trans>
+            </IonLabel>
+            <IonToggle
+              slot="end"
+              checked={autoSort}
+              onIonChange={(e) => {
+                const val = e.detail.checked;
+                setAutoSort(val);
+                try {
+                  localStorage.setItem('autoSortStickerPacks', val ? 'true' : 'false');
+                } catch {
+                  // ignore
+                }
+              }}
+            />
+          </IonItem>
+        </IonList>
+
         <IonList inset>
           <IonItem button detail={false} onClick={handleCreatePack}>
             <IonIcon aria-hidden="true" icon={addOutline} slot="start" color="primary" />

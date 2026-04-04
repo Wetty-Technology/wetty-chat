@@ -190,9 +190,6 @@ msgstr "Blocked"
 msgid "Cancel"
 msgstr "Cancel"
 
-msgid "Owned"
-msgstr "Owned"
-
 #: src/components/chat/compose/ComposeContextBanner.tsx
 msgid "Cancel edit"
 msgstr "Cancel edit"
@@ -317,6 +314,12 @@ msgstr "Create Invite"
 #: src/pages/settings/stickers.tsx
 msgid "Create New Pack"
 msgstr "Create New Pack"
+
+msgid "Owned"
+msgstr "Owned"
+
+msgid "Auto-sort packs by recent use"
+msgstr "Auto-sort packs by recent use"
 
 #: src/components/chat/compose/StickerPicker.tsx
 msgid "Create new sticker pack"

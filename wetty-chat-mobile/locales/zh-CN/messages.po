@@ -282,6 +282,9 @@ msgstr "创建新表情包"
 msgid "Owned"
 msgstr "我的"
 
+msgid "Auto-sort packs by recent use"
+msgstr "根据最近使用自动排序"
+
 #: src/components/chat/compose/StickerPicker.tsx
 msgid "Create new sticker pack"
 msgstr "创建新的表情包"
@@ -1500,3 +1503,4 @@ msgstr "你已经是此聊天的成员。"
 #: src/components/invites/InvitePreviewCard.tsx
 msgid "You’ve been invited"
 msgstr "你已收到邀请"
+

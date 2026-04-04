@@ -166,6 +166,30 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
 
   const activePack = packs.find((pack) => pack.id === selectedPackId) ?? packs[0];
 
+  const handleStickerSelect = useCallback(
+    (sticker: StickerSummary) => {
+      try {
+        const autoSort = localStorage.getItem('autoSortStickerPacks') === 'true';
+        if (autoSort && activePack && activePack.id !== 'favorites') {
+          const prevOrderStr = localStorage.getItem('stickerPackOrder') || '[]';
+          let newOrder = JSON.parse(prevOrderStr);
+          if (Array.isArray(newOrder)) {
+            if (newOrder[0] !== activePack.id) {
+              newOrder = newOrder.filter((id) => id !== activePack.id);
+              newOrder.unshift(activePack.id);
+              localStorage.setItem('stickerPackOrder', JSON.stringify(newOrder));
+              window.dispatchEvent(new Event('stickerPackOrderChanged'));
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to auto-sort sticker pack order window event:', err);
+      }
+      onStickerSelect(sticker);
+    },
+    [activePack, onStickerSelect],
+  );
+
   const { addStickerFile, setAddStickerFile, fileInputRef, handleFileChange, handleAddSticker } = useAddSticker({
     packId: activePack.owned && activePack.id !== 'favorites' ? activePack.id : undefined,
     onSuccess: (newSticker) => {
@@ -290,7 +314,7 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
           <StickerButton
             key={sticker.id}
             sticker={sticker}
-            onSelect={onStickerSelect}
+            onSelect={handleStickerSelect}
             onLongPress={handleStickerLongPress}
           />
         ))}
