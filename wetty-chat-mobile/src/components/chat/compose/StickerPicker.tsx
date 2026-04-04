@@ -18,9 +18,8 @@ import {
   type StickerSummary,
   favoriteSticker,
   unfavoriteSticker,
-  uploadStickerToPack,
-  MAX_STICKER_FILE_BYTES,
 } from '@/api/stickers';
+import { useAddSticker } from '@/hooks/useAddSticker';
 
 interface StickerPickerProps {
   isOpen: boolean;
@@ -43,21 +42,12 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
   const [favoriteStickers, setFavoriteStickers] = useState<StickerSummary[]>([]);
   const [packDetails, setPackDetails] = useState<Record<string, StickerPackDetailResponse>>({});
   const [selectedPackId, setSelectedPackId] = useState('favorites');
-  const [addStickerFile, setAddStickerFile] = useState<File | null>(null);
   const [isLibraryLoading, setIsLibraryLoading] = useState(false);
   const hasLoaded = useRef(false);
   const [loadingPackIds, setLoadingPackIds] = useState<Record<string, boolean>>({});
   const [popover, setPopover] = useState<{ sticker: StickerSummary; rect: DOMRect } | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [presentAlert] = useIonAlert();
   const [presentToast] = useIonToast();
-
-  useEffect(() => {
-    overlayActiveRef.current = popover !== null || addStickerFile !== null;
-    return () => {
-      overlayActiveRef.current = false;
-    };
-  }, [popover, addStickerFile, overlayActiveRef]);
 
   const loadPackDetail = useCallback(async (packId: string) => {
     setLoadingPackIds((prev) => ({ ...prev, [packId]: true }));
@@ -139,9 +129,38 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
     void loadPackDetail(selectedPackId);
   }, [isOpen, loadPackDetail, loadingPackIds, packDetails, selectedPackId]);
 
-  if (!isOpen) return null;
-
   const activePack = packs.find((pack) => pack.id === selectedPackId) ?? packs[0];
+
+  const { addStickerFile, setAddStickerFile, fileInputRef, handleFileChange, handleAddSticker } = useAddSticker({
+    packId: activePack.owned && activePack.id !== 'favorites' ? activePack.id : undefined,
+    onSuccess: (newSticker) => {
+      if (!activePack.owned || activePack.id === 'favorites') return;
+      setPackDetails((prev) => {
+        const detail = prev[activePack.id];
+        if (!detail) return prev;
+        return {
+          ...prev,
+          [activePack.id]: {
+            ...detail,
+            stickerCount: detail.stickerCount + 1,
+            stickers: [...detail.stickers, newSticker],
+          },
+        };
+      });
+      setOwnedPacks((prev) =>
+        prev.map((pack) => (pack.id === activePack.id ? { ...pack, stickerCount: pack.stickerCount + 1 } : pack)),
+      );
+    },
+  });
+
+  useEffect(() => {
+    overlayActiveRef.current = popover !== null || addStickerFile !== null;
+    return () => {
+      overlayActiveRef.current = false;
+    };
+  }, [popover, addStickerFile, overlayActiveRef]);
+
+  if (!isOpen) return null;
 
   const handleCreatePack = () => {
     presentAlert({
@@ -170,49 +189,6 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
         },
       ],
     });
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null;
-    e.target.value = '';
-    if (!file) return;
-    if (file.size > MAX_STICKER_FILE_BYTES) {
-      presentToast({
-        message: t`File is too large. Maximum sticker size is 10 MB.`,
-        duration: 3000,
-        position: 'bottom',
-      });
-      return;
-    }
-    setAddStickerFile(file);
-  };
-
-  const handleAddSticker = async (file: File, emoji: string, name: string) => {
-    if (!activePack || !activePack.owned || activePack.id === 'favorites') return;
-
-    try {
-      const res = await uploadStickerToPack(activePack.id, { file, emoji, name });
-      setPackDetails((prev) => {
-        const detail = prev[activePack.id];
-        if (!detail) return prev;
-        return {
-          ...prev,
-          [activePack.id]: {
-            ...detail,
-            stickerCount: detail.stickerCount + 1,
-            stickers: [...detail.stickers, res.data],
-          },
-        };
-      });
-      setOwnedPacks((prev) =>
-        prev.map((pack) => (pack.id === activePack.id ? { ...pack, stickerCount: pack.stickerCount + 1 } : pack)),
-      );
-      setAddStickerFile(null);
-      presentToast({ message: t`Sticker added`, duration: 1500, position: 'bottom' });
-    } catch (error) {
-      console.error('Failed to add sticker', error);
-      presentToast({ message: t`Failed to add sticker`, duration: 2000, position: 'bottom' });
-    }
   };
 
   const handleStickerLongPress = (sticker: StickerSummary, rect: DOMRect) => {

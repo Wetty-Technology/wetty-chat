@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   IonBackButton,
   IonButton,
@@ -21,6 +21,7 @@ import { useHistory } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { BackButton } from '@/components/BackButton';
 import { AddStickerModal } from '@/components/chat/compose/AddStickerModal';
+import { useAddSticker } from '@/hooks/useAddSticker';
 import {
   deleteStickerPack,
   getStickerPack,
@@ -28,8 +29,6 @@ import {
   type StickerPackDetailResponse,
   type StickerSummary,
   unsubscribeStickerPack,
-  uploadStickerToPack,
-  MAX_STICKER_FILE_BYTES,
 } from '@/api/stickers';
 import type { RootState } from '@/store';
 import type { BackAction } from '@/types/back-action';
@@ -44,10 +43,23 @@ export function StickerPackDetailCore({ packId, backAction }: StickerPackDetailC
   const history = useHistory();
   const currentUserId = useSelector((state: RootState) => state.user.uid);
   const [pack, setPack] = useState<StickerPackDetailResponse | null>(null);
-  const [addStickerFile, setAddStickerFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [presentAlert] = useIonAlert();
   const [presentToast] = useIonToast();
+
+  const { addStickerFile, setAddStickerFile, fileInputRef, handleFileChange, handleAddSticker } = useAddSticker({
+    packId,
+    onSuccess: (newSticker) => {
+      setPack((prev) =>
+        prev
+          ? {
+              ...prev,
+              stickerCount: prev.stickerCount + 1,
+              stickers: [...prev.stickers, newSticker],
+            }
+          : prev,
+      );
+    },
+  });
 
   const loadPack = useCallback(async () => {
     try {
@@ -90,41 +102,6 @@ export function StickerPackDetailCore({ packId, backAction }: StickerPackDetailC
   }
 
   const owned = pack.ownerUid === currentUserId;
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null;
-    e.target.value = '';
-    if (!file) return;
-    if (file.size > MAX_STICKER_FILE_BYTES) {
-      presentToast({
-        message: t`File is too large. Maximum sticker size is 10 MB.`,
-        duration: 3000,
-        position: 'bottom',
-      });
-      return;
-    }
-    setAddStickerFile(file);
-  };
-
-  const handleAddSticker = async (file: File, emoji: string, stickerName: string) => {
-    try {
-      const res = await uploadStickerToPack(packId, { file, emoji, name: stickerName });
-      setPack((prev) =>
-        prev
-          ? {
-              ...prev,
-              stickerCount: prev.stickerCount + 1,
-              stickers: [...prev.stickers, res.data],
-            }
-          : prev,
-      );
-      setAddStickerFile(null);
-      presentToast({ message: t`Sticker added`, duration: 1500, position: 'bottom' });
-    } catch (error) {
-      console.error('Failed to add sticker', error);
-      presentToast({ message: t`Failed to add sticker`, duration: 2000, position: 'bottom' });
-    }
-  };
 
   const handleRemoveSticker = (sticker: StickerSummary) => {
     presentAlert({
