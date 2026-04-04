@@ -699,9 +699,9 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   useEffect(() => {
     if (!chatId) return;
 
-    if (!threadId && pendingResumeRequest != null) {
+    if (pendingResumeRequest != null) {
       initialLoadCompletedRef.current = true;
-      getMessages(chatId, { around: pendingResumeRequest.messageId, max: 50 })
+      getMessages(chatId, { around: pendingResumeRequest.messageId, max: 50, threadId })
         .then((res) => {
           const list = res.data.messages ?? [];
           dispatch(
