@@ -17,20 +17,6 @@ class ChatListItem {
     this.mutedUntil,
   });
 
-  factory ChatListItem.fromJson(Map<String, dynamic> json) {
-    final lastMsgJson = json['lastMessage'] as Map<String, dynamic>?;
-    return ChatListItem(
-      id: json['id']?.toString() ?? '',
-      name: json['name'] as String?,
-      lastMessageAt: json['lastMessageAt'] as String?,
-      unreadCount: json['unreadCount'] as int? ?? 0,
-      lastMessage: lastMsgJson != null
-          ? MessageItem.fromJson(lastMsgJson)
-          : null,
-      mutedUntil: json['mutedUntil'] as String?,
-    );
-  }
-
   /// Create a copy of the object with the given fields replaced.
   ChatListItem copyWith({
     String? id,
@@ -38,6 +24,7 @@ class ChatListItem {
     String? lastMessageAt,
     int? unreadCount,
     MessageItem? lastMessage,
+    String? mutedUntil,
   }) {
     return ChatListItem(
       id: id ?? this.id,
@@ -45,6 +32,7 @@ class ChatListItem {
       lastMessageAt: lastMessageAt ?? this.lastMessageAt,
       unreadCount: unreadCount ?? this.unreadCount,
       lastMessage: lastMessage ?? this.lastMessage,
+      mutedUntil: mutedUntil ?? this.mutedUntil,
     );
   }
 }
@@ -54,14 +42,4 @@ class ListChatsResponse {
   final String? nextCursor;
 
   ListChatsResponse({required this.chats, this.nextCursor});
-
-  factory ListChatsResponse.fromJson(Map<String, dynamic> json) {
-    final list = json['chats'] as List<dynamic>? ?? [];
-    return ListChatsResponse(
-      chats: list
-          .map((e) => ChatListItem.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      nextCursor: json['nextCursor']?.toString(),
-    );
-  }
 }

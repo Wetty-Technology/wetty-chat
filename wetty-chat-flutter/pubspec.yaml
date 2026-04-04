@@ -17,6 +17,7 @@ dependencies:
   file_picker: ^10.3.2
   flutter_svg: ^2.2.0
   http: ^1.6.0
+  json_annotation: ^4.11.0
   media_kit: ^1.2.6
   media_kit_libs_video: ^1.0.7
   media_kit_video: ^2.0.1
@@ -27,9 +28,11 @@ dependencies:
   file_selector: ^1.0.3
 
 dev_dependencies:
+  build_runner: ^2.8.0
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  json_serializable: ^6.11.0
 
 flutter:
   generate: true

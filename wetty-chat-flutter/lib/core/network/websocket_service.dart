@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import '../api/client/api_json.dart';
+import '../api/models/websocket_api_models.dart';
 import 'api_config.dart';
 
 /// Singleton service to manage the WebSocket connection.
@@ -14,10 +16,10 @@ class WebSocketService {
   WebSocketService._internal();
 
   WebSocketChannel? _channel;
-  final StreamController<Map<String, dynamic>> _eventController =
-      StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<ApiWsEvent> _eventController =
+      StreamController<ApiWsEvent>.broadcast();
 
-  Stream<Map<String, dynamic>> get events => _eventController.stream;
+  Stream<ApiWsEvent> get events => _eventController.stream;
 
   Timer? _pingTimer;
   bool _isConnecting = false;
@@ -36,7 +38,9 @@ class WebSocketService {
       if (ticketRes.statusCode != 200) {
         throw Exception('Failed to fetch WS ticket: ${ticketRes.body}');
       }
-      final ticket = jsonDecode(ticketRes.body)['ticket'];
+      final ticket = WsTicketResponseDto.fromJson(
+        decodeJsonObject(ticketRes.body),
+      ).ticket;
 
       // create a WebSocketChannel
       final wsUrl = '${apiBaseUrl.replaceAll('http', 'ws')}/ws';
@@ -44,16 +48,14 @@ class WebSocketService {
       _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
 
       // Send auth message
-      _channel!.sink.add(jsonEncode({'type': 'auth', 'ticket': ticket}));
+      _channel!.sink.add(jsonEncode(WsAuthMessageDto(ticket: ticket).toJson()));
 
       // Listen for messages
       _channel!.stream.listen(
         (data) {
           try {
-            final Map<String, dynamic> msg = jsonDecode(data as String);
-            if (msg['type'] == 'pong') {
-              return;
-            }
+            final msg = ApiWsEvent.fromJson(decodeJsonObject(data as String));
+            if (msg == null || msg is PongWsEvent) return;
             _eventController.add(msg);
           } catch (_) {
             // Drop malformed websocket payloads.
@@ -73,7 +75,7 @@ class WebSocketService {
       _pingTimer?.cancel();
       _pingTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
         if (_channel != null) {
-          _channel!.sink.add(jsonEncode({'type': 'ping'}));
+          _channel!.sink.add(jsonEncode(const WsPingMessageDto().toJson()));
         }
       });
 

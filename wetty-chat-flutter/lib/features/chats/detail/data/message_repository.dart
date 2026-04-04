@@ -1,5 +1,7 @@
+import '../../../../core/api/models/websocket_api_models.dart';
 import '../application/message_store.dart';
 import '../../models/message_models.dart';
+import '../../models/message_api_mapper.dart';
 import 'message_api_service.dart';
 
 /// Source of truth for messages in a single chat.
@@ -17,14 +19,18 @@ class MessageRepository {
   Future<List<MessageItem>> initLoadMessages({int limit = 100}) async {
     final response = await _service.fetchMessages(chatId, max: limit);
     store.clear();
-    store.addMessages(response.messages);
+    store.addMessages(
+      response.messages.reversed.map((message) => message.toDomain()).toList(),
+    );
     nextCursor = response.nextCursor;
     return store.newest(limit: limit);
   }
 
   Future<List<MessageItem>> refreshLatestWindow({int limit = 100}) async {
     final response = await _service.fetchMessages(chatId, max: limit);
-    store.addMessages(response.messages);
+    store.addMessages(
+      response.messages.reversed.map((message) => message.toDomain()).toList(),
+    );
     nextCursor = response.nextCursor;
     return store.newest(limit: limit);
   }
@@ -68,7 +74,12 @@ class MessageRepository {
       before: oldestVisibleId,
       max: pageSize,
     );
-    store.addOlderPage(olderThanId: oldestVisibleId, items: response.messages);
+    store.addOlderPage(
+      olderThanId: oldestVisibleId,
+      items: response.messages.reversed
+          .map((message) => message.toDomain())
+          .toList(),
+    );
     nextCursor = response.nextCursor;
     return store.takeOlderAdjacent(oldestVisibleId, pageSize);
   }
@@ -85,7 +96,12 @@ class MessageRepository {
       after: newestVisibleId,
       max: pageSize,
     );
-    store.addNewerPage(newerThanId: newestVisibleId, items: response.messages);
+    store.addNewerPage(
+      newerThanId: newestVisibleId,
+      items: response.messages.reversed
+          .map((message) => message.toDomain())
+          .toList(),
+    );
     return store.takeNewerAdjacent(newestVisibleId, pageSize);
   }
 
@@ -102,7 +118,9 @@ class MessageRepository {
       around: messageId,
       max: before + after + 1,
     );
-    store.addMessages(response.messages);
+    store.addMessages(
+      response.messages.reversed.map((message) => message.toDomain()).toList(),
+    );
     nextCursor = response.nextCursor;
     cached = store.getWindowAround(messageId, before: before, after: after);
     return cached;
@@ -155,14 +173,16 @@ class MessageRepository {
       replyToId: replyToId,
       attachmentIds: attachmentIds ?? const <String>[],
     );
-    store.addMessages([message]);
-    return message;
+    final domainMessage = message.toDomain();
+    store.addMessages([domainMessage]);
+    return domainMessage;
   }
 
   Future<MessageItem> editMessage(int messageId, String newText) async {
     final message = await _service.editMessage(chatId, messageId, newText);
-    store.replaceWhere((item) => item.id == messageId, message);
-    return message;
+    final domainMessage = message.toDomain();
+    store.replaceWhere((item) => item.id == messageId, domainMessage);
+    return domainMessage;
   }
 
   Future<void> deleteMessage(int messageId) async {
@@ -172,15 +192,19 @@ class MessageRepository {
 
   List<MessageItem> get displayItems => store.buildDisplayItems();
 
-  void applyRealtimeEvent(Map<String, dynamic> event) {
-    final type = event['type'];
-    final payload = event['payload'];
-    if (payload is! Map<String, dynamic>) return;
+  void applyRealtimeEvent(ApiWsEvent event) {
+    final (type, payload) = switch (event) {
+      MessageCreatedWsEvent(:final payload) => ('message', payload),
+      MessageUpdatedWsEvent(:final payload) => ('messageUpdated', payload),
+      MessageDeletedWsEvent(:final payload) => ('messageDeleted', payload),
+      _ => (null, null),
+    };
+    if (type == null || payload == null) return;
 
-    final eventChatId = payload['chatId']?.toString();
+    final eventChatId = payload.chatId.toString();
     if (eventChatId != chatId) return;
 
-    final message = MessageItem.fromJson(payload);
+    final message = payload.toDomain();
     if (type == 'message') {
       store.addMessages([message]);
     } else if (type == 'messageUpdated') {

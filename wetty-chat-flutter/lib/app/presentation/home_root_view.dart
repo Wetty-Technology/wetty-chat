@@ -32,9 +32,7 @@ class _HomeRootPageState extends State<HomeRootPage> {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.backgroundPrimary,
-      ),
+      decoration: BoxDecoration(color: colors.backgroundPrimary),
       child: Column(
         children: [
           Expanded(
