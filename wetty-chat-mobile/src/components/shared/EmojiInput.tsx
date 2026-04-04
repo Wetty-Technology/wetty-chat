@@ -3,6 +3,7 @@ import { IonButton, IonIcon, IonInput, IonPopover } from '@ionic/react';
 import EmojiPicker, { EmojiStyle, Theme, type EmojiClickData } from 'emoji-picker-react';
 import { happyOutline } from 'ionicons/icons';
 import { t } from '@lingui/core/macro';
+import { extractEmojiSequences, isEmojiSequence } from '@/utils/emojiSequences';
 import styles from './EmojiInput.module.scss';
 
 interface EmojiInputProps {
@@ -14,17 +15,6 @@ interface EmojiInputProps {
   invalid?: boolean;
   errorText?: string;
   maxEmojiCount?: number;
-}
-
-function getGraphemes(str: string): string[] {
-  if (!str) return [];
-  const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
-  return Array.from(segmenter.segment(str)).map((s) => s.segment);
-}
-
-function isEmojiGrapheme(grapheme: string): boolean {
-  if (!grapheme) return false;
-  return /^\p{RGI_Emoji}$/v.test(grapheme);
 }
 
 export function EmojiInput({
@@ -44,11 +34,11 @@ export function EmojiInput({
 
   const handleEmojiClick = useCallback(
     (emojiData: EmojiClickData) => {
-      const currentGraphemes = getGraphemes(value);
-      if (currentGraphemes.length >= maxEmojiCount) return;
+      const currentEmojis = extractEmojiSequences(value);
+      if (currentEmojis.length >= maxEmojiCount) return;
 
-      const nextGraphemes = [...currentGraphemes, emojiData.emoji];
-      onChange(nextGraphemes.slice(0, maxEmojiCount).join(''));
+      const nextEmojis = [...currentEmojis, emojiData.emoji];
+      onChange(nextEmojis.slice(0, maxEmojiCount).join(''));
     },
     [value, maxEmojiCount, onChange],
   );
@@ -57,7 +47,7 @@ export function EmojiInput({
     if (event.nativeEvent.isComposing || event.key.length > 1) {
       return;
     }
-    if (!isEmojiGrapheme(event.key)) {
+    if (!isEmojiSequence(event.key)) {
       event.preventDefault();
     }
   }, []);
@@ -69,12 +59,12 @@ export function EmojiInput({
       const pastedText = event.clipboardData.getData('text');
       if (!pastedText) return;
 
-      const validEmojis = getGraphemes(pastedText).filter(isEmojiGrapheme);
+      const validEmojis = extractEmojiSequences(pastedText);
       if (validEmojis.length === 0) return;
 
-      const currentGraphemes = getGraphemes(value);
-      const newGraphemes = [...currentGraphemes, ...validEmojis].slice(0, maxEmojiCount);
-      onChange(newGraphemes.join(''));
+      const currentEmojis = extractEmojiSequences(value);
+      const newEmojis = [...currentEmojis, ...validEmojis].slice(0, maxEmojiCount);
+      onChange(newEmojis.join(''));
     },
     [value, maxEmojiCount, onChange],
   );
@@ -86,7 +76,7 @@ export function EmojiInput({
       const rawValue = customEvent.detail.value ?? '';
 
       const cleanValue = rawValue.replace(/\s+/g, '');
-      const validEmojis = getGraphemes(cleanValue).filter(isEmojiGrapheme);
+      const validEmojis = extractEmojiSequences(cleanValue);
       const finalValue = validEmojis.slice(0, maxEmojiCount).join('');
 
       if (rawValue !== finalValue) {
@@ -120,7 +110,7 @@ export function EmojiInput({
           placeholder={placeholder}
           counter
           maxlength={maxEmojiCount * 10}
-          counterFormatter={() => `${getGraphemes(value).length} / ${maxEmojiCount}`}
+          counterFormatter={() => `${extractEmojiSequences(value).length} / ${maxEmojiCount}`}
           errorText={errorText ?? t`Please choose at least one emoji`}
           className={`${styles.input}${invalid ? ' ion-invalid ion-touched' : ''}`}
           onKeyDown={handleKeyDown}
