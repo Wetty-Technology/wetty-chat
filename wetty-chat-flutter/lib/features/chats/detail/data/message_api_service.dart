@@ -2,11 +2,13 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../../../../core/api/client/api_json.dart';
+import '../../../../core/api/models/chats_api_models.dart';
+import '../../../../core/api/models/messages_api_models.dart';
 import '../../../../core/network/api_config.dart';
-import '../../models/message_models.dart';
 
 class MessageApiService {
-  Future<ListMessagesResponse> fetchMessages(
+  Future<ListMessagesResponseDto> fetchMessages(
     String chatId, {
     int? max,
     int? before,
@@ -33,17 +35,15 @@ class MessageApiService {
       );
     }
 
-    return ListMessagesResponse.fromJson(
-      jsonDecode(response.body) as Map<String, dynamic>,
-    );
+    return ListMessagesResponseDto.fromJson(decodeJsonObject(response.body));
   }
 
-  Future<List<MessageItem>> fetchAround(String chatId, int messageId) async {
+  Future<List<MessageItemDto>> fetchAround(String chatId, int messageId) async {
     final response = await fetchMessages(chatId, around: messageId);
     return response.messages;
   }
 
-  Future<MessageItem> sendMessage(
+  Future<MessageItemDto> sendMessage(
     String chatId,
     String text, {
     int? replyToId,
@@ -56,20 +56,18 @@ class MessageApiService {
     final uri = Uri.parse(path);
     final clientGeneratedId =
         '${DateTime.now().millisecondsSinceEpoch}-${Uri.base.hashCode}';
-    final body = <String, dynamic>{
-      'message': text,
-      'messageType': 'text',
-      'clientGeneratedId': clientGeneratedId,
-      'attachmentIds': attachmentIds,
-    };
-    if (replyToId != null) {
-      body['replyToId'] = replyToId;
-    }
+    final body = SendMessageRequestDto(
+      message: text,
+      messageType: 'text',
+      clientGeneratedId: clientGeneratedId,
+      attachmentIds: attachmentIds,
+      replyToId: replyToId,
+    );
 
     final response = await http.post(
       uri,
       headers: apiHeaders,
-      body: jsonEncode(body),
+      body: jsonEncode(body.toJson()),
     );
     if (response.statusCode != 201) {
       throw Exception(
@@ -77,12 +75,10 @@ class MessageApiService {
       );
     }
 
-    return MessageItem.fromJson(
-      jsonDecode(response.body) as Map<String, dynamic>,
-    );
+    return MessageItemDto.fromJson(decodeJsonObject(response.body));
   }
 
-  Future<MessageItem> editMessage(
+  Future<MessageItemDto> editMessage(
     String chatId,
     int messageId,
     String newText, {
@@ -92,10 +88,12 @@ class MessageApiService {
     final response = await http.patch(
       uri,
       headers: apiHeaders,
-      body: jsonEncode(<String, dynamic>{
-        'message': newText,
-        'attachmentIds': attachmentIds,
-      }),
+      body: jsonEncode(
+        EditMessageRequestDto(
+          message: newText,
+          attachmentIds: attachmentIds,
+        ).toJson(),
+      ),
     );
     if (response.statusCode != 200) {
       throw Exception(
@@ -103,9 +101,7 @@ class MessageApiService {
       );
     }
 
-    return MessageItem.fromJson(
-      jsonDecode(response.body) as Map<String, dynamic>,
-    );
+    return MessageItemDto.fromJson(decodeJsonObject(response.body));
   }
 
   Future<void> deleteMessage(String chatId, int messageId) async {
@@ -118,17 +114,23 @@ class MessageApiService {
     }
   }
 
-  Future<void> markMessagesAsRead(String chatId, int messageId) async {
+  Future<MarkChatReadStateResponseDto> markMessagesAsRead(
+    String chatId,
+    int messageId,
+  ) async {
     final uri = Uri.parse('$apiBaseUrl/chats/$chatId/read');
     final response = await http.post(
       uri,
       headers: apiHeaders,
-      body: jsonEncode({'messageId': messageId}),
+      body: jsonEncode(MarkReadRequestDto(messageId: messageId).toJson()),
     );
     if (response.statusCode != 200) {
       throw Exception(
         'Failed to mark as read: ${response.statusCode} ${response.body}',
       );
     }
+    return MarkChatReadStateResponseDto.fromJson(
+      decodeJsonObject(response.body),
+    );
   }
 }

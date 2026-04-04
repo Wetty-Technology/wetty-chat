@@ -163,15 +163,16 @@ class _MessageFontSizeSliderState extends State<MessageFontSizeSlider> {
   double get _maxValue => AppSettingsStore.maxChatMessageFontSize;
   int get _stepCount => AppSettingsStore.chatMessageFontSizeSteps;
 
-  double _effectiveValue() => (_dragValue ?? widget.value).clamp(
-    _minValue,
-    _maxValue,
-  );
+  double _effectiveValue() =>
+      (_dragValue ?? widget.value).clamp(_minValue, _maxValue);
 
   double _valueForIndex(int index) => _minValue + index;
 
   double _trackWidth(double width) =>
-      (width - (MessageFontSizeSlider._horizontalPadding * 2)).clamp(1.0, width);
+      (width - (MessageFontSizeSlider._horizontalPadding * 2)).clamp(
+        1.0,
+        width,
+      );
 
   double _normalizedPosition(double x, double width) {
     final trackWidth = _trackWidth(width);
@@ -213,7 +214,8 @@ class _MessageFontSizeSliderState extends State<MessageFontSizeSlider> {
               final markerStep = _stepCount > 1
                   ? (trackEnd - trackStart) / (_stepCount - 1)
                   : 0.0;
-              final thumbCenter = trackStart +
+              final thumbCenter =
+                  trackStart +
                   (((currentValue - _minValue) / (_maxValue - _minValue)) *
                       (trackEnd - trackStart));
               const sliderHeight = 28.0;
@@ -295,11 +297,13 @@ class _MessageFontSizeSliderState extends State<MessageFontSizeSlider> {
                       final isHighlighted = markerValue <= currentValue;
                       final markerCenter = trackStart + markerStep * index;
                       return Positioned(
-                        left: markerCenter -
+                        left:
+                            markerCenter -
                             (MessageFontSizeSlider._markerWidth / 2),
                         top:
-                            (sliderHeight - MessageFontSizeSlider._markerHeight) /
-                                2,
+                            (sliderHeight -
+                                MessageFontSizeSlider._markerHeight) /
+                            2,
                         child: Container(
                           width: MessageFontSizeSlider._markerWidth,
                           height: MessageFontSizeSlider._markerHeight,

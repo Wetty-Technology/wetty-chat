@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
+import '../../../../core/api/client/api_json.dart';
+import '../../../../core/api/models/attachments_api_models.dart';
 import '../../../../core/network/api_config.dart';
 
 class UploadUrlResponse {
@@ -15,17 +17,6 @@ class UploadUrlResponse {
     required this.uploadUrl,
     this.uploadHeaders = const {},
   });
-
-  factory UploadUrlResponse.fromJson(Map<String, dynamic> json) {
-    final headers = json['uploadHeaders'] as Map<String, dynamic>? ?? {};
-    return UploadUrlResponse(
-      attachmentId: json['attachmentId']?.toString() ?? '',
-      uploadUrl: json['uploadUrl'] as String? ?? '',
-      uploadHeaders: headers.map(
-        (key, value) => MapEntry(key, value.toString()),
-      ),
-    );
-  }
 }
 
 class AttachmentService {
@@ -40,24 +31,27 @@ class AttachmentService {
     int? height,
   }) async {
     final uri = Uri.parse('$apiBaseUrl/attachments/upload-url');
-    final body = <String, dynamic>{
-      'filename': filename,
-      'contentType': contentType,
-      'size': size,
-    };
-    if (width != null) body['width'] = width;
-    if (height != null) body['height'] = height;
+    final payload = UploadUrlRequestDto(
+      filename: filename,
+      contentType: contentType,
+      size: size,
+      width: width,
+      height: height,
+    );
 
     final response = await http
-        .post(uri, headers: apiHeaders, body: jsonEncode(body))
+        .post(uri, headers: apiHeaders, body: jsonEncode(payload.toJson()))
         .timeout(_requestTimeout);
     if (response.statusCode != 201) {
       throw Exception(
         'Failed to get upload URL: ${response.statusCode} ${response.body}',
       );
     }
-    return UploadUrlResponse.fromJson(
-      jsonDecode(response.body) as Map<String, dynamic>,
+    final dto = UploadUrlResponseDto.fromJson(decodeJsonObject(response.body));
+    return UploadUrlResponse(
+      attachmentId: dto.attachmentId,
+      uploadUrl: dto.uploadUrl,
+      uploadHeaders: dto.uploadHeaders,
     );
   }
 

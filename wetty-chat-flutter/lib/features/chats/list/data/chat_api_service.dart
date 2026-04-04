@@ -2,12 +2,13 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../../../../core/api/client/api_json.dart';
+import '../../../../core/api/models/chats_api_models.dart';
 import '../../../../core/network/api_config.dart';
-import '../../models/chat_models.dart';
 
 /// Raw HTTP calls for chat endpoints. No state.
 class ChatApiService {
-  Future<ListChatsResponse> fetchChats({int? limit, String? after}) async {
+  Future<ListChatsResponseDto> fetchChats({int? limit, String? after}) async {
     final query = <String, String>{};
     if (limit != null) query['limit'] = limit.toString();
     if (after != null && after.isNotEmpty) query['after'] = after;
@@ -20,21 +21,25 @@ class ChatApiService {
         'Failed to load chats: ${response.statusCode} ${response.body}',
       );
     }
-    return ListChatsResponse.fromJson(
-      jsonDecode(response.body) as Map<String, dynamic>,
-    );
+    return ListChatsResponseDto.fromJson(decodeJsonObject(response.body));
   }
 
-  Future<http.Response> createChat({String? name}) async {
+  Future<CreateChatResponseDto> createChat({String? name}) async {
     final url = Uri.parse('$apiBaseUrl/group');
-    return http.post(
+    final response = await http.post(
       url,
       headers: apiHeaders,
-      body: jsonEncode({"name": name}),
+      body: jsonEncode(CreateChatRequestDto(name: name).toJson()),
     );
+    if (response.statusCode != 201) {
+      throw Exception(
+        'Failed to create chat: ${response.statusCode} ${response.body}',
+      );
+    }
+    return CreateChatResponseDto.fromJson(decodeJsonObject(response.body));
   }
 
-  Future<int> fetchUnreadCount() async {
+  Future<UnreadCountResponseDto> fetchUnreadCount() async {
     final uri = Uri.parse('$apiBaseUrl/chats/unread');
     final response = await http.get(uri, headers: apiHeaders);
     if (response.statusCode != 200) {
@@ -43,7 +48,6 @@ class ChatApiService {
       );
     }
 
-    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-    return decoded['unreadCount'] as int? ?? 0;
+    return UnreadCountResponseDto.fromJson(decodeJsonObject(response.body));
   }
 }

@@ -1,11 +1,12 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
+import '../../../../core/api/models/websocket_api_models.dart';
 import '../../../../core/network/api_config.dart';
+import '../../models/chat_api_mapper.dart';
 import '../../models/chat_models.dart';
-import '../../models/message_models.dart';
+import '../../models/message_api_mapper.dart';
 import 'chat_api_service.dart';
 
 /// Source of truth for chat list data.
@@ -24,11 +25,11 @@ class ChatRepository extends ChangeNotifier {
   String? get nextCursor => _nextCursor;
   bool get hasMore => _nextCursor != null && _nextCursor!.isNotEmpty;
 
-  /// Load the first page of chats. 
+  /// Load the first page of chats.
   /// (Need to reconsider if we need the chats limit.)
   Future<void> loadChats({int limit = 20}) async {
     final res = await _service.fetchChats();
-    _chats = res.chats;
+    _chats = res.chats.map((chat) => chat.toDomain()).toList();
     _nextCursor = res.nextCursor;
     notifyListeners();
   }
@@ -40,6 +41,7 @@ class ChatRepository extends ChangeNotifier {
     final res = await _service.fetchChats(limit: limit, after: lastId);
     final existingIds = _chats.map((c) => c.id).toSet();
     final newChats = res.chats
+        .map((chat) => chat.toDomain())
         .where((c) => !existingIds.contains(c.id))
         .toList();
     _chats = [..._chats, ...newChats];
@@ -57,21 +59,19 @@ class ChatRepository extends ChangeNotifier {
   /// Returns the new ChatListItem on success, null on failure.
   Future<ChatListItem?> createChat({String? name}) async {
     final response = await _service.createChat(name: name);
-    if (response.statusCode == 201) {
-      final body = jsonDecode(response.body) as Map<String, dynamic>;
-      final id = body['id']?.toString() ?? '';
-      final createdName = body['name'] as String?;
-      return ChatListItem(id: id, name: createdName);
-    }
-    throw Exception('Server error: ${response.body}');
+    return ChatListItem(id: response.id.toString(), name: response.name);
   }
 
-  void applyRealtimeEvent(Map<String, dynamic> event) {
-    final type = event['type'];
-    final payload = event['payload'];
-    if (payload is! Map<String, dynamic>) return;
+  void applyRealtimeEvent(ApiWsEvent event) {
+    final (type, payload) = switch (event) {
+      MessageCreatedWsEvent(:final payload) => ('message', payload),
+      MessageUpdatedWsEvent(:final payload) => ('messageUpdated', payload),
+      MessageDeletedWsEvent(:final payload) => ('messageDeleted', payload),
+      _ => (null, null),
+    };
+    if (type == null || payload == null) return;
 
-    final chatId = payload['chatId']?.toString() ?? '';
+    final chatId = payload.chatId.toString();
     final index = _chats.indexWhere((chat) => chat.id == chatId);
     if (index < 0) {
       if (type == 'message') {
@@ -81,10 +81,10 @@ class ChatRepository extends ChangeNotifier {
     }
 
     final previous = _chats[index];
-    final message = MessageItem.fromJson(payload);
+    final message = payload.toDomain();
     if (type == 'message') {
-      final senderUid = payload['sender']?['uid'] as int?;
-      final createdAt = payload['createdAt'] as String?;
+      final senderUid = payload.sender.uid;
+      final createdAt = payload.createdAt;
       final updated = previous.copyWith(
         lastMessage: message,
         lastMessageAt: createdAt,

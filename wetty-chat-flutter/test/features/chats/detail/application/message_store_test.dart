@@ -8,34 +8,23 @@ void main() {
     test('realtime newest message extends the live-edge range', () {
       final store = MessageStore();
 
-      store.addMessages([
-        _message(100),
-        _message(90),
-        _message(80),
-      ]);
+      store.addMessages([_message(100), _message(90), _message(80)]);
       store.addMessages([_message(150)]);
 
       expect(store.ranges, hasLength(1));
-      expect(
-        store.newest(limit: 4).map((message) => message.id).toList(),
-        [150, 100, 90, 80],
-      );
+      expect(store.newest(limit: 4).map((message) => message.id).toList(), [
+        150,
+        100,
+        90,
+        80,
+      ]);
     });
 
     test('older page merges into the anchored range', () {
       final store = MessageStore();
 
-      store.addMessages([
-        _message(100),
-        _message(80),
-      ]);
-      store.addOlderPage(
-        olderThanId: 80,
-        items: [
-          _message(70),
-          _message(50),
-        ],
-      );
+      store.addMessages([_message(100), _message(80)]);
+      store.addOlderPage(olderThanId: 80, items: [_message(70), _message(50)]);
 
       expect(store.ranges, hasLength(1));
       expect(
@@ -47,34 +36,32 @@ void main() {
     test('ranges only coalesce when they share exact message ids', () {
       final store = MessageStore();
 
-      store.addMessages([
-        _message(300),
-        _message(200),
-      ]);
-      store.addMessages([
-        _message(200),
-        _message(100),
-      ]);
+      store.addMessages([_message(300), _message(200)]);
+      store.addMessages([_message(200), _message(100)]);
 
       expect(store.ranges, hasLength(1));
-      expect(
-        store.newest(limit: 3).map((message) => message.id).toList(),
-        [300, 200, 100],
-      );
+      expect(store.newest(limit: 3).map((message) => message.id).toList(), [
+        300,
+        200,
+        100,
+      ]);
     });
 
-    test('detached ranges remain separate without anchor or overlap evidence', () {
-      final store = MessageStore();
+    test(
+      'detached ranges remain separate without anchor or overlap evidence',
+      () {
+        final store = MessageStore();
 
-      store.addMessages([_message(300)]);
-      store.addMessages([_message(100)]);
+        store.addMessages([_message(300)]);
+        store.addMessages([_message(100)]);
 
-      expect(store.ranges, hasLength(2));
-      expect(
-        store.newest(limit: 3).map((message) => message.id).toList(),
-        [300, 100],
-      );
-    });
+        expect(store.ranges, hasLength(2));
+        expect(store.newest(limit: 3).map((message) => message.id).toList(), [
+          300,
+          100,
+        ]);
+      },
+    );
   });
 }
 

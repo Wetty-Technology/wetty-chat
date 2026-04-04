@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../../../../core/api/models/websocket_api_models.dart';
 import '../../../../core/network/websocket_service.dart';
 import '../data/chat_repository.dart';
 
@@ -7,7 +8,7 @@ class ChatListRealtimeController {
   ChatListRealtimeController(this._repository);
 
   final ChatRepository _repository;
-  StreamSubscription<Map<String, dynamic>>? _subscription;
+  StreamSubscription<ApiWsEvent>? _subscription;
 
   void start() {
     _subscription ??= WebSocketService.instance.events.listen(
