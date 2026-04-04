@@ -2,11 +2,14 @@ default_platform(:ios)
 
 platform :ios do
   desc "Sync development signing"
-  lane :sync_dev_signing do
+  lane :sync_dev_signing do |options|
     match(
       type: "development",
       git_url: "git@github.com:Codetector1374/apple_developer_certs.git",
-      readonly: true
+      readonly: options.fetch(:readonly, true),
+      force_for_new_devices: options.fetch(:force_for_new_devices, false),
+      include_all_certificates: options.fetch(:include_all_certificates, false),
+      force_for_new_certificates: options.fetch(:force_for_new_certificates, false)
     )
   end
 end
