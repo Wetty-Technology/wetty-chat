@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { IonIcon, useIonAlert, useIonToast } from '@ionic/react';
 import { heart, heartDislike } from 'ionicons/icons';
-import { starOutline } from 'ionicons/icons';
+import { starOutline, cubeOutline } from 'ionicons/icons';
 import { t } from '@lingui/core/macro';
 import { StickerImage } from '@/components/shared/StickerImage';
 import { AddStickerModal } from './AddStickerModal';
@@ -314,7 +314,7 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
               {pack.previewUrl ? (
                 <StickerImage src={pack.previewUrl} alt="" className={styles.packIconImg} />
               ) : (
-                <IonIcon icon={starOutline} />
+                <IonIcon icon={pack.id === 'favorites' ? starOutline : cubeOutline} />
               )}
             </span>
           </button>
