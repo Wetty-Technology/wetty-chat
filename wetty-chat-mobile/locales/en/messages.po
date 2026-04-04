@@ -190,6 +190,9 @@ msgstr "Blocked"
 msgid "Cancel"
 msgstr "Cancel"
 
+msgid "Owned"
+msgstr "Owned"
+
 #: src/components/chat/compose/ComposeContextBanner.tsx
 msgid "Cancel edit"
 msgstr "Cancel edit"

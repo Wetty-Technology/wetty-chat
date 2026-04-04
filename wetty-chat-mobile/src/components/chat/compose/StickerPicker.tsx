@@ -43,6 +43,13 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
   const [packDetails, setPackDetails] = useState<Record<string, StickerPackDetailResponse>>({});
   const [selectedPackId, setSelectedPackId] = useState('favorites');
   const [isLibraryLoading, setIsLibraryLoading] = useState(false);
+  const [packOrder, setPackOrder] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('stickerPackOrder') || '[]');
+    } catch {
+      return [];
+    }
+  });
   const hasLoaded = useRef(false);
   const [loadingPackIds, setLoadingPackIds] = useState<Record<string, boolean>>({});
   const [popover, setPopover] = useState<{ sticker: StickerSummary; rect: DOMRect } | null>(null);
@@ -93,6 +100,19 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
     void loadLibrary();
   }, [isOpen, loadLibrary]);
 
+  useEffect(() => {
+    const handleStorageChange = () => {
+      try {
+        const order = JSON.parse(localStorage.getItem('stickerPackOrder') || '[]');
+        setPackOrder(order);
+      } catch {
+        // ignore
+      }
+    };
+    window.addEventListener('stickerPackOrderChanged', handleStorageChange);
+    return () => window.removeEventListener('stickerPackOrderChanged', handleStorageChange);
+  }, []);
+
   const packs = useMemo<PickerPack[]>(() => {
     const packEntries = [...ownedPacks, ...subscribedPacks].map((pack) => ({
       id: pack.id,
@@ -103,7 +123,7 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
       isLoading: !!loadingPackIds[pack.id],
     }));
 
-    return [
+    const allPacks = [
       {
         id: 'favorites',
         name: t`Favorites`,
@@ -114,7 +134,22 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
       },
       ...packEntries,
     ];
-  }, [favoriteStickers, isLibraryLoading, loadingPackIds, ownedPacks, packDetails, subscribedPacks]);
+
+    if (packOrder.length > 0) {
+      allPacks.sort((a, b) => {
+        if (a.id === 'favorites') return -1;
+        if (b.id === 'favorites') return 1;
+        const indexA = packOrder.indexOf(a.id);
+        const indexB = packOrder.indexOf(b.id);
+        if (indexA === -1 && indexB === -1) return 0;
+        if (indexA === -1) return 1;
+        if (indexB === -1) return -1;
+        return indexA - indexB;
+      });
+    }
+
+    return allPacks;
+  }, [favoriteStickers, isLibraryLoading, loadingPackIds, ownedPacks, packDetails, subscribedPacks, packOrder]);
 
   useEffect(() => {
     if (!packs.some((pack) => pack.id === selectedPackId)) {
