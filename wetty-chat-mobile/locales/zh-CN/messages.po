@@ -279,6 +279,9 @@ msgstr "创建邀请"
 msgid "Create New Pack"
 msgstr "创建新表情包"
 
+msgid "Owned"
+msgstr "我的"
+
 #: src/components/chat/compose/StickerPicker.tsx
 msgid "Create new sticker pack"
 msgstr "创建新的表情包"

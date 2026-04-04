@@ -8,13 +8,15 @@ import {
   IonItem,
   IonLabel,
   IonList,
-  IonListHeader,
-  IonNote,
   IonPage,
   IonTitle,
   IonToolbar,
   useIonAlert,
   useIonToast,
+  IonBadge,
+  IonReorder,
+  IonReorderGroup,
+  type ItemReorderEventDetail,
 } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
 import { addOutline, cubeOutline } from 'ionicons/icons';
@@ -40,20 +42,42 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
   const [presentAlert] = useIonAlert();
   const [presentToast] = useIonToast();
   const [ownedPacks, setOwnedPacks] = useState<StickerPackSummary[]>([]);
-  const [subscribedPacks, setSubscribedPacks] = useState<StickerPackSummary[]>([]);
+  const [allPacks, setAllPacks] = useState<StickerPackSummary[]>([]);
+  const [packOrder, setPackOrder] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('stickerPackOrder') || '[]');
+    } catch {
+      return [];
+    }
+  });
 
   const loadPacks = useCallback(async () => {
     try {
       const [ownedRes, subscribedRes] = await Promise.all([getOwnedStickerPacks(), getSubscribedStickerPacks()]);
       setOwnedPacks(ownedRes.data.packs);
-      setSubscribedPacks(
-        subscribedRes.data.packs.filter((pack) => !ownedRes.data.packs.some((ownedPack) => ownedPack.id === pack.id)),
+      const subs = subscribedRes.data.packs.filter(
+        (pack) => !ownedRes.data.packs.some((ownedPack) => ownedPack.id === pack.id),
       );
+
+      const merged = [...ownedRes.data.packs, ...subs];
+
+      if (packOrder.length > 0) {
+        merged.sort((a, b) => {
+          const indexA = packOrder.indexOf(a.id);
+          const indexB = packOrder.indexOf(b.id);
+          if (indexA === -1 && indexB === -1) return 0;
+          if (indexA === -1) return 1;
+          if (indexB === -1) return -1;
+          return indexA - indexB;
+        });
+      }
+
+      setAllPacks(merged);
     } catch (error) {
       console.error('Failed to load sticker packs', error);
       presentToast({ message: t`Failed to load sticker packs`, duration: 2000, position: 'bottom' });
     }
-  }, [presentToast]);
+  }, [presentToast, packOrder]);
 
   useEffect(() => {
     const run = async () => {
@@ -62,6 +86,15 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
 
     void run();
   }, [loadPacks]);
+
+  const handleReorder = (event: CustomEvent<ItemReorderEventDetail>) => {
+    const newItems = event.detail.complete(allPacks);
+    setAllPacks(newItems);
+    const newOrder = newItems.map((p: StickerPackSummary) => p.id);
+    setPackOrder(newOrder);
+    localStorage.setItem('stickerPackOrder', JSON.stringify(newOrder));
+    window.dispatchEvent(new Event('stickerPackOrderChanged'));
+  };
 
   const handleOpenPack = (packId: string) => {
     if (onOpenPack) {
@@ -85,6 +118,14 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
             try {
               const res = await createStickerPack({ name });
               setOwnedPacks((prev) => [res.data, ...prev]);
+              setAllPacks((prev) => {
+                const newAll = [res.data, ...prev];
+                const newOrder = newAll.map((p) => p.id);
+                setPackOrder(newOrder);
+                localStorage.setItem('stickerPackOrder', JSON.stringify(newOrder));
+                window.dispatchEvent(new Event('stickerPackOrderChanged'));
+                return newAll;
+              });
               handleOpenPack(res.data.id);
             } catch (error) {
               console.error('Failed to create sticker pack', error);
@@ -109,71 +150,56 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
         </IonToolbar>
       </IonHeader>
       <IonContent color="light" className="ion-no-padding">
-        <IonListHeader>
-          <IonLabel>
-            <Trans>My Packs</Trans>
-          </IonLabel>
-        </IonListHeader>
         <IonList inset>
-          {ownedPacks.map((pack) => (
-            <IonItem key={pack.id} button detail onClick={() => handleOpenPack(pack.id)}>
-              {pack.previewSticker ? (
-                <StickerImage
-                  slot="start"
-                  src={pack.previewSticker.media.url}
-                  alt=""
-                  style={{ width: 32, height: 32, objectFit: 'contain', borderRadius: 4 }}
-                />
-              ) : (
-                <IonIcon aria-hidden="true" icon={cubeOutline} slot="start" color="medium" />
-              )}
-              <IonLabel>{pack.name}</IonLabel>
-              <IonNote slot="end" color="medium">
-                {pack.stickerCount}
-              </IonNote>
-            </IonItem>
-          ))}
           <IonItem button detail={false} onClick={handleCreatePack}>
             <IonIcon aria-hidden="true" icon={addOutline} slot="start" color="primary" />
             <IonLabel color="primary">
               <Trans>Create New Pack</Trans>
             </IonLabel>
           </IonItem>
-        </IonList>
 
-        <IonListHeader>
-          <IonLabel>
-            <Trans>Subscribed Packs</Trans>
-          </IonLabel>
-        </IonListHeader>
-        <IonList inset>
-          {subscribedPacks.length === 0 ? (
-            <IonItem>
-              <IonIcon aria-hidden="true" icon={cubeOutline} slot="start" color="medium" />
-              <IonLabel color="medium">
-                <Trans>No subscribed packs</Trans>
-              </IonLabel>
-            </IonItem>
-          ) : (
-            subscribedPacks.map((pack) => (
-              <IonItem key={pack.id} button detail onClick={() => handleOpenPack(pack.id)}>
-                {pack.previewSticker ? (
-                  <StickerImage
+          <IonReorderGroup disabled={false} onIonItemReorder={handleReorder}>
+            {allPacks.map((pack) => {
+              const isOwned = ownedPacks.some((p) => p.id === pack.id);
+              return (
+                <IonItem key={pack.id} button detail={false} onClick={() => handleOpenPack(pack.id)}>
+                  <span
                     slot="start"
-                    src={pack.previewSticker.media.url}
-                    alt=""
-                    style={{ width: 32, height: 32, objectFit: 'contain', borderRadius: 4 }}
-                  />
-                ) : (
-                  <IonIcon aria-hidden="true" icon={cubeOutline} slot="start" color="medium" />
-                )}
-                <IonLabel>{pack.name}</IonLabel>
-                <IonNote slot="end" color="medium">
-                  {pack.stickerCount}
-                </IonNote>
-              </IonItem>
-            ))
-          )}
+                    style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    {pack.previewSticker ? (
+                      <StickerImage
+                        src={pack.previewSticker.media.url}
+                        alt=""
+                        style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 4 }}
+                      />
+                    ) : (
+                      <IonIcon aria-hidden="true" icon={cubeOutline} color="medium" style={{ fontSize: 24 }} />
+                    )}
+                  </span>
+                  <IonLabel>
+                    <h2 style={{ display: 'flex', alignItems: 'center' }}>
+                      {isOwned && (
+                        <IonBadge
+                          color="primary"
+                          style={{ marginRight: 8, fontSize: '0.55rem', fontWeight: 'normal', flexShrink: 0 }}
+                        >
+                          <Trans>Owned</Trans>
+                        </IonBadge>
+                      )}
+                      <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                        {pack.name}
+                      </span>
+                    </h2>
+                    <p style={{ fontSize: '0.85em', color: 'var(--ion-color-medium)', marginTop: 2 }}>
+                      {pack.stickerCount} <Trans>stickers</Trans>
+                    </p>
+                  </IonLabel>
+                  <IonReorder slot="end" onClick={(e) => e.stopPropagation()} />
+                </IonItem>
+              );
+            })}
+          </IonReorderGroup>
         </IonList>
       </IonContent>
     </IonPage>
