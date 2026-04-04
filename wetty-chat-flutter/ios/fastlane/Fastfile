@@ -6,7 +6,7 @@ platform :ios do
     match(
       type: "development",
       git_url: "git@github.com:Codetector1374/apple_developer_certs.git",
-      readonly: ENV["CI"] == "true"
+      readonly: true
     )
   end
 end
