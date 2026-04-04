@@ -32,6 +32,8 @@ class WettyChatApp extends StatelessWidget {
   }
 }
 
+/// Legacy login flow kept for future redesign.
+/// The app currently boots directly into the main shell with a dev UID session.
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 

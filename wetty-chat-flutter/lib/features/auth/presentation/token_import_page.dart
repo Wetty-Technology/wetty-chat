@@ -22,6 +22,7 @@ const List<SecurityQuestionOption> securityQuestions = <SecurityQuestionOption>[
   SecurityQuestionOption('7', '驾驶执照最后四位数字'),
 ];
 
+/// Legacy login UI kept in the codebase while authentication is redesigned.
 class TokenImportPage extends StatefulWidget {
   const TokenImportPage({super.key, this.allowClose = false});
 

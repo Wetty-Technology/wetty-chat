@@ -1,4 +1,4 @@
-import '../../features/auth/application/auth_store.dart';
+import '../session/dev_session_store.dart';
 
 const String apiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
@@ -8,8 +8,7 @@ const String apiBaseUrl = String.fromEnvironment(
 class ApiSession {
   const ApiSession._();
 
-  static int? get currentUserId => AuthStore.instance.currentUserId;
-  static String? get token => AuthStore.instance.token;
+  static int get currentUserId => DevSessionStore.instance.currentUserId;
 }
 
 Map<String, String> get apiHeaders {
@@ -18,17 +17,9 @@ Map<String, String> get apiHeaders {
     'Accept': 'application/json',
   };
 
-  final token = ApiSession.token;
-  if (token != null) {
-    headers['Authorization'] = 'Bearer $token';
-  }
-
   final uid = ApiSession.currentUserId;
-  // TODO: for development test only. Remove in production.
-  if (uid != null) {
-    headers['X-User-Id'] = uid.toString();
-    headers['X-Client-Id'] = uid.toString();
-  }
+  headers['X-User-Id'] = uid.toString();
+  headers['X-Client-Id'] = uid.toString();
 
   return headers;
 }

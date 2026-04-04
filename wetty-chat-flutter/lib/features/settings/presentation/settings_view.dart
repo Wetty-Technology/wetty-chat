@@ -3,8 +3,9 @@ import '../../../l10n/app_localizations.dart';
 
 import '../../../app/presentation/root_navigation.dart';
 import '../../../app/theme/style_config.dart';
+import '../../../core/session/dev_session_store.dart';
 import '../../../core/settings/app_settings_store.dart';
-import '../../../features/auth/application/auth_store.dart';
+import 'dev_session_settings_view.dart';
 import 'font_size_settings_view.dart';
 import 'language_settings_view.dart';
 import 'notification_settings_view.dart';
@@ -25,6 +26,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   List<SettingsSectionData> _sections(AppLanguage language) {
     final l10n = AppLocalizations.of(context)!;
+    final currentUserId = DevSessionStore.instance.currentUserId;
     return [
       SettingsSectionData(
         title: l10n.settingsGeneral,
@@ -60,6 +62,16 @@ class _SettingsPageState extends State<SettingsPage> {
             titleFontWeight: FontWeight.w500,
             onTap: () => _openPage(const ProfileSettingsPage()),
           ),
+          SettingsItemData(
+            title: 'Developer Session',
+            icon: CupertinoIcons.person_crop_square,
+            iconColor: const Color(0xFF8E44AD),
+            trailingText: 'UID $currentUserId',
+            trailingTextSize: AppFontSizes.body,
+            titleFontSize: AppFontSizes.body,
+            titleFontWeight: FontWeight.w500,
+            onTap: () => _openPage(const DevSessionSettingsPage()),
+          ),
         ],
       ),
       SettingsSectionData(
@@ -86,7 +98,10 @@ class _SettingsPageState extends State<SettingsPage> {
       navigationBar: CupertinoNavigationBar(middle: Text(l10n.tabSettings)),
       child: SafeArea(
         child: AnimatedBuilder(
-          animation: AppSettingsStore.instance,
+          animation: Listenable.merge([
+            AppSettingsStore.instance,
+            DevSessionStore.instance,
+          ]),
           builder: (context, _) {
             final sections = _sections(AppSettingsStore.instance.language);
             return ListView(
@@ -97,53 +112,11 @@ class _SettingsPageState extends State<SettingsPage> {
                   const SizedBox(height: 16),
                 ],
                 const SizedBox(height: 54),
-                SettingsSectionCard(
-                  section: SettingsSectionData(
-                    title: '',
-                    items: [
-                      SettingsItemData(
-                        title: l10n.logOut,
-                        icon: CupertinoIcons.square_arrow_right,
-                        iconColor: const Color(0xFFFF3B30),
-                        titleFontSize: AppFontSizes.body,
-                        titleFontWeight: FontWeight.w500,
-                        onTap: _confirmLogout,
-                        isDestructive: true,
-                      ),
-                    ],
-                  ),
-                ),
               ],
             );
           },
         ),
       ),
     );
-  }
-
-  Future<void> _confirmLogout() async {
-    final l10n = AppLocalizations.of(context)!;
-    final shouldLogout = await showCupertinoDialog<bool>(
-      context: context,
-      builder: (context) => CupertinoAlertDialog(
-        title: Text(l10n.logOutConfirmTitle, style: appTextStyle(context)),
-        content: Text(l10n.logOutConfirmMessage, style: appTextStyle(context)),
-        actions: [
-          CupertinoDialogAction(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l10n.cancel, style: appTextStyle(context)),
-          ),
-          CupertinoDialogAction(
-            isDestructiveAction: true,
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(l10n.logOut, style: appTextStyle(context)),
-          ),
-        ],
-      ),
-    );
-
-    if (shouldLogout == true) {
-      await AuthStore.instance.clearToken();
-    }
   }
 }

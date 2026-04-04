@@ -7,6 +7,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../api/client/api_json.dart';
 import '../api/models/websocket_api_models.dart';
+import '../session/dev_session_store.dart';
 import 'api_config.dart';
 
 /// Singleton service to manage the WebSocket connection.
@@ -22,12 +23,19 @@ class WebSocketService {
   Stream<ApiWsEvent> get events => _eventController.stream;
 
   Timer? _pingTimer;
+  Timer? _reconnectTimer;
   bool _isConnecting = false;
+  bool _didRegisterSessionListener = false;
 
   /// Initialize the connection.
   Future<void> init() async {
+    if (!_didRegisterSessionListener) {
+      DevSessionStore.instance.addListener(_handleSessionChanged);
+      _didRegisterSessionListener = true;
+    }
     if (_isConnecting || (_channel != null)) return;
     _isConnecting = true;
+    _reconnectTimer?.cancel();
 
     try {
       // Fetch auth ticket
@@ -90,14 +98,35 @@ class WebSocketService {
 
   void _reconnect() {
     _pingTimer?.cancel();
+    _reconnectTimer?.cancel();
     final old = _channel;
     _channel = null;
     old?.sink.close();
-    Future.delayed(const Duration(seconds: 5), () => init());
+    _reconnectTimer = Timer(const Duration(seconds: 5), () {
+      unawaited(init());
+    });
+  }
+
+  void _handleSessionChanged() {
+    refreshSession();
+  }
+
+  Future<void> refreshSession() async {
+    _pingTimer?.cancel();
+    _reconnectTimer?.cancel();
+    final old = _channel;
+    _channel = null;
+    await old?.sink.close();
+    await init();
   }
 
   void dispose() {
+    if (_didRegisterSessionListener) {
+      DevSessionStore.instance.removeListener(_handleSessionChanged);
+      _didRegisterSessionListener = false;
+    }
     _pingTimer?.cancel();
+    _reconnectTimer?.cancel();
     _channel?.sink.close();
     _eventController.close();
   }

@@ -7,7 +7,6 @@ import 'dart:ui' as ui;
 import 'package:http/http.dart' as http;
 
 import '../../../../core/network/api_config.dart';
-import '../../../auth/application/auth_store.dart';
 
 Map<String, String>? attachmentRequestHeadersForUrl(String url) {
   final mediaUri = Uri.tryParse(url);
@@ -23,14 +22,9 @@ Map<String, String>? attachmentRequestHeadersForUrl(String url) {
   }
 
   final headers = <String, String>{};
-  final token = AuthStore.instance.token;
-  if (token != null && token.isNotEmpty) {
-    headers['Authorization'] = 'Bearer $token';
-  }
-  final uid = AuthStore.instance.currentUserId;
-  if (uid != null) {
-    headers['X-User-Id'] = uid.toString();
-  }
+  final uid = ApiSession.currentUserId;
+  headers['X-User-Id'] = uid.toString();
+  headers['X-Client-Id'] = uid.toString();
   return headers.isEmpty ? null : headers;
 }
 
