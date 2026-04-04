@@ -1,10 +1,12 @@
 import 'package:flutter/cupertino.dart';
+import '../../../l10n/app_localizations.dart';
 
 import '../../../app/presentation/root_navigation.dart';
 import '../../../app/theme/style_config.dart';
 import '../../../core/settings/app_settings_store.dart';
 import '../../../features/auth/application/auth_store.dart';
 import 'font_size_settings_view.dart';
+import 'language_settings_view.dart';
 import 'notification_settings_view.dart';
 import 'profile_settings_view.dart';
 import 'settings_components.dart';
@@ -21,62 +23,24 @@ class _SettingsPageState extends State<SettingsPage> {
     pushRootCupertinoPage<void>(context, page);
   }
 
-  String _languageLabel(AppLanguage language) {
-    switch (language) {
-      case AppLanguage.system:
-        return 'System';
-      case AppLanguage.english:
-        return 'English';
-      case AppLanguage.chinese:
-        return 'Chinese';
-    }
-  }
-
-  Future<void> _showLanguagePicker() async {
-    final currentLanguage = AppSettingsStore.instance.language;
-    await showCupertinoModalPopup<void>(
-      context: context,
-      builder: (context) => CupertinoActionSheet(
-        title: Text(
-          'Language',
-          style: appTextStyle(context, fontSize: AppFontSizes.body),
-        ),
-        actions: [
-          for (final language in AppLanguage.values)
-            CupertinoActionSheetAction(
-              isDefaultAction: language == currentLanguage,
-              onPressed: () {
-                AppSettingsStore.instance.setLanguage(language);
-                Navigator.of(context).pop();
-              },
-              child: Text(_languageLabel(language)),
-            ),
-        ],
-        cancelButton: CupertinoActionSheetAction(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-      ),
-    );
-  }
-
   List<SettingsSectionData> _sections(AppLanguage language) {
+    final l10n = AppLocalizations.of(context)!;
     return [
       SettingsSectionData(
-        title: 'General',
+        title: l10n.settingsGeneral,
         items: [
           SettingsItemData(
-            title: 'Language',
+            title: l10n.settingsLanguage,
             icon: CupertinoIcons.globe,
             iconColor: const Color(0xFF3A7DFF),
-            trailingText: _languageLabel(language),
+            trailingText: language.displayName(l10n),
             trailingTextSize: AppFontSizes.body,
             titleFontSize: AppFontSizes.body,
             titleFontWeight: FontWeight.w500,
-            onTap: _showLanguagePicker,
+            onTap: () => _openPage(const LanguageSettingsPage()),
           ),
           SettingsItemData(
-            title: 'Text Size',
+            title: l10n.settingsTextSize,
             icon: CupertinoIcons.textformat_size,
             iconColor: const Color(0xFF34A853),
             titleFontSize: AppFontSizes.body,
@@ -86,10 +50,10 @@ class _SettingsPageState extends State<SettingsPage> {
         ],
       ),
       SettingsSectionData(
-        title: 'User',
+        title: l10n.settingsUser,
         items: [
           SettingsItemData(
-            title: 'Profile',
+            title: l10n.settingsProfile,
             icon: CupertinoIcons.person_crop_circle,
             iconColor: const Color(0xFF34AADC),
             titleFontSize: AppFontSizes.body,
@@ -99,10 +63,10 @@ class _SettingsPageState extends State<SettingsPage> {
         ],
       ),
       SettingsSectionData(
-        title: 'Notifications',
+        title: l10n.settingsNotifications,
         items: [
           SettingsItemData(
-            title: 'Notifications',
+            title: l10n.settingsNotifications,
             icon: CupertinoIcons.bell,
             iconColor: const Color(0xFFFF9500),
             titleFontSize: AppFontSizes.body,
@@ -116,9 +80,10 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return CupertinoPageScaffold(
       backgroundColor: const Color(0xFFF2F2F7),
-      navigationBar: const CupertinoNavigationBar(middle: Text('Settings')),
+      navigationBar: CupertinoNavigationBar(middle: Text(l10n.tabSettings)),
       child: SafeArea(
         child: AnimatedBuilder(
           animation: AppSettingsStore.instance,
@@ -137,7 +102,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     title: '',
                     items: [
                       SettingsItemData(
-                        title: 'Log Out',
+                        title: l10n.logOut,
                         icon: CupertinoIcons.square_arrow_right,
                         iconColor: const Color(0xFFFF3B30),
                         titleFontSize: AppFontSizes.body,
@@ -157,20 +122,21 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _confirmLogout() async {
+    final l10n = AppLocalizations.of(context)!;
     final shouldLogout = await showCupertinoDialog<bool>(
       context: context,
       builder: (context) => CupertinoAlertDialog(
-        title: Text('退出登录？', style: appTextStyle(context)),
-        content: Text('这会清除当前设备保存的登录状态。', style: appTextStyle(context)),
+        title: Text(l10n.logOutConfirmTitle, style: appTextStyle(context)),
+        content: Text(l10n.logOutConfirmMessage, style: appTextStyle(context)),
         actions: [
           CupertinoDialogAction(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('取消', style: appTextStyle(context)),
+            child: Text(l10n.cancel, style: appTextStyle(context)),
           ),
           CupertinoDialogAction(
             isDestructiveAction: true,
             onPressed: () => Navigator.pop(context, true),
-            child: Text('退出登录', style: appTextStyle(context)),
+            child: Text(l10n.logOut, style: appTextStyle(context)),
           ),
         ],
       ),

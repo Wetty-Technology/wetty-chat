@@ -1,0 +1,162 @@
+{
+  "@@locale": "en",
+
+  "appTitle": "Wetty Chat",
+  "@appTitle": { "description": "The application title" },
+
+  "tabChats": "Chats",
+  "@tabChats": { "description": "Bottom tab label for chats" },
+
+  "tabSettings": "Settings",
+  "@tabSettings": { "description": "Bottom tab label for settings" },
+
+  "login": "Login",
+  "@login": { "description": "Login button / page title" },
+
+  "loginInfo": "Login Info",
+  "@loginInfo": { "description": "Login info section header" },
+
+  "username": "Username",
+  "@username": { "description": "Username field label" },
+
+  "password": "Password",
+  "@password": { "description": "Password field label" },
+
+  "securityQuestion": "Security Question",
+  "@securityQuestion": { "description": "Security question section header" },
+
+  "securityQuestionHint": "Security question (ignore if not set)",
+  "@securityQuestionHint": { "description": "Security question hint text" },
+
+  "sqMothersName": "Mother's name",
+  "@sqMothersName": { "description": "Security question option" },
+
+  "sqGrandfathersName": "Grandfather's name",
+  "@sqGrandfathersName": { "description": "Security question option" },
+
+  "sqFathersBirthCity": "Father's birth city",
+  "@sqFathersBirthCity": { "description": "Security question option" },
+
+  "sqTeachersName": "Name of one of your teachers",
+  "@sqTeachersName": { "description": "Security question option" },
+
+  "sqComputerModel": "Your computer model",
+  "@sqComputerModel": { "description": "Security question option" },
+
+  "sqFavoriteRestaurant": "Your favorite restaurant",
+  "@sqFavoriteRestaurant": { "description": "Security question option" },
+
+  "sqDriversLicenseLast4": "Last 4 digits of driver's license",
+  "@sqDriversLicenseLast4": { "description": "Security question option" },
+
+  "loginSuccess": "Login successful",
+  "@loginSuccess": { "description": "Toast shown on successful login" },
+
+  "loginFailed": "Login failed",
+  "@loginFailed": { "description": "Toast shown on failed login" },
+
+  "missingFields": "Missing fields",
+  "@missingFields": { "description": "Error when required fields are empty" },
+
+  "processing": "Processing",
+  "@processing": { "description": "Status while request is in progress" },
+
+  "ready": "Ready",
+  "@ready": { "description": "Status when ready" },
+
+  "newChat": "New Chat",
+  "@newChat": { "description": "New chat page title" },
+
+  "chatName": "Chat Name",
+  "@chatName": { "description": "Chat name field label" },
+
+  "optional": "Optional",
+  "@optional": { "description": "Placeholder for optional fields" },
+
+  "create": "Create",
+  "@create": { "description": "Create button label" },
+
+  "chatCreated": "Chat created",
+  "@chatCreated": { "description": "Toast shown when chat is created" },
+
+  "noMessagesYet": "No messages yet",
+  "@noMessagesYet": { "description": "Placeholder when chat has no messages" },
+
+  "groupMembers": "Group Members",
+  "@groupMembers": { "description": "Group members page title" },
+
+  "groupSettings": "Group Settings",
+  "@groupSettings": { "description": "Group settings page title" },
+
+  "noMembers": "No members",
+  "@noMembers": { "description": "Placeholder when group has no members" },
+
+  "retry": "Retry",
+  "@retry": { "description": "Retry button label" },
+
+  "settingsLanguage": "Language",
+  "@settingsLanguage": { "description": "Language setting label" },
+
+  "languageSystem": "System",
+  "@languageSystem": { "description": "System language option" },
+
+  "languageEnglish": "English",
+  "@languageEnglish": { "description": "English language option" },
+
+  "languageChineseCN": "Simplified Chinese",
+  "@languageChineseCN": { "description": "Simplified Chinese language option" },
+
+  "languageChineseTW": "Traditional Chinese",
+  "@languageChineseTW": { "description": "Traditional Chinese language option" },
+
+  "settingsTextSize": "Text Size",
+  "@settingsTextSize": { "description": "Text size setting label" },
+
+  "settingsGeneral": "General",
+  "@settingsGeneral": { "description": "General settings section header" },
+
+  "settingsUser": "User",
+  "@settingsUser": { "description": "User settings section header" },
+
+  "settingsProfile": "Profile",
+  "@settingsProfile": { "description": "Profile setting label" },
+
+  "settingsNotifications": "Notifications",
+  "@settingsNotifications": { "description": "Notifications setting label" },
+
+  "logOut": "Log Out",
+  "@logOut": { "description": "Log out button label" },
+
+  "logOutConfirmTitle": "Log out?",
+  "@logOutConfirmTitle": { "description": "Log out confirmation dialog title" },
+
+  "logOutConfirmMessage": "This will clear the login state saved on this device.",
+  "@logOutConfirmMessage": { "description": "Log out confirmation dialog message" },
+
+  "cancel": "Cancel",
+  "@cancel": { "description": "Cancel button label" },
+
+  "ok": "OK",
+  "@ok": { "description": "OK button label" },
+
+  "error": "Error",
+  "@error": { "description": "Error dialog title" },
+
+  "close": "Close",
+  "@close": { "description": "Close button label" },
+
+  "copied": "Copied",
+  "@copied": { "description": "Toast shown when text is copied" },
+
+  "fontSize": "Font Size",
+  "@fontSize": { "description": "Font size settings page title" },
+
+  "messagesFontSize": "Messages Font Size",
+  "@messagesFontSize": { "description": "Messages font size label" },
+
+  "sampleUser": "Sample User",
+  "@sampleUser": { "description": "Example user name in font size preview" },
+
+  "fontSizePreviewMessage": "This is how your messages will look in chat.",
+  "@fontSizePreviewMessage": { "description": "Font size preview sample message" }
+}
