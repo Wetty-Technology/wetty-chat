@@ -101,7 +101,7 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            {backAction ? <BackButton action={backAction} /> : <IonBackButton defaultHref="/settings" />}
+            {backAction ? <BackButton action={backAction} /> : <IonBackButton text={t`Back`} defaultHref="/settings" />}
           </IonButtons>
           <IonTitle>
             <Trans>Stickers</Trans>
