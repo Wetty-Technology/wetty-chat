@@ -17,7 +17,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { checkmarkDone, mailUnreadOutline, notificationsOffOutline } from 'ionicons/icons';
 import { type ChatListEntry, getChats } from '@/api/chats';
 import { selectAllChats, setChatLastReadMessageId, setChatsList, setChatUnreadCount } from '@/store/chatsSlice';
-import { selectEffectiveLocale } from '@/store/settingsSlice';
+import { selectEffectiveLocale, selectShowAllTab } from '@/store/settingsSlice';
 import { Trans } from '@lingui/react/macro';
 import { markChatAsUnread, markMessagesAsRead, type MessageResponse } from '@/api/messages';
 import { t } from '@lingui/core/macro';
@@ -110,9 +110,11 @@ export function ChatList({ activeChatId, activeThreadId, onChatSelect, onThreadS
   const threadsLoaded = useSelector(selectThreadsLoaded);
   const unreadThreadCount = useSelector(selectTotalUnreadThreadCount);
   const unreadChatCount = useSelector(selectTotalUnreadChatCount);
+  const showAllTab = useSelector(selectShowAllTab);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<ChatListTab>('all');
+  const [activeTab, setActiveTab] = useState<ChatListTab>(showAllTab ? 'all' : 'groups');
+  const effectiveTab = activeTab === 'all' && !showAllTab ? 'groups' : activeTab;
 
   const updateAppBadge = useCallback(async () => {
     await syncAppBadgeCount();
@@ -319,11 +321,11 @@ export function ChatList({ activeChatId, activeThreadId, onChatSelect, onThreadS
       );
     }
 
-    if (activeTab === 'threads') {
+    if (effectiveTab === 'threads') {
       return <ThreadsListInner activeThreadId={activeThreadId} onThreadSelect={handleThreadSelect} />;
     }
 
-    if (activeTab === 'groups') {
+    if (effectiveTab === 'groups') {
       if (chats.length === 0) {
         return (
           <IonList>
@@ -377,11 +379,12 @@ export function ChatList({ activeChatId, activeThreadId, onChatSelect, onThreadS
         <IonRefresherContent />
       </IonRefresher>
       <ChatListSegment
-        value={activeTab}
+        value={effectiveTab}
         onChange={setActiveTab}
         allUnreadCount={unreadChatCount + unreadThreadCount}
         groupsUnreadCount={unreadChatCount}
         threadsUnreadCount={unreadThreadCount}
+        showAllTab={showAllTab}
       />
       {renderContent()}
     </IonContent>

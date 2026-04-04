@@ -1231,7 +1231,13 @@ async fn mark_as_read(
 
     use crate::schema::group_membership::dsl as gm_dsl;
     diesel::update(
-        group_membership::table.filter(gm_dsl::chat_id.eq(chat_id).and(gm_dsl::uid.eq(uid))),
+        group_membership::table.filter(
+            gm_dsl::chat_id.eq(chat_id).and(gm_dsl::uid.eq(uid)).and(
+                gm_dsl::last_read_message_id
+                    .is_null()
+                    .or(gm_dsl::last_read_message_id.lt(body.message_id)),
+            ),
+        ),
     )
     .set(gm_dsl::last_read_message_id.eq(Some(body.message_id)))
     .execute(conn)?;
@@ -1245,6 +1251,15 @@ async fn mark_as_read(
     }))
 }
 
+/// Optional body for the unread endpoint — allows resetting read position to a specific message.
+#[derive(serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MarkAsUnreadBody {
+    #[serde(deserialize_with = "crate::serde_i64_string::deserialize")]
+    #[schema(value_type = String)]
+    message_id: i64,
+}
+
 /// POST /chats/:chat_id/unread — Mark a chat as unread by rewinding the read pointer.
 #[utoipa::path(
     post,
@@ -1253,6 +1268,7 @@ async fn mark_as_read(
     params(
         ("chat_id" = i64, Path, description = "Chat ID"),
     ),
+    request_body(content = Option<MarkAsUnreadBody>),
     responses(
         (status = 200, description = "Updated read state", body = MarkChatReadStateResponse),
     ),
@@ -1262,43 +1278,59 @@ async fn mark_as_unread(
     CurrentUid(uid): CurrentUid,
     Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
     mut conn: DbConn,
+    body: Option<Json<MarkAsUnreadBody>>,
 ) -> Result<Json<MarkChatReadStateResponse>, AppError> {
     let conn = &mut *conn;
 
     check_membership(conn, chat_id, uid)?;
 
-    use crate::schema::messages::dsl;
-    let last_two: Vec<i64> = messages_schema::table
-        .filter(
-            dsl::chat_id
-                .eq(chat_id)
-                .and(dsl::reply_root_id.is_null())
-                .and(dsl::deleted_at.is_null()),
+    let explicit_id = body.map(|b| b.message_id);
+
+    let (new_read_id, unread_count) = if let Some(message_id) = explicit_id {
+        use crate::schema::group_membership::dsl as gm_dsl;
+        diesel::update(
+            group_membership::table.filter(gm_dsl::chat_id.eq(chat_id).and(gm_dsl::uid.eq(uid))),
         )
-        .order(dsl::id.desc())
-        .limit(2)
-        .select(dsl::id)
-        .load(conn)?;
+        .set(gm_dsl::last_read_message_id.eq(Some(message_id)))
+        .execute(conn)?;
 
-    // If < 2 public messages, set to NULL (entire chat unread); otherwise second-to-last
-    let new_read_id = if last_two.len() >= 2 {
-        Some(last_two[1])
+        let unread_count =
+            crate::services::chat::get_chat_unread_count(conn, chat_id, Some(message_id))?;
+        (Some(message_id), unread_count)
     } else {
-        None
-    };
+        use crate::schema::messages::dsl;
+        let last_two: Vec<i64> = messages_schema::table
+            .filter(
+                dsl::chat_id
+                    .eq(chat_id)
+                    .and(dsl::reply_root_id.is_null())
+                    .and(dsl::deleted_at.is_null()),
+            )
+            .order(dsl::id.desc())
+            .limit(2)
+            .select(dsl::id)
+            .load(conn)?;
 
-    use crate::schema::group_membership::dsl as gm_dsl;
-    diesel::update(
-        group_membership::table.filter(gm_dsl::chat_id.eq(chat_id).and(gm_dsl::uid.eq(uid))),
-    )
-    .set(gm_dsl::last_read_message_id.eq(new_read_id))
-    .execute(conn)?;
+        // If < 2 public messages, set to NULL (entire chat unread); otherwise second-to-last
+        let new_read_id = if last_two.len() >= 2 {
+            Some(last_two[1])
+        } else {
+            None
+        };
 
-    // Unread count is always 1 when we rewind to second-to-last, or total messages if NULL
-    let unread_count = if new_read_id.is_some() {
-        1
-    } else {
-        last_two.len() as i64
+        use crate::schema::group_membership::dsl as gm_dsl;
+        diesel::update(
+            group_membership::table.filter(gm_dsl::chat_id.eq(chat_id).and(gm_dsl::uid.eq(uid))),
+        )
+        .set(gm_dsl::last_read_message_id.eq(new_read_id))
+        .execute(conn)?;
+
+        let unread_count = if new_read_id.is_some() {
+            1
+        } else {
+            last_two.len() as i64
+        };
+        (new_read_id, unread_count)
     };
 
     Ok(Json(MarkChatReadStateResponse {

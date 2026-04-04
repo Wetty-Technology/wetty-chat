@@ -1251,6 +1251,10 @@ msgid "Share Invite"
 msgstr "分享邀请"
 
 #: src/pages/settings/general.tsx
+msgid "Show \"All\" Tab in Chats"
+msgstr "在聊天中显示"全部"标签"
+
+#: src/pages/settings/general.tsx
 msgid "Small"
 msgstr "小"
 

@@ -1304,6 +1304,10 @@ msgid "Share Invite"
 msgstr "Share Invite"
 
 #: src/pages/settings/general.tsx
+msgid "Show \"All\" Tab in Chats"
+msgstr "Show \"All\" Tab in Chats"
+
+#: src/pages/settings/general.tsx
 msgid "Small"
 msgstr "Small"
 

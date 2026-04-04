@@ -93,7 +93,12 @@ pub fn mark_thread_as_read(
         thread_subscriptions::table.filter(
             thread_subscriptions::thread_root_id
                 .eq(thread_root_id)
-                .and(thread_subscriptions::uid.eq(uid)),
+                .and(thread_subscriptions::uid.eq(uid))
+                .and(
+                    thread_subscriptions::last_read_message_id
+                        .is_null()
+                        .or(thread_subscriptions::last_read_message_id.lt(message_id)),
+                ),
         ),
     )
     .set(thread_subscriptions::last_read_message_id.eq(Some(message_id)))
