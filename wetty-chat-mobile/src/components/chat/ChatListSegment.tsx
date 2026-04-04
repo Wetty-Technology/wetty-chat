@@ -10,6 +10,7 @@ interface ChatListSegmentProps {
   allUnreadCount: number;
   groupsUnreadCount: number;
   threadsUnreadCount: number;
+  showAllTab?: boolean;
 }
 
 function UnreadBadge({ count }: { count: number }) {
@@ -27,6 +28,7 @@ export function ChatListSegment({
   allUnreadCount,
   groupsUnreadCount,
   threadsUnreadCount,
+  showAllTab = true,
 }: ChatListSegmentProps) {
   return (
     <div className={styles.segmentWrapper}>
@@ -38,12 +40,14 @@ export function ChatListSegment({
           if (val) onChange(val);
         }}
       >
-        <IonSegmentButton value="all">
-          <IonLabel>
-            <Trans>All</Trans>
-            <UnreadBadge count={allUnreadCount} />
-          </IonLabel>
-        </IonSegmentButton>
+        {showAllTab && (
+          <IonSegmentButton value="all">
+            <IonLabel>
+              <Trans>All</Trans>
+              <UnreadBadge count={allUnreadCount} />
+            </IonLabel>
+          </IonSegmentButton>
+        )}
         <IonSegmentButton value="groups">
           <IonLabel>
             <Trans>Groups</Trans>

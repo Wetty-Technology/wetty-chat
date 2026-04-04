@@ -10,6 +10,7 @@ import {
   IonPage,
   IonRange,
   IonTitle,
+  IonToggle,
   IonToolbar,
 } from '@ionic/react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -19,7 +20,14 @@ import { Trans } from '@lingui/react/macro';
 import { i18n } from '@/i18n';
 import { BackButton } from '@/components/BackButton';
 import { ChatBubble } from '@/components/chat/messages/ChatBubble';
-import { chatFontSizeOptions, selectLocale, selectMessageFontSize, setMessageFontSize } from '@/store/settingsSlice';
+import {
+  chatFontSizeOptions,
+  selectLocale,
+  selectMessageFontSize,
+  selectShowAllTab,
+  setMessageFontSize,
+  setShowAllTab,
+} from '@/store/settingsSlice';
 import type { BackAction } from '@/types/back-action';
 import styles from './GeneralSettings.module.scss';
 
@@ -39,6 +47,7 @@ export function GeneralSettingsCore({ backAction, onOpenLanguage }: GeneralSetti
   const history = useHistory();
   const locale = useSelector(selectLocale);
   const messageFontSize = useSelector(selectMessageFontSize);
+  const showAllTab = useSelector(selectShowAllTab);
   const sliderValue = chatFontSizeOptions.indexOf(messageFontSize);
 
   const handleOpenLanguage = () => {
@@ -70,6 +79,11 @@ export function GeneralSettingsCore({ backAction, onOpenLanguage }: GeneralSetti
             <IonLabel slot="end" color="medium">
               {locale ? (localeLabels[locale] ?? locale) : t`Auto`}
             </IonLabel>
+          </IonItem>
+          <IonItem>
+            <IonToggle checked={showAllTab} onIonChange={(e) => dispatch(setShowAllTab(e.detail.checked))}>
+              <Trans>Show "All" Tab in Chats</Trans>
+            </IonToggle>
           </IonItem>
         </IonList>
 

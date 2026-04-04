@@ -23,7 +23,7 @@ import { createStore, setStoreInstance } from '@/store/index';
 import { initializeClientId } from '@/utils/clientId';
 import { syncJwtTokenToIdb } from '@/utils/jwtToken';
 import { kvGet } from '@/utils/db';
-import { defaultChatFontSize, isChatFontSizeOption, type SettingsState } from '@/store/settingsSlice';
+import { hydrateSettings, type SettingsState } from '@/store/settingsSlice';
 import { installBootstrapRecoveryHandlers } from '@/bootstrapRecovery';
 import App from './App';
 import { setupIonicReact } from '@ionic/react';
@@ -44,14 +44,11 @@ async function bootstrap() {
     syncJwtTokenToIdb(),
   ]);
 
-  const locale = savedSettings?.locale ?? null;
-  const messageFontSize = isChatFontSizeOption(savedSettings?.messageFontSize)
-    ? savedSettings.messageFontSize
-    : defaultChatFontSize;
+  const settings = hydrateSettings(savedSettings);
 
-  await activateDetectedLocale(locale);
+  await activateDetectedLocale(settings.locale);
 
-  const store = createStore({ locale, messageFontSize });
+  const store = createStore(settings);
   setStoreInstance(store);
 
   createRoot(document.getElementById('root')!).render(

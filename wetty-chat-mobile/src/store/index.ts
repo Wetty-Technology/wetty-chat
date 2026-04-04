@@ -182,7 +182,7 @@ listenerMiddleware.startListening({
   },
 });
 
-export function createStore(initialSettings?: Partial<SettingsState>) {
+export function createStore(initialSettings?: SettingsState) {
   return configureStore({
     reducer: {
       connection: connectionReducer,
@@ -193,9 +193,7 @@ export function createStore(initialSettings?: Partial<SettingsState>) {
       pins: pinsReducer,
       user: userReducer,
     },
-    preloadedState: initialSettings
-      ? { settings: { locale: null, messageFontSize: 'medium' as const, ...initialSettings } }
-      : undefined,
+    preloadedState: initialSettings ? { settings: initialSettings } : undefined,
     middleware: (getDefaultMiddleware) => getDefaultMiddleware().prepend(listenerMiddleware.middleware),
   });
 }

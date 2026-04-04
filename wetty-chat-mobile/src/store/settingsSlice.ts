@@ -30,6 +30,7 @@ export function detectLocale(): string {
 export interface SettingsState {
   locale: string | null;
   messageFontSize: ChatFontSizeOption;
+  showAllTab: boolean;
 }
 
 export function isChatFontSizeOption(value: unknown): value is ChatFontSizeOption {
@@ -37,7 +38,11 @@ export function isChatFontSizeOption(value: unknown): value is ChatFontSizeOptio
 }
 
 function persistSettings(state: SettingsState) {
-  void kvSet('settings', { locale: state.locale, messageFontSize: state.messageFontSize });
+  void kvSet('settings', {
+    locale: state.locale,
+    messageFontSize: state.messageFontSize,
+    showAllTab: state.showAllTab,
+  });
 }
 
 function persistEffectiveLocale(locale: string | null) {
@@ -49,25 +54,44 @@ export function getChatFontSizeStyle(messageFontSize: ChatFontSizeOption): strin
   return chatFontSizeStyles[messageFontSize];
 }
 
+const defaultSettings: SettingsState = {
+  locale: null,
+  messageFontSize: defaultChatFontSize,
+  showAllTab: true,
+};
+
+export function hydrateSettings(saved: Partial<SettingsState> | null | undefined): SettingsState {
+  return {
+    ...defaultSettings,
+    ...saved,
+    messageFontSize: isChatFontSizeOption(saved?.messageFontSize) ? saved.messageFontSize : defaultChatFontSize,
+  };
+}
+
 const settingsSlice = createSlice({
   name: 'settings',
-  initialState: { locale: null, messageFontSize: defaultChatFontSize } as SettingsState,
+  initialState: defaultSettings,
   reducers: {
     setLocale(state, action: PayloadAction<string | null>) {
       state.locale = action.payload;
-      persistSettings({ locale: state.locale, messageFontSize: state.messageFontSize });
+      persistSettings(state);
       persistEffectiveLocale(state.locale);
     },
     setMessageFontSize(state, action: PayloadAction<ChatFontSizeOption>) {
       state.messageFontSize = action.payload;
-      persistSettings({ locale: state.locale, messageFontSize: state.messageFontSize });
+      persistSettings(state);
+    },
+    setShowAllTab(state, action: PayloadAction<boolean>) {
+      state.showAllTab = action.payload;
+      persistSettings(state);
     },
   },
 });
 
-export const { setLocale, setMessageFontSize } = settingsSlice.actions;
+export const { setLocale, setMessageFontSize, setShowAllTab } = settingsSlice.actions;
 export const selectLocale = (state: RootState) => state.settings.locale;
 export const selectEffectiveLocale = (state: RootState) => state.settings.locale ?? detectLocale();
 export const selectMessageFontSize = (state: RootState) => state.settings.messageFontSize;
+export const selectShowAllTab = (state: RootState) => state.settings.showAllTab;
 export const selectChatFontSizeStyle = (state: RootState) => getChatFontSizeStyle(state.settings.messageFontSize);
 export default settingsSlice.reducer;
