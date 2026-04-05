@@ -63,7 +63,7 @@ class MessageItem {
   final String messageType;
   final Sender sender;
   final String chatId;
-  final String createdAt;
+  final DateTime? createdAt;
   final bool isEdited;
   final bool isDeleted;
   final String clientGeneratedId;

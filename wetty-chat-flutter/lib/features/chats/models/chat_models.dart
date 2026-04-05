@@ -3,10 +3,10 @@ import 'message_models.dart';
 class ChatListItem {
   final String id;
   final String? name;
-  final String? lastMessageAt;
+  final DateTime? lastMessageAt;
   final int unreadCount;
   final MessageItem? lastMessage;
-  final String? mutedUntil;
+  final DateTime? mutedUntil;
 
   ChatListItem({
     required this.id,
@@ -21,10 +21,10 @@ class ChatListItem {
   ChatListItem copyWith({
     String? id,
     String? name,
-    String? lastMessageAt,
+    DateTime? lastMessageAt,
     int? unreadCount,
     MessageItem? lastMessage,
-    String? mutedUntil,
+    DateTime? mutedUntil,
   }) {
     return ChatListItem(
       id: id ?? this.id,

@@ -1,6 +1,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import '../converters/flexible_int_converter.dart';
+import '../converters/nullable_date_time_converter.dart';
 import '../converters/string_value_converter.dart';
 
 part 'messages_api_models.g.dart';
@@ -101,7 +102,7 @@ class MessageItemDto {
     this.messageType = 'text',
     required this.sender,
     required this.chatId,
-    this.createdAt = '',
+    this.createdAt,
     this.isEdited = false,
     this.isDeleted = false,
     this.clientGeneratedId = '',
@@ -120,8 +121,8 @@ class MessageItemDto {
   final SenderDto sender;
   @FlexibleIntConverter()
   final int chatId;
-  @JsonKey(defaultValue: '')
-  final String createdAt;
+  @NullableDateTimeConverter()
+  final DateTime? createdAt;
   @JsonKey(defaultValue: false)
   final bool isEdited;
   @JsonKey(defaultValue: false)

@@ -1,6 +1,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import '../converters/flexible_int_converter.dart';
+import '../converters/nullable_date_time_converter.dart';
 
 part 'group_members_api_models.g.dart';
 
@@ -10,7 +11,7 @@ class GroupMemberDto {
     required this.uid,
     this.username,
     this.role = 'member',
-    this.joinedAt = '',
+    this.joinedAt,
   });
 
   @FlexibleIntConverter()
@@ -18,8 +19,8 @@ class GroupMemberDto {
   final String? username;
   @JsonKey(defaultValue: 'member')
   final String role;
-  @JsonKey(defaultValue: '')
-  final String joinedAt;
+  @NullableDateTimeConverter()
+  final DateTime? joinedAt;
 
   factory GroupMemberDto.fromJson(Map<String, dynamic> json) =>
       _$GroupMemberDtoFromJson(json);

@@ -72,7 +72,7 @@ MessageItem _message(int id, {String chatId = '1'}) {
     messageType: 'text',
     sender: const Sender(uid: 2, name: 'tester'),
     chatId: chatId,
-    createdAt: '2026-01-01T00:00:00Z',
+    createdAt: DateTime.parse('2026-01-01T00:00:00Z'),
     isEdited: false,
     isDeleted: false,
     clientGeneratedId: 'c$id',

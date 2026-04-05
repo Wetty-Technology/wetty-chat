@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/routing/route_names.dart';
 import '../../../../app/theme/style_config.dart';
 import '../../../../core/network/api_config.dart';
+import '../../chat_timestamp_formatter.dart';
 import '../../models/message_models.dart';
 import 'message_attachment_previews.dart';
 import 'message_avatar.dart';
@@ -426,7 +427,7 @@ class _MessageRowState extends State<MessageRow>
           Padding(
             padding: const EdgeInsets.only(right: 3),
             child: Text(
-              'edited',
+              'edited', // TODO: localize
               style: _bubbleStyle(
                 color: presentation.metaColor,
                 fontSize: AppFontSizes.bubbleMeta,
@@ -704,7 +705,7 @@ class _MessageRowPresentation {
   }) {
     final colors = context.appColors;
     final senderName = message.sender.name ?? 'User ${message.sender.uid}';
-    final timeStr = _formatTime(message.createdAt);
+    final timeStr = formatChatMessageTime(context, message.createdAt);
     final screenWidth = MediaQuery.sizeOf(context).width;
 
     return _MessageRowPresentation(
@@ -750,15 +751,5 @@ class _MessageRowPresentation {
     )..layout(maxWidth: double.infinity);
 
     return metaPainter.width;
-  }
-
-  static String _formatTime(String iso) {
-    if (iso.isEmpty) return '';
-    try {
-      final dt = DateTime.parse(iso);
-      return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    } catch (_) {
-      return iso;
-    }
   }
 }

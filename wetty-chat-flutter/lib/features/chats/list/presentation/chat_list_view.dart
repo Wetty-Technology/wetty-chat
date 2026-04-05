@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/routing/route_names.dart';
 import '../../../../app/theme/style_config.dart';
+import '../../chat_timestamp_formatter.dart';
 import '../../detail/application/chat_draft_store.dart';
 import '../../models/chat_models.dart';
 import '../../models/message_models.dart';
@@ -197,21 +198,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         ? chat.name!
         : 'Chat ${chat.id}';
 
-    String? dateText;
-    if (chat.lastMessageAt != null) {
-      try {
-        final dt = DateTime.parse(chat.lastMessageAt!);
-        final now = DateTime.now();
-        if (dt.day == now.day && dt.month == now.month && dt.year == now.year) {
-          dateText =
-              '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-        } else {
-          dateText = '${dt.month}/${dt.day}';
-        }
-      } catch (_) {
-        dateText = chat.lastMessageAt;
-      }
-    }
+    final dateText = formatChatListTimestamp(context, chat.lastMessageAt);
 
     final lastMessage = chat.lastMessage;
     final senderName = lastMessage?.sender.name;

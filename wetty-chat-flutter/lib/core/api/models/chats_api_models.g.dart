@@ -6,29 +6,33 @@ part of 'chats_api_models.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-ChatListItemDto _$ChatListItemDtoFromJson(Map<String, dynamic> json) =>
-    ChatListItemDto(
-      id: const FlexibleIntConverter().fromJson(json['id']),
-      name: json['name'] as String?,
-      lastMessageAt: json['lastMessageAt'] as String?,
-      unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
-      lastMessage: json['lastMessage'] == null
-          ? null
-          : MessageItemDto.fromJson(
-              json['lastMessage'] as Map<String, dynamic>,
-            ),
-      mutedUntil: json['mutedUntil'] as String?,
-    );
+ChatListItemDto _$ChatListItemDtoFromJson(
+  Map<String, dynamic> json,
+) => ChatListItemDto(
+  id: const FlexibleIntConverter().fromJson(json['id']),
+  name: json['name'] as String?,
+  lastMessageAt: const NullableDateTimeConverter().fromJson(
+    json['lastMessageAt'],
+  ),
+  unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
+  lastMessage: json['lastMessage'] == null
+      ? null
+      : MessageItemDto.fromJson(json['lastMessage'] as Map<String, dynamic>),
+  mutedUntil: const NullableDateTimeConverter().fromJson(json['mutedUntil']),
+);
 
-Map<String, dynamic> _$ChatListItemDtoToJson(ChatListItemDto instance) =>
-    <String, dynamic>{
-      'id': const FlexibleIntConverter().toJson(instance.id),
-      'name': instance.name,
-      'lastMessageAt': instance.lastMessageAt,
-      'unreadCount': instance.unreadCount,
-      'lastMessage': instance.lastMessage?.toJson(),
-      'mutedUntil': instance.mutedUntil,
-    };
+Map<String, dynamic> _$ChatListItemDtoToJson(
+  ChatListItemDto instance,
+) => <String, dynamic>{
+  'id': const FlexibleIntConverter().toJson(instance.id),
+  'name': instance.name,
+  'lastMessageAt': const NullableDateTimeConverter().toJson(
+    instance.lastMessageAt,
+  ),
+  'unreadCount': instance.unreadCount,
+  'lastMessage': instance.lastMessage?.toJson(),
+  'mutedUntil': const NullableDateTimeConverter().toJson(instance.mutedUntil),
+};
 
 ListChatsResponseDto _$ListChatsResponseDtoFromJson(
   Map<String, dynamic> json,

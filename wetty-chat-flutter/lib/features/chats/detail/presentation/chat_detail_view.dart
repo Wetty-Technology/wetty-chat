@@ -73,22 +73,22 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
   int _scrollOperationToken = 0;
   static const double _tallMessageHeightThreshold = 0.55;
   final GlobalKey _messageListKey = GlobalKey();
+  late final ChatDetailViewModel _viewModel;
 
   ChatDetailArgs get _args =>
       (chatId: widget.chatId, unreadCount: widget.unreadCount);
 
-  ChatDetailViewModel get _viewModel =>
-      ref.read(chatDetailViewModelProvider(_args).notifier);
-
   @override
   void initState() {
     super.initState();
+    _viewModel = ref.read(chatDetailViewModelProvider(_args).notifier);
     final userId = ref.read(devSessionProvider);
     _attachmentService = AttachmentService(userId);
     WidgetsBinding.instance.addObserver(this);
     _itemPositionsListener.itemPositions.addListener(_onItemPositionsChanged);
     // Load draft after first frame when provider is available
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       final draft = _viewModel.loadDraft();
       if (draft != null) _textController.text = draft;
     });
@@ -126,10 +126,9 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
     if (_isPopping) return;
     _isPopping = true;
     _saveDraft();
-    await _viewModel.flushReadStatus();
+    final didSyncReadStatus = await _viewModel.flushReadStatus();
     if (!mounted) return;
-    final viewState = ref.read(chatDetailViewModelProvider(_args)).valueOrNull;
-    context.pop(viewState?.shouldRefreshChats ?? false);
+    context.pop(didSyncReadStatus || _viewModel.shouldRefreshChats);
   }
 
   void _onItemPositionsChanged() {

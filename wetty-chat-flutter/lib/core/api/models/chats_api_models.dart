@@ -1,6 +1,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import '../converters/flexible_int_converter.dart';
+import '../converters/nullable_date_time_converter.dart';
 import 'messages_api_models.dart';
 
 part 'chats_api_models.g.dart';
@@ -19,11 +20,13 @@ class ChatListItemDto {
   @FlexibleIntConverter()
   final int id;
   final String? name;
-  final String? lastMessageAt;
+  @NullableDateTimeConverter()
+  final DateTime? lastMessageAt;
   @JsonKey(defaultValue: 0)
   final int unreadCount;
   final MessageItemDto? lastMessage;
-  final String? mutedUntil;
+  @NullableDateTimeConverter()
+  final DateTime? mutedUntil;
 
   factory ChatListItemDto.fromJson(Map<String, dynamic> json) =>
       _$ChatListItemDtoFromJson(json);

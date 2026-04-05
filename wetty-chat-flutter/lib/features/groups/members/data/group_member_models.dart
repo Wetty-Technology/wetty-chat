@@ -9,5 +9,5 @@ class GroupMember {
   final int uid;
   final String? username;
   final String role;
-  final String joinedAt;
+  final DateTime? joinedAt;
 }

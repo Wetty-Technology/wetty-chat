@@ -11,7 +11,7 @@ GroupMemberDto _$GroupMemberDtoFromJson(Map<String, dynamic> json) =>
       uid: const FlexibleIntConverter().fromJson(json['uid']),
       username: json['username'] as String?,
       role: json['role'] as String? ?? 'member',
-      joinedAt: json['joinedAt'] as String? ?? '',
+      joinedAt: const NullableDateTimeConverter().fromJson(json['joinedAt']),
     );
 
 Map<String, dynamic> _$GroupMemberDtoToJson(GroupMemberDto instance) =>
@@ -19,7 +19,7 @@ Map<String, dynamic> _$GroupMemberDtoToJson(GroupMemberDto instance) =>
       'uid': const FlexibleIntConverter().toJson(instance.uid),
       'username': instance.username,
       'role': instance.role,
-      'joinedAt': instance.joinedAt,
+      'joinedAt': const NullableDateTimeConverter().toJson(instance.joinedAt),
     };
 
 GroupMembersResponseDto _$GroupMembersResponseDtoFromJson(

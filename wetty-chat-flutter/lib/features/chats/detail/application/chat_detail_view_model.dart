@@ -320,9 +320,6 @@ class ChatDetailViewModel
       await _repository.markAsRead(toSync);
       _lastReadSyncId = toSync;
       _didSyncReadState = true;
-      if (state.hasValue) {
-        _updateState(_currentState.copyWith(shouldRefreshChats: true));
-      }
       return true;
     } catch (_) {
       return false;
@@ -468,6 +465,7 @@ class ChatDetailViewModel
 
   int? get newestVisibleId => _newestVisibleId;
   int? get oldestVisibleId => _oldestVisibleId;
+  bool get shouldRefreshChats => _didSyncReadState;
 
   void _setDisplayItems(List<MessageItem> items, {int? anchorMessageId}) {
     _setDisplayItemsInternal(items, anchorMessageId: anchorMessageId);

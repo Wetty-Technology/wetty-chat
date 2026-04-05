@@ -83,7 +83,7 @@ ApiWsEvent _messageEvent({required String chatId, required int messageId}) {
       messageType: 'text',
       sender: const SenderDto(uid: 999, name: 'sender', gender: 0),
       chatId: int.parse(chatId),
-      createdAt: '2026-01-01T00:00:00Z',
+      createdAt: DateTime.parse('2026-01-01T00:00:00Z'),
       isEdited: false,
       isDeleted: false,
       clientGeneratedId: 'cg-$messageId',
