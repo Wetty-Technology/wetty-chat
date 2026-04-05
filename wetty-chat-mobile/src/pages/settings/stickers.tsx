@@ -31,6 +31,7 @@ import {
   getSubscribedStickerPacks,
   type StickerPackSummary,
 } from '@/api/stickers';
+import { kvGet, kvSet } from '@/utils/db';
 import type { BackAction } from '@/types/back-action';
 
 interface StickerSettingsCoreProps {
@@ -44,20 +45,34 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
   const [presentToast] = useIonToast();
   const [ownedPacks, setOwnedPacks] = useState<StickerPackSummary[]>([]);
   const [allPacks, setAllPacks] = useState<StickerPackSummary[]>([]);
-  const [autoSort, setAutoSort] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem('autoSortStickerPacks') === 'true';
-    } catch {
-      return false;
-    }
-  });
-  const [packOrder, setPackOrder] = useState<string[]>(() => {
-    try {
-      return JSON.parse(localStorage.getItem('stickerPackOrder') || '[]');
-    } catch {
-      return [];
-    }
-  });
+  const [autoSort, setAutoSort] = useState<boolean>(false);
+  const [packOrder, setPackOrder] = useState<string[]>([]);
+  const [initialized, setInitialized] = useState(false);
+
+  useEffect(() => {
+    const initStorage = async () => {
+      try {
+        const storedAutoSort = await kvGet<boolean>('autoSortStickerPacks');
+        if (storedAutoSort !== undefined) {
+          setAutoSort(storedAutoSort);
+        } else {
+          setAutoSort(false);
+        }
+
+        const storedOrder = await kvGet<string[]>('stickerPackOrder');
+        if (storedOrder !== undefined) {
+          setPackOrder(storedOrder);
+        } else {
+          setPackOrder([]);
+        }
+      } catch (error) {
+        console.error('Failed to init sticker storage', error);
+      } finally {
+        setInitialized(true);
+      }
+    };
+    void initStorage();
+  }, []);
 
   const loadPacks = useCallback(async () => {
     try {
@@ -88,19 +103,20 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
   }, [presentToast, packOrder]);
 
   useEffect(() => {
+    if (!initialized) return;
     const run = async () => {
       await loadPacks();
     };
 
     void run();
-  }, [loadPacks]);
+  }, [loadPacks, initialized]);
 
   const handleReorder = (event: CustomEvent<ItemReorderEventDetail>) => {
     const newItems = event.detail.complete(allPacks);
     setAllPacks(newItems);
     const newOrder = newItems.map((p: StickerPackSummary) => p.id);
     setPackOrder(newOrder);
-    localStorage.setItem('stickerPackOrder', JSON.stringify(newOrder));
+    void kvSet('stickerPackOrder', newOrder);
     window.dispatchEvent(new Event('stickerPackOrderChanged'));
   };
 
@@ -130,7 +146,7 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
                 const newAll = [res.data, ...prev];
                 const newOrder = newAll.map((p) => p.id);
                 setPackOrder(newOrder);
-                localStorage.setItem('stickerPackOrder', JSON.stringify(newOrder));
+                void kvSet('stickerPackOrder', newOrder);
                 window.dispatchEvent(new Event('stickerPackOrderChanged'));
                 return newAll;
               });
@@ -169,11 +185,7 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
               onIonChange={(e) => {
                 const val = e.detail.checked;
                 setAutoSort(val);
-                try {
-                  localStorage.setItem('autoSortStickerPacks', val ? 'true' : 'false');
-                } catch {
-                  // ignore
-                }
+                void kvSet('autoSortStickerPacks', val);
               }}
             />
           </IonItem>
