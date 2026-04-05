@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/style_config.dart';
 import '../../../core/session/dev_session_store.dart';
@@ -48,7 +49,7 @@ class _DevSessionSettingsPageState extends State<DevSessionSettingsPage> {
       if (!mounted) {
         return;
       }
-      Navigator.of(context).pop();
+      context.pop();
     } finally {
       if (mounted) {
         setState(() {
@@ -69,7 +70,7 @@ class _DevSessionSettingsPageState extends State<DevSessionSettingsPage> {
       if (!mounted) {
         return;
       }
-      Navigator.of(context).pop();
+      context.pop();
     } finally {
       if (mounted) {
         setState(() {

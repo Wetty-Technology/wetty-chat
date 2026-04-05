@@ -1,15 +1,11 @@
 import 'package:flutter/cupertino.dart';
+import 'package:go_router/go_router.dart';
 import '../../../l10n/app_localizations.dart';
 
-import '../../../app/presentation/root_navigation.dart';
+import '../../../app/routing/route_names.dart';
 import '../../../app/theme/style_config.dart';
 import '../../../core/session/dev_session_store.dart';
 import '../../../core/settings/app_settings_store.dart';
-import 'dev_session_settings_view.dart';
-import 'font_size_settings_view.dart';
-import 'language_settings_view.dart';
-import 'notification_settings_view.dart';
-import 'profile_settings_view.dart';
 import 'settings_components.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -20,10 +16,6 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  void _openPage(Widget page) {
-    pushRootCupertinoPage<void>(context, page);
-  }
-
   List<SettingsSectionData> _sections(AppLanguage language) {
     final l10n = AppLocalizations.of(context)!;
     final currentUserId = DevSessionStore.instance.currentUserId;
@@ -39,7 +31,7 @@ class _SettingsPageState extends State<SettingsPage> {
             trailingTextSize: AppFontSizes.body,
             titleFontSize: AppFontSizes.body,
             titleFontWeight: FontWeight.w500,
-            onTap: () => _openPage(const LanguageSettingsPage()),
+            onTap: () => context.push(AppRoutes.language),
           ),
           SettingsItemData(
             title: l10n.settingsTextSize,
@@ -47,7 +39,7 @@ class _SettingsPageState extends State<SettingsPage> {
             iconColor: const Color(0xFF34A853),
             titleFontSize: AppFontSizes.body,
             titleFontWeight: FontWeight.w500,
-            onTap: () => _openPage(const FontSizeSettingsPage()),
+            onTap: () => context.push(AppRoutes.fontSize),
           ),
         ],
       ),
@@ -60,7 +52,7 @@ class _SettingsPageState extends State<SettingsPage> {
             iconColor: const Color(0xFF34AADC),
             titleFontSize: AppFontSizes.body,
             titleFontWeight: FontWeight.w500,
-            onTap: () => _openPage(const ProfileSettingsPage()),
+            onTap: () => context.push(AppRoutes.profile),
           ),
           SettingsItemData(
             title: 'Developer Session',
@@ -70,7 +62,7 @@ class _SettingsPageState extends State<SettingsPage> {
             trailingTextSize: AppFontSizes.body,
             titleFontSize: AppFontSizes.body,
             titleFontWeight: FontWeight.w500,
-            onTap: () => _openPage(const DevSessionSettingsPage()),
+            onTap: () => context.push(AppRoutes.devSession),
           ),
         ],
       ),
@@ -83,7 +75,7 @@ class _SettingsPageState extends State<SettingsPage> {
             iconColor: const Color(0xFFFF9500),
             titleFontSize: AppFontSizes.body,
             titleFontWeight: FontWeight.w500,
-            onTap: () => _openPage(const NotificationSettingsPage()),
+            onTap: () => context.push(AppRoutes.notifications),
           ),
         ],
       ),

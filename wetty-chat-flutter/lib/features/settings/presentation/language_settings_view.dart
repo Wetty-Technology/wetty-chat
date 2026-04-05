@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/settings/app_settings_store.dart';
 import '../../../l10n/app_localizations.dart';
@@ -33,7 +34,7 @@ class LanguageSettingsPage extends StatelessWidget {
                         : null,
                     onTap: () {
                       AppSettingsStore.instance.setLanguage(language);
-                      Navigator.of(context).pop();
+                      context.pop();
                     },
                   ),
               ],

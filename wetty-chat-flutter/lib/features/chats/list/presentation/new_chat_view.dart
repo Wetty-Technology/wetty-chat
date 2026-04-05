@@ -1,11 +1,11 @@
 import 'package:flutter/cupertino.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../models/chat_models.dart';
+import '../data/chat_repository.dart';
 
 /// Page to create a new chat group.
 class NewChatPage extends StatefulWidget {
-  const NewChatPage({super.key, required this.createChat});
-  final Future<ChatListItem?> Function({String? name}) createChat;
+  const NewChatPage({super.key});
 
   @override
   State<NewChatPage> createState() => _NewChatPageState();
@@ -13,6 +13,7 @@ class NewChatPage extends StatefulWidget {
 
 class _NewChatPageState extends State<NewChatPage> {
   final _nameController = TextEditingController();
+  final _repository = ChatRepository();
   bool _isCreating = false;
 
   TextStyle _inputStyle(BuildContext context) {
@@ -36,10 +37,12 @@ class _NewChatPageState extends State<NewChatPage> {
     setState(() => _isCreating = true);
     final name = _nameController.text.trim();
     try {
-      final chat = await widget.createChat(name: name.isEmpty ? null : name);
+      final chat = await _repository.createChat(
+        name: name.isEmpty ? null : name,
+      );
       if (!mounted) return;
       if (chat != null) {
-        Navigator.of(context).pop(chat);
+        context.pop(chat);
       } else {
         _showError('Chat creation did not return a result.');
       }
@@ -74,7 +77,7 @@ class _NewChatPageState extends State<NewChatPage> {
         middle: const Text('New Chat'),
         leading: CupertinoButton(
           padding: EdgeInsets.zero,
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
           child: const Icon(CupertinoIcons.back, size: 28),
         ),
       ),
