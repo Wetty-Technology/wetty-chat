@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   IonBackButton,
   IonButtons,
@@ -31,8 +32,14 @@ import {
   getSubscribedStickerPacks,
   type StickerPackSummary,
 } from '@/api/stickers';
-import { kvGet, kvSet } from '@/utils/db';
 import type { BackAction } from '@/types/back-action';
+import {
+  fetchRemoteSettings,
+  selectAutoSortStickerPacks,
+  selectStickerPackOrder,
+  setAutoSortStickerPacks,
+  setStickerPackOrder,
+} from '@/store/settingsSlice';
 
 interface StickerSettingsCoreProps {
   backAction?: BackAction;
@@ -41,38 +48,14 @@ interface StickerSettingsCoreProps {
 
 export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsCoreProps) {
   const history = useHistory();
+  const dispatch = useDispatch();
   const [presentAlert] = useIonAlert();
   const [presentToast] = useIonToast();
   const [ownedPacks, setOwnedPacks] = useState<StickerPackSummary[]>([]);
   const [allPacks, setAllPacks] = useState<StickerPackSummary[]>([]);
-  const [autoSort, setAutoSort] = useState<boolean>(false);
-  const [packOrder, setPackOrder] = useState<string[]>([]);
-  const [initialized, setInitialized] = useState(false);
 
-  useEffect(() => {
-    const initStorage = async () => {
-      try {
-        const storedAutoSort = await kvGet<boolean>('autoSortStickerPacks');
-        if (storedAutoSort !== undefined) {
-          setAutoSort(storedAutoSort);
-        } else {
-          setAutoSort(false);
-        }
-
-        const storedOrder = await kvGet<string[]>('stickerPackOrder');
-        if (storedOrder !== undefined) {
-          setPackOrder(storedOrder);
-        } else {
-          setPackOrder([]);
-        }
-      } catch (error) {
-        console.error('Failed to init sticker storage', error);
-      } finally {
-        setInitialized(true);
-      }
-    };
-    void initStorage();
-  }, []);
+  const autoSort = useSelector(selectAutoSortStickerPacks);
+  const packOrder = useSelector(selectStickerPackOrder);
 
   const loadPacks = useCallback(async () => {
     try {
@@ -103,21 +86,19 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
   }, [presentToast, packOrder]);
 
   useEffect(() => {
-    if (!initialized) return;
     const run = async () => {
+      dispatch(fetchRemoteSettings() as any);
       await loadPacks();
     };
 
     void run();
-  }, [loadPacks, initialized]);
+  }, [loadPacks, dispatch]);
 
   const handleReorder = (event: CustomEvent<ItemReorderEventDetail>) => {
     const newItems = event.detail.complete(allPacks);
     setAllPacks(newItems);
     const newOrder = newItems.map((p: StickerPackSummary) => p.id);
-    setPackOrder(newOrder);
-    void kvSet('stickerPackOrder', newOrder);
-    window.dispatchEvent(new Event('stickerPackOrderChanged'));
+    dispatch(setStickerPackOrder(newOrder));
   };
 
   const handleOpenPack = (packId: string) => {
@@ -145,9 +126,7 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
               setAllPacks((prev) => {
                 const newAll = [res.data, ...prev];
                 const newOrder = newAll.map((p) => p.id);
-                setPackOrder(newOrder);
-                void kvSet('stickerPackOrder', newOrder);
-                window.dispatchEvent(new Event('stickerPackOrderChanged'));
+                dispatch(setStickerPackOrder(newOrder));
                 return newAll;
               });
               handleOpenPack(res.data.id);
@@ -183,9 +162,7 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
               slot="end"
               checked={autoSort}
               onIonChange={(e) => {
-                const val = e.detail.checked;
-                setAutoSort(val);
-                void kvSet('autoSortStickerPacks', val);
+                dispatch(setAutoSortStickerPacks(e.detail.checked));
               }}
             />
           </IonItem>

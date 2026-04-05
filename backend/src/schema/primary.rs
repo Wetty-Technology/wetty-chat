@@ -252,6 +252,14 @@ diesel::table! {
 }
 
 diesel::table! {
+    user_settings (uid) {
+        uid -> Int4,
+        preferences -> Jsonb,
+        updated_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     user_favorite_stickers (uid, sticker_id) {
         uid -> Int4,
         sticker_id -> Int8,
@@ -309,6 +317,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     stickers,
     thread_subscriptions,
     user_extra,
+    user_settings,
     user_favorite_stickers,
     user_sticker_pack_subscriptions,
     usergroup_extra,
