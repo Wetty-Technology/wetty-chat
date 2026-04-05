@@ -1,23 +1,26 @@
-import 'dart:async';
-
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit/media_kit.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/app.dart';
 import 'core/network/api_config.dart';
-import 'core/network/websocket_service.dart';
-import 'core/session/dev_session_store.dart';
-import 'core/settings/app_settings_store.dart';
+import 'core/providers/shared_preferences_provider.dart';
 import 'features/chats/chats.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
-  unawaited(Future<void>(MediaPreviewCache.instance.initialize));
-  await DevSessionStore.instance.init();
-  await ChatDraftStore.instance.init();
-  await AppSettingsStore.instance.init();
+  MediaPreviewCache.instance.initialize();
+
+  final prefs = await SharedPreferences.getInstance();
+
   debugPrint('[APP] API_BASE_URL=$apiBaseUrl');
-  await WebSocketService.instance.init();
-  runApp(const WettyChatApp());
+
+  runApp(
+    ProviderScope(
+      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      child: const WettyChatApp(),
+    ),
+  );
 }

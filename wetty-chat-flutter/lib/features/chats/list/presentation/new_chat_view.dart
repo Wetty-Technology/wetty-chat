@@ -1,19 +1,19 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../data/chat_repository.dart';
 
 /// Page to create a new chat group.
-class NewChatPage extends StatefulWidget {
+class NewChatPage extends ConsumerStatefulWidget {
   const NewChatPage({super.key});
 
   @override
-  State<NewChatPage> createState() => _NewChatPageState();
+  ConsumerState<NewChatPage> createState() => _NewChatPageState();
 }
 
-class _NewChatPageState extends State<NewChatPage> {
+class _NewChatPageState extends ConsumerState<NewChatPage> {
   final _nameController = TextEditingController();
-  final _repository = ChatRepository();
   bool _isCreating = false;
 
   TextStyle _inputStyle(BuildContext context) {
@@ -37,9 +37,9 @@ class _NewChatPageState extends State<NewChatPage> {
     setState(() => _isCreating = true);
     final name = _nameController.text.trim();
     try {
-      final chat = await _repository.createChat(
-        name: name.isEmpty ? null : name,
-      );
+      final chat = await ref
+          .read(chatListStateProvider.notifier)
+          .createChat(name: name.isEmpty ? null : name);
       if (!mounted) return;
       if (chat != null) {
         context.pop(chat);

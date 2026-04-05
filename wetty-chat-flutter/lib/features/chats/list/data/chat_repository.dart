@@ -1,68 +1,82 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/websocket_api_models.dart';
-import '../../../../core/network/api_config.dart';
+import '../../../../core/network/websocket_service.dart';
+import '../../../../core/session/dev_session_store.dart';
 import '../../models/chat_api_mapper.dart';
 import '../../models/chat_models.dart';
 import '../../models/message_api_mapper.dart';
 import 'chat_api_service.dart';
 
+typedef ChatListState = ({
+  List<ChatListItem> chats,
+  String? nextCursor,
+  bool hasMore,
+});
+
 /// Source of truth for chat list data.
-/// Manages pagination and caching.
-class ChatRepository extends ChangeNotifier {
-  final ChatApiService _service;
-
-  ChatRepository({ChatApiService? service})
-    : _service = service ?? ChatApiService();
-
-  List<ChatListItem> _chats = [];
-  String? _nextCursor;
+/// Manages pagination, caching, and realtime events.
+class ChatListNotifier extends Notifier<ChatListState> {
   bool _isRealtimeRefreshing = false;
 
-  List<ChatListItem> get chats => _chats;
-  String? get nextCursor => _nextCursor;
-  bool get hasMore => _nextCursor != null && _nextCursor!.isNotEmpty;
+  @override
+  ChatListState build() {
+    // Subscribe to WebSocket events for realtime updates.
+    ref.listen<AsyncValue<ApiWsEvent>>(wsEventsProvider, (_, next) {
+      final event = next.valueOrNull;
+      if (event != null) _applyRealtimeEvent(event);
+    });
+    return (chats: const [], nextCursor: null, hasMore: false);
+  }
+
+  ChatApiService get _service => ref.read(chatApiServiceProvider);
 
   /// Load the first page of chats.
-  /// (Need to reconsider if we need the chats limit.)
   Future<void> loadChats({int limit = 20}) async {
     final res = await _service.fetchChats();
-    _chats = res.chats.map((chat) => chat.toDomain()).toList();
-    _nextCursor = res.nextCursor;
-    notifyListeners();
+    final chats = res.chats.map((chat) => chat.toDomain()).toList();
+    state = (
+      chats: chats,
+      nextCursor: res.nextCursor,
+      hasMore: res.nextCursor != null && res.nextCursor!.isNotEmpty,
+    );
   }
 
   /// Load more chats (next page).
   Future<void> loadMoreChats({int limit = 20}) async {
-    if (!hasMore || _chats.isEmpty) return;
-    final lastId = _chats.last.id;
+    if (!state.hasMore || state.chats.isEmpty) return;
+    final lastId = state.chats.last.id;
     final res = await _service.fetchChats(limit: limit, after: lastId);
-    final existingIds = _chats.map((c) => c.id).toSet();
+    final existingIds = state.chats.map((c) => c.id).toSet();
     final newChats = res.chats
         .map((chat) => chat.toDomain())
         .where((c) => !existingIds.contains(c.id))
         .toList();
-    _chats = [..._chats, ...newChats];
-    _nextCursor = res.nextCursor;
-    notifyListeners();
+    state = (
+      chats: [...state.chats, ...newChats],
+      nextCursor: res.nextCursor,
+      hasMore: res.nextCursor != null && res.nextCursor!.isNotEmpty,
+    );
   }
 
   /// Insert a newly created chat at the top.
   void insertChat(ChatListItem chat) {
-    _chats.insert(0, chat);
-    notifyListeners();
+    state = (
+      chats: [chat, ...state.chats],
+      nextCursor: state.nextCursor,
+      hasMore: state.hasMore,
+    );
   }
 
   /// Create a new chat via the service.
-  /// Returns the new ChatListItem on success, null on failure.
   Future<ChatListItem?> createChat({String? name}) async {
     final response = await _service.createChat(name: name);
     return ChatListItem(id: response.id.toString(), name: response.name);
   }
 
-  void applyRealtimeEvent(ApiWsEvent event) {
+  void _applyRealtimeEvent(ApiWsEvent event) {
     final (type, payload) = switch (event) {
       MessageCreatedWsEvent(:final payload) => ('message', payload),
       MessageUpdatedWsEvent(:final payload) => ('messageUpdated', payload),
@@ -72,7 +86,8 @@ class ChatRepository extends ChangeNotifier {
     if (type == null || payload == null) return;
 
     final chatId = payload.chatId.toString();
-    final index = _chats.indexWhere((chat) => chat.id == chatId);
+    final chats = state.chats;
+    final index = chats.indexWhere((chat) => chat.id == chatId);
     if (index < 0) {
       if (type == 'message') {
         unawaited(_refreshForRealtimeMiss());
@@ -80,29 +95,39 @@ class ChatRepository extends ChangeNotifier {
       return;
     }
 
-    final previous = _chats[index];
+    final previous = chats[index];
     final message = payload.toDomain();
     if (type == 'message') {
       final senderUid = payload.sender.uid;
+      final currentUserId = ref.read(devSessionProvider);
       final createdAt = payload.createdAt;
       final updated = previous.copyWith(
         lastMessage: message,
         lastMessageAt: createdAt,
-        unreadCount: senderUid != ApiSession.currentUserId
+        unreadCount: senderUid != currentUserId
             ? previous.unreadCount + 1
             : previous.unreadCount,
       );
-      _chats
+      final newChats = [...chats]
         ..removeAt(index)
         ..insert(0, updated);
-      notifyListeners();
+      state = (
+        chats: newChats,
+        nextCursor: state.nextCursor,
+        hasMore: state.hasMore,
+      );
       return;
     }
 
     if (type == 'messageUpdated' || type == 'messageDeleted') {
       if (previous.lastMessage?.id != message.id) return;
-      _chats[index] = previous.copyWith(lastMessage: message);
-      notifyListeners();
+      final newChats = [...chats];
+      newChats[index] = previous.copyWith(lastMessage: message);
+      state = (
+        chats: newChats,
+        nextCursor: state.nextCursor,
+        hasMore: state.hasMore,
+      );
     }
   }
 
@@ -111,7 +136,7 @@ class ChatRepository extends ChangeNotifier {
 
     _isRealtimeRefreshing = true;
     try {
-      final limit = _chats.isEmpty ? 11 : _chats.length;
+      final limit = state.chats.isEmpty ? 11 : state.chats.length;
       await loadChats(limit: limit);
     } catch (_) {
       // Ignore realtime refresh failures and rely on the next manual refresh.
@@ -120,3 +145,7 @@ class ChatRepository extends ChangeNotifier {
     }
   }
 }
+
+final chatListStateProvider = NotifierProvider<ChatListNotifier, ChatListState>(
+  ChatListNotifier.new,
+);

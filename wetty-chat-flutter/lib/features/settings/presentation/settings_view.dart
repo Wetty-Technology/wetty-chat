@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../l10n/app_localizations.dart';
 
@@ -8,17 +9,15 @@ import '../../../core/session/dev_session_store.dart';
 import '../../../core/settings/app_settings_store.dart';
 import 'settings_components.dart';
 
-class SettingsPage extends StatefulWidget {
+class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
 
-  @override
-  State<SettingsPage> createState() => _SettingsPageState();
-}
-
-class _SettingsPageState extends State<SettingsPage> {
-  List<SettingsSectionData> _sections(AppLanguage language) {
+  List<SettingsSectionData> _sections(
+    BuildContext context,
+    AppLanguage language,
+    int currentUserId,
+  ) {
     final l10n = AppLocalizations.of(context)!;
-    final currentUserId = DevSessionStore.instance.currentUserId;
     return [
       SettingsSectionData(
         title: l10n.settingsGeneral,
@@ -83,30 +82,24 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
+    final settings = ref.watch(appSettingsProvider);
+    final currentUserId = ref.watch(devSessionProvider);
+    final sections = _sections(context, settings.language, currentUserId);
     return CupertinoPageScaffold(
       backgroundColor: const Color(0xFFF2F2F7),
       navigationBar: CupertinoNavigationBar(middle: Text(l10n.tabSettings)),
       child: SafeArea(
-        child: AnimatedBuilder(
-          animation: Listenable.merge([
-            AppSettingsStore.instance,
-            DevSessionStore.instance,
-          ]),
-          builder: (context, _) {
-            final sections = _sections(AppSettingsStore.instance.language);
-            return ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-              children: [
-                for (final section in sections) ...[
-                  SettingsSectionCard(section: section),
-                  const SizedBox(height: 16),
-                ],
-                const SizedBox(height: 54),
-              ],
-            );
-          },
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          children: [
+            for (final section in sections) ...[
+              SettingsSectionCard(section: section),
+              const SizedBox(height: 16),
+            ],
+            const SizedBox(height: 54),
+          ],
         ),
       ),
     );

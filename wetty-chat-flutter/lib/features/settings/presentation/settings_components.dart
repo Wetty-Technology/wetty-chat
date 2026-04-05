@@ -159,9 +159,9 @@ class MessageFontSizeSlider extends StatefulWidget {
 class _MessageFontSizeSliderState extends State<MessageFontSizeSlider> {
   double? _dragValue;
 
-  double get _minValue => AppSettingsStore.minChatMessageFontSize;
-  double get _maxValue => AppSettingsStore.maxChatMessageFontSize;
-  int get _stepCount => AppSettingsStore.chatMessageFontSizeSteps;
+  double get _minValue => AppSettingsNotifier.minChatMessageFontSize;
+  double get _maxValue => AppSettingsNotifier.maxChatMessageFontSize;
+  int get _stepCount => AppSettingsNotifier.chatMessageFontSizeSteps;
 
   double _effectiveValue() =>
       (_dragValue ?? widget.value).clamp(_minValue, _maxValue);

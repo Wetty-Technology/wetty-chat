@@ -52,7 +52,7 @@ class _MessageRowState extends State<MessageRow>
 
   bool get _isMe {
     final currentUserId = ApiSession.currentUserId;
-    return currentUserId != null && widget.message.sender.uid == currentUserId;
+    return widget.message.sender.uid == currentUserId;
   }
 
   TextStyle _bubbleStyle({

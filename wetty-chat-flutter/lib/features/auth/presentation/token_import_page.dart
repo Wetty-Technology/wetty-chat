@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../application/auth_store.dart';
 import '../data/discuz_login_client.dart';
@@ -23,16 +24,16 @@ const List<SecurityQuestionOption> securityQuestions = <SecurityQuestionOption>[
 ];
 
 /// Legacy login UI kept in the codebase while authentication is redesigned.
-class TokenImportPage extends StatefulWidget {
+class TokenImportPage extends ConsumerStatefulWidget {
   const TokenImportPage({super.key, this.allowClose = false});
 
   final bool allowClose;
 
   @override
-  State<TokenImportPage> createState() => _TokenImportPageState();
+  ConsumerState<TokenImportPage> createState() => _TokenImportPageState();
 }
 
-class _TokenImportPageState extends State<TokenImportPage> {
+class _TokenImportPageState extends ConsumerState<TokenImportPage> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _answerController = TextEditingController();
@@ -100,7 +101,7 @@ class _TokenImportPageState extends State<TokenImportPage> {
 
     try {
       final result = await client.login();
-      await AuthStore.instance.setToken(result.token);
+      await ref.read(authProvider.notifier).setToken(result.token);
       if (!mounted) {
         return;
       }
@@ -165,7 +166,7 @@ class _TokenImportPageState extends State<TokenImportPage> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUid = AuthStore.instance.currentUserId;
+    final currentUid = ref.watch(authProvider).userId;
 
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(

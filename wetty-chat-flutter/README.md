@@ -23,6 +23,29 @@ From the terminal:
 flutter run --dart-define=API_BASE_URL=http://wchat.i386.mov/_api
 ```
 
+## Generate DTO serializers
+
+JSON DTOs under `lib/core/api/models` use `json_serializable` and are generated
+with `build_runner`.
+
+Generate them once:
+
+```bash
+dart run build_runner build --delete-conflicting-outputs
+```
+
+Regenerate automatically while editing DTOs:
+
+```bash
+dart run build_runner watch --delete-conflicting-outputs
+```
+
+Run these commands from `wetty-chat-flutter/`.
+
+`flutter run` and `flutter build` do not run this DTO code generation
+automatically. Also note that `flutter: generate: true` is for Flutter's own
+generators such as localization, not `json_serializable`.
+
 ## VS Code
 
 Use a launch configuration that passes `--dart-define` to the Flutter tool:

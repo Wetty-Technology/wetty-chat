@@ -5,13 +5,14 @@ import 'dart:ui' as ui;
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routing/route_names.dart';
 import '../../../../app/theme/style_config.dart';
-import '../../../../core/network/api_config.dart';
+import '../../../../core/session/dev_session_store.dart';
 import '../../../../core/settings/app_settings_store.dart';
 import '../../../../shared/presentation/app_divider.dart';
 import '../../models/chat_input_state.dart';
@@ -21,7 +22,7 @@ import '../data/attachment_service.dart';
 import 'message_row.dart';
 
 /// Chat detail screen: message list (oldest at top, newest at bottom) and send input.
-class ChatDetailPage extends StatefulWidget {
+class ChatDetailPage extends ConsumerStatefulWidget {
   const ChatDetailPage({
     super.key,
     required this.chatId,
@@ -34,7 +35,7 @@ class ChatDetailPage extends StatefulWidget {
   final int unreadCount;
 
   @override
-  State<ChatDetailPage> createState() => _ChatDetailPageState();
+  ConsumerState<ChatDetailPage> createState() => _ChatDetailPageState();
 }
 
 class _PendingAttachment {
@@ -53,10 +54,9 @@ class _PendingAttachment {
   bool get isImage => mimeType.startsWith('image/') && previewBytes != null;
 }
 
-class _ChatDetailPageState extends State<ChatDetailPage>
+class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
     with WidgetsBindingObserver {
   static const bool _isReversedMessageList = true;
-  late final ChatDetailViewModel _viewModel;
   final ItemScrollController _itemScrollController = ItemScrollController();
   final ScrollOffsetController _scrollOffsetController =
       ScrollOffsetController();
@@ -66,7 +66,7 @@ class _ChatDetailPageState extends State<ChatDetailPage>
   final TextEditingController _textController = TextEditingController();
   static const double _titleBarHeight = 70.0;
   bool _isPopping = false;
-  final AttachmentService _attachmentService = AttachmentService();
+  late final AttachmentService _attachmentService;
   final List<_PendingAttachment> _pendingAttachments = [];
   bool _isUploadingAttachment = false;
   bool _isProgrammaticScrollActive = false;
@@ -74,28 +74,31 @@ class _ChatDetailPageState extends State<ChatDetailPage>
   static const double _tallMessageHeightThreshold = 0.55;
   final GlobalKey _messageListKey = GlobalKey();
 
+  ChatDetailArgs get _args =>
+      (chatId: widget.chatId, unreadCount: widget.unreadCount);
+
+  ChatDetailViewModel get _viewModel =>
+      ref.read(chatDetailViewModelProvider(_args).notifier);
+
   @override
   void initState() {
     super.initState();
-    _viewModel = ChatDetailViewModel(
-      chatId: widget.chatId,
-      unreadCount: widget.unreadCount,
-    );
+    final userId = ref.read(devSessionProvider);
+    _attachmentService = AttachmentService(userId);
     WidgetsBinding.instance.addObserver(this);
-    _viewModel.addListener(_onViewModelChanged);
     _itemPositionsListener.itemPositions.addListener(_onItemPositionsChanged);
-    _viewModel.loadMessages();
-    final draft = _viewModel.loadDraft();
-    if (draft != null) _textController.text = draft;
+    // Load draft after first frame when provider is available
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final draft = _viewModel.loadDraft();
+      if (draft != null) _textController.text = draft;
+    });
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _saveDraft();
-    unawaited(_viewModel.flushReadStatus());
-    _viewModel.removeListener(_onViewModelChanged);
-    _viewModel.dispose();
+    _viewModel.flushReadStatus();
     _itemPositionsListener.itemPositions.removeListener(
       _onItemPositionsChanged,
     );
@@ -115,23 +118,6 @@ class _ChatDetailPageState extends State<ChatDetailPage>
 
   int? _lastJumpedId;
 
-  /// registered via _viewModel.addListener(_onViewModelChanged);
-  /// every time the view model calls notifyListeners(), this method will be called
-  void _onViewModelChanged() {
-    if (!mounted) return;
-
-    // Check if we need to jump to the first unread message
-    if (_viewModel.firstUnreadMessageId != null &&
-        _viewModel.firstUnreadMessageId != _lastJumpedId) {
-      _lastJumpedId = _viewModel.firstUnreadMessageId;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _jumpToMessage(_lastJumpedId!);
-      });
-    }
-
-    setState(() {});
-  }
-
   void _saveDraft() {
     _viewModel.saveDraft(_textController.text);
   }
@@ -142,34 +128,23 @@ class _ChatDetailPageState extends State<ChatDetailPage>
     _saveDraft();
     await _viewModel.flushReadStatus();
     if (!mounted) return;
-    context.pop(_viewModel.shouldRefreshChats);
+    final viewState = ref.read(chatDetailViewModelProvider(_args)).valueOrNull;
+    context.pop(viewState?.shouldRefreshChats ?? false);
   }
 
-  /// Handles visible-item updates from the message list viewport.
-  ///
-  /// Called when `ItemPositionsListener` reports that the set of visible items
-  /// has changed, such as after user scrolling, initial layout, or message list
-  /// updates. Ignores callbacks while a programmatic scroll is active or while
-  /// messages are still loading.
-  ///
-  /// For normal viewport changes, this updates the jump-to-bottom button state,
-  /// loads older or newer messages when the viewport reaches either edge of the
-  /// loaded window, and marks sufficiently visible messages as read.
   void _onItemPositionsChanged() {
-    if (_isProgrammaticScrollActive) {
-      return;
-    }
-    if (_viewModel.isLoadingMore ||
-        _viewModel.isLoading ||
-        _viewModel.displayItems.isEmpty) {
+    if (_isProgrammaticScrollActive) return;
+
+    final viewState = ref.read(chatDetailViewModelProvider(_args)).valueOrNull;
+    if (viewState == null ||
+        viewState.isLoadingMore ||
+        viewState.displayItems.isEmpty) {
       return;
     }
 
     final positions = _itemPositionsListener.itemPositions.value;
     if (positions.isEmpty) return;
 
-    // Show jump-to-bottom button when scrolled away from newest messages.
-    // In reverse mode, index 0 is at the bottom.
     final isBottomVisible = positions.any((p) => p.index == 0);
     _viewModel.updateScrollToBottom(!isBottomVisible);
 
@@ -180,24 +155,22 @@ class _ChatDetailPageState extends State<ChatDetailPage>
     final maxIndex = positions
         .map((p) => p.index)
         .reduce((a, b) => a > b ? a : b);
-    final messageCount = _viewModel.displayItems.length;
+    final messageCount = viewState.displayItems.length;
     debugPrint("min: $minIndex, max: $maxIndex");
     debugPrint("total: $messageCount");
 
     if (maxIndex >= messageCount - 5) {
       _loadOlderMessages();
     }
-    if (minIndex <= 4 && _viewModel.hasNewerMessages && !isBottomVisible) {
+    if (minIndex <= 4 && viewState.hasNewerMessages && !isBottomVisible) {
       _loadNewerMessages();
     }
 
-    // Track read status
     for (final pos in positions) {
-      // If at least 50% of the message is visible (simplified)
       if (pos.itemLeadingEdge < 0.9 && pos.itemTrailingEdge > 0.1) {
         final idx = pos.index;
-        if (idx < _viewModel.displayItems.length) {
-          final msg = _viewModel.displayItems[idx];
+        if (idx < viewState.displayItems.length) {
+          final msg = viewState.displayItems[idx];
           _viewModel.onMessageVisible(msg.id);
         }
       }
@@ -289,29 +262,33 @@ class _ChatDetailPageState extends State<ChatDetailPage>
   }
 
   MapEntry<int, double>? _topViewportAnchor() {
+    final viewState = ref.read(chatDetailViewModelProvider(_args)).valueOrNull;
+    if (viewState == null) return null;
     final positions = _itemPositionsListener.itemPositions.value
-        .where((position) => position.index < _viewModel.displayItems.length)
+        .where((position) => position.index < viewState.displayItems.length)
         .toList();
     if (positions.isEmpty) return null;
 
     positions.sort((a, b) => b.index.compareTo(a.index));
     final anchor = positions.first;
     return MapEntry(
-      _viewModel.displayItems[anchor.index].id,
+      viewState.displayItems[anchor.index].id,
       anchor.itemLeadingEdge,
     );
   }
 
   MapEntry<int, double>? _bottomViewportAnchor() {
+    final viewState = ref.read(chatDetailViewModelProvider(_args)).valueOrNull;
+    if (viewState == null) return null;
     final positions = _itemPositionsListener.itemPositions.value
-        .where((position) => position.index < _viewModel.displayItems.length)
+        .where((position) => position.index < viewState.displayItems.length)
         .toList();
     if (positions.isEmpty) return null;
 
     positions.sort((a, b) => a.index.compareTo(b.index));
     final anchor = positions.first;
     return MapEntry(
-      _viewModel.displayItems[anchor.index].id,
+      viewState.displayItems[anchor.index].id,
       anchor.itemLeadingEdge,
     );
   }
@@ -319,7 +296,14 @@ class _ChatDetailPageState extends State<ChatDetailPage>
   Future<void> _scrollToBottom() async {
     await _runProgrammaticScroll((token) async {
       await _viewModel.jumpToBottom();
-      if (!_canApplyScroll(token) || _viewModel.displayItems.isEmpty) return;
+      final viewState = ref
+          .read(chatDetailViewModelProvider(_args))
+          .valueOrNull;
+      if (!_canApplyScroll(token) ||
+          viewState == null ||
+          viewState.displayItems.isEmpty) {
+        return;
+      }
 
       await _waitForNextFrame();
       if (!_canApplyScroll(token)) return;
@@ -351,7 +335,6 @@ class _ChatDetailPageState extends State<ChatDetailPage>
     if (height >= _tallMessageHeightThreshold) {
       return _safeAlignment(0.5);
     }
-
     return _safeAlignment(0.5 - height);
   }
 
@@ -580,7 +563,10 @@ class _ChatDetailPageState extends State<ChatDetailPage>
       return;
     }
 
-    switch (_viewModel.inputState) {
+    final viewState = ref.read(chatDetailViewModelProvider(_args)).valueOrNull;
+    if (viewState == null) return;
+
+    switch (viewState.inputState) {
       case InputEditing(:final message):
         if (hasAttachments) {
           _showErrorDialog('编辑消息暂不支持附件');
@@ -714,8 +700,8 @@ class _ChatDetailPageState extends State<ChatDetailPage>
 
   void _showMessageActions(MessageItem msg) {
     if (msg.isDeleted) return;
-    final currentUserId = ApiSession.currentUserId;
-    final isOwn = currentUserId != null && msg.sender.uid == currentUserId;
+    final currentUserId = ref.read(devSessionProvider);
+    final isOwn = msg.sender.uid == currentUserId;
 
     showCupertinoModalPopup(
       context: context,
@@ -786,193 +772,208 @@ class _ChatDetailPageState extends State<ChatDetailPage>
 
   @override
   Widget build(BuildContext context) {
+    final asyncState = ref.watch(chatDetailViewModelProvider(_args));
+    final settings = ref.watch(appSettingsProvider);
+
     final chatName = widget.chatName.isEmpty
         ? 'Chat ${widget.chatId}'
         : widget.chatName;
-    return AnimatedBuilder(
-      animation: AppSettingsStore.instance,
-      builder: (context, _) {
-        final chatMessageFontSize =
-            AppSettingsStore.instance.chatMessageFontSize;
-        return PopScope(
-          onPopInvokedWithResult: (didPop, _) {
-            if (didPop) {
-              _saveDraft();
-              unawaited(_viewModel.flushReadStatus());
-            }
-          },
-          child: CupertinoPageScaffold(
-            backgroundColor: const Color(0xFFECE5DD),
-            child: GestureDetector(
-              onTap: () => FocusScope.of(context).unfocus(),
-              child: Stack(
-                children: [
-                  SafeArea(
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: Stack(
-                            children: [
-                              _buildBody(chatMessageFontSize),
-                              if (_viewModel.showScrollToBottom)
-                                Positioned(
-                                  right: 16,
-                                  bottom: 16,
-                                  child: CupertinoButton(
-                                    padding: EdgeInsets.zero,
-                                    onPressed: _scrollToBottom,
-                                    child: Container(
-                                      width: 40,
-                                      height: 40,
-                                      decoration: BoxDecoration(
-                                        color: CupertinoColors.systemGrey5
-                                            .resolveFrom(context),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        CupertinoIcons.chevron_down,
-                                        size: 20,
-                                        color: CupertinoColors.label
-                                            .resolveFrom(context),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(top: 5),
-                          child: _buildInput(),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Gradient title bar overlay
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment(0, 0.5),
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Color(0xFFECE5DD),
-                            Color(0xDFECE5DD),
-                            Color(0xCCECE5DD),
-                            Color(0x80ECE5DD),
-                            Color(0x40ECE5DD),
-                            Color(0x00ECE5DD),
-                          ],
-                          stops: [0.0, 0.5, 0.6, 0.8, 0.9, 1.0],
-                        ),
-                      ),
-                      child: SafeArea(
-                        bottom: false,
-                        child: SizedBox(
-                          height: _titleBarHeight,
-                          child: Padding(
-                            padding: const EdgeInsets.only(bottom: 36),
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                Text(
-                                  chatName,
-                                  textAlign: TextAlign.center,
-                                  style: appTitleTextStyle(
-                                    context,
-                                    fontSize: AppFontSizes.appTitle,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                Positioned(
-                                  left: 8,
-                                  child: CupertinoButton(
-                                    padding: EdgeInsets.zero,
-                                    onPressed: _popWithResult,
-                                    child: const Icon(
-                                      CupertinoIcons.back,
-                                      size: 28,
-                                    ),
-                                  ),
-                                ),
-                                Positioned(
-                                  right: 8,
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      CupertinoButton(
-                                        padding: EdgeInsets.zero,
-                                        onPressed: () => context.push(
-                                          AppRoutes.chatMembers(widget.chatId),
-                                        ),
-                                        child: const Icon(
-                                          CupertinoIcons.person_2_fill,
-                                          size: 22,
-                                        ),
-                                      ),
-                                      CupertinoButton(
-                                        padding: EdgeInsets.zero,
-                                        onPressed: () => context.push(
-                                          AppRoutes.chatSettings(widget.chatId),
-                                          extra: {
-                                            'currentName': widget.chatName,
-                                          },
-                                        ),
-                                        child: const Icon(
-                                          CupertinoIcons.gear_solid,
-                                          size: IconSizes.iconSize,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
 
-  Widget _buildBody(double chatMessageFontSize) {
-    if (_viewModel.isLoading) {
-      return const Center(child: CupertinoActivityIndicator());
-    }
-    if (_viewModel.errorMessage != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+    final chatMessageFontSize = settings.fontSize;
+
+    // Handle unread jump
+    asyncState.whenData((viewState) {
+      if (viewState.firstUnreadMessageId != null &&
+          viewState.firstUnreadMessageId != _lastJumpedId) {
+        _lastJumpedId = viewState.firstUnreadMessageId;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _jumpToMessage(_lastJumpedId!);
+        });
+      }
+    });
+
+    return PopScope(
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) {
+          _saveDraft();
+          unawaited(_viewModel.flushReadStatus());
+        }
+      },
+      child: CupertinoPageScaffold(
+        backgroundColor: const Color(0xFFECE5DD),
+        child: GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Stack(
             children: [
-              Text(_viewModel.errorMessage!, textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              CupertinoButton.filled(
-                onPressed: _viewModel.loadMessages,
-                child: const Text('Retry'),
+              SafeArea(
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: Stack(
+                        children: [
+                          asyncState.when(
+                            loading: () => const Center(
+                              child: CupertinoActivityIndicator(),
+                            ),
+                            error: (error, _) => Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(24),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      error.toString(),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    CupertinoButton.filled(
+                                      onPressed: () => ref.invalidate(
+                                        chatDetailViewModelProvider(_args),
+                                      ),
+                                      child: const Text('Retry'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            data: (viewState) =>
+                                _buildBody(viewState, chatMessageFontSize),
+                          ),
+                          if (asyncState.valueOrNull?.showScrollToBottom ??
+                              false)
+                            Positioned(
+                              right: 16,
+                              bottom: 16,
+                              child: CupertinoButton(
+                                padding: EdgeInsets.zero,
+                                onPressed: _scrollToBottom,
+                                child: Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: CupertinoColors.systemGrey5
+                                        .resolveFrom(context),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    CupertinoIcons.chevron_down,
+                                    size: 20,
+                                    color: CupertinoColors.label.resolveFrom(
+                                      context,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 5),
+                      child: _buildInput(asyncState.valueOrNull),
+                    ),
+                  ],
+                ),
+              ),
+              // Gradient title bar overlay
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment(0, 0.5),
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0xFFECE5DD),
+                        Color(0xDFECE5DD),
+                        Color(0xCCECE5DD),
+                        Color(0x80ECE5DD),
+                        Color(0x40ECE5DD),
+                        Color(0x00ECE5DD),
+                      ],
+                      stops: [0.0, 0.5, 0.6, 0.8, 0.9, 1.0],
+                    ),
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: SizedBox(
+                      height: _titleBarHeight,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 36),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Text(
+                              chatName,
+                              textAlign: TextAlign.center,
+                              style: appTitleTextStyle(
+                                context,
+                                fontSize: AppFontSizes.appTitle,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Positioned(
+                              left: 8,
+                              child: CupertinoButton(
+                                padding: EdgeInsets.zero,
+                                onPressed: _popWithResult,
+                                child: const Icon(
+                                  CupertinoIcons.back,
+                                  size: 28,
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              right: 8,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  CupertinoButton(
+                                    padding: EdgeInsets.zero,
+                                    onPressed: () => context.push(
+                                      AppRoutes.chatMembers(widget.chatId),
+                                    ),
+                                    child: const Icon(
+                                      CupertinoIcons.person_2_fill,
+                                      size: 22,
+                                    ),
+                                  ),
+                                  CupertinoButton(
+                                    padding: EdgeInsets.zero,
+                                    onPressed: () => context.push(
+                                      AppRoutes.chatSettings(widget.chatId),
+                                      extra: {'currentName': widget.chatName},
+                                    ),
+                                    child: const Icon(
+                                      CupertinoIcons.gear_solid,
+                                      size: IconSizes.iconSize,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
         ),
-      );
-    }
-    if (_viewModel.displayItems.isEmpty) {
+      ),
+    );
+  }
+
+  Widget _buildBody(ChatDetailState viewState, double chatMessageFontSize) {
+    if (viewState.displayItems.isEmpty) {
       return const Center(child: Text('No messages yet'));
     }
-    final showTopLoader =
-        _viewModel.hasMoreMessages && _viewModel.isLoadingMore;
-    final items = _viewModel.displayItems;
+    final showTopLoader = viewState.hasMoreMessages && viewState.isLoadingMore;
+    final items = viewState.displayItems;
     final itemCount = items.length + (showTopLoader ? 1 : 0);
 
     return ScrollablePositionedList.builder(
@@ -992,7 +993,7 @@ class _ChatDetailPageState extends State<ChatDetailPage>
         }
 
         final msg = items[index];
-        final isHighlighted = _viewModel.highlightedMessageId == msg.id;
+        final isHighlighted = viewState.highlightedMessageId == msg.id;
 
         bool showSenderName = true;
         if (index < items.length - 1) {
@@ -1011,8 +1012,8 @@ class _ChatDetailPageState extends State<ChatDetailPage>
         }
 
         final isFirstUnread =
-            _viewModel.firstUnreadMessageId == msg.id &&
-            _viewModel.showUnreadDivider;
+            viewState.firstUnreadMessageId == msg.id &&
+            viewState.showUnreadDivider;
 
         final messageRow = MessageRow(
           key: ValueKey(msg.id),
@@ -1067,9 +1068,10 @@ class _ChatDetailPageState extends State<ChatDetailPage>
     );
   }
 
-  Widget _buildInput() {
-    final hasPreview = _viewModel.inputState is! InputEmpty;
-    final isEditing = _viewModel.inputState is InputEditing;
+  Widget _buildInput(ChatDetailState? viewState) {
+    final inputState = viewState?.inputState ?? InputEmpty();
+    final hasPreview = inputState is! InputEmpty;
+    final isEditing = inputState is InputEditing;
     final canAttach = !_isUploadingAttachment && !isEditing;
 
     return Column(
@@ -1117,7 +1119,7 @@ class _ChatDetailPageState extends State<ChatDetailPage>
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          switch (_viewModel.inputState) {
+                          switch (inputState) {
                             InputReplying(:final message) => _replyToMsg(
                               title:
                                   'Replying to ${message.sender.name ?? 'User ${message.sender.uid}'}',

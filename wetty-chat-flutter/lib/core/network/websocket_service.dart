@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -10,12 +11,9 @@ import '../api/models/websocket_api_models.dart';
 import '../session/dev_session_store.dart';
 import 'api_config.dart';
 
-/// Singleton service to manage the WebSocket connection.
+/// Manages the WebSocket connection.
 /// Handles ticket-based auth, keep-alive (pings), and broadcasts events.
 class WebSocketService {
-  static final WebSocketService instance = WebSocketService._internal();
-  WebSocketService._internal();
-
   WebSocketChannel? _channel;
   final StreamController<ApiWsEvent> _eventController =
       StreamController<ApiWsEvent>.broadcast();
@@ -25,14 +23,14 @@ class WebSocketService {
   Timer? _pingTimer;
   Timer? _reconnectTimer;
   bool _isConnecting = false;
-  bool _didRegisterSessionListener = false;
+
+  /// The current user ID to use for API headers when fetching ticket.
+  int _currentUserId;
+
+  WebSocketService(this._currentUserId);
 
   /// Initialize the connection.
   Future<void> init() async {
-    if (!_didRegisterSessionListener) {
-      DevSessionStore.instance.addListener(_handleSessionChanged);
-      _didRegisterSessionListener = true;
-    }
     if (_isConnecting || (_channel != null)) return;
     _isConnecting = true;
     _reconnectTimer?.cancel();
@@ -41,7 +39,7 @@ class WebSocketService {
       // Fetch auth ticket
       final ticketRes = await http.get(
         Uri.parse('$apiBaseUrl/ws/ticket'),
-        headers: apiHeaders,
+        headers: apiHeadersForUser(_currentUserId),
       );
       if (ticketRes.statusCode != 200) {
         throw Exception('Failed to fetch WS ticket: ${ticketRes.body}');
@@ -107,11 +105,8 @@ class WebSocketService {
     });
   }
 
-  void _handleSessionChanged() {
-    refreshSession();
-  }
-
-  Future<void> refreshSession() async {
+  Future<void> refreshSession(int newUserId) async {
+    _currentUserId = newUserId;
     _pingTimer?.cancel();
     _reconnectTimer?.cancel();
     final old = _channel;
@@ -121,13 +116,32 @@ class WebSocketService {
   }
 
   void dispose() {
-    if (_didRegisterSessionListener) {
-      DevSessionStore.instance.removeListener(_handleSessionChanged);
-      _didRegisterSessionListener = false;
-    }
     _pingTimer?.cancel();
     _reconnectTimer?.cancel();
     _channel?.sink.close();
     _eventController.close();
   }
 }
+
+final webSocketProvider = Provider<WebSocketService>((ref) {
+  final userId = ref.watch(devSessionProvider);
+  final service = WebSocketService(userId);
+  unawaited(service.init());
+
+  // When devSessionProvider changes, Riverpod will recreate this provider,
+  // so we dispose the old service.
+  ref.onDispose(service.dispose);
+
+  // Listen for subsequent session changes to refresh the connection.
+  ref.listen<int>(devSessionProvider, (previous, next) {
+    if (previous != null && previous != next) {
+      service.refreshSession(next);
+    }
+  });
+
+  return service;
+});
+
+final wsEventsProvider = StreamProvider<ApiWsEvent>((ref) {
+  return ref.watch(webSocketProvider).events;
+});

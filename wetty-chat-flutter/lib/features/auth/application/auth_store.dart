@@ -1,13 +1,13 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class AuthStore extends ChangeNotifier {
-  AuthStore._();
+import '../../../core/providers/shared_preferences_provider.dart';
 
-  static final AuthStore instance = AuthStore._();
+typedef AuthState = ({String? token, int? userId});
 
+class AuthNotifier extends Notifier<AuthState> {
   static const String _tokenStorageKey = 'jwt_token';
   static final RegExp _jwtPattern = RegExp(
     r'[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+',
@@ -24,106 +24,77 @@ class AuthStore extends ChangeNotifier {
     caseSensitive: false,
   );
 
-  SharedPreferences? _prefs;
-  String? _token;
-  int? _currentUserId = 1;
+  late SharedPreferences _prefs;
 
-  String? get token => _token;
-  int? get currentUserId => _currentUserId;
-  bool get hasToken => _token != null;
-
-  Future<void> init() async {
-    _prefs = await SharedPreferences.getInstance();
-    // _applyToken(_prefs!.getString(_tokenStorageKey));
+  @override
+  AuthState build() {
+    _prefs = ref.read(sharedPreferencesProvider);
+    // TODO: currently not used
+    // final token = _prefs.getString(_tokenStorageKey);
+    // return _buildState(token);
+    return (token: null, userId: 1);
   }
+
+  bool get hasToken => state.token != null;
 
   // TODO: currently not used
   Future<int?> importFromText(String input) async {
     final extractedToken = extractToken(input);
-    if (extractedToken == null) {
-      return null;
-    }
-
+    if (extractedToken == null) return null;
     await setToken(extractedToken);
-    return _currentUserId;
+    return state.userId;
   }
 
   Future<void> setToken(String? token) async {
-    _prefs ??= await SharedPreferences.getInstance();
-
     final normalized = _normalizeToken(token);
-    _applyToken(normalized);
-
+    state = _buildState(normalized);
     if (normalized == null) {
-      await _prefs!.remove(_tokenStorageKey);
+      await _prefs.remove(_tokenStorageKey);
     } else {
-      await _prefs!.setString(_tokenStorageKey, normalized);
+      await _prefs.setString(_tokenStorageKey, normalized);
     }
-
-    notifyListeners();
   }
 
-  Future<void> clearToken() async {
-    await setToken(null);
-  }
+  Future<void> clearToken() async => setToken(null);
 
   String? extractToken(String rawInput) {
     final normalizedInput = rawInput.trim();
-    if (normalizedInput.isEmpty) {
-      return null;
-    }
+    if (normalizedInput.isEmpty) return null;
 
     final directCandidate = _normalizeDirectToken(normalizedInput);
-    if (directCandidate != null) {
-      return directCandidate;
-    }
+    if (directCandidate != null) return directCandidate;
 
     final jsonCandidate = _extractTokenFromJson(normalizedInput);
-    if (jsonCandidate != null) {
-      return jsonCandidate;
-    }
+    if (jsonCandidate != null) return jsonCandidate;
 
     for (final match in _urlPattern.allMatches(normalizedInput)) {
       final candidate = match.group(0);
-      if (candidate == null) {
-        continue;
-      }
+      if (candidate == null) continue;
       final uri = Uri.tryParse(candidate);
       final token = _normalizeDirectToken(uri?.queryParameters['token']);
-      if (token != null) {
-        return token;
-      }
+      if (token != null) return token;
     }
 
     final queryTokenMatch = _tokenQueryPattern.firstMatch(normalizedInput);
     final queryToken = _normalizeDirectToken(queryTokenMatch?.group(1));
-    if (queryToken != null) {
-      return queryToken;
-    }
+    if (queryToken != null) return queryToken;
 
     final jwtMatch = _jwtPattern.firstMatch(normalizedInput);
     return _normalizeDirectToken(jwtMatch?.group(0));
   }
 
-  void _applyToken(String? token) {
-    _token = _normalizeToken(token);
-    _currentUserId = _parseUidFromJwt(_token);
+  AuthState _buildState(String? token) {
+    return (token: token, userId: _parseUidFromJwt(token));
   }
 
   String? _normalizeDirectToken(String? token) {
     final normalized = _normalizeToken(token);
-    if (normalized == null) {
-      return null;
-    }
+    if (normalized == null) return null;
 
     final stripped = normalized.replaceFirst(_bearerPrefixPattern, '').trim();
     final jwtMatch = _jwtPattern.firstMatch(stripped);
-    if (jwtMatch == null || jwtMatch.group(0) != stripped) {
-      return null;
-    }
-    if (_parseUidFromJwt(stripped) == null) {
-      return null;
-    }
+    if (jwtMatch == null || jwtMatch.group(0) != stripped) return null;
+    if (_parseUidFromJwt(stripped) == null) return null;
     return stripped;
   }
 
@@ -132,9 +103,7 @@ class AuthStore extends ChangeNotifier {
       final decoded = jsonDecode(rawInput);
       if (decoded is Map<String, dynamic>) {
         final token = decoded['token'];
-        if (token is String) {
-          return _normalizeDirectToken(token);
-        }
+        if (token is String) return _normalizeDirectToken(token);
       }
     } catch (_) {
       return null;
@@ -144,40 +113,30 @@ class AuthStore extends ChangeNotifier {
 
   String? _normalizeToken(String? token) {
     final normalized = token?.trim();
-    if (normalized == null || normalized.isEmpty) {
-      return null;
-    }
+    if (normalized == null || normalized.isEmpty) return null;
     return normalized;
   }
 
   int? _parseUidFromJwt(String? token) {
-    if (token == null) {
-      return null;
-    }
-
+    if (token == null) return null;
     final parts = token.split('.');
-    if (parts.length < 2) {
-      return null;
-    }
+    if (parts.length < 2) return null;
 
     try {
       final payload = base64Url.decode(base64Url.normalize(parts[1]));
       final decoded = jsonDecode(utf8.decode(payload));
-      if (decoded is! Map<String, dynamic>) {
-        return null;
-      }
+      if (decoded is! Map<String, dynamic>) return null;
 
       final uid = decoded['uid'];
-      if (uid is int) {
-        return uid;
-      }
-      if (uid is String) {
-        return int.tryParse(uid);
-      }
+      if (uid is int) return uid;
+      if (uid is String) return int.tryParse(uid);
     } catch (_) {
-      return null;
+      // ignore
     }
-
     return null;
   }
 }
+
+final authProvider = NotifierProvider<AuthNotifier, AuthState>(
+  AuthNotifier.new,
+);

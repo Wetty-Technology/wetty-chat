@@ -1,17 +1,20 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/style_config.dart';
 import '../../../core/session/dev_session_store.dart';
 
-class DevSessionSettingsPage extends StatefulWidget {
+class DevSessionSettingsPage extends ConsumerStatefulWidget {
   const DevSessionSettingsPage({super.key});
 
   @override
-  State<DevSessionSettingsPage> createState() => _DevSessionSettingsPageState();
+  ConsumerState<DevSessionSettingsPage> createState() =>
+      _DevSessionSettingsPageState();
 }
 
-class _DevSessionSettingsPageState extends State<DevSessionSettingsPage> {
+class _DevSessionSettingsPageState
+    extends ConsumerState<DevSessionSettingsPage> {
   late final TextEditingController _uidController;
   String? _errorText;
   bool _isSaving = false;
@@ -20,7 +23,7 @@ class _DevSessionSettingsPageState extends State<DevSessionSettingsPage> {
   void initState() {
     super.initState();
     _uidController = TextEditingController(
-      text: DevSessionStore.instance.currentUserId.toString(),
+      text: ref.read(devSessionProvider).toString(),
     );
   }
 
@@ -45,7 +48,7 @@ class _DevSessionSettingsPageState extends State<DevSessionSettingsPage> {
       _errorText = null;
     });
     try {
-      await DevSessionStore.instance.setCurrentUserId(nextUserId);
+      await ref.read(devSessionProvider.notifier).setCurrentUserId(nextUserId);
       if (!mounted) {
         return;
       }
@@ -65,8 +68,8 @@ class _DevSessionSettingsPageState extends State<DevSessionSettingsPage> {
       _errorText = null;
     });
     try {
-      await DevSessionStore.instance.resetToDefault();
-      _uidController.text = DevSessionStore.defaultUserId.toString();
+      await ref.read(devSessionProvider.notifier).resetToDefault();
+      _uidController.text = DevSessionNotifier.defaultUserId.toString();
       if (!mounted) {
         return;
       }
@@ -82,7 +85,7 @@ class _DevSessionSettingsPageState extends State<DevSessionSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUserId = DevSessionStore.instance.currentUserId;
+    final currentUserId = ref.watch(devSessionProvider);
     return CupertinoPageScaffold(
       navigationBar: const CupertinoNavigationBar(
         middle: Text('Developer Session'),
@@ -156,7 +159,7 @@ class _DevSessionSettingsPageState extends State<DevSessionSettingsPage> {
             const SizedBox(height: 12),
             CupertinoButton(
               onPressed: _isSaving ? null : _resetToDefault,
-              child: Text('Reset to UID ${DevSessionStore.defaultUserId}'),
+              child: Text('Reset to UID ${DevSessionNotifier.defaultUserId}'),
             ),
           ],
         ),

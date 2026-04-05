@@ -1,45 +1,41 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/settings/app_settings_store.dart';
 import '../../../l10n/app_localizations.dart';
 
-class LanguageSettingsPage extends StatelessWidget {
+class LanguageSettingsPage extends ConsumerWidget {
   const LanguageSettingsPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
+    final current = ref.watch(appSettingsProvider).language;
     return CupertinoPageScaffold(
       backgroundColor: CupertinoColors.systemGroupedBackground,
       navigationBar: CupertinoNavigationBar(
         middle: Text(l10n.settingsLanguage),
       ),
       child: SafeArea(
-        child: AnimatedBuilder(
-          animation: AppSettingsStore.instance,
-          builder: (context, _) {
-            final current = AppSettingsStore.instance.language;
-            return CupertinoListSection.insetGrouped(
-              children: [
-                for (final language in AppLanguage.values)
-                  CupertinoListTile(
-                    title: Text(language.displayName(l10n)),
-                    trailing: language == current
-                        ? const Icon(
-                            CupertinoIcons.checkmark,
-                            color: CupertinoColors.activeBlue,
-                            size: 20,
-                          )
-                        : null,
-                    onTap: () {
-                      AppSettingsStore.instance.setLanguage(language);
-                      context.pop();
-                    },
-                  ),
-              ],
-            );
-          },
+        child: CupertinoListSection.insetGrouped(
+          children: [
+            for (final language in AppLanguage.values)
+              CupertinoListTile(
+                title: Text(language.displayName(l10n)),
+                trailing: language == current
+                    ? const Icon(
+                        CupertinoIcons.checkmark,
+                        color: CupertinoColors.activeBlue,
+                        size: 20,
+                      )
+                    : null,
+                onTap: () {
+                  ref.read(appSettingsProvider.notifier).setLanguage(language);
+                  context.pop();
+                },
+              ),
+          ],
         ),
       ),
     );

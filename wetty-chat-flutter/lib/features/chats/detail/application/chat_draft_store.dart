@@ -1,20 +1,20 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../core/providers/shared_preferences_provider.dart';
+
 /// Persists draft messages per chat using SharedPreferences.
-/// Call [init] once at app startup before accessing drafts.
 class ChatDraftStore {
-  ChatDraftStore._();
-  static final ChatDraftStore instance = ChatDraftStore._();
+  ChatDraftStore(this._prefs) {
+    _loadCache();
+  }
 
   static const String _prefix = 'draft_';
 
-  late SharedPreferences _prefs;
+  final SharedPreferences _prefs;
   final Map<String, String> _cache = {};
 
-  /// Initialise the store – call once in main() before runApp().
-  Future<void> init() async {
-    _prefs = await SharedPreferences.getInstance();
-    // Load all existing drafts into memory cache
+  void _loadCache() {
     for (final key in _prefs.getKeys()) {
       if (key.startsWith(_prefix)) {
         final chatId = key.substring(_prefix.length);
@@ -45,3 +45,7 @@ class ChatDraftStore {
     await _prefs.remove('$_prefix$chatId');
   }
 }
+
+final chatDraftProvider = Provider<ChatDraftStore>((ref) {
+  return ChatDraftStore(ref.read(sharedPreferencesProvider));
+});
