@@ -196,10 +196,10 @@ export function DesktopSplitLayout() {
   const globalSettingsOpen = currentRoute.globalSettings;
 
   const handleChatSelect = useCallback(
-    (chatId: string, routeState?: ChatThreadRouteState) => {
+    (chatId: string, resumeHash?: string) => {
       history.replace({
         pathname: `/chats/chat/${chatId}`,
-        state: routeState,
+        hash: resumeHash,
       });
     },
     [history],

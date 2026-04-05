@@ -1,4 +1,4 @@
-import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   IonButton,
   IonButtons,
@@ -96,7 +96,7 @@ import { ChatContext } from '@/components/chat/messages/ChatContext';
 import { useIsDesktop, useMouseDetected } from '@/hooks/platformHooks';
 import { useChatRole } from '@/components/chat/permissions/useChatRole';
 import { ChatMessageRow } from '@/components/chat/messages/ChatMessageRow';
-import type { ChatThreadRouteState, ChatThreadResumeRequest } from '@/types/chatThreadNavigation';
+import { parseResumeHash } from '@/types/chatThreadNavigation';
 import { READ_REQUEST_COOLDOWN_MS } from '@/constants/chatTiming';
 import {
   markThreadAsRead as apiMarkThreadAsRead,
@@ -181,8 +181,8 @@ interface EditSession extends EditingMessage {
 function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   const storeChatId = threadId ? `${chatId}_thread_${threadId}` : chatId;
   const history = useHistory();
-  const location = useLocation<ChatThreadRouteState | undefined>();
-  const initialResumeRequest = location.state?.resumeRequest ?? null;
+  const location = useLocation();
+  const initialResumeMessageId = parseResumeHash(location.hash);
 
   const dispatch = useDispatch();
   const currentUserId = useSelector((state: RootState) => state.user.uid);
@@ -240,9 +240,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   const loadingMoreRef = useRef(false);
   const loadingNewerRef = useRef(false);
   const [initialAnchor, setInitialAnchor] = useState<VirtualScrollAnchor>({ type: 'bottom', token: 0 });
-  const [pendingResumeRequest, setPendingResumeRequest] = useState<ChatThreadResumeRequest | null>(
-    initialResumeRequest,
-  );
+  const [pendingResumeMessageId, setPendingResumeMessageId] = useState<string | null>(initialResumeMessageId);
   const [lastFullyVisibleMessageId, setLastFullyVisibleMessageId] = useState<string | null>(null);
   const [firstVisibleMessageId, setFirstVisibleMessageId] = useState<string | null>(null);
 
@@ -301,7 +299,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
       .catch(() => {});
   }, [chatId, threadId, pinsLoaded, dispatch]);
 
-  const [atBottom, setAtBottom] = useState(() => threadId || initialResumeRequest == null);
+  const [atBottom, setAtBottom] = useState(() => threadId || initialResumeMessageId == null);
   const [replyingTo, setReplyingTo] = useState<MessageResponse | null>(null);
   const [profileSender, setProfileSender] = useState<Sender | null>(null);
   const [reactionDetail, setReactionDetail] = useState<{ messageId: string; emoji?: string } | null>(null);
@@ -440,7 +438,6 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   );
 
   const lastReportedReadId = useRef<string | null>(null);
-  const consumedResumeTokenRef = useRef<string | null>(null);
   const initialLoadCompletedRef = useRef(false);
   const readRequestTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingReadTargetIdRef = useRef<string | null>(null);
@@ -448,7 +445,6 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
 
   useEffect(() => {
     lastReportedReadId.current = null;
-    consumedResumeTokenRef.current = null;
     initialLoadCompletedRef.current = false;
     pendingReadTargetIdRef.current = null;
     lastReadRequestAtRef.current = 0;
@@ -580,35 +576,15 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
     }
   }, [storeChatId]);
 
+  // Strip the #msg= hash after it has been captured into initialResumeMessageId
+  // so it doesn't linger in the URL bar or get re-consumed on re-render.
   useEffect(() => {
-    const resumeRequest = location.state?.resumeRequest;
-    if (!resumeRequest) return;
-
-    // On mobile, Ionic keeps hidden pages mounted — their useLocation() sees the
-    // global location too.  Only the instance whose route matches the current
-    // pathname should consume the request; otherwise a hidden page steals it and
-    // clears the state before the entering page can read it.
-    const expectedPath = threadId ? `/chats/chat/${chatId}/thread/${threadId}` : `/chats/chat/${chatId}`;
-    if (location.pathname !== expectedPath) return;
-
-    if (resumeRequest.token === consumedResumeTokenRef.current) return;
-
-    consumedResumeTokenRef.current = resumeRequest.token;
-    startTransition(() => {
-      setPendingResumeRequest(resumeRequest);
-      setAtBottom(false);
-    });
-
-    const { resumeRequest: _resumeRequest, ...restState } = location.state ?? {};
-    void _resumeRequest;
-    const nextState = Object.keys(restState).length > 0 ? restState : undefined;
-    history.replace({
-      pathname: location.pathname,
-      search: location.search,
-      hash: location.hash,
-      state: nextState,
-    });
-  }, [history, location, chatId, threadId]);
+    if (initialResumeMessageId && location.hash) {
+      history.replace({ pathname: location.pathname, search: location.search });
+    }
+    // Only run once on mount — initialResumeMessageId is captured at construction time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchLatestWindow = useCallback(
     (options?: { forceReopen?: boolean }) => {
@@ -709,9 +685,9 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   useEffect(() => {
     if (!chatId) return;
 
-    if (pendingResumeRequest != null) {
+    if (pendingResumeMessageId != null) {
       initialLoadCompletedRef.current = true;
-      getMessages(chatId, { around: pendingResumeRequest.messageId, max: 50, threadId })
+      getMessages(chatId, { around: pendingResumeMessageId, max: 50, threadId })
         .then((res) => {
           const list = res.data.messages ?? [];
           dispatch(
@@ -724,20 +700,20 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
           );
           setInitialAnchor((currentAnchor) => ({
             type: 'message',
-            messageId: pendingResumeRequest.messageId,
+            messageId: pendingResumeMessageId,
             token: currentAnchor.token + 1,
           }));
-          setPendingResumeRequest(null);
+          setPendingResumeMessageId(null);
         })
         .catch(() => {
-          setPendingResumeRequest(null);
+          setPendingResumeMessageId(null);
           fetchLatestWindow();
         });
     } else if (!initialLoadCompletedRef.current) {
       initialLoadCompletedRef.current = true;
       fetchLatestWindow();
     }
-  }, [chatId, fetchLatestWindow, dispatch, pendingResumeRequest, storeChatId, threadId]);
+  }, [chatId, fetchLatestWindow, dispatch, pendingResumeMessageId, storeChatId, threadId]);
 
   // Auto-focus compose input after initial messages load (only on devices with a
   // physical keyboard — on touch-only devices this would pop up the virtual keyboard)

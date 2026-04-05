@@ -25,7 +25,7 @@ import { syncAppBadgeCount } from '@/utils/badges';
 import { getChatDisplayName } from '@/utils/chatDisplay';
 import { UserAvatar } from '@/components/UserAvatar';
 import { formatMessagePreview, getNotificationPreviewLabels } from '@/utils/messagePreview';
-import { buildChatThreadRouteState, type ChatThreadRouteState } from '@/types/chatThreadNavigation';
+import { buildResumeHash } from '@/types/chatThreadNavigation';
 import { CHAT_LIST_REFRESH_MIN_DURATION_MS } from '@/constants/chatTiming';
 import { getThreads } from '@/api/threads';
 import { selectThreads, selectThreadsLoaded, selectTotalUnreadThreadCount, setThreadsList } from '@/store/threadsSlice';
@@ -98,7 +98,7 @@ type MergedItem =
 interface ChatListProps {
   activeChatId?: string;
   activeThreadId?: string;
-  onChatSelect: (chatId: string, routeState?: ChatThreadRouteState) => void;
+  onChatSelect: (chatId: string, resumeHash?: string) => void;
   onThreadSelect?: (chatId: string, threadRootId: string) => void;
 }
 
@@ -255,10 +255,10 @@ export function ChatList({ activeChatId, activeThreadId, onChatSelect, onThreadS
         onClick={() =>
           onChatSelect(
             chat.id,
-            buildChatThreadRouteState({
+            buildResumeHash({
               unreadCount: chat.unreadCount,
               lastReadMessageId: chat.lastReadMessageId,
-            }),
+            }) || undefined,
           )
         }
       >

@@ -1,23 +1,21 @@
-export interface ChatThreadResumeRequest {
-  messageId: string;
-  token: string;
-}
-
 export interface ChatThreadRouteState {
   backgroundPath?: string;
-  resumeRequest?: ChatThreadResumeRequest;
 }
 
-export function buildChatThreadRouteState(params: {
-  unreadCount: number;
-  lastReadMessageId: string | null | undefined;
-}): ChatThreadRouteState | undefined {
-  if (params.unreadCount <= 0 || params.lastReadMessageId == null) return undefined;
+/**
+ * Parse a `#msg=<messageId>` hash fragment into the message ID, or return null.
+ */
+export function parseResumeHash(hash: string): string | null {
+  if (!hash.startsWith('#msg=')) return null;
+  const messageId = hash.slice(5);
+  return messageId || null;
+}
 
-  return {
-    resumeRequest: {
-      messageId: params.lastReadMessageId,
-      token: `${params.lastReadMessageId}:${Date.now()}:${Math.random().toString(36).slice(2)}`,
-    },
-  };
+/**
+ * Build a `#msg=<messageId>` hash fragment for jumping to a specific message
+ * when opening a chat.  Returns an empty string when there is nothing to resume.
+ */
+export function buildResumeHash(params: { unreadCount: number; lastReadMessageId: string | null | undefined }): string {
+  if (params.unreadCount <= 0 || params.lastReadMessageId == null) return '';
+  return `#msg=${params.lastReadMessageId}`;
 }

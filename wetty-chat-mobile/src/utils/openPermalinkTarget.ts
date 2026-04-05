@@ -17,14 +17,10 @@ export async function openPermalinkTarget({
   const res = await getMessage(chatId, messageId);
   const msg = res.data;
   const threadRootId = msg.replyRootId;
-  const target = threadRootId
+  const basePath = threadRootId
     ? `/chats/chat/${encodeURIComponent(chatId)}/thread/${threadRootId}`
     : `/chats/chat/${encodeURIComponent(chatId)}`;
-
-  const resumeToken = `${messageId}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
-  const state = {
-    resumeRequest: { messageId, token: resumeToken },
-  };
+  const target = `${basePath}#msg=${messageId}`;
 
   console.debug('[permalink] navigating to resolved target', {
     chatId,
@@ -34,5 +30,5 @@ export async function openPermalinkTarget({
     preserveCurrentEntry,
   });
 
-  navigateToNotificationTarget(target, state, { preserveCurrentEntry });
+  navigateToNotificationTarget(target, { preserveCurrentEntry });
 }
