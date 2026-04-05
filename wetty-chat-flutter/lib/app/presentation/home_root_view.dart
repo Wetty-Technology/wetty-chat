@@ -1,32 +1,19 @@
 import 'package:flutter/cupertino.dart';
+import 'package:go_router/go_router.dart';
 
 import '../theme/style_config.dart';
-import '../../features/chats/chats.dart';
-import '../../features/settings/settings.dart';
 
-class HomeRootPage extends StatefulWidget {
-  const HomeRootPage({super.key});
+/// Shell widget for the [StatefulShellRoute.indexedStack].
+/// Renders the active branch content with a custom bottom navigation bar.
+class HomeShell extends StatelessWidget {
+  const HomeShell({super.key, required this.navigationShell});
 
-  @override
-  State<HomeRootPage> createState() => _HomeRootPageState();
-}
-
-class _HomeRootPageState extends State<HomeRootPage> {
-  int _selectedIndex = 0;
+  final StatefulNavigationShell navigationShell;
 
   static const _tabs = [
     _HomeTabData(icon: CupertinoIcons.chat_bubble_2_fill, label: 'Chats'),
     _HomeTabData(icon: CupertinoIcons.gear_alt_fill, label: 'Settings'),
   ];
-
-  late final List<Widget> _tabViews = const [
-    CupertinoTabView(builder: _buildChatsTab),
-    CupertinoTabView(builder: _buildSettingsTab),
-  ];
-
-  static Widget _buildChatsTab(BuildContext context) => const ChatPage();
-
-  static Widget _buildSettingsTab(BuildContext context) => const SettingsPage();
 
   @override
   Widget build(BuildContext context) {
@@ -35,20 +22,14 @@ class _HomeRootPageState extends State<HomeRootPage> {
       decoration: BoxDecoration(color: colors.backgroundPrimary),
       child: Column(
         children: [
-          Expanded(
-            child: IndexedStack(index: _selectedIndex, children: _tabViews),
-          ),
+          Expanded(child: navigationShell),
           _BottomNavBar(
             items: _tabs,
-            selectedIndex: _selectedIndex,
-            onTap: (index) {
-              if (_selectedIndex == index) {
-                return;
-              }
-              setState(() {
-                _selectedIndex = index;
-              });
-            },
+            selectedIndex: navigationShell.currentIndex,
+            onTap: (index) => navigationShell.goBranch(
+              index,
+              initialLocation: index == navigationShell.currentIndex,
+            ),
           ),
         ],
       ),

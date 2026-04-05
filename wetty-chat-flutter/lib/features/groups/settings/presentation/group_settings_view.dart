@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../shared/presentation/app_divider.dart';
 
@@ -48,7 +49,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
 
   void _onSave() {
     // TODO: call backend API to update group settings
-    Navigator.of(context).pop();
+    context.pop();
   }
 
   @override

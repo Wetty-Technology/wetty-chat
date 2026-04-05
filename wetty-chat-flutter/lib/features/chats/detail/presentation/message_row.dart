@@ -4,10 +4,12 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:go_router/go_router.dart';
+
+import '../../../../app/routing/route_names.dart';
 import '../../../../app/theme/style_config.dart';
 import '../../../../core/network/api_config.dart';
 import '../../models/message_models.dart';
-import 'attachment_viewer_page.dart';
 import 'message_attachment_previews.dart';
 import 'message_avatar.dart';
 import 'video_popup_player.dart';
@@ -110,11 +112,7 @@ class _MessageRowState extends State<MessageRow>
 
     if (attachment.isImage) {
       if (!mounted) return;
-      await Navigator.of(context).push(
-        CupertinoPageRoute(
-          builder: (_) => AttachmentViewerPage(attachment: attachment),
-        ),
-      );
+      await context.push(AppRoutes.attachmentViewer, extra: attachment);
       return;
     }
 

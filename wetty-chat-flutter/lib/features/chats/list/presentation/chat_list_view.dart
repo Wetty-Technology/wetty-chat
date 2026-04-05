@@ -1,14 +1,13 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../../../app/presentation/root_navigation.dart';
+import '../../../../app/routing/route_names.dart';
 import '../../../../app/theme/style_config.dart';
 import '../../detail/application/chat_draft_store.dart';
-import '../../detail/presentation/chat_detail_view.dart';
 import '../../models/chat_models.dart';
 import '../../models/message_models.dart';
 import '../application/chat_list_view_model.dart';
-import 'new_chat_view.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -74,10 +73,7 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Future<void> _addChat() async {
-    final newChat = await pushRootCupertinoPage<ChatListItem>(
-      context,
-      NewChatPage(createChat: _viewModel.createChat),
-    );
+    final newChat = await context.push<ChatListItem>(AppRoutes.newChat);
     if (newChat != null && mounted) {
       _viewModel.insertChat(newChat);
       _showToast('Chat created');
@@ -223,13 +219,12 @@ class _ChatPageState extends State<ChatPage> {
         GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () async {
-            final shouldRefresh = await pushRootCupertinoPage<bool>(
-              context,
-              ChatDetailPage(
-                chatId: chat.id,
-                chatName: chat.name ?? 'Chat ${chat.id}',
-                unreadCount: chat.unreadCount,
-              ),
+            final shouldRefresh = await context.push<bool>(
+              AppRoutes.chatDetail(chat.id),
+              extra: {
+                'chatName': chat.name ?? 'Chat ${chat.id}',
+                'unreadCount': chat.unreadCount,
+              },
             );
             if (shouldRefresh == true) {
               await _viewModel.refreshChats();

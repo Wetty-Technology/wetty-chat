@@ -7,12 +7,13 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
+import 'package:go_router/go_router.dart';
+
+import '../../../../app/routing/route_names.dart';
 import '../../../../app/theme/style_config.dart';
 import '../../../../core/network/api_config.dart';
 import '../../../../core/settings/app_settings_store.dart';
 import '../../../../shared/presentation/app_divider.dart';
-import '../../../groups/members/presentation/group_members_view.dart';
-import '../../../groups/settings/presentation/group_settings_view.dart';
 import '../../models/chat_input_state.dart';
 import '../../models/message_models.dart';
 import '../application/chat_detail_view_model.dart';
@@ -141,7 +142,7 @@ class _ChatDetailPageState extends State<ChatDetailPage>
     _saveDraft();
     await _viewModel.flushReadStatus();
     if (!mounted) return;
-    Navigator.pop(context, _viewModel.shouldRefreshChats);
+    context.pop(_viewModel.shouldRefreshChats);
   }
 
   /// Handles visible-item updates from the message list viewport.
@@ -794,10 +795,10 @@ class _ChatDetailPageState extends State<ChatDetailPage>
         final chatMessageFontSize =
             AppSettingsStore.instance.chatMessageFontSize;
         return PopScope(
-          canPop: false,
           onPopInvokedWithResult: (didPop, _) {
-            if (!didPop) {
-              unawaited(_popWithResult());
+            if (didPop) {
+              _saveDraft();
+              unawaited(_viewModel.flushReadStatus());
             }
           },
           child: CupertinoPageScaffold(
@@ -904,13 +905,8 @@ class _ChatDetailPageState extends State<ChatDetailPage>
                                     children: [
                                       CupertinoButton(
                                         padding: EdgeInsets.zero,
-                                        onPressed: () => Navigator.push(
-                                          context,
-                                          CupertinoPageRoute(
-                                            builder: (_) => GroupMembersPage(
-                                              chatId: widget.chatId,
-                                            ),
-                                          ),
+                                        onPressed: () => context.push(
+                                          AppRoutes.chatMembers(widget.chatId),
                                         ),
                                         child: const Icon(
                                           CupertinoIcons.person_2_fill,
@@ -919,14 +915,11 @@ class _ChatDetailPageState extends State<ChatDetailPage>
                                       ),
                                       CupertinoButton(
                                         padding: EdgeInsets.zero,
-                                        onPressed: () => Navigator.push(
-                                          context,
-                                          CupertinoPageRoute(
-                                            builder: (_) => GroupSettingsPage(
-                                              chatId: widget.chatId,
-                                              currentName: widget.chatName,
-                                            ),
-                                          ),
+                                        onPressed: () => context.push(
+                                          AppRoutes.chatSettings(widget.chatId),
+                                          extra: {
+                                            'currentName': widget.chatName,
+                                          },
                                         ),
                                         child: const Icon(
                                           CupertinoIcons.gear_solid,
