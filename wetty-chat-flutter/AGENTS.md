@@ -47,12 +47,19 @@ You are an expert Flutter and Dart developer. Your goal is to build beautiful, p
 * **Const:** Use `const` constructors everywhere possible to reduce rebuilds.
 * **Build Methods:** Avoid expensive ops (network) in `build()`.
 
-## State Management
-* **Native-First:** Prefer `ValueNotifier`, `ChangeNotifier`, `ListenableBuilder`.
-* **Restrictions:** Do NOT use Riverpod, Bloc, or GetX unless explicitly requested.
-* **ChangeNotifier:** For state that is more complex or shared across multiple widgets, use `ChangeNotifier`.
-* **MVVM:** When a more robust solution is needed, structure the app using the Model-View-ViewModel (MVVM) pattern.
-* **Dependency Injection:** Use simple manual constructor dependency injection to make a class's dependencies explicit in its API, and to manage dependencies between different layers of the application.
+## State Management (Riverpod)
+* **Riverpod:** This project uses `flutter_riverpod` (manual providers, no codegen) for all state management.
+* **Restrictions:** Do NOT use Bloc, GetX, or raw ChangeNotifier for new code. Use Riverpod providers.
+* **Provider types:**
+  - `Provider<T>` for stateless services (API services, repositories)
+  - `NotifierProvider<N, T>` for synchronous mutable state (settings, session)
+  - `AsyncNotifierProvider<N, T>` for async state with loading/error (ViewModels)
+  - `AsyncNotifierProvider.family<N, T, Arg>` for per-entity state (chat detail, group members)
+  - `StreamProvider<T>` for streams (WebSocket events)
+* **Widgets:** Use `ConsumerWidget` or `ConsumerStatefulWidget` (when local controllers needed). Access state via `ref.watch()` for reactive rebuilds, `ref.read()` for one-off reads/mutations.
+* **Architecture:** Providers → API Services → Repositories (Notifiers) → ViewModels (AsyncNotifiers) → ConsumerWidgets
+* **SharedPreferences:** Pre-initialized in `main()` and passed via `ProviderScope(overrides:)`.
+* **ApiSession bridge:** `ApiSession.updateUserId()` is kept in sync via the app widget for deep presentation-layer code (image loading headers) that cannot access `ref`.
 
 ## Routing (GoRouter)
 Use `go_router` for all navigation needs (deep linking, web). Ensure users are redirected to login when unauthorized.

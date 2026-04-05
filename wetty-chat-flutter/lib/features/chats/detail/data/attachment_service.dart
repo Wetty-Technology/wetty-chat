@@ -23,6 +23,10 @@ class AttachmentService {
   static const Duration _requestTimeout = Duration(seconds: 15);
   static const Duration _uploadTimeout = Duration(seconds: 120);
 
+  final int _userId;
+
+  AttachmentService(this._userId);
+
   Future<UploadUrlResponse> requestUploadUrl({
     required String filename,
     required String contentType,
@@ -40,7 +44,11 @@ class AttachmentService {
     );
 
     final response = await http
-        .post(uri, headers: apiHeaders, body: jsonEncode(payload.toJson()))
+        .post(
+          uri,
+          headers: apiHeadersForUser(_userId),
+          body: jsonEncode(payload.toJson()),
+        )
         .timeout(_requestTimeout);
     if (response.statusCode != 201) {
       throw Exception(

@@ -13,8 +13,8 @@ class MessageRepository {
 
   String? nextCursor;
 
-  MessageRepository({required this.chatId, MessageApiService? service})
-    : _service = service ?? MessageApiService();
+  MessageRepository({required this.chatId, required MessageApiService service})
+    : _service = service;
 
   Future<List<MessageItem>> initLoadMessages({int limit = 100}) async {
     final response = await _service.fetchMessages(chatId, max: limit);

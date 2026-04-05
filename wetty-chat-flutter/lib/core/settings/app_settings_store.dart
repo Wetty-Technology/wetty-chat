@@ -1,9 +1,10 @@
 import 'dart:ui';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../providers/shared_preferences_provider.dart';
 
 enum AppLanguage {
   system('system'),
@@ -44,10 +45,9 @@ extension AppLanguageDisplayName on AppLanguage {
   };
 }
 
-class AppSettingsStore extends ChangeNotifier {
-  AppSettingsStore._();
-  static final AppSettingsStore instance = AppSettingsStore._();
+typedef AppSettingsState = ({double fontSize, AppLanguage language});
 
+class AppSettingsNotifier extends Notifier<AppSettingsState> {
   static const String _chatMessageFontSizeKey = 'chat_message_font_size';
   static const String _languageKey = 'app_language';
   static const double minChatMessageFontSize = 14;
@@ -56,39 +56,34 @@ class AppSettingsStore extends ChangeNotifier {
   static const double defaultChatMessageFontSize = 16;
 
   late SharedPreferences _prefs;
-  double _chatMessageFontSize = defaultChatMessageFontSize;
-  AppLanguage _language = AppLanguage.system;
 
-  double get chatMessageFontSize => _chatMessageFontSize;
-  AppLanguage get language => _language;
-
-  Future<void> init() async {
-    _prefs = await SharedPreferences.getInstance();
+  @override
+  AppSettingsState build() {
+    _prefs = ref.read(sharedPreferencesProvider);
     final stored = _prefs.getDouble(_chatMessageFontSizeKey);
-    _chatMessageFontSize = _snapChatMessageFontSize(
+    final fontSize = _snapChatMessageFontSize(
       (stored ?? defaultChatMessageFontSize).clamp(
         minChatMessageFontSize,
         maxChatMessageFontSize,
       ),
     );
-    _language = AppLanguage.fromStorage(_prefs.getString(_languageKey));
+    final language = AppLanguage.fromStorage(_prefs.getString(_languageKey));
+    return (fontSize: fontSize, language: language);
   }
 
   void setChatMessageFontSize(double value) {
     final next = _snapChatMessageFontSize(
       value.clamp(minChatMessageFontSize, maxChatMessageFontSize),
     );
-    if (next == _chatMessageFontSize) return;
-    _chatMessageFontSize = next;
-    notifyListeners();
-    _prefs.setDouble(_chatMessageFontSizeKey, _chatMessageFontSize);
+    if (next == state.fontSize) return;
+    state = (fontSize: next, language: state.language);
+    _prefs.setDouble(_chatMessageFontSizeKey, next);
   }
 
   void setLanguage(AppLanguage language) {
-    if (language == _language) return;
-    _language = language;
-    notifyListeners();
-    _prefs.setString(_languageKey, _language.storageValue);
+    if (language == state.language) return;
+    state = (fontSize: state.fontSize, language: language);
+    _prefs.setString(_languageKey, language.storageValue);
   }
 
   static double _snapChatMessageFontSize(double value) {
@@ -101,3 +96,8 @@ class AppSettingsStore extends ChangeNotifier {
     return minChatMessageFontSize + step * clampedIdx;
   }
 }
+
+final appSettingsProvider =
+    NotifierProvider<AppSettingsNotifier, AppSettingsState>(
+      AppSettingsNotifier.new,
+    );

@@ -1,39 +1,28 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/group_member_models.dart';
 import '../data/group_member_repository.dart';
 
-class GroupMembersViewModel extends ChangeNotifier {
-  GroupMembersViewModel({
-    required this.chatId,
-    GroupMemberRepository? repository,
-  }) : _repository = repository ?? GroupMemberRepository();
+class GroupMembersViewModel
+    extends FamilyAsyncNotifier<List<GroupMember>, String> {
+  @override
+  Future<List<GroupMember>> build(String chatId) async {
+    final repository = ref.read(groupMemberRepositoryProvider);
+    return repository.fetchMembers(chatId);
+  }
 
-  final String chatId;
-  final GroupMemberRepository _repository;
-
-  List<GroupMember> _members = const [];
-  List<GroupMember> get members => _members;
-
-  bool _isLoading = true;
-  bool get isLoading => _isLoading;
-
-  String? _error;
-  String? get error => _error;
-
-  Future<void> loadMembers() async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
-
-    try {
-      _members = await _repository.fetchMembers(chatId);
-      _error = null;
-    } catch (error) {
-      _error = error.toString();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+  Future<void> reload() async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final repository = ref.read(groupMemberRepositoryProvider);
+      return repository.fetchMembers(arg);
+    });
   }
 }
+
+final groupMembersViewModelProvider =
+    AsyncNotifierProvider.family<
+      GroupMembersViewModel,
+      List<GroupMember>,
+      String
+    >(GroupMembersViewModel.new);

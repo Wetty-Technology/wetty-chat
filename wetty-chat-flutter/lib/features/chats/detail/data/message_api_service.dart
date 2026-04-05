@@ -1,13 +1,21 @@
 import 'dart:convert';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../../core/api/client/api_json.dart';
 import '../../../../core/api/models/chats_api_models.dart';
 import '../../../../core/api/models/messages_api_models.dart';
 import '../../../../core/network/api_config.dart';
+import '../../../../core/session/dev_session_store.dart';
 
 class MessageApiService {
+  final int _userId;
+
+  MessageApiService(this._userId);
+
+  Map<String, String> get _headers => apiHeadersForUser(_userId);
+
   Future<ListMessagesResponseDto> fetchMessages(
     String chatId, {
     int? max,
@@ -28,7 +36,7 @@ class MessageApiService {
     final uri = Uri.parse(
       '$apiBaseUrl/chats/$chatId/messages',
     ).replace(queryParameters: query.isEmpty ? null : query);
-    final response = await http.get(uri, headers: apiHeaders);
+    final response = await http.get(uri, headers: _headers);
     if (response.statusCode != 200) {
       throw Exception(
         'Failed to load messages: ${response.statusCode} ${response.body}',
@@ -66,7 +74,7 @@ class MessageApiService {
 
     final response = await http.post(
       uri,
-      headers: apiHeaders,
+      headers: _headers,
       body: jsonEncode(body.toJson()),
     );
     if (response.statusCode != 201) {
@@ -87,7 +95,7 @@ class MessageApiService {
     final uri = Uri.parse('$apiBaseUrl/chats/$chatId/messages/$messageId');
     final response = await http.patch(
       uri,
-      headers: apiHeaders,
+      headers: _headers,
       body: jsonEncode(
         EditMessageRequestDto(
           message: newText,
@@ -106,7 +114,7 @@ class MessageApiService {
 
   Future<void> deleteMessage(String chatId, int messageId) async {
     final uri = Uri.parse('$apiBaseUrl/chats/$chatId/messages/$messageId');
-    final response = await http.delete(uri, headers: apiHeaders);
+    final response = await http.delete(uri, headers: _headers);
     if (response.statusCode != 204) {
       throw Exception(
         'Failed to delete message: ${response.statusCode} ${response.body}',
@@ -121,7 +129,7 @@ class MessageApiService {
     final uri = Uri.parse('$apiBaseUrl/chats/$chatId/read');
     final response = await http.post(
       uri,
-      headers: apiHeaders,
+      headers: _headers,
       body: jsonEncode(MarkReadRequestDto(messageId: messageId).toJson()),
     );
     if (response.statusCode != 200) {
@@ -134,3 +142,8 @@ class MessageApiService {
     );
   }
 }
+
+final messageApiServiceProvider = Provider<MessageApiService>((ref) {
+  final userId = ref.watch(devSessionProvider);
+  return MessageApiService(userId);
+});

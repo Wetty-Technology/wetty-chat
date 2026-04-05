@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 import '../../models/message_models.dart';
 
 /// A contiguous block of messages sorted descending by snowflake ID.
@@ -91,7 +89,7 @@ class MessageRange {
   }
 }
 
-class MessageStore extends ChangeNotifier {
+class MessageStore {
   final List<MessageRange> _ranges = [];
   List<MessageItem>? _cachedItems;
 
@@ -99,7 +97,6 @@ class MessageStore extends ChangeNotifier {
 
   List<MessageItem> get displayItems {
     _cachedItems ??= _buildFlatList();
-    debugPrint('displayItems: $_cachedItems');
     return _cachedItems!;
   }
 
@@ -120,7 +117,6 @@ class MessageStore extends ChangeNotifier {
   void clear() {
     _ranges.clear();
     _invalidateCache();
-    notifyListeners();
   }
 
   void addMessages(List<MessageItem> items) {
@@ -196,7 +192,6 @@ class MessageStore extends ChangeNotifier {
     _ranges.insert(insertAt, incoming);
     _coalesceOverlappingRanges();
     _invalidateCache();
-    notifyListeners();
   }
 
   void _coalesceOverlappingRanges() {
@@ -230,7 +225,6 @@ class MessageStore extends ChangeNotifier {
         _ranges.removeAt(index);
       }
       _invalidateCache();
-      notifyListeners();
       return;
     }
   }
@@ -242,7 +236,6 @@ class MessageStore extends ChangeNotifier {
       range.messages[index] = replacement;
       range.messages.sort((a, b) => b.id.compareTo(a.id));
       _invalidateCache();
-      notifyListeners();
       return;
     }
   }
@@ -262,7 +255,6 @@ class MessageStore extends ChangeNotifier {
     }
     if (!changed) return;
     _invalidateCache();
-    notifyListeners();
   }
 
   bool contains(int messageId) => findRangeContaining(messageId) != null;

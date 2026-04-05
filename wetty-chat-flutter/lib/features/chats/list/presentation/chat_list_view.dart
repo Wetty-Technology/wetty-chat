@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routing/route_names.dart';
@@ -9,21 +10,18 @@ import '../../models/chat_models.dart';
 import '../../models/message_models.dart';
 import '../application/chat_list_view_model.dart';
 
-class ChatPage extends StatefulWidget {
+class ChatPage extends ConsumerStatefulWidget {
   const ChatPage({super.key});
 
   @override
-  State<ChatPage> createState() => _ChatPageState();
+  ConsumerState<ChatPage> createState() => _ChatPageState();
 }
 
-class _ChatPageState extends State<ChatPage> {
-  final ChatListViewModel _viewModel = ChatListViewModel();
+class _ChatPageState extends ConsumerState<ChatPage> {
   late final ScrollController _scrollController;
 
   bool get _supportsPullToRefresh {
-    if (kIsWeb) {
-      return false;
-    }
+    if (kIsWeb) return false;
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
       case TargetPlatform.iOS:
@@ -40,51 +38,37 @@ class _ChatPageState extends State<ChatPage> {
   void initState() {
     super.initState();
     _scrollController = ScrollController()..addListener(_onScroll);
-    _viewModel.addListener(_onViewModelChanged);
-    _viewModel.initLoadChats();
   }
 
   @override
   void dispose() {
-    _viewModel.removeListener(_onViewModelChanged);
-    _viewModel.dispose();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
   }
 
-  void _onViewModelChanged() {
-    if (mounted) {
-      setState(() {});
-    }
-  }
-
   void _onScroll() {
-    if (!_viewModel.hasMore ||
-        _viewModel.isLoadingMore ||
-        _viewModel.isLoading) {
-      return;
-    }
+    final viewState = ref.read(chatListViewModelProvider).valueOrNull;
+    if (viewState == null) return;
+    if (!viewState.hasMore || viewState.isLoadingMore) return;
 
     final position = _scrollController.position;
     if (position.pixels >= position.maxScrollExtent - 200) {
-      _viewModel.loadMoreChats();
+      ref.read(chatListViewModelProvider.notifier).loadMoreChats();
     }
   }
 
   Future<void> _addChat() async {
     final newChat = await context.push<ChatListItem>(AppRoutes.newChat);
     if (newChat != null && mounted) {
-      _viewModel.insertChat(newChat);
+      ref.read(chatListViewModelProvider.notifier).insertChat(newChat);
       _showToast('Chat created');
     }
   }
 
   void _showToast(String message) {
     final overlay = Navigator.of(context).overlay;
-    if (overlay == null) {
-      return;
-    }
+    if (overlay == null) return;
 
     late OverlayEntry entry;
     entry = OverlayEntry(
@@ -99,11 +83,15 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Future<void> _refreshChats() {
-    return _viewModel.refreshChats(userInitiated: true);
+    return ref
+        .read(chatListViewModelProvider.notifier)
+        .refreshChats(userInitiated: true);
   }
 
   @override
   Widget build(BuildContext context) {
+    final asyncState = ref.watch(chatListViewModelProvider);
+
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
         middle: const Text('Chats'),
@@ -116,25 +104,43 @@ class _ChatPageState extends State<ChatPage> {
           ),
         ),
       ),
-      child: SafeArea(child: _buildBody()),
+      child: SafeArea(
+        child: asyncState.when(
+          loading: () => const Center(child: CupertinoActivityIndicator()),
+          error: (error, _) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(error.toString(), textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                  CupertinoButton.filled(
+                    onPressed: () => ref.invalidate(chatListViewModelProvider),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          data: (viewState) => _buildBody(viewState),
+        ),
+      ),
     );
   }
 
-  Widget _buildBody() {
-    if (_viewModel.isLoading) {
-      return const Center(child: CupertinoActivityIndicator());
-    }
-    if (_viewModel.errorMessage != null) {
+  Widget _buildBody(ChatListViewState viewState) {
+    if (viewState.errorMessage != null && viewState.chats.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(_viewModel.errorMessage!, textAlign: TextAlign.center),
+              Text(viewState.errorMessage!, textAlign: TextAlign.center),
               const SizedBox(height: 16),
               CupertinoButton.filled(
-                onPressed: _viewModel.initLoadChats,
+                onPressed: () => ref.invalidate(chatListViewModelProvider),
                 child: const Text('Retry'),
               ),
             ],
@@ -142,7 +148,7 @@ class _ChatPageState extends State<ChatPage> {
         ),
       );
     }
-    if (_viewModel.chats.isEmpty) {
+    if (viewState.chats.isEmpty) {
       return const Center(child: Text('No chats yet'));
     }
 
@@ -155,11 +161,11 @@ class _ChatPageState extends State<ChatPage> {
         slivers: [
           CupertinoSliverRefreshControl(onRefresh: _refreshChats),
           SliverList.builder(
-            itemCount: _viewModel.chats.length,
+            itemCount: viewState.chats.length,
             itemBuilder: (context, index) =>
-                _buildChatListItem(context, _viewModel.chats[index]),
+                _buildChatListItem(context, viewState.chats[index]),
           ),
-          if (_viewModel.isLoadingMore)
+          if (viewState.isLoadingMore)
             const SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.symmetric(vertical: 16),
@@ -173,15 +179,15 @@ class _ChatPageState extends State<ChatPage> {
     return ListView.builder(
       controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
-      itemCount: _viewModel.chats.length + (_viewModel.isLoadingMore ? 1 : 0),
+      itemCount: viewState.chats.length + (viewState.isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
-        if (index >= _viewModel.chats.length) {
+        if (index >= viewState.chats.length) {
           return const Padding(
             padding: EdgeInsets.symmetric(vertical: 16),
             child: Center(child: CupertinoActivityIndicator()),
           );
         }
-        return _buildChatListItem(context, _viewModel.chats[index]);
+        return _buildChatListItem(context, viewState.chats[index]);
       },
     );
   }
@@ -227,7 +233,7 @@ class _ChatPageState extends State<ChatPage> {
               },
             );
             if (shouldRefresh == true) {
-              await _viewModel.refreshChats();
+              await ref.read(chatListViewModelProvider.notifier).refreshChats();
             }
           },
           child: Padding(
@@ -321,7 +327,7 @@ class _ChatPageState extends State<ChatPage> {
     bool hasMessage,
     int unreadCount,
   ) {
-    final draft = ChatDraftStore.instance.getDraft(chat.id);
+    final draft = ref.read(chatDraftProvider).getDraft(chat.id);
     if (draft != null) {
       return Row(
         children: [
@@ -395,32 +401,22 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   String _messagePreviewText(MessageItem? message) {
-    if (message == null) {
-      return '';
-    }
-
-    if (message.isDeleted) {
-      return '[Deleted]';
-    }
+    if (message == null) return '';
+    if (message.isDeleted) return '[Deleted]';
 
     final text = message.message?.trim();
-    if (text != null && text.isNotEmpty) {
-      return text;
-    }
+    if (text != null && text.isNotEmpty) return text;
 
     // TODO: implement options of preview text later
     if (message.attachments.any((attachment) => attachment.isImage)) {
       return '[Image]';
     }
-
     if (message.attachments.any((attachment) => attachment.isVideo)) {
       return '[Video]';
     }
-
     if (message.attachments.isNotEmpty || message.hasAttachments) {
       return '[Attachment]';
     }
-
     return '';
   }
 

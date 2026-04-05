@@ -1,10 +1,11 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'group_member_api_mapper.dart';
 import 'group_member_api_service.dart';
 import 'group_member_models.dart';
 
 class GroupMemberRepository {
-  GroupMemberRepository({GroupMemberApiService? apiService})
-    : _apiService = apiService ?? GroupMemberApiService();
+  GroupMemberRepository(this._apiService);
 
   final GroupMemberApiService _apiService;
 
@@ -13,3 +14,7 @@ class GroupMemberRepository {
     return response.members.map((member) => member.toDomain()).toList();
   }
 }
+
+final groupMemberRepositoryProvider = Provider<GroupMemberRepository>((ref) {
+  return GroupMemberRepository(ref.watch(groupMemberApiServiceProvider));
+});
