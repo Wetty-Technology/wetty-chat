@@ -22,6 +22,7 @@ pub enum ServerWsMessage {
     ThreadUpdate(ThreadUpdatePayload),
     PinAdded(PinUpdatePayload),
     PinRemoved(PinUpdatePayload),
+    UserSettingsUpdated(UserSettingsUpdatedPayload),
 }
 
 impl ServerWsMessage {
@@ -36,6 +37,7 @@ impl ServerWsMessage {
             Self::ThreadUpdate(_) => "threadUpdate",
             Self::PinAdded(_) => "pinAdded",
             Self::PinRemoved(_) => "pinRemoved",
+            Self::UserSettingsUpdated(_) => "userSettingsUpdated",
         }
     }
 }
@@ -85,6 +87,12 @@ pub struct PinUpdatePayload {
     pub message_id: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pin: Option<PinResponse>,
+}
+
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UserSettingsUpdatedPayload {
+    pub settings: serde_json::Value,
 }
 
 #[cfg(test)]

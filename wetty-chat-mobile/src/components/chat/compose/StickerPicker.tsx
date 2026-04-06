@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { createPortal } from 'react-dom';
 import { IonIcon, useIonAlert, useIonToast } from '@ionic/react';
 import { heart, heartDislike } from 'ionicons/icons';
@@ -20,6 +21,12 @@ import {
   unfavoriteSticker,
 } from '@/api/stickers';
 import { useAddSticker } from '@/hooks/useAddSticker';
+import {
+  fetchRemoteSettings,
+  selectAutoSortStickerPacks,
+  selectStickerPackOrder,
+  setStickerPackOrder,
+} from '@/store/settingsSlice';
 
 interface StickerPickerProps {
   isOpen: boolean;
@@ -43,13 +50,9 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
   const [packDetails, setPackDetails] = useState<Record<string, StickerPackDetailResponse>>({});
   const [selectedPackId, setSelectedPackId] = useState('favorites');
   const [isLibraryLoading, setIsLibraryLoading] = useState(false);
-  const [packOrder, setPackOrder] = useState<string[]>(() => {
-    try {
-      return JSON.parse(localStorage.getItem('stickerPackOrder') || '[]');
-    } catch {
-      return [];
-    }
-  });
+  const packOrder = useSelector(selectStickerPackOrder);
+  const autoSort = useSelector(selectAutoSortStickerPacks);
+  const dispatch = useDispatch();
   const hasLoaded = useRef(false);
   const [loadingPackIds, setLoadingPackIds] = useState<Record<string, boolean>>({});
   const [popover, setPopover] = useState<{ sticker: StickerSummary; rect: DOMRect } | null>(null);
@@ -97,21 +100,9 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
 
   useEffect(() => {
     if (!isOpen) return;
+    dispatch(fetchRemoteSettings() as any);
     void loadLibrary();
-  }, [isOpen, loadLibrary]);
-
-  useEffect(() => {
-    const handleStorageChange = () => {
-      try {
-        const order = JSON.parse(localStorage.getItem('stickerPackOrder') || '[]');
-        setPackOrder(order);
-      } catch {
-        // ignore
-      }
-    };
-    window.addEventListener('stickerPackOrderChanged', handleStorageChange);
-    return () => window.removeEventListener('stickerPackOrderChanged', handleStorageChange);
-  }, []);
+  }, [isOpen, loadLibrary, dispatch]);
 
   const packs = useMemo<PickerPack[]>(() => {
     const packEntries = [...ownedPacks, ...subscribedPacks].map((pack) => ({
@@ -169,25 +160,20 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
   const handleStickerSelect = useCallback(
     (sticker: StickerSummary) => {
       try {
-        const autoSort = localStorage.getItem('autoSortStickerPacks') === 'true';
         if (autoSort && activePack && activePack.id !== 'favorites') {
-          const prevOrderStr = localStorage.getItem('stickerPackOrder') || '[]';
-          let newOrder = JSON.parse(prevOrderStr);
-          if (Array.isArray(newOrder)) {
-            if (newOrder[0] !== activePack.id) {
-              newOrder = newOrder.filter((id) => id !== activePack.id);
-              newOrder.unshift(activePack.id);
-              localStorage.setItem('stickerPackOrder', JSON.stringify(newOrder));
-              window.dispatchEvent(new Event('stickerPackOrderChanged'));
-            }
+          let newOrder = packOrder ? [...packOrder] : [];
+          if (newOrder.length === 0 || newOrder[0] !== activePack.id) {
+            newOrder = newOrder.filter((id) => id !== activePack.id);
+            newOrder.unshift(activePack.id);
+            dispatch(setStickerPackOrder(newOrder));
           }
         }
       } catch (err) {
-        console.error('Failed to auto-sort sticker pack order window event:', err);
+        console.error('Failed to auto-sort sticker pack order:', err);
       }
       onStickerSelect(sticker);
     },
-    [activePack, onStickerSelect],
+    [activePack, onStickerSelect, autoSort, packOrder, dispatch],
   );
 
   const { addStickerFile, setAddStickerFile, fileInputRef, handleFileChange, handleAddSticker } = useAddSticker({

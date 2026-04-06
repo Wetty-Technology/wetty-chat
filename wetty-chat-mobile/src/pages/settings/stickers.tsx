@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   IonBackButton,
   IonButtons,
@@ -32,6 +33,13 @@ import {
   type StickerPackSummary,
 } from '@/api/stickers';
 import type { BackAction } from '@/types/back-action';
+import {
+  fetchRemoteSettings,
+  selectAutoSortStickerPacks,
+  selectStickerPackOrder,
+  setAutoSortStickerPacks,
+  setStickerPackOrder,
+} from '@/store/settingsSlice';
 
 interface StickerSettingsCoreProps {
   backAction?: BackAction;
@@ -40,24 +48,14 @@ interface StickerSettingsCoreProps {
 
 export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsCoreProps) {
   const history = useHistory();
+  const dispatch = useDispatch();
   const [presentAlert] = useIonAlert();
   const [presentToast] = useIonToast();
   const [ownedPacks, setOwnedPacks] = useState<StickerPackSummary[]>([]);
   const [allPacks, setAllPacks] = useState<StickerPackSummary[]>([]);
-  const [autoSort, setAutoSort] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem('autoSortStickerPacks') === 'true';
-    } catch {
-      return false;
-    }
-  });
-  const [packOrder, setPackOrder] = useState<string[]>(() => {
-    try {
-      return JSON.parse(localStorage.getItem('stickerPackOrder') || '[]');
-    } catch {
-      return [];
-    }
-  });
+
+  const autoSort = useSelector(selectAutoSortStickerPacks);
+  const packOrder = useSelector(selectStickerPackOrder);
 
   const loadPacks = useCallback(async () => {
     try {
@@ -89,19 +87,18 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
 
   useEffect(() => {
     const run = async () => {
+      dispatch(fetchRemoteSettings() as any);
       await loadPacks();
     };
 
     void run();
-  }, [loadPacks]);
+  }, [loadPacks, dispatch]);
 
   const handleReorder = (event: CustomEvent<ItemReorderEventDetail>) => {
     const newItems = event.detail.complete(allPacks);
     setAllPacks(newItems);
     const newOrder = newItems.map((p: StickerPackSummary) => p.id);
-    setPackOrder(newOrder);
-    localStorage.setItem('stickerPackOrder', JSON.stringify(newOrder));
-    window.dispatchEvent(new Event('stickerPackOrderChanged'));
+    dispatch(setStickerPackOrder(newOrder));
   };
 
   const handleOpenPack = (packId: string) => {
@@ -129,9 +126,7 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
               setAllPacks((prev) => {
                 const newAll = [res.data, ...prev];
                 const newOrder = newAll.map((p) => p.id);
-                setPackOrder(newOrder);
-                localStorage.setItem('stickerPackOrder', JSON.stringify(newOrder));
-                window.dispatchEvent(new Event('stickerPackOrderChanged'));
+                dispatch(setStickerPackOrder(newOrder));
                 return newAll;
               });
               handleOpenPack(res.data.id);
@@ -167,13 +162,7 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
               slot="end"
               checked={autoSort}
               onIonChange={(e) => {
-                const val = e.detail.checked;
-                setAutoSort(val);
-                try {
-                  localStorage.setItem('autoSortStickerPacks', val ? 'true' : 'false');
-                } catch {
-                  // ignore
-                }
+                dispatch(setAutoSortStickerPacks(e.detail.checked));
               }}
             />
           </IonItem>

@@ -530,6 +530,22 @@ pub struct NewClientRecord {
     pub last_active_uid: i32,
 }
 
+#[derive(Debug, Clone, Queryable, Selectable, Insertable, Identifiable, Serialize)]
+#[diesel(primary_key(uid), table_name = schema::primary::user_settings)]
+#[serde(rename_all = "camelCase")]
+pub struct UserSettings {
+    pub uid: i32,
+    pub preferences: serde_json::Value,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Debug, Clone, Insertable)]
+#[diesel(table_name = schema::primary::user_settings)]
+pub struct NewUserSettings {
+    pub uid: i32,
+    pub preferences: serde_json::Value,
+}
+
 #[derive(Debug, Clone, Queryable, Selectable, Serialize, Insertable)]
 #[diesel(table_name = schema::user_extra)]
 pub struct UserExtra {

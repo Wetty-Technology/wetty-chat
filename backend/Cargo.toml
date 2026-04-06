@@ -55,6 +55,7 @@ matroska = "0.30"
 utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }
 utoipa-axum = "0.2"
 utoipa-swagger-ui = { version = "9", features = ["axum"] }
+json-patch = "4.1.0"
 
 [profile.dev]
 overflow-checks = false

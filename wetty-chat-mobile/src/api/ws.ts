@@ -2,7 +2,7 @@ import apiClient from '@/api/client';
 import { syncApp } from '@/api/sync';
 import type { MessageResponse, ReactionSummary } from '@/api/messages';
 import { setActiveConnections, setWsConnected } from '@/store/connectionSlice';
-import { selectEffectiveLocale } from '@/store/settingsSlice';
+import { selectEffectiveLocale, replaceSettings, hydrateSettings } from '@/store/settingsSlice';
 import { updateThreadFromWs, setThreadsList, type ThreadUpdatePayload } from '@/store/threadsSlice';
 import { addPin, removePin } from '@/store/pinsSlice';
 import type { PinResponse } from '@/api/pins';
@@ -327,6 +327,14 @@ async function connectWebSocket(): Promise<void> {
 
         if (message.type === 'message' && message.payload != null) {
           handleWsMessage(message.payload);
+          return;
+        }
+
+        if (message.type === 'userSettingsUpdated' && message.payload != null) {
+          const payload = message.payload as { settings: Record<string, unknown> };
+          if (payload.settings) {
+            store.dispatch(replaceSettings(hydrateSettings(payload.settings)));
+          }
           return;
         }
 
