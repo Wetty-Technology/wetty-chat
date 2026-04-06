@@ -6,7 +6,10 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/routing/route_names.dart';
 import '../../../../app/theme/style_config.dart';
 import '../../chat_timestamp_formatter.dart';
-import '../../detail/application/chat_draft_store.dart';
+import '../../detail/application/conversation_draft_store.dart';
+import '../../detail/data/conversation_repository.dart';
+import '../../detail/domain/conversation_scope.dart';
+import '../../detail/domain/launch_request.dart';
 import '../../models/chat_models.dart';
 import '../../models/message_models.dart';
 import '../application/chat_list_view_model.dart';
@@ -87,6 +90,24 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     return ref
         .read(chatListViewModelProvider.notifier)
         .refreshChats(userInitiated: true);
+  }
+
+  Future<LaunchRequest> _launchRequestForChat(ChatListItem chat) async {
+    final lastReadMessageId = chat.lastReadMessageId;
+    if (chat.unreadCount <= 0 || lastReadMessageId == null) {
+      return const LaunchRequest.latest();
+    }
+    final parsedId = int.tryParse(lastReadMessageId);
+    if (parsedId == null) {
+      return const LaunchRequest.latest();
+    }
+    final unreadMessageId = await ref
+        .read(conversationRepositoryProvider(ConversationScope.chat(chat.id)))
+        .resolveFirstUnreadMessageId(parsedId);
+    if (unreadMessageId == null) {
+      return const LaunchRequest.latest();
+    }
+    return LaunchRequest.unread(unreadMessageId);
   }
 
   @override
@@ -212,11 +233,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () async {
+            final launchRequest = await _launchRequestForChat(chat);
             final shouldRefresh = await context.push<bool>(
               AppRoutes.chatDetail(chat.id),
               extra: {
                 'chatName': chat.name ?? 'Chat ${chat.id}',
-                'unreadCount': chat.unreadCount,
+                'launchRequest': launchRequest,
               },
             );
             if (shouldRefresh == true) {
@@ -314,7 +336,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     bool hasMessage,
     int unreadCount,
   ) {
-    final draft = ref.read(chatDraftProvider).getDraft(chat.id);
+    final draft = ref
+        .read(conversationDraftProvider)
+        .getDraft(ConversationScope.chat(chat.id));
     if (draft != null) {
       return Row(
         children: [

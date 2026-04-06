@@ -13,6 +13,7 @@ class ChatListItemDto {
     this.name,
     this.lastMessageAt,
     this.unreadCount = 0,
+    this.lastReadMessageId,
     this.lastMessage,
     this.mutedUntil,
   });
@@ -24,6 +25,7 @@ class ChatListItemDto {
   final DateTime? lastMessageAt;
   @JsonKey(defaultValue: 0)
   final int unreadCount;
+  final String? lastReadMessageId;
   final MessageItemDto? lastMessage;
   @NullableDateTimeConverter()
   final DateTime? mutedUntil;

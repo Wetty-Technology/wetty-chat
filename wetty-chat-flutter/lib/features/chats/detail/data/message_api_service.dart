@@ -8,6 +8,7 @@ import '../../../../core/api/models/chats_api_models.dart';
 import '../../../../core/api/models/messages_api_models.dart';
 import '../../../../core/network/api_config.dart';
 import '../../../../core/session/dev_session_store.dart';
+import '../domain/conversation_scope.dart';
 
 class MessageApiService {
   final int _userId;
@@ -15,6 +16,17 @@ class MessageApiService {
   MessageApiService(this._userId);
 
   Map<String, String> get _headers => apiHeadersForUser(_userId);
+
+  String nextClientGeneratedId({String? seed}) {
+    return '${DateTime.now().microsecondsSinceEpoch}-$seed-$_userId';
+  }
+
+  String _messagesPath(ConversationScope scope) {
+    if (scope.threadRootId == null) {
+      return '$apiBaseUrl/chats/${scope.chatId}/messages';
+    }
+    return '$apiBaseUrl/chats/${scope.chatId}/threads/${scope.threadRootId}/messages';
+  }
 
   Future<ListMessagesResponseDto> fetchMessages(
     String chatId, {
@@ -51,23 +63,47 @@ class MessageApiService {
     return response.messages;
   }
 
+  Future<ListMessagesResponseDto> fetchConversationMessages(
+    ConversationScope scope, {
+    int? max,
+    int? before,
+    int? after,
+    int? around,
+  }) async {
+    final query = <String, String>{};
+    if (max != null) query['max'] = max.toString();
+    if (before != null) query['before'] = before.toString();
+    if (after != null) query['after'] = after.toString();
+    if (around != null) query['around'] = around.toString();
+
+    final uri = Uri.parse(
+      _messagesPath(scope),
+    ).replace(queryParameters: query.isEmpty ? null : query);
+    final response = await http.get(uri, headers: _headers);
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to load messages: ${response.statusCode} ${response.body}',
+      );
+    }
+    return ListMessagesResponseDto.fromJson(decodeJsonObject(response.body));
+  }
+
   Future<MessageItemDto> sendMessage(
     String chatId,
     String text, {
     int? replyToId,
     String? threadId,
     List<String> attachmentIds = const <String>[],
+    String? clientGeneratedId,
   }) async {
     final path = threadId == null
         ? '$apiBaseUrl/chats/$chatId/messages'
         : '$apiBaseUrl/chats/$chatId/threads/$threadId/messages';
     final uri = Uri.parse(path);
-    final clientGeneratedId =
-        '${DateTime.now().millisecondsSinceEpoch}-${Uri.base.hashCode}';
     final body = SendMessageRequestDto(
       message: text,
       messageType: 'text',
-      clientGeneratedId: clientGeneratedId,
+      clientGeneratedId: clientGeneratedId ?? nextClientGeneratedId(),
       attachmentIds: attachmentIds,
       replyToId: replyToId,
     );
@@ -83,6 +119,34 @@ class MessageApiService {
       );
     }
 
+    return MessageItemDto.fromJson(decodeJsonObject(response.body));
+  }
+
+  Future<MessageItemDto> sendConversationMessage(
+    ConversationScope scope,
+    String text, {
+    int? replyToId,
+    List<String> attachmentIds = const <String>[],
+    required String clientGeneratedId,
+  }) async {
+    final uri = Uri.parse(_messagesPath(scope));
+    final body = SendMessageRequestDto(
+      message: text,
+      messageType: 'text',
+      clientGeneratedId: clientGeneratedId,
+      attachmentIds: attachmentIds,
+      replyToId: replyToId,
+    );
+    final response = await http.post(
+      uri,
+      headers: _headers,
+      body: jsonEncode(body.toJson()),
+    );
+    if (response.statusCode != 201) {
+      throw Exception(
+        'Failed to send message: ${response.statusCode} ${response.body}',
+      );
+    }
     return MessageItemDto.fromJson(decodeJsonObject(response.body));
   }
 

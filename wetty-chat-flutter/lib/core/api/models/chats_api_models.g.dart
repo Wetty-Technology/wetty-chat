@@ -15,6 +15,7 @@ ChatListItemDto _$ChatListItemDtoFromJson(
     json['lastMessageAt'],
   ),
   unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
+  lastReadMessageId: json['lastReadMessageId'] as String?,
   lastMessage: json['lastMessage'] == null
       ? null
       : MessageItemDto.fromJson(json['lastMessage'] as Map<String, dynamic>),
@@ -30,6 +31,7 @@ Map<String, dynamic> _$ChatListItemDtoToJson(
     instance.lastMessageAt,
   ),
   'unreadCount': instance.unreadCount,
+  'lastReadMessageId': instance.lastReadMessageId,
   'lastMessage': instance.lastMessage?.toJson(),
   'mutedUntil': const NullableDateTimeConverter().toJson(instance.mutedUntil),
 };

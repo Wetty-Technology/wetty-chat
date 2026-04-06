@@ -6,102 +6,91 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
-
 import 'package:go_router/go_router.dart';
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 import '../../../../app/routing/route_names.dart';
 import '../../../../app/theme/style_config.dart';
 import '../../../../core/session/dev_session_store.dart';
 import '../../../../core/settings/app_settings_store.dart';
 import '../../../../shared/presentation/app_divider.dart';
-import '../../models/chat_input_state.dart';
-import '../../models/message_models.dart';
-import '../application/chat_detail_view_model.dart';
+import '../application/conversation_composer_view_model.dart';
+import '../application/conversation_timeline_view_model.dart';
 import '../data/attachment_service.dart';
+import '../domain/conversation_message.dart';
+import '../domain/conversation_scope.dart';
+import '../domain/launch_request.dart';
+import '../domain/timeline_entry.dart';
+import 'conversation_timeline_view.dart';
 import 'message_row.dart';
 
-/// Chat detail screen: message list (oldest at top, newest at bottom) and send input.
 class ChatDetailPage extends ConsumerStatefulWidget {
   const ChatDetailPage({
     super.key,
     required this.chatId,
     required this.chatName,
-    this.unreadCount = 0,
+    this.launchRequest = const LaunchRequest.latest(),
   });
 
   final String chatId;
   final String chatName;
-  final int unreadCount;
+  final LaunchRequest launchRequest;
 
   @override
   ConsumerState<ChatDetailPage> createState() => _ChatDetailPageState();
 }
 
-class _PendingAttachment {
-  final String id;
-  final String name;
-  final String mimeType;
-  final Uint8List? previewBytes;
-
-  _PendingAttachment({
-    required this.id,
-    required this.name,
-    required this.mimeType,
-    this.previewBytes,
-  });
-
-  bool get isImage => mimeType.startsWith('image/') && previewBytes != null;
-}
-
 class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
     with WidgetsBindingObserver {
-  static const bool _isReversedMessageList = true;
-  final ItemScrollController _itemScrollController = ItemScrollController();
-  final ScrollOffsetController _scrollOffsetController =
-      ScrollOffsetController();
-  final ItemPositionsListener _itemPositionsListener =
-      ItemPositionsListener.create();
+  static const double _topPreferredThreshold = 0.08;
+  static const double _liveEdgeThreshold = 0.08;
+  static const double _timelineEndPadding = 24;
+
   final ScrollController _inputScrollController = ScrollController();
   final TextEditingController _textController = TextEditingController();
-  static const double _titleBarHeight = 70.0;
-  bool _isPopping = false;
-  late final AttachmentService _attachmentService;
-  final List<_PendingAttachment> _pendingAttachments = [];
-  bool _isUploadingAttachment = false;
-  bool _isProgrammaticScrollActive = false;
-  int _scrollOperationToken = 0;
-  static const double _tallMessageHeightThreshold = 0.55;
-  final GlobalKey _messageListKey = GlobalKey();
-  late final ChatDetailViewModel _viewModel;
 
-  ChatDetailArgs get _args =>
-      (chatId: widget.chatId, unreadCount: widget.unreadCount);
+  late final AttachmentService _attachmentService;
+  late final ConversationTimelineViewModel _timelineNotifier;
+  late ItemScrollController _itemScrollController;
+  late ItemPositionsListener _itemPositionsListener;
+  bool _isUploadingAttachment = false;
+  bool _isPopping = false;
+  bool _isProgrammaticScrollActive = false;
+  bool _isAtLiveEdge = true;
+  int _scrollToken = 0;
+  int _lastAppliedLocateRevision = 0;
+  int _currentViewportSessionId = 0;
+  int _lastSyncedViewportSessionId = 0;
+  Key _timelineViewportKey = const ValueKey<int>(0);
+
+  ConversationScope get scope => ConversationScope.chat(widget.chatId);
+
+  ConversationTimelineArgs get _timelineArgs =>
+      (scope: scope, launchRequest: widget.launchRequest);
 
   @override
   void initState() {
     super.initState();
-    _viewModel = ref.read(chatDetailViewModelProvider(_args).notifier);
     final userId = ref.read(devSessionProvider);
     _attachmentService = AttachmentService(userId);
+    _resetViewportSession(0);
+    _timelineNotifier = ref.read(
+      conversationTimelineViewModelProvider(_timelineArgs).notifier,
+    );
     WidgetsBinding.instance.addObserver(this);
-    _itemPositionsListener.itemPositions.addListener(_onItemPositionsChanged);
-    // Load draft after first frame when provider is available
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final draft = _viewModel.loadDraft();
-      if (draft != null) _textController.text = draft;
+      if (!mounted) {
+        return;
+      }
+      final composer = ref.read(conversationComposerViewModelProvider(scope));
+      _textController.text = composer.draft;
     });
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _saveDraft();
-    _viewModel.flushReadStatus();
-    _itemPositionsListener.itemPositions.removeListener(
-      _onItemPositionsChanged,
-    );
+    unawaited(_timelineNotifier.flushReadStatus());
     _inputScrollController.dispose();
     _textController.dispose();
     super.dispose();
@@ -112,604 +101,77 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
-      unawaited(_viewModel.flushReadStatus());
+      unawaited(_timelineNotifier.flushReadStatus());
     }
-  }
-
-  int? _lastJumpedId;
-
-  void _saveDraft() {
-    _viewModel.saveDraft(_textController.text);
   }
 
   Future<void> _popWithResult() async {
-    if (_isPopping) return;
+    if (_isPopping) {
+      return;
+    }
     _isPopping = true;
-    _saveDraft();
-    final didSyncReadStatus = await _viewModel.flushReadStatus();
-    if (!mounted) return;
-    context.pop(didSyncReadStatus || _viewModel.shouldRefreshChats);
-  }
-
-  void _onItemPositionsChanged() {
-    if (_isProgrammaticScrollActive) return;
-
-    final viewState = ref.read(chatDetailViewModelProvider(_args)).valueOrNull;
-    if (viewState == null ||
-        viewState.isLoadingMore ||
-        viewState.displayItems.isEmpty) {
-      return;
-    }
-
-    final positions = _itemPositionsListener.itemPositions.value;
-    if (positions.isEmpty) return;
-
-    final isBottomVisible = positions.any((p) => p.index == 0);
-    _viewModel.updateScrollToBottom(!isBottomVisible);
-
-    final minIndex = positions
-        .map((p) => p.index)
-        .reduce((a, b) => a < b ? a : b);
-
-    final maxIndex = positions
-        .map((p) => p.index)
-        .reduce((a, b) => a > b ? a : b);
-    final messageCount = viewState.displayItems.length;
-    debugPrint("min: $minIndex, max: $maxIndex");
-    debugPrint("total: $messageCount");
-
-    if (maxIndex >= messageCount - 5) {
-      _loadOlderMessages();
-    }
-    if (minIndex <= 4 && viewState.hasNewerMessages && !isBottomVisible) {
-      _loadNewerMessages();
-    }
-
-    for (final pos in positions) {
-      if (pos.itemLeadingEdge < 0.9 && pos.itemTrailingEdge > 0.1) {
-        final idx = pos.index;
-        if (idx < viewState.displayItems.length) {
-          final msg = viewState.displayItems[idx];
-          _viewModel.onMessageVisible(msg.id);
-        }
-      }
-    }
-  }
-
-  Future<void> _loadOlderMessages() async {
-    final anchor = _topViewportAnchor();
-    final changed = await _viewModel.loadMoreMessages();
-    if (!changed || anchor == null || !mounted) return;
-
-    await _runProgrammaticScroll((token) async {
-      await _waitForNextFrame();
-      if (!_canApplyScroll(token)) return;
-
-      final anchorIndex = _viewModel.findWindowIndex(anchor.key);
-      if (anchorIndex == null) return;
-      _itemScrollController.jumpTo(
-        index: anchorIndex,
-        alignment: _safeAlignment(anchor.value),
-      );
-    });
-  }
-
-  void _clearAttachments() {
-    if (_pendingAttachments.isEmpty) return;
+    final notifier = ref.read(
+      conversationTimelineViewModelProvider(_timelineArgs).notifier,
+    );
+    final didSync = await notifier.flushReadStatus();
     if (!mounted) {
-      _pendingAttachments.clear();
       return;
     }
-    setState(() {
-      _pendingAttachments.clear();
-    });
-  }
-
-  void _removeAttachmentAt(int index) {
-    if (index < 0 || index >= _pendingAttachments.length) return;
-    setState(() {
-      _pendingAttachments.removeAt(index);
-    });
-  }
-
-  String _guessContentType(String filename) {
-    final lower = filename.toLowerCase();
-    if (lower.endsWith('.png')) return 'image/png';
-    if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) {
-      return 'image/jpeg';
-    }
-    if (lower.endsWith('.gif')) return 'image/gif';
-    if (lower.endsWith('.webp')) return 'image/webp';
-    if (lower.endsWith('.bmp')) return 'image/bmp';
-    if (lower.endsWith('.heic')) return 'image/heic';
-    if (lower.endsWith('.pdf')) return 'application/pdf';
-    if (lower.endsWith('.txt')) return 'text/plain';
-    if (lower.endsWith('.json')) return 'application/json';
-    if (lower.endsWith('.zip')) return 'application/zip';
-    return 'application/octet-stream';
-  }
-
-  Future<void> _loadNewerMessages() async {
-    final anchor = _bottomViewportAnchor();
-    final changed = await _viewModel.loadNewerMessages();
-    if (!changed || anchor == null || !mounted) return;
-
-    await _runProgrammaticScroll((token) async {
-      await _waitForNextFrame();
-      if (!_canApplyScroll(token)) return;
-
-      final anchorIndex = _viewModel.findWindowIndex(anchor.key);
-      if (anchorIndex == null) return;
-      _itemScrollController.jumpTo(
-        index: anchorIndex,
-        alignment: _safeAlignment(anchor.value),
-      );
-    });
-  }
-
-  Future<(int? width, int? height)> _decodeImageSize(Uint8List bytes) async {
-    try {
-      final completer = Completer<ui.Image>();
-      ui.decodeImageFromList(bytes, (img) => completer.complete(img));
-      final img = await completer.future.timeout(const Duration(seconds: 2));
-      final size = (img.width, img.height);
-      img.dispose();
-      return size;
-    } catch (_) {
-      return (null, null);
-    }
-  }
-
-  MapEntry<int, double>? _topViewportAnchor() {
-    final viewState = ref.read(chatDetailViewModelProvider(_args)).valueOrNull;
-    if (viewState == null) return null;
-    final positions = _itemPositionsListener.itemPositions.value
-        .where((position) => position.index < viewState.displayItems.length)
-        .toList();
-    if (positions.isEmpty) return null;
-
-    positions.sort((a, b) => b.index.compareTo(a.index));
-    final anchor = positions.first;
-    return MapEntry(
-      viewState.displayItems[anchor.index].id,
-      anchor.itemLeadingEdge,
-    );
-  }
-
-  MapEntry<int, double>? _bottomViewportAnchor() {
-    final viewState = ref.read(chatDetailViewModelProvider(_args)).valueOrNull;
-    if (viewState == null) return null;
-    final positions = _itemPositionsListener.itemPositions.value
-        .where((position) => position.index < viewState.displayItems.length)
-        .toList();
-    if (positions.isEmpty) return null;
-
-    positions.sort((a, b) => a.index.compareTo(b.index));
-    final anchor = positions.first;
-    return MapEntry(
-      viewState.displayItems[anchor.index].id,
-      anchor.itemLeadingEdge,
-    );
-  }
-
-  Future<void> _scrollToBottom() async {
-    await _runProgrammaticScroll((token) async {
-      await _viewModel.jumpToBottom();
-      final viewState = ref
-          .read(chatDetailViewModelProvider(_args))
-          .valueOrNull;
-      if (!_canApplyScroll(token) ||
-          viewState == null ||
-          viewState.displayItems.isEmpty) {
-        return;
-      }
-
-      await _waitForNextFrame();
-      if (!_canApplyScroll(token)) return;
-
-      _itemScrollController.jumpTo(index: 0, alignment: 0);
-      await Future<void>.delayed(const Duration(milliseconds: 16));
-      if (!_canApplyScroll(token)) return;
-
-      await _itemScrollController.scrollTo(
-        index: 0,
-        alignment: 0,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    });
-  }
-
-  bool _canApplyScroll(int token) =>
-      mounted &&
-      token == _scrollOperationToken &&
-      _itemScrollController.isAttached;
-
-  double _safeAlignment(double alignment) {
-    return alignment.clamp(0.0, 1.0).toDouble();
-  }
-
-  double _messageJumpAlignment(ItemPosition position) {
-    final height = position.itemTrailingEdge - position.itemLeadingEdge;
-    if (height >= _tallMessageHeightThreshold) {
-      return _safeAlignment(0.5);
-    }
-    return _safeAlignment(0.5 - height);
-  }
-
-  bool _isTallMessage(ItemPosition position) {
-    final height = position.itemTrailingEdge - position.itemLeadingEdge;
-    return height >= _tallMessageHeightThreshold;
-  }
-
-  double _messageStartEdge(ItemPosition position) {
-    return _isReversedMessageList
-        ? position.itemTrailingEdge
-        : position.itemLeadingEdge;
-  }
-
-  Future<void> _adjustTallMessagePosition(
-    int targetIdx, {
-    required int token,
-  }) async {
-    final viewportHeight = _messageListKey.currentContext?.size?.height;
-    if (viewportHeight == null || viewportHeight <= 0) return;
-
-    final positions = _itemPositionsListener.itemPositions.value;
-    final targetPos = positions.where((p) => p.index == targetIdx).toList();
-    if (targetPos.isEmpty) return;
-
-    final pos = targetPos.first;
-    if (!_isTallMessage(pos)) return;
-
-    final deltaPixels = (_messageStartEdge(pos) - 0.5) * viewportHeight;
-    if (deltaPixels.abs() < 1 || !_canApplyScroll(token)) return;
-
-    await _scrollOffsetController.animateScroll(
-      offset: deltaPixels,
-      duration: const Duration(milliseconds: 220),
-      curve: Curves.easeOut,
-    );
-  }
-
-  Future<void> _waitForNextFrame() {
-    final completer = Completer<void>();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!completer.isCompleted) {
-        completer.complete();
-      }
-    });
-    return completer.future;
-  }
-
-  Future<void> _runProgrammaticScroll(
-    Future<void> Function(int token) operation,
-  ) async {
-    final token = ++_scrollOperationToken;
-    _isProgrammaticScrollActive = true;
-    try {
-      await operation(token);
-    } finally {
-      await Future<void>.delayed(const Duration(milliseconds: 350));
-      if (mounted && token == _scrollOperationToken) {
-        _isProgrammaticScrollActive = false;
-      }
-    }
-  }
-
-  void _clearInputMessage() {
-    _textController.clear();
-    _viewModel.clearInputState();
-  }
-
-  Future<void> _pickAttachment() async {
-    if (kIsWeb || !Platform.isWindows) {
-      _showErrorDialog('目前只实现了 Windows 上传逻辑');
-      return;
-    }
-    if (_isUploadingAttachment) return;
-
-    final file = await openFile();
-    if (file == null) return;
-
-    setState(() {
-      _isUploadingAttachment = true;
-    });
-
-    try {
-      final filename = file.name;
-      final contentType = _guessContentType(filename);
-      final size = await file.length();
-
-      Uint8List? previewBytes;
-      int? width;
-      int? height;
-
-      if (contentType.startsWith('image/')) {
-        final shouldPreview = size <= 8 * 1024 * 1024;
-        if (shouldPreview) {
-          previewBytes = await file.readAsBytes();
-          final dims = await _decodeImageSize(previewBytes);
-          width = dims.$1;
-          height = dims.$2;
-        }
-      }
-
-      final uploadInfo = await _attachmentService.requestUploadUrl(
-        filename: filename,
-        contentType: contentType,
-        size: size,
-        width: width,
-        height: height,
-      );
-
-      await _attachmentService.uploadFileToS3(
-        uploadUrl: uploadInfo.uploadUrl,
-        file: File(file.path),
-        contentType: contentType,
-      );
-
-      if (!mounted) return;
-      setState(() {
-        _pendingAttachments.add(
-          _PendingAttachment(
-            id: uploadInfo.attachmentId,
-            name: filename,
-            mimeType: contentType,
-            previewBytes: previewBytes,
-          ),
-        );
-      });
-    } catch (e) {
-      if (mounted) _showErrorDialog('上传失败: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isUploadingAttachment = false;
-        });
-      }
-    }
-  }
-
-  Widget _buildAttachmentPreview(BuildContext context) {
-    if (_pendingAttachments.isEmpty) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          for (int i = 0; i < _pendingAttachments.length; i++)
-            _buildAttachmentChip(context, _pendingAttachments[i], i),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAttachmentChip(
-    BuildContext context,
-    _PendingAttachment attachment,
-    int index,
-  ) {
-    final borderColor = CupertinoColors.systemGrey4.resolveFrom(context);
-    final bgColor = CupertinoColors.systemGrey5.resolveFrom(context);
-    final textColor = CupertinoColors.label.resolveFrom(context);
-
-    final thumb = attachment.isImage
-        ? ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: Image.memory(
-              attachment.previewBytes!,
-              width: 36,
-              height: 36,
-              fit: BoxFit.cover,
-            ),
-          )
-        : Icon(
-            CupertinoIcons.doc,
-            size: 28,
-            color: CupertinoColors.activeBlue.resolveFrom(context),
-          );
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          thumb,
-          const SizedBox(width: 6),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 140),
-            child: Text(
-              attachment.name,
-              overflow: TextOverflow.ellipsis,
-              style: appTextStyle(
-                context,
-                fontSize: AppFontSizes.meta,
-                color: textColor,
-              ),
-            ),
-          ),
-          const SizedBox(width: 6),
-          CupertinoButton(
-            padding: EdgeInsets.zero,
-            minimumSize: const Size(20, 20),
-            onPressed: () => _removeAttachmentAt(index),
-            child: Icon(
-              CupertinoIcons.xmark_circle_fill,
-              size: 18,
-              color: CupertinoColors.systemGrey2.resolveFrom(context),
-            ),
-          ),
-        ],
-      ),
+    context.pop(
+      didSync ||
+          ref
+                  .read(conversationTimelineViewModelProvider(_timelineArgs))
+                  .valueOrNull
+                  ?.shouldRefreshChats ==
+              true,
     );
   }
 
   Future<void> _sendMessage() async {
-    final text = _textController.text.trim();
-    final attachmentIds = _pendingAttachments.map((a) => a.id).toList();
-    final hasAttachments = attachmentIds.isNotEmpty;
-    if (text.isEmpty && !hasAttachments) return;
+    final composer = ref.read(conversationComposerViewModelProvider(scope));
+    final composerNotifier = ref.read(
+      conversationComposerViewModelProvider(scope).notifier,
+    );
     if (_isUploadingAttachment) {
-      _showErrorDialog('文件正在上传，请稍后再发送');
+      _showErrorDialog('File upload is still in progress.');
       return;
     }
-
-    final viewState = ref.read(chatDetailViewModelProvider(_args)).valueOrNull;
-    if (viewState == null) return;
-
-    switch (viewState.inputState) {
-      case InputEditing(:final message):
-        if (hasAttachments) {
-          _showErrorDialog('编辑消息暂不支持附件');
-          return;
-        }
-        if (text == message.message) return;
-        try {
-          await _viewModel.editMessage(message.id, text);
-          if (!mounted) return;
-          _clearInputMessage();
-        } catch (e) {
-          if (mounted) _showErrorDialog('$e');
-        }
-
-      case InputReplying(:final message):
-        _clearInputMessage();
-        _viewModel.clearDraft();
-        try {
-          await _viewModel.sendMessage(
-            text,
-            replyToId: message.id,
-            attachmentIds: attachmentIds,
-          );
-          _clearAttachments();
-          _scrollToBottom();
-        } catch (e) {
-          if (mounted) _showErrorDialog('$e');
-        }
-
-      case InputEmpty():
-        _clearInputMessage();
-        _viewModel.clearDraft();
-        try {
-          await _viewModel.sendMessage(text, attachmentIds: attachmentIds);
-          _clearAttachments();
-          _scrollToBottom();
-        } catch (e) {
-          if (mounted) _showErrorDialog('$e');
-        }
+    if (composer.isEditing && composer.attachments.isNotEmpty) {
+      _showErrorDialog('Editing does not support attachments yet.');
+      return;
+    }
+    if (_textController.text.trim().isEmpty && composer.attachments.isEmpty) {
+      return;
+    }
+    try {
+      await composerNotifier.send(text: _textController.text);
+      _textController.clear();
+      await _scrollToLatest();
+    } catch (error) {
+      if (mounted) {
+        _showErrorDialog('$error');
+      }
     }
   }
 
-  Future<void> _jumpToMessage(int messageId) async {
-    await _runProgrammaticScroll((token) async {
-      final found = await _viewModel.jumpToMessage(messageId);
-      if (!found || !_canApplyScroll(token)) return;
-
-      final idx = _viewModel.findWindowIndex(messageId);
-      if (idx == null) return;
-
-      Future<void> performRefinedScroll(int targetIdx) async {
-        final positions = _itemPositionsListener.itemPositions.value;
-        final targetPos = positions.where((p) => p.index == targetIdx).toList();
-        if (targetPos.isEmpty) return;
-
-        final pos = targetPos.first;
-        if (_isTallMessage(pos)) {
-          await _adjustTallMessagePosition(targetIdx, token: token);
-          return;
-        }
-
-        await _itemScrollController.scrollTo(
-          index: targetIdx,
-          alignment: _messageJumpAlignment(pos),
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
-
-      final currentVisible = _itemPositionsListener.itemPositions.value
-          .where((p) => p.index == idx)
-          .toList();
-      if (currentVisible.isNotEmpty) {
-        await performRefinedScroll(idx);
-        return;
-      }
-
-      await _waitForNextFrame();
-      if (!_canApplyScroll(token)) return;
-
-      final idx2 = _viewModel.findWindowIndex(messageId);
-      if (idx2 == null) return;
-
-      _itemScrollController.jumpTo(index: idx2, alignment: 0.5);
-
-      await Future<void>.delayed(Duration.zero);
-      if (!_canApplyScroll(token)) return;
-
-      var positions = _itemPositionsListener.itemPositions.value
-          .where((pos) => pos.index == idx2)
-          .toList();
-
-      if (positions.isEmpty) {
-        await Future<void>.delayed(const Duration(milliseconds: 16));
-        if (!_canApplyScroll(token)) return;
-        positions = _itemPositionsListener.itemPositions.value
-            .where((pos) => pos.index == idx2)
-            .toList();
-      }
-
-      if (positions.isNotEmpty) {
-        await performRefinedScroll(idx2);
-        return;
-      }
-
-      await _itemScrollController.scrollTo(
-        index: idx2,
-        alignment: 0.5,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    });
-  }
-
-  void _showErrorDialog(String message) {
-    showCupertinoDialog(
-      context: context,
-      builder: (_) => CupertinoAlertDialog(
-        title: const Text('Error'),
-        content: Text(message),
-        actions: [
-          CupertinoDialogAction(
-            isDefaultAction: true,
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showMessageActions(MessageItem msg) {
-    if (msg.isDeleted) return;
+  void _showMessageActions(ConversationMessage message) {
+    if (message.isDeleted) {
+      return;
+    }
     final currentUserId = ref.read(devSessionProvider);
-    final isOwn = msg.sender.uid == currentUserId;
+    final isOwn = message.sender.uid == currentUserId;
+    final composerNotifier = ref.read(
+      conversationComposerViewModelProvider(scope).notifier,
+    );
 
-    showCupertinoModalPopup(
+    showCupertinoModalPopup<void>(
       context: context,
       builder: (_) => CupertinoActionSheet(
         actions: [
           CupertinoActionSheetAction(
             onPressed: () {
               Navigator.pop(context);
-              _viewModel.setReplyTo(msg);
+              composerNotifier.beginReply(message);
             },
             child: const Text('Reply'),
           ),
@@ -717,9 +179,9 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
             CupertinoActionSheetAction(
               onPressed: () {
                 Navigator.pop(context);
-                _clearAttachments();
-                _viewModel.startEditing(msg);
-                _textController.text = msg.message ?? '';
+                composerNotifier.clearAttachments();
+                composerNotifier.beginEdit(message);
+                _textController.text = message.message ?? '';
               },
               child: const Text('Edit'),
             ),
@@ -728,7 +190,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
               isDestructiveAction: true,
               onPressed: () {
                 Navigator.pop(context);
-                _confirmDelete(msg);
+                _confirmDelete(message);
               },
               child: const Text('Delete'),
             ),
@@ -741,25 +203,29 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
     );
   }
 
-  void _confirmDelete(MessageItem msg) {
-    showCupertinoDialog(
+  void _confirmDelete(ConversationMessage message) {
+    showCupertinoDialog<void>(
       context: context,
-      builder: (ctx) => CupertinoAlertDialog(
+      builder: (context) => CupertinoAlertDialog(
         title: const Text('Delete message?'),
         content: const Text('This cannot be undone.'),
         actions: [
           CupertinoDialogAction(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
           CupertinoDialogAction(
             isDestructiveAction: true,
             onPressed: () async {
-              Navigator.pop(ctx);
+              Navigator.pop(context);
               try {
-                await _viewModel.deleteMessage(msg.id);
-              } catch (e) {
-                if (mounted) _showErrorDialog('$e');
+                await ref
+                    .read(conversationComposerViewModelProvider(scope).notifier)
+                    .delete(message);
+              } catch (error) {
+                if (mounted) {
+                  _showErrorDialog('$error');
+                }
               }
             },
             child: const Text('Delete'),
@@ -769,24 +235,391 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
     );
   }
 
+  void _onVisibleRangeChanged(int minIndex, int maxIndex) {
+    if (!mounted) {
+      return;
+    }
+    if (_isProgrammaticScrollActive) {
+      return;
+    }
+    _syncViewportState(minIndex: minIndex, maxIndex: maxIndex);
+  }
+
+  void _syncViewportState({
+    int? minIndex,
+    int? maxIndex,
+    bool allowLoads = true,
+  }) {
+    if (!mounted) {
+      return;
+    }
+    final viewState = ref
+        .read(conversationTimelineViewModelProvider(_timelineArgs))
+        .valueOrNull;
+    if (viewState == null || viewState.entries.isEmpty) {
+      return;
+    }
+    final range = minIndex != null && maxIndex != null
+        ? (minIndex, maxIndex)
+        : _visibleRange();
+    if (range == null) {
+      return;
+    }
+    final resolvedMinIndex = range.$1;
+    final resolvedMaxIndex = range.$2;
+    final isNearTop = resolvedMinIndex <= 4;
+    final isNearBottom = resolvedMaxIndex >= viewState.entries.length - 5;
+    final isAtLiveEdge = !viewState.canLoadNewer && isNearBottom;
+    if (_isAtLiveEdge != isAtLiveEdge) {
+      setState(() {
+        _isAtLiveEdge = isAtLiveEdge;
+      });
+    }
+
+    if (allowLoads &&
+        isNearTop &&
+        viewState.canLoadOlder &&
+        !viewState.isLoadingOlder) {
+      unawaited(_loadOlder());
+    }
+    if (allowLoads &&
+        isNearBottom &&
+        viewState.canLoadNewer &&
+        !viewState.isLoadingNewer) {
+      unawaited(_loadNewer());
+    }
+
+    for (final position in _itemPositionsListener.itemPositions.value) {
+      if (position.itemLeadingEdge >= 0.9 || position.itemTrailingEdge <= 0.1) {
+        continue;
+      }
+      final entry = viewState.entries[position.index];
+      if (entry case TimelineMessageEntry(:final message)) {
+        ref
+            .read(conversationTimelineViewModelProvider(_timelineArgs).notifier)
+            .onMessageVisible(message);
+      }
+    }
+  }
+
+  (int, int)? _visibleRange() {
+    final positions = _itemPositionsListener.itemPositions.value;
+    if (positions.isEmpty) {
+      return null;
+    }
+    final minIndex = positions
+        .map((item) => item.index)
+        .reduce((left, right) => left < right ? left : right);
+    final maxIndex = positions
+        .map((item) => item.index)
+        .reduce((left, right) => left > right ? left : right);
+    return (minIndex, maxIndex);
+  }
+
+  Future<void> _loadOlder() async {
+    final current = ref
+        .read(conversationTimelineViewModelProvider(_timelineArgs))
+        .valueOrNull;
+    if (current == null) {
+      return;
+    }
+    final topAnchor = _topAnchor(current.entries);
+    final changed = await ref
+        .read(conversationTimelineViewModelProvider(_timelineArgs).notifier)
+        .loadOlder();
+    if (!changed || topAnchor == null || !mounted) {
+      return;
+    }
+    final next = ref
+        .read(conversationTimelineViewModelProvider(_timelineArgs))
+        .valueOrNull;
+    if (next == null) {
+      return;
+    }
+    final newIndex = _messageIndex(next.entries, topAnchor.$1);
+    if (newIndex == null) {
+      return;
+    }
+    await _runProgrammaticScroll((_) async {
+      _itemScrollController.jumpTo(index: newIndex, alignment: topAnchor.$2);
+    });
+  }
+
+  Future<void> _loadNewer() async {
+    await ref
+        .read(conversationTimelineViewModelProvider(_timelineArgs).notifier)
+        .loadNewer();
+  }
+
+  (int, double)? _topAnchor(List<TimelineEntry> entries) {
+    final positions = _itemPositionsListener.itemPositions.value.toList()
+      ..sort((left, right) => left.index.compareTo(right.index));
+    for (final position in positions) {
+      if (position.index < 0 || position.index >= entries.length) {
+        continue;
+      }
+      final entry = entries[position.index];
+      if (entry case TimelineMessageEntry(:final message)) {
+        final id = message.serverMessageId;
+        if (id != null) {
+          return (id, position.itemLeadingEdge);
+        }
+      }
+    }
+    return null;
+  }
+
+  int? _messageIndex(List<TimelineEntry> entries, int messageId) {
+    final index = entries.indexWhere((entry) {
+      return entry is TimelineMessageEntry &&
+          entry.message.serverMessageId == messageId;
+    });
+    return index >= 0 ? index : null;
+  }
+
+  Future<void> _scrollToLatest() async {
+    await ref
+        .read(conversationTimelineViewModelProvider(_timelineArgs).notifier)
+        .jumpToLatest();
+  }
+
+  Future<void> _jumpToMessage(int messageId) async {
+    final notifier = ref.read(
+      conversationTimelineViewModelProvider(_timelineArgs).notifier,
+    );
+    await notifier.jumpToMessage(messageId);
+  }
+
+  void _resetViewportSession(int sessionId) {
+    _scrollToken += 1;
+    _isProgrammaticScrollActive = false;
+    _itemScrollController = ItemScrollController();
+    _itemPositionsListener = ItemPositionsListener.create();
+    _timelineViewportKey = ValueKey<int>(sessionId);
+  }
+
+  Future<void> _runProgrammaticScroll(
+    Future<void> Function(int token) action,
+  ) async {
+    final token = ++_scrollToken;
+    _isProgrammaticScrollActive = true;
+    try {
+      await action(token);
+    } finally {
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      if (mounted && token == _scrollToken) {
+        _isProgrammaticScrollActive = false;
+        _syncViewportState(allowLoads: true);
+      }
+    }
+  }
+
+  Future<(int?, int?)> _decodeImageSize(Uint8List bytes) async {
+    try {
+      final completer = Completer<ui.Image>();
+      ui.decodeImageFromList(bytes, completer.complete);
+      final image = await completer.future.timeout(const Duration(seconds: 2));
+      final size = (image.width, image.height);
+      image.dispose();
+      return size;
+    } catch (_) {
+      return (null, null);
+    }
+  }
+
+  String _guessContentType(String filename) {
+    final lower = filename.toLowerCase();
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+    if (lower.endsWith('.gif')) return 'image/gif';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    if (lower.endsWith('.bmp')) return 'image/bmp';
+    if (lower.endsWith('.heic')) return 'image/heic';
+    if (lower.endsWith('.pdf')) return 'application/pdf';
+    if (lower.endsWith('.txt')) return 'text/plain';
+    if (lower.endsWith('.json')) return 'application/json';
+    if (lower.endsWith('.zip')) return 'application/zip';
+    return 'application/octet-stream';
+  }
+
+  Future<void> _pickAttachment() async {
+    if (kIsWeb || !Platform.isWindows) {
+      _showErrorDialog(
+        'Attachment upload is currently only implemented on Windows.',
+      );
+      return;
+    }
+    if (_isUploadingAttachment) {
+      return;
+    }
+    final file = await openFile();
+    if (file == null) {
+      return;
+    }
+    setState(() {
+      _isUploadingAttachment = true;
+    });
+    try {
+      final filename = file.name;
+      final contentType = _guessContentType(filename);
+      final size = await file.length();
+      Uint8List? previewBytes;
+      int? width;
+      int? height;
+      if (contentType.startsWith('image/') && size <= 8 * 1024 * 1024) {
+        previewBytes = await file.readAsBytes();
+        final dimensions = await _decodeImageSize(previewBytes);
+        width = dimensions.$1;
+        height = dimensions.$2;
+      }
+
+      final uploadInfo = await _attachmentService.requestUploadUrl(
+        filename: filename,
+        contentType: contentType,
+        size: size,
+        width: width,
+        height: height,
+      );
+      await _attachmentService.uploadFileToS3(
+        uploadUrl: uploadInfo.uploadUrl,
+        file: File(file.path),
+        contentType: contentType,
+      );
+      if (!mounted) {
+        return;
+      }
+      ref
+          .read(conversationComposerViewModelProvider(scope).notifier)
+          .addUploadedAttachment(
+            ComposerAttachment(
+              id: uploadInfo.attachmentId,
+              name: filename,
+              mimeType: contentType,
+              previewBytes: previewBytes,
+            ),
+          );
+    } catch (error) {
+      if (mounted) {
+        _showErrorDialog('Upload failed: $error');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingAttachment = false;
+        });
+      }
+    }
+  }
+
+  void _showErrorDialog(String message) {
+    showCupertinoDialog<void>(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavigationBarTitle(BuildContext context) {
+    return Text(
+      widget.chatName.isEmpty ? 'Chat ${widget.chatId}' : widget.chatName,
+      style: appTitleTextStyle(context, fontSize: AppFontSizes.appTitle),
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+
+  Widget _buildNavigationBarTrailing() {
+    return SizedBox(
+      width: 72,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            minSize: 0,
+            onPressed: () => context.push(AppRoutes.chatMembers(widget.chatId)),
+            child: const Icon(CupertinoIcons.person_2_fill, size: 22),
+          ),
+          const SizedBox(width: 12),
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            minSize: 0,
+            onPressed: () => context.push(
+              AppRoutes.chatSettings(widget.chatId),
+              extra: {'currentName': widget.chatName},
+            ),
+            child: const Icon(
+              CupertinoIcons.gear_solid,
+              size: IconSizes.iconSize,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  EdgeInsets _timelinePadding(BuildContext context) {
+    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+    return EdgeInsets.only(top: 8, bottom: bottomInset + _timelineEndPadding);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final asyncState = ref.watch(chatDetailViewModelProvider(_args));
+    final timelineAsync = ref.watch(
+      conversationTimelineViewModelProvider(_timelineArgs),
+    );
+    final composer = ref.watch(conversationComposerViewModelProvider(scope));
     final settings = ref.watch(appSettingsProvider);
 
-    final chatName = widget.chatName.isEmpty
-        ? 'Chat ${widget.chatId}'
-        : widget.chatName;
-
-    final chatMessageFontSize = settings.fontSize;
-
-    // Handle unread jump
-    asyncState.whenData((viewState) {
-      if (viewState.firstUnreadMessageId != null &&
-          viewState.firstUnreadMessageId != _lastJumpedId) {
-        _lastJumpedId = viewState.firstUnreadMessageId;
+    timelineAsync.whenData((state) {
+      final locatePlan = state.locatePlan;
+      if (locatePlan != null &&
+          locatePlan.execution ==
+              ConversationLocateExecution.preparedViewport &&
+          locatePlan.viewportSessionId != _currentViewportSessionId) {
+        _currentViewportSessionId = locatePlan.viewportSessionId;
+        _lastAppliedLocateRevision = locatePlan.revision;
+        _isAtLiveEdge =
+            locatePlan.placement == ConversationLocatePlacement.liveEdge;
+        _resetViewportSession(locatePlan.viewportSessionId);
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _jumpToMessage(_lastJumpedId!);
+          if (!mounted ||
+              locatePlan.viewportSessionId == _lastSyncedViewportSessionId) {
+            return;
+          }
+          _lastSyncedViewportSessionId = locatePlan.viewportSessionId;
+          _syncViewportState(allowLoads: true);
+        });
+      }
+      if (locatePlan != null &&
+          locatePlan.execution ==
+              ConversationLocateExecution.interactiveViewport &&
+          locatePlan.revision > _lastAppliedLocateRevision) {
+        _lastAppliedLocateRevision = locatePlan.revision;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            unawaited(_applyInteractiveLocatePlan(locatePlan));
+          }
+        });
+      }
+      if (state.infoMessage != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) {
+            return;
+          }
+          _showErrorDialog(state.infoMessage!);
+          ref
+              .read(
+                conversationTimelineViewModelProvider(_timelineArgs).notifier,
+              )
+              .clearInfoMessage();
         });
       }
     });
@@ -794,249 +627,282 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
     return PopScope(
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) {
-          _saveDraft();
-          unawaited(_viewModel.flushReadStatus());
+          unawaited(
+            ref
+                .read(
+                  conversationTimelineViewModelProvider(_timelineArgs).notifier,
+                )
+                .flushReadStatus(),
+          );
         }
       },
       child: CupertinoPageScaffold(
         backgroundColor: const Color(0xFFECE5DD),
+        navigationBar: CupertinoNavigationBar(
+          middle: _buildNavigationBarTitle(context),
+          leading: CupertinoNavigationBarBackButton(onPressed: _popWithResult),
+          trailing: _buildNavigationBarTrailing(),
+        ),
         child: GestureDetector(
           onTap: () => FocusScope.of(context).unfocus(),
-          child: Stack(
-            children: [
-              SafeArea(
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: Stack(
-                        children: [
-                          asyncState.when(
-                            loading: () => const Center(
-                              child: CupertinoActivityIndicator(),
-                            ),
-                            error: (error, _) => Center(
-                              child: Padding(
-                                padding: const EdgeInsets.all(24),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      error.toString(),
-                                      textAlign: TextAlign.center,
+          child: SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                Expanded(
+                  child: Stack(
+                    children: [
+                      timelineAsync.when(
+                        loading: () =>
+                            const Center(child: CupertinoActivityIndicator()),
+                        error: (error, _) => Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text('$error', textAlign: TextAlign.center),
+                                const SizedBox(height: 16),
+                                CupertinoButton.filled(
+                                  onPressed: () => ref.invalidate(
+                                    conversationTimelineViewModelProvider(
+                                      _timelineArgs,
                                     ),
-                                    const SizedBox(height: 16),
-                                    CupertinoButton.filled(
-                                      onPressed: () => ref.invalidate(
-                                        chatDetailViewModelProvider(_args),
-                                      ),
-                                      child: const Text('Retry'),
-                                    ),
-                                  ],
+                                  ),
+                                  child: const Text('Retry'),
                                 ),
-                              ),
+                              ],
                             ),
-                            data: (viewState) =>
-                                _buildBody(viewState, chatMessageFontSize),
                           ),
-                          if (asyncState.valueOrNull?.showScrollToBottom ??
-                              false)
-                            Positioned(
-                              right: 16,
-                              bottom: 16,
-                              child: CupertinoButton(
-                                padding: EdgeInsets.zero,
-                                onPressed: _scrollToBottom,
-                                child: Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: CupertinoColors.systemGrey5
-                                        .resolveFrom(context),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    CupertinoIcons.chevron_down,
-                                    size: 20,
-                                    color: CupertinoColors.label.resolveFrom(
-                                      context,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
+                        ),
+                        data: (viewState) => _buildTimeline(
+                          viewState,
+                          settings.fontSize,
+                          _timelinePadding(context),
+                        ),
                       ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 5),
-                      child: _buildInput(asyncState.valueOrNull),
-                    ),
-                  ],
-                ),
-              ),
-              // Gradient title bar overlay
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment(0, 0.5),
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Color(0xFFECE5DD),
-                        Color(0xDFECE5DD),
-                        Color(0xCCECE5DD),
-                        Color(0x80ECE5DD),
-                        Color(0x40ECE5DD),
-                        Color(0x00ECE5DD),
-                      ],
-                      stops: [0.0, 0.5, 0.6, 0.8, 0.9, 1.0],
-                    ),
-                  ),
-                  child: SafeArea(
-                    bottom: false,
-                    child: SizedBox(
-                      height: _titleBarHeight,
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 36),
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Text(
-                              chatName,
-                              textAlign: TextAlign.center,
-                              style: appTitleTextStyle(
-                                context,
-                                fontSize: AppFontSizes.appTitle,
+                      if (timelineAsync.valueOrNull case final viewState?
+                          when _shouldShowJumpToLatest(viewState))
+                        Positioned(
+                          right: 16,
+                          bottom: 16,
+                          child: CupertinoButton(
+                            padding: EdgeInsets.zero,
+                            onPressed: _scrollToLatest,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
                               ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Positioned(
-                              left: 8,
-                              child: CupertinoButton(
-                                padding: EdgeInsets.zero,
-                                onPressed: _popWithResult,
-                                child: const Icon(
-                                  CupertinoIcons.back,
-                                  size: 28,
+                              decoration: BoxDecoration(
+                                color: CupertinoColors.systemGrey5.resolveFrom(
+                                  context,
                                 ),
+                                borderRadius: BorderRadius.circular(24),
                               ),
-                            ),
-                            Positioned(
-                              right: 8,
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  CupertinoButton(
-                                    padding: EdgeInsets.zero,
-                                    onPressed: () => context.push(
-                                      AppRoutes.chatMembers(widget.chatId),
+                                  const Icon(CupertinoIcons.chevron_down),
+                                  if ((timelineAsync
+                                              .valueOrNull
+                                              ?.pendingLiveCount ??
+                                          0) >
+                                      0)
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 6),
+                                      child: Text(
+                                        '${timelineAsync.valueOrNull!.pendingLiveCount}',
+                                        style: appTextStyle(
+                                          context,
+                                          fontSize: AppFontSizes.meta,
+                                        ),
+                                      ),
                                     ),
-                                    child: const Icon(
-                                      CupertinoIcons.person_2_fill,
-                                      size: 22,
-                                    ),
-                                  ),
-                                  CupertinoButton(
-                                    padding: EdgeInsets.zero,
-                                    onPressed: () => context.push(
-                                      AppRoutes.chatSettings(widget.chatId),
-                                      extra: {'currentName': widget.chatName},
-                                    ),
-                                    child: const Icon(
-                                      CupertinoIcons.gear_solid,
-                                      size: IconSizes.iconSize,
-                                    ),
-                                  ),
                                 ],
                               ),
                             ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
+                    ],
                   ),
                 ),
-              ),
-            ],
+                SafeArea(top: false, child: _buildComposer(composer)),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildBody(ChatDetailState viewState, double chatMessageFontSize) {
-    if (viewState.displayItems.isEmpty) {
+  ItemPosition? _itemPositionForIndex(int index) {
+    for (final position in _itemPositionsListener.itemPositions.value) {
+      if (position.index == index) {
+        return position;
+      }
+    }
+    return null;
+  }
+
+  bool _isRevealAlreadySatisfied(
+    ConversationLocatePlacement placement,
+    ItemPosition? position,
+  ) {
+    if (position == null) {
+      return false;
+    }
+    return switch (placement) {
+      ConversationLocatePlacement.topPreferred =>
+        position.itemLeadingEdge >= -_topPreferredThreshold &&
+            position.itemLeadingEdge <= _topPreferredThreshold,
+      ConversationLocatePlacement.liveEdge =>
+        (1 - position.itemTrailingEdge).abs() <= _liveEdgeThreshold,
+    };
+  }
+
+  int? _targetIndexForLocatePlan(
+    ConversationTimelineState state,
+    ConversationLocatePlan locatePlan,
+  ) {
+    return switch (locatePlan.target) {
+      ConversationLocateTarget.latest => state.entries.length - 1,
+      ConversationLocateTarget.message =>
+        locatePlan.messageId == null
+            ? null
+            : _messageIndex(state.entries, locatePlan.messageId!),
+    };
+  }
+
+  Future<void> _applyInteractiveLocatePlan(
+    ConversationLocatePlan locatePlan,
+  ) async {
+    final state = ref
+        .read(conversationTimelineViewModelProvider(_timelineArgs))
+        .valueOrNull;
+    if (state == null || state.entries.isEmpty) {
+      return;
+    }
+    final targetIndex = _targetIndexForLocatePlan(state, locatePlan);
+    if (targetIndex == null) {
+      return;
+    }
+    final placement = locatePlan.placement;
+    final currentPosition = _itemPositionForIndex(targetIndex);
+    if (_isRevealAlreadySatisfied(placement, currentPosition)) {
+      return;
+    }
+
+    await _runProgrammaticScroll((_) async {
+      await _itemScrollController.scrollTo(
+        index: targetIndex,
+        alignment: 0,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  bool _shouldShowJumpToLatest(ConversationTimelineState state) {
+    if (state.windowMode != ConversationWindowMode.liveLatest) {
+      return true;
+    }
+    if (state.canLoadNewer) {
+      return true;
+    }
+    return !_isAtLiveEdge;
+  }
+
+  ({Key viewportKey, int? initialScrollIndex, double initialAlignment})
+  _timelineViewportConfig(ConversationTimelineState state) {
+    final locatePlan = state.locatePlan;
+    final targetIndex = locatePlan == null
+        ? null
+        : _targetIndexForLocatePlan(state, locatePlan);
+    return (
+      viewportKey: _timelineViewportKey,
+      initialScrollIndex:
+          locatePlan != null &&
+              locatePlan.execution ==
+                  ConversationLocateExecution.preparedViewport
+          ? targetIndex
+          : null,
+      initialAlignment: 0,
+    );
+  }
+
+  Widget _buildTimeline(
+    ConversationTimelineState viewState,
+    double chatMessageFontSize,
+    EdgeInsets contentPadding,
+  ) {
+    if (viewState.entries.isEmpty) {
       return const Center(child: Text('No messages yet'));
     }
-    final showTopLoader = viewState.hasMoreMessages && viewState.isLoadingMore;
-    final items = viewState.displayItems;
-    final itemCount = items.length + (showTopLoader ? 1 : 0);
-
-    return ScrollablePositionedList.builder(
-      key: _messageListKey,
+    final viewportConfig = _timelineViewportConfig(viewState);
+    return ConversationTimelineView(
+      key: viewportConfig.viewportKey,
+      entries: viewState.entries,
       itemScrollController: _itemScrollController,
-      scrollOffsetController: _scrollOffsetController,
       itemPositionsListener: _itemPositionsListener,
-      reverse: true,
-      padding: const EdgeInsets.only(top: _titleBarHeight),
-      itemCount: itemCount,
-      itemBuilder: (context, index) {
-        if (showTopLoader && index == itemCount - 1) {
-          return const Padding(
+      onVisibleRangeChanged: _onVisibleRangeChanged,
+      initialScrollIndex: viewportConfig.initialScrollIndex,
+      initialAlignment: viewportConfig.initialAlignment,
+      topPadding: contentPadding.top,
+      bottomPadding: contentPadding.bottom,
+      entryBuilder: (context, entry, index) {
+        return switch (entry) {
+          TimelineMessageEntry(:final message) => MessageRow(
+            key: ValueKey(message.stableKey),
+            message: message,
+            chatMessageFontSize: chatMessageFontSize,
+            isHighlighted:
+                viewState.highlightedMessageId == message.serverMessageId,
+            onLongPress: () => _showMessageActions(message),
+            onReply: () => ref
+                .read(conversationComposerViewModelProvider(scope).notifier)
+                .beginReply(message),
+            onTapReply: message.replyToMessage != null
+                ? () => _jumpToMessage(message.replyToMessage!.id)
+                : null,
+          ),
+          TimelineDateSeparatorEntry(:final day) => _buildDateSeparator(day),
+          TimelineUnreadMarkerEntry() => _buildUnreadDivider(),
+          TimelineHistoryGapOlderEntry() => _buildGapLabel(
+            'Pull to load older messages',
+          ),
+          TimelineHistoryGapNewerEntry() => _buildGapLabel(
+            'Scroll down to newer messages',
+          ),
+          TimelineLoadingOlderEntry() => const Padding(
             padding: EdgeInsets.symmetric(vertical: 16),
             child: Center(child: CupertinoActivityIndicator()),
-          );
-        }
-
-        final msg = items[index];
-        final isHighlighted = viewState.highlightedMessageId == msg.id;
-
-        bool showSenderName = true;
-        if (index < items.length - 1) {
-          final next = items[index + 1];
-          if (next.sender.uid == msg.sender.uid) {
-            showSenderName = false;
-          }
-        }
-
-        bool showAvatar = true;
-        if (index > 0) {
-          final prev = items[index - 1];
-          if (prev.sender.uid == msg.sender.uid) {
-            showAvatar = false;
-          }
-        }
-
-        final isFirstUnread =
-            viewState.firstUnreadMessageId == msg.id &&
-            viewState.showUnreadDivider;
-
-        final messageRow = MessageRow(
-          key: ValueKey(msg.id),
-          message: msg,
-          chatMessageFontSize: chatMessageFontSize,
-          isHighlighted: isHighlighted,
-          onLongPress: () => _showMessageActions(msg),
-          onReply: () => _viewModel.setReplyTo(msg),
-          onTapReply: msg.replyToMessage != null
-              ? () => _jumpToMessage(msg.replyToMessage!.id)
-              : null,
-          showSenderName: showSenderName,
-          showAvatar: showAvatar,
-        );
-
-        if (isFirstUnread) {
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [_buildUnreadDivider(), messageRow],
-          );
-        }
-
-        return messageRow;
+          ),
+          TimelineLoadingNewerEntry() => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(child: CupertinoActivityIndicator()),
+          ),
+        };
       },
+    );
+  }
+
+  Widget _buildDateSeparator(DateTime day) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: CupertinoColors.systemGrey4.resolveFrom(context),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}',
+            style: appOnDarkTextStyle(context, fontSize: AppFontSizes.meta),
+          ),
+        ),
+      ),
     );
   }
 
@@ -1067,17 +933,26 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
     );
   }
 
-  Widget _buildInput(ChatDetailState? viewState) {
-    final inputState = viewState?.inputState ?? InputEmpty();
-    final hasPreview = inputState is! InputEmpty;
-    final isEditing = inputState is InputEditing;
-    final canAttach = !_isUploadingAttachment && !isEditing;
+  Widget _buildGapLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Center(
+        child: Text(
+          text,
+          style: appSecondaryTextStyle(context, fontSize: AppFontSizes.meta),
+        ),
+      ),
+    );
+  }
 
+  Widget _buildComposer(ConversationComposerState composer) {
+    final isEditing = composer.isEditing;
+    final canAttach = !isEditing && !_isUploadingAttachment;
     return Column(
       children: [
         const AppDivider(height: 0.5, color: CupertinoColors.separator),
         Padding(
-          padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Column(
             children: [
               Row(
@@ -1111,38 +986,31 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
                           color: CupertinoColors.systemGrey4.resolveFrom(
                             context,
                           ),
-                          width: 1.0,
                         ),
                       ),
                       clipBehavior: Clip.antiAlias,
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          switch (inputState) {
-                            InputReplying(:final message) => _replyToMsg(
-                              title:
-                                  'Replying to ${message.sender.name ?? 'User ${message.sender.uid}'}',
-                              body: message.message ?? '',
-                            ),
-                            InputEditing(:final message) => _buildPreviewBar(
-                              title: 'Edit Message',
-                              body: message.message ?? '',
-                            ),
-                            InputEmpty() => const SizedBox.shrink(),
-                          },
-                          if (hasPreview)
-                            Container(
-                              height: 0.5,
-                              color: CupertinoColors.separator.resolveFrom(
-                                context,
-                              ),
-                            ),
-                          _buildAttachmentPreview(context),
+                          _buildComposerPreview(composer),
+                          if (composer.attachments.isNotEmpty)
+                            _buildAttachmentPreview(composer),
                           CupertinoScrollbar(
                             controller: _inputScrollController,
                             child: CupertinoTextField(
                               controller: _textController,
                               scrollController: _inputScrollController,
+                              onChanged: (value) {
+                                unawaited(
+                                  ref
+                                      .read(
+                                        conversationComposerViewModelProvider(
+                                          scope,
+                                        ).notifier,
+                                      )
+                                      .updateDraft(value),
+                                );
+                              },
                               placeholder: 'Message',
                               maxLines: 5,
                               minLines: 1,
@@ -1184,22 +1052,29 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
     );
   }
 
-  Widget _replyToMsg({required String title, required String body}) {
-    _textController.clear();
-    return _buildPreviewBar(title: title, body: body);
+  Widget _buildComposerPreview(ConversationComposerState composer) {
+    final mode = composer.mode;
+    return switch (mode) {
+      ComposerReplying(:final message) => _previewBar(
+        title:
+            'Replying to ${message.sender.name ?? 'User ${message.sender.uid}'}',
+        body: message.message ?? '',
+      ),
+      ComposerEditing(:final message) => _previewBar(
+        title: 'Edit Message',
+        body: message.message ?? '',
+      ),
+      ComposerIdle() => const SizedBox.shrink(),
+    };
   }
 
-  Widget _buildPreviewBar({required String title, required String body}) {
+  Widget _previewBar({required String title, required String body}) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 8, 4),
       decoration: BoxDecoration(
         color: CupertinoColors.systemGrey5.resolveFrom(context),
         border: const Border(
           left: BorderSide(color: CupertinoColors.activeBlue, width: 3),
-        ),
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
         ),
       ),
       child: Row(
@@ -1211,14 +1086,14 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
               children: [
                 Text(
                   title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: appTextStyle(
                     context,
                     fontWeight: FontWeight.w600,
                     fontSize: AppFontSizes.bodySmall,
                     color: CupertinoColors.activeBlue,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -1236,11 +1111,87 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
           CupertinoButton(
             padding: EdgeInsets.zero,
             minimumSize: const Size(30, 30),
-            onPressed: _clearInputMessage,
+            onPressed: () {
+              ref
+                  .read(conversationComposerViewModelProvider(scope).notifier)
+                  .clearMode();
+            },
             child: Icon(
               CupertinoIcons.xmark_circle_fill,
               size: 20,
               color: CupertinoColors.systemGrey3.resolveFrom(context),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAttachmentPreview(ConversationComposerState composer) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (int index = 0; index < composer.attachments.length; index++)
+            _attachmentChip(composer.attachments[index], index),
+        ],
+      ),
+    );
+  }
+
+  Widget _attachmentChip(ComposerAttachment attachment, int index) {
+    final borderColor = CupertinoColors.systemGrey4.resolveFrom(context);
+    final background = CupertinoColors.systemGrey5.resolveFrom(context);
+    final thumb = attachment.isImage
+        ? ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: Image.memory(
+              attachment.previewBytes!,
+              width: 36,
+              height: 36,
+              fit: BoxFit.cover,
+            ),
+          )
+        : Icon(
+            CupertinoIcons.doc,
+            size: 28,
+            color: CupertinoColors.activeBlue.resolveFrom(context),
+          );
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          thumb,
+          const SizedBox(width: 6),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 140),
+            child: Text(
+              attachment.name,
+              overflow: TextOverflow.ellipsis,
+              style: appTextStyle(context, fontSize: AppFontSizes.meta),
+            ),
+          ),
+          const SizedBox(width: 6),
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            minimumSize: const Size(20, 20),
+            onPressed: () {
+              ref
+                  .read(conversationComposerViewModelProvider(scope).notifier)
+                  .removeAttachmentAt(index);
+            },
+            child: Icon(
+              CupertinoIcons.xmark_circle_fill,
+              size: 18,
+              color: CupertinoColors.systemGrey2.resolveFrom(context),
             ),
           ),
         ],

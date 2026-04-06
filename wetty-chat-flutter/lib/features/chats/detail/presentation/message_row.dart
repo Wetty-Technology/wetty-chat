@@ -11,6 +11,7 @@ import '../../../../app/theme/style_config.dart';
 import '../../../../core/network/api_config.dart';
 import '../../chat_timestamp_formatter.dart';
 import '../../models/message_models.dart';
+import '../domain/conversation_message.dart';
 import 'message_attachment_previews.dart';
 import 'message_avatar.dart';
 import 'video_popup_player.dart';
@@ -29,7 +30,7 @@ class MessageRow extends StatefulWidget {
     this.showAvatar = true,
   });
 
-  final MessageItem message;
+  final ConversationMessage message;
   final double chatMessageFontSize;
   final bool isHighlighted;
   final VoidCallback? onLongPress;
@@ -699,7 +700,7 @@ class _MessageRowPresentation {
 
   factory _MessageRowPresentation.fromContext({
     required BuildContext context,
-    required MessageItem message,
+    required ConversationMessage message,
     required bool isMe,
     required double chatMessageFontSize,
   }) {
@@ -735,7 +736,7 @@ class _MessageRowPresentation {
   // reserves space for the timestamp row in the bottom-right corner.
   static double _measureMetaWidth(
     BuildContext context,
-    MessageItem message,
+    ConversationMessage message,
     String timeStr,
   ) {
     final metaPainter = TextPainter(

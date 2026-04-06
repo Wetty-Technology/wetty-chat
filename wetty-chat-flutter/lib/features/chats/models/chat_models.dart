@@ -5,6 +5,7 @@ class ChatListItem {
   final String? name;
   final DateTime? lastMessageAt;
   final int unreadCount;
+  final String? lastReadMessageId;
   final MessageItem? lastMessage;
   final DateTime? mutedUntil;
 
@@ -13,6 +14,7 @@ class ChatListItem {
     this.name,
     this.lastMessageAt,
     this.unreadCount = 0,
+    this.lastReadMessageId,
     this.lastMessage,
     this.mutedUntil,
   });
@@ -23,6 +25,7 @@ class ChatListItem {
     String? name,
     DateTime? lastMessageAt,
     int? unreadCount,
+    Object? lastReadMessageId = _sentinel,
     MessageItem? lastMessage,
     DateTime? mutedUntil,
   }) {
@@ -31,6 +34,9 @@ class ChatListItem {
       name: name ?? this.name,
       lastMessageAt: lastMessageAt ?? this.lastMessageAt,
       unreadCount: unreadCount ?? this.unreadCount,
+      lastReadMessageId: lastReadMessageId == _sentinel
+          ? this.lastReadMessageId
+          : lastReadMessageId as String?,
       lastMessage: lastMessage ?? this.lastMessage,
       mutedUntil: mutedUntil ?? this.mutedUntil,
     );
@@ -43,3 +49,5 @@ class ListChatsResponse {
 
   ListChatsResponse({required this.chats, this.nextCursor});
 }
+
+const _sentinel = Object();

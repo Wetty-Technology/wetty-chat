@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/session/dev_session_store.dart';
 import '../../features/chats/detail/presentation/attachment_viewer_page.dart';
 import '../../features/chats/detail/presentation/chat_detail_view.dart';
+import '../../features/chats/detail/domain/launch_request.dart';
 import '../../features/chats/list/presentation/chat_list_view.dart';
 import '../../features/chats/list/presentation/new_chat_view.dart';
 import '../../features/chats/models/message_models.dart';
@@ -54,7 +55,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             child: ChatDetailPage(
               chatId: chatId,
               chatName: extra?['chatName'] as String? ?? 'Chat $chatId',
-              unreadCount: extra?['unreadCount'] as int? ?? 0,
+              launchRequest:
+                  extra?['launchRequest'] as LaunchRequest? ??
+                  const LaunchRequest.latest(),
             ),
           );
         },

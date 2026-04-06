@@ -8,6 +8,7 @@ extension ChatListItemDtoMapper on ChatListItemDto {
     name: name,
     lastMessageAt: lastMessageAt,
     unreadCount: unreadCount,
+    lastReadMessageId: lastReadMessageId,
     lastMessage: lastMessage?.toDomain(),
     mutedUntil: mutedUntil,
   );
