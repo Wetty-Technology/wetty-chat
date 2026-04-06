@@ -2,8 +2,31 @@ import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/session/dev_session_store.dart';
+import '../../models/message_models.dart';
 import '../data/conversation_repository.dart';
-import '../models/conversation_models.dart';
+import '../domain/conversation_message.dart';
+import '../domain/conversation_scope.dart';
+import 'conversation_draft_store.dart';
+
+class ComposerAttachment {
+  const ComposerAttachment({
+    required this.id,
+    required this.name,
+    required this.mimeType,
+    this.previewBytes,
+  });
+
+  final String id;
+  final String name;
+  final String mimeType;
+  final Uint8List? previewBytes;
+
+  bool get isImage => mimeType.startsWith('image/') && previewBytes != null;
+
+  AttachmentItem toAttachmentItem() =>
+      AttachmentItem(id: id, url: '', kind: mimeType, size: 0, fileName: name);
+}
 
 sealed class ConversationComposerMode {
   const ConversationComposerMode();
@@ -25,123 +48,177 @@ class ComposerEditing extends ConversationComposerMode {
   final ConversationMessage message;
 }
 
-class ComposerAttachment {
-  const ComposerAttachment({
-    required this.id,
-    required this.name,
-    required this.mimeType,
-    this.previewBytes,
+class ConversationComposerState {
+  const ConversationComposerState({
+    required this.draft,
+    required this.mode,
+    required this.attachments,
   });
 
-  final String id;
-  final String name;
-  final String mimeType;
-  final Uint8List? previewBytes;
+  final String draft;
+  final ConversationComposerMode mode;
+  final List<ComposerAttachment> attachments;
 
-  bool get isImage => mimeType.startsWith('image/') && previewBytes != null;
+  bool get isEditing => mode is ComposerEditing;
+
+  ConversationComposerState copyWith({
+    String? draft,
+    ConversationComposerMode? mode,
+    List<ComposerAttachment>? attachments,
+  }) {
+    return ConversationComposerState(
+      draft: draft ?? this.draft,
+      mode: mode ?? this.mode,
+      attachments: attachments ?? this.attachments,
+    );
+  }
 }
-
-typedef ConversationComposerState = ({
-  String draft,
-  ConversationComposerMode mode,
-  List<ComposerAttachment> attachments,
-});
 
 class ConversationComposerViewModel
     extends FamilyNotifier<ConversationComposerState, ConversationScope> {
   late final ConversationRepository _repository;
+  late final ConversationDraftStore _draftStore;
+  late final ConversationScope _scope;
 
   @override
   ConversationComposerState build(ConversationScope arg) {
+    _scope = arg;
     _repository = ref.read(conversationRepositoryProvider(arg));
-    return (
-      draft: _repository.draft,
+    _draftStore = ref.read(conversationDraftProvider);
+    final draft = _draftStore.getDraft(arg) ?? '';
+    return ConversationComposerState(
+      draft: draft,
       mode: const ComposerIdle(),
       attachments: const <ComposerAttachment>[],
     );
   }
 
-  void setDraft(String text) {
-    _repository.cacheDraft(text);
-    state = (draft: text, mode: state.mode, attachments: state.attachments);
+  Future<void> updateDraft(String value) async {
+    state = state.copyWith(draft: value);
+    await _draftStore.setDraft(_scope, value);
   }
 
-  void setReplyTo(ConversationMessage message) {
-    state = (
-      draft: state.draft,
+  void beginReply(ConversationMessage message) {
+    state = state.copyWith(
       mode: ComposerReplying(message),
-      attachments: state.attachments,
-    );
-  }
-
-  void startEditing(ConversationMessage message) {
-    state = (
-      draft: message.message ?? '',
-      mode: ComposerEditing(message),
       attachments: const <ComposerAttachment>[],
     );
-    _repository.cacheDraft(message.message ?? '');
+  }
+
+  void beginEdit(ConversationMessage message) {
+    state = state.copyWith(
+      mode: ComposerEditing(message),
+      draft: message.message ?? '',
+      attachments: const <ComposerAttachment>[],
+    );
   }
 
   void clearMode() {
-    state = (
-      draft: state.draft,
-      mode: const ComposerIdle(),
-      attachments: state.attachments,
-    );
+    state = state.copyWith(mode: const ComposerIdle());
   }
 
-  void addAttachment(ComposerAttachment attachment) {
-    state = (
-      draft: state.draft,
-      mode: state.mode,
-      attachments: [...state.attachments, attachment],
-    );
+  void addUploadedAttachment(ComposerAttachment attachment) {
+    state = state.copyWith(attachments: [...state.attachments, attachment]);
   }
 
   void removeAttachmentAt(int index) {
     if (index < 0 || index >= state.attachments.length) {
       return;
     }
-    final attachments = [...state.attachments]..removeAt(index);
-    state = (draft: state.draft, mode: state.mode, attachments: attachments);
+    final next = [...state.attachments]..removeAt(index);
+    state = state.copyWith(attachments: next);
   }
 
   void clearAttachments() {
-    state = (
-      draft: state.draft,
-      mode: state.mode,
-      attachments: const <ComposerAttachment>[],
-    );
-  }
-
-  Future<void> submit() async {
-    final text = state.draft.trim();
-    final attachmentIds = state.attachments
-        .map((attachment) => attachment.id)
-        .toList();
-    switch (state.mode) {
-      case ComposerEditing(:final message):
-        await _repository.editMessage(message.serverId!, text);
-      case ComposerReplying(:final message):
-        await _repository.sendMessage(
-          text,
-          replyToId: message.serverId,
-          attachmentIds: attachmentIds,
-        );
-      case ComposerIdle():
-        await _repository.sendMessage(text, attachmentIds: attachmentIds);
+    if (state.attachments.isEmpty) {
+      return;
     }
-    _repository.cacheDraft('');
-    state = (
-      draft: '',
-      mode: const ComposerIdle(),
-      attachments: const <ComposerAttachment>[],
-    );
+    state = state.copyWith(attachments: const <ComposerAttachment>[]);
   }
 
-  Future<void> deleteMessage(int messageId) {
-    return _repository.deleteMessage(messageId);
+  Future<void> send({required String text}) async {
+    final trimmed = text.trim();
+    final attachmentIds = state.attachments.map((item) => item.id).toList();
+    final mode = state.mode;
+    if (trimmed.isEmpty && attachmentIds.isEmpty) {
+      return;
+    }
+
+    if (mode is ComposerEditing) {
+      if (attachmentIds.isNotEmpty) {
+        throw Exception('Editing messages does not support attachments');
+      }
+      _repository.beginOptimisticEdit(mode.message.serverMessageId!);
+      try {
+        await _repository.commitEdit(mode.message.serverMessageId!, trimmed);
+        state = const ConversationComposerState(
+          draft: '',
+          mode: ComposerIdle(),
+          attachments: <ComposerAttachment>[],
+        );
+        await _draftStore.clearDraft(_scope);
+      } catch (_) {
+        _repository.rollbackEdit(mode.message.serverMessageId!);
+        rethrow;
+      }
+      return;
+    }
+
+    final currentUserId = ref.read(devSessionProvider);
+    final clientGeneratedId =
+        '${DateTime.now().microsecondsSinceEpoch}-$currentUserId-${_scope.storageKey}';
+    _repository.insertOptimisticSend(
+      sender: Sender(uid: currentUserId, name: 'You'),
+      text: trimmed,
+      attachments: state.attachments
+          .map((item) => item.toAttachmentItem())
+          .toList(),
+      clientGeneratedId: clientGeneratedId,
+      replyToId: mode is ComposerReplying ? mode.message.serverMessageId : null,
+    );
+
+    try {
+      await _repository.commitSend(
+        clientGeneratedId: clientGeneratedId,
+        text: trimmed,
+        attachmentIds: attachmentIds,
+        replyToId: mode is ComposerReplying
+            ? mode.message.serverMessageId
+            : null,
+      );
+      state = const ConversationComposerState(
+        draft: '',
+        mode: ComposerIdle(),
+        attachments: <ComposerAttachment>[],
+      );
+      await _draftStore.clearDraft(_scope);
+    } catch (_) {
+      _repository.markSendFailed(clientGeneratedId);
+      rethrow;
+    }
+  }
+
+  Future<void> delete(ConversationMessage message) async {
+    final messageId = message.serverMessageId;
+    if (messageId == null) {
+      _repository.discardFailedMessage(message);
+      return;
+    }
+    _repository.beginOptimisticDelete(messageId);
+    try {
+      await _repository.commitDelete(messageId);
+    } catch (_) {
+      _repository.rollbackDelete(messageId);
+      rethrow;
+    }
+  }
+
+  Future<void> retryFailedMessage(ConversationMessage message) async {
+    await _repository.retryFailedSend(message);
+  }
+
+  Future<void> discardFailedMessage(ConversationMessage message) async {
+    _repository.discardFailedMessage(message);
   }
 }
 

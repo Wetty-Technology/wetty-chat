@@ -1,14 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../../../../lib/core/api/models/chats_api_models.dart';
-import '../../../../../lib/core/api/models/messages_api_models.dart';
-import '../../../../../lib/core/api/models/websocket_api_models.dart';
-import '../../../../../lib/core/network/websocket_service.dart';
-import '../../../../../lib/features/chats/detail/application/conversation_timeline_view_model.dart';
-import '../../../../../lib/features/chats/detail/data/message_api_service.dart';
-import '../../../../../lib/features/chats/detail/domain/conversation_scope.dart';
-import '../../../../../lib/features/chats/detail/domain/launch_request.dart';
+import 'package:wetty_chat_flutter/core/api/models/chats_api_models.dart';
+import 'package:wetty_chat_flutter/core/api/models/messages_api_models.dart';
+import 'package:wetty_chat_flutter/core/api/models/websocket_api_models.dart';
+import 'package:wetty_chat_flutter/core/network/websocket_service.dart';
+import 'package:wetty_chat_flutter/features/chats/conversation/application/conversation_timeline_view_model.dart';
+import 'package:wetty_chat_flutter/features/chats/conversation/data/message_api_service.dart';
+import 'package:wetty_chat_flutter/features/chats/conversation/domain/conversation_scope.dart';
+import 'package:wetty_chat_flutter/features/chats/conversation/domain/launch_request.dart';
 
 void main() {
   group('ConversationTimelineViewModel locate plans', () {

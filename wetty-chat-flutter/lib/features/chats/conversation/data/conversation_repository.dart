@@ -1,14 +1,12 @@
-import 'dart:async';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/api/models/messages_api_models.dart';
 import '../../../../core/api/models/websocket_api_models.dart';
-import '../../../../core/network/websocket_service.dart';
-import '../../detail/data/message_api_service.dart';
+import '../../models/message_api_mapper.dart';
 import '../../models/message_models.dart';
-import 'conversation_api_mapper.dart';
-import 'conversation_store.dart';
-import '../models/conversation_models.dart';
+import '../domain/conversation_message.dart';
+import '../domain/conversation_scope.dart';
+import 'message_api_service.dart';
 
 class ConversationRepository {
   ConversationRepository({
@@ -17,233 +15,375 @@ class ConversationRepository {
   }) : _service = service;
 
   static const int defaultWindowSize = 100;
-  static const int defaultPageSize = 40;
+  static const int pageSize = 40;
+  static const int maxRenderEntries = 350;
 
   final ConversationScope scope;
   final MessageApiService _service;
-  final ConversationStore _store = ConversationStore();
-  final StreamController<void> _changes = StreamController<void>.broadcast();
 
-  ConversationViewportCache _viewportCache = const ConversationViewportCache();
-  String _draft = '';
+  final Map<String, ConversationMessage> _messagesByStableKey = {};
+  final Map<int, String> _stableKeyByServerId = {};
+  final Map<String, String> _stableKeyByClientGeneratedId = {};
+  final List<String> _orderedStableKeys = <String>[];
+  final Map<String, ConversationMessage> _optimisticSnapshots = {};
+
   bool _hasReachedOldest = false;
-  bool _hasReachedNewest = true;
-  int _localIdCounter = 0;
+  bool _hasReachedNewest = false;
 
-  Stream<void> get changes => _changes.stream;
-  ConversationViewportCache get viewportCache => _viewportCache;
-  String get draft => _draft;
-  bool get hasWarmWindow => _viewportCache.visibleMessageIds.isNotEmpty;
-
-  List<ConversationMessage> latestSync({int limit = defaultWindowSize}) {
-    return _store.latest(limit: limit);
-  }
-
-  TimelineWindow currentAroundSync(
-    int messageId, {
-    int before = defaultWindowSize ~/ 2,
-    int after = defaultWindowSize ~/ 2,
-  }) {
-    final messages = _store.around(messageId, before: before, after: after);
-    return TimelineWindow(
-      messages: messages,
-      hasOlder: messageId == messages.lastServerId
-          ? !_hasReachedOldest
-          : (messages.lastServerId != null
-                ? _store.hasOlderAdjacent(messages.lastServerId!) ||
-                      !_hasReachedOldest
-                : false),
-      hasNewer: messages.firstServerId != null
-          ? _store.hasNewerAdjacent(messages.firstServerId!) ||
-                !_hasReachedNewest
-          : false,
-      anchorMessageId: messageId,
-    );
-  }
-
-  bool hasOlderAvailable(int oldestVisibleServerId) {
-    return _store.hasOlderAdjacent(oldestVisibleServerId) || !_hasReachedOldest;
-  }
-
-  bool hasNewerAvailable(int newestVisibleServerId) {
-    return _store.hasNewerAdjacent(newestVisibleServerId) || !_hasReachedNewest;
-  }
-
-  Future<TimelineWindow> loadLatest({int limit = defaultWindowSize}) async {
-    final response = await _service.fetchMessages(
-      scope.chatId,
+  Future<List<ConversationMessage>> loadLatestWindow({
+    int limit = defaultWindowSize,
+  }) async {
+    final response = await _service.fetchConversationMessages(
+      scope,
       max: limit,
-      threadId: _threadId,
     );
-    final messages = response.messages
-        .map((message) => message.toConversationMessage(scope))
-        .toList(growable: false);
-    _store.clear();
-    _store.mergeServerMessages(messages);
-    _hasReachedNewest = true;
-    _hasReachedOldest = messages.length < limit;
-    final window = TimelineWindow(
-      messages: _store.latest(limit: limit),
-      hasOlder: !_hasReachedOldest,
-      hasNewer: false,
-    );
-    _cacheWindow(
-      launchRequest: const LaunchLatestRequest(),
-      anchorMessageId: window.messages.firstOrNull?.serverId,
-      visibleMessageIds: window.messages.serverIds,
-      isAtLiveEdge: true,
-    );
-    _emitChange();
-    return window;
-  }
-
-  Future<TimelineWindow> refreshLatest({int limit = defaultWindowSize}) async {
-    final response = await _service.fetchMessages(
-      scope.chatId,
-      max: limit,
-      threadId: _threadId,
-    );
-    _store.mergeServerMessages(
-      response.messages
-          .map((message) => message.toConversationMessage(scope))
-          .toList(growable: false),
-    );
+    _mergeDtos(response.messages);
     _hasReachedNewest = true;
     _hasReachedOldest = response.messages.length < limit;
-    final window = TimelineWindow(
-      messages: _store.latest(limit: limit),
-      hasOlder: !_hasReachedOldest,
-      hasNewer: false,
-    );
-    _emitChange();
-    return window;
+    final keys = _latestWindowStableKeys(limit);
+    return _messagesForWindow(keys);
   }
 
-  Future<TimelineWindow> loadAround(
+  Future<List<ConversationMessage>> refreshLatestWindow({
+    int limit = defaultWindowSize,
+  }) async {
+    final response = await _service.fetchConversationMessages(
+      scope,
+      max: limit,
+    );
+    _mergeDtos(response.messages);
+    _hasReachedNewest = true;
+    _hasReachedOldest = response.messages.length < limit;
+    final keys = _latestWindowStableKeys(limit);
+    return _messagesForWindow(keys);
+  }
+
+  Future<List<ConversationMessage>> loadAroundMessage(
     int messageId, {
     int before = defaultWindowSize ~/ 2,
     int after = defaultWindowSize ~/ 2,
   }) async {
-    var window = _store.around(messageId, before: before, after: after);
-    if (window.isEmpty) {
-      final response = await _service.fetchMessages(
-        scope.chatId,
+    if (!_containsServerMessage(messageId)) {
+      final response = await _service.fetchConversationMessages(
+        scope,
         around: messageId,
         max: before + after + 1,
-        threadId: _threadId,
       );
-      _store.mergeServerMessages(
-        response.messages
-            .map((message) => message.toConversationMessage(scope))
-            .toList(growable: false),
-      );
-      window = _store.around(messageId, before: before, after: after);
+      _mergeDtos(response.messages);
     }
-    final result = TimelineWindow(
-      messages: window,
-      hasOlder: window.lastServerId != null
-          ? _store.hasOlderAdjacent(window.lastServerId!) || !_hasReachedOldest
-          : false,
-      hasNewer: window.firstServerId != null
-          ? _store.hasNewerAdjacent(window.firstServerId!) || !_hasReachedNewest
-          : false,
-      anchorMessageId: messageId,
+    final keys = _windowKeysAroundServerMessage(
+      messageId,
+      before: before,
+      after: after,
     );
-    _cacheWindow(
-      launchRequest: LaunchMessageRequest(messageId, highlight: false),
-      anchorMessageId: messageId,
-      visibleMessageIds: result.messages.serverIds,
-      isAtLiveEdge: false,
-    );
-    _emitChange();
-    return result;
-  }
-
-  Future<List<ConversationMessage>> loadOlder(
-    int oldestVisibleServerId, {
-    int pageSize = defaultPageSize,
-  }) async {
-    final cached = _store.olderThan(oldestVisibleServerId, limit: pageSize);
-    if (cached.isNotEmpty) {
-      return cached;
-    }
-    final response = await _service.fetchMessages(
-      scope.chatId,
-      before: oldestVisibleServerId,
-      max: pageSize,
-      threadId: _threadId,
-    );
-    final messages = response.messages
-        .map((message) => message.toConversationMessage(scope))
-        .toList(growable: false);
-    _store.mergeServerMessages(messages);
-    _hasReachedOldest = messages.length < pageSize;
-    _emitChange();
-    return _store.olderThan(oldestVisibleServerId, limit: pageSize);
-  }
-
-  Future<List<ConversationMessage>> loadNewer(
-    int newestVisibleServerId, {
-    int pageSize = defaultPageSize,
-  }) async {
-    final cached = _store.newerThan(newestVisibleServerId, limit: pageSize);
-    if (cached.isNotEmpty) {
-      return cached;
-    }
-    final response = await _service.fetchMessages(
-      scope.chatId,
-      after: newestVisibleServerId,
-      max: pageSize,
-      threadId: _threadId,
-    );
-    final messages = response.messages
-        .map((message) => message.toConversationMessage(scope))
-        .toList(growable: false);
-    _store.mergeServerMessages(messages);
-    _hasReachedNewest = messages.length < pageSize;
-    _emitChange();
-    return _store.newerThan(newestVisibleServerId, limit: pageSize);
+    return _messagesForWindow(keys);
   }
 
   Future<int?> resolveFirstUnreadMessageId(int lastReadMessageId) async {
-    final cached = _store.firstNewerServerId(lastReadMessageId);
-    if (cached != null) {
-      return cached;
-    }
-    final response = await _service.fetchMessages(
-      scope.chatId,
+    final response = await _service.fetchConversationMessages(
+      scope,
       after: lastReadMessageId,
       max: 1,
-      threadId: _threadId,
     );
-    final messages = response.messages
-        .map((message) => message.toConversationMessage(scope))
-        .toList(growable: false);
-    _store.mergeServerMessages(messages);
-    _hasReachedNewest = messages.length < 1;
-    _emitChange();
-    return messages.firstOrNull?.serverId;
+    _mergeDtos(response.messages);
+    if (response.messages.isEmpty) {
+      return null;
+    }
+    return response.messages.first.id;
   }
 
-  List<ConversationMessage> warmWindow({int limit = defaultWindowSize}) {
-    if (_viewportCache.visibleMessageIds.isEmpty) {
-      return _store.latest(limit: limit);
+  Future<List<ConversationMessage>> extendOlder({
+    required String anchorStableKey,
+    int pageSize = ConversationRepository.pageSize,
+  }) async {
+    final anchor = _messagesByStableKey[anchorStableKey];
+    final oldestId = anchor?.serverMessageId;
+    if (oldestId == null) {
+      return const <ConversationMessage>[];
     }
-    final messages = _viewportCache.visibleMessageIds
-        .map(_store.messageByServerId)
+
+    final response = await _service.fetchConversationMessages(
+      scope,
+      before: oldestId,
+      max: pageSize,
+    );
+    _mergeDtos(response.messages);
+    if (response.messages.length < pageSize) {
+      _hasReachedOldest = true;
+    }
+    return response.messages
+        .map((dto) => _messageForServerId(dto.id))
         .whereType<ConversationMessage>()
         .toList(growable: false);
-    return messages.isEmpty ? _store.latest(limit: limit) : messages;
   }
 
-  void cacheDraft(String draft) {
-    _draft = draft;
+  Future<List<ConversationMessage>> extendNewer({
+    required String anchorStableKey,
+    int pageSize = ConversationRepository.pageSize,
+  }) async {
+    final anchor = _messagesByStableKey[anchorStableKey];
+    final newestId = anchor?.serverMessageId;
+    if (newestId == null) {
+      return const <ConversationMessage>[];
+    }
+
+    final response = await _service.fetchConversationMessages(
+      scope,
+      after: newestId,
+      max: pageSize,
+    );
+    _mergeDtos(response.messages);
+    if (response.messages.length < pageSize) {
+      _hasReachedNewest = true;
+    }
+    return response.messages
+        .map((dto) => _messageForServerId(dto.id))
+        .whereType<ConversationMessage>()
+        .toList(growable: false);
   }
 
-  Future<void> markAsRead(int messageId) =>
-      _service.markMessagesAsRead(scope.chatId, messageId);
+  bool hasOlderOutsideWindow(List<String> windowStableKeys) {
+    if (windowStableKeys.isEmpty) {
+      return false;
+    }
+    final oldestIndex = _orderedStableKeys.indexOf(windowStableKeys.first);
+    return oldestIndex > 0 || !_hasReachedOldest;
+  }
 
-  Future<void> applyRealtimeEvent(ApiWsEvent event) async {
+  bool hasNewerOutsideWindow(List<String> windowStableKeys) {
+    if (windowStableKeys.isEmpty) {
+      return false;
+    }
+    final newestIndex = _orderedStableKeys.indexOf(windowStableKeys.last);
+    return newestIndex >= 0 && newestIndex < _orderedStableKeys.length - 1 ||
+        !_hasReachedNewest;
+  }
+
+  List<String> latestWindowStableKeys({int limit = defaultWindowSize}) =>
+      _latestWindowStableKeys(limit);
+
+  List<String> trimWindowAroundAnchor(
+    List<String> stableKeys, {
+    required int? anchorMessageId,
+    int maxEntries = maxRenderEntries,
+  }) {
+    if (stableKeys.length <= maxEntries) {
+      return stableKeys;
+    }
+    if (anchorMessageId == null) {
+      return stableKeys.sublist(stableKeys.length - maxEntries);
+    }
+
+    final anchorKey = _stableKeyByServerId[anchorMessageId];
+    if (anchorKey == null) {
+      return stableKeys.sublist(stableKeys.length - maxEntries);
+    }
+
+    final anchorIndex = stableKeys.indexOf(anchorKey);
+    if (anchorIndex < 0) {
+      return stableKeys.sublist(stableKeys.length - maxEntries);
+    }
+
+    final before = maxEntries ~/ 2;
+    final start = (anchorIndex - before).clamp(0, stableKeys.length);
+    final end = (start + maxEntries).clamp(0, stableKeys.length);
+    final adjustedStart = (end - maxEntries).clamp(0, stableKeys.length);
+    return stableKeys.sublist(adjustedStart, end);
+  }
+
+  List<String> prependWindowPage(
+    List<String> currentWindow,
+    String oldestStableKey,
+  ) {
+    final oldestIndex = _orderedStableKeys.indexOf(oldestStableKey);
+    if (oldestIndex <= 0) {
+      return currentWindow;
+    }
+    final start = (oldestIndex - pageSize).clamp(0, oldestIndex);
+    return _orderedStableKeys.sublist(start, oldestIndex) + currentWindow;
+  }
+
+  List<String> appendWindowPage(
+    List<String> currentWindow,
+    String newestStableKey,
+  ) {
+    final newestIndex = _orderedStableKeys.indexOf(newestStableKey);
+    if (newestIndex < 0 || newestIndex >= _orderedStableKeys.length - 1) {
+      return currentWindow;
+    }
+    final end = (newestIndex + 1 + pageSize).clamp(
+      0,
+      _orderedStableKeys.length,
+    );
+    return currentWindow + _orderedStableKeys.sublist(newestIndex + 1, end);
+  }
+
+  int? findWindowIndex(List<String> windowStableKeys, int messageId) {
+    final stableKey = _stableKeyByServerId[messageId];
+    if (stableKey == null) {
+      return null;
+    }
+    return windowStableKeys.indexOf(stableKey);
+  }
+
+  Future<void> markAsRead(int messageId) {
+    return _service.markMessagesAsRead(scope.chatId, messageId);
+  }
+
+  ConversationMessage insertOptimisticSend({
+    required Sender sender,
+    required String text,
+    required List<AttachmentItem> attachments,
+    required String clientGeneratedId,
+    int? replyToId,
+  }) {
+    final localMessage = ConversationMessage(
+      scope: scope,
+      localMessageId: 'local-${DateTime.now().microsecondsSinceEpoch}',
+      clientGeneratedId: clientGeneratedId,
+      sender: sender,
+      message: text,
+      messageType: 'text',
+      createdAt: DateTime.now().toUtc(),
+      isEdited: false,
+      isDeleted: false,
+      replyRootId: replyToId,
+      hasAttachments: attachments.isNotEmpty,
+      replyToMessage: _replyToMessageForId(replyToId),
+      attachments: attachments,
+      threadInfo: null,
+      deliveryState: ConversationDeliveryState.sending,
+    );
+    _upsertMessage(localMessage, appendLocalOnly: true);
+    return localMessage;
+  }
+
+  Future<ConversationMessage> commitSend({
+    required String clientGeneratedId,
+    required String text,
+    required List<String> attachmentIds,
+    int? replyToId,
+  }) async {
+    final response = await _service.sendConversationMessage(
+      scope,
+      text,
+      replyToId: replyToId,
+      attachmentIds: attachmentIds,
+      clientGeneratedId: clientGeneratedId,
+    );
+    return _mergeMessage(
+      response.toConversation(scope),
+      preferredState: ConversationDeliveryState.sent,
+    );
+  }
+
+  void markSendFailed(String clientGeneratedId) {
+    final stableKey = _stableKeyByClientGeneratedId[clientGeneratedId];
+    if (stableKey == null) {
+      return;
+    }
+    final message = _messagesByStableKey[stableKey];
+    if (message == null) {
+      return;
+    }
+    _messagesByStableKey[stableKey] = message.copyWith(
+      deliveryState: ConversationDeliveryState.failed,
+    );
+  }
+
+  Future<ConversationMessage> retryFailedSend(
+    ConversationMessage message,
+  ) async {
+    final optimistic = message.copyWith(
+      deliveryState: ConversationDeliveryState.sending,
+    );
+    _messagesByStableKey[optimistic.stableKey] = optimistic;
+    return commitSend(
+      clientGeneratedId: optimistic.clientGeneratedId,
+      text: optimistic.message ?? '',
+      attachmentIds: optimistic.attachments.map((item) => item.id).toList(),
+      replyToId: optimistic.replyRootId,
+    );
+  }
+
+  void discardFailedMessage(ConversationMessage message) {
+    _removeStableKey(message.stableKey);
+  }
+
+  ConversationMessage? beginOptimisticEdit(int messageId) {
+    final stableKey = _stableKeyByServerId[messageId];
+    if (stableKey == null) {
+      return null;
+    }
+    final message = _messagesByStableKey[stableKey];
+    if (message == null) {
+      return null;
+    }
+    _optimisticSnapshots[stableKey] = message;
+    final updating = message.copyWith(
+      deliveryState: ConversationDeliveryState.editing,
+    );
+    _messagesByStableKey[stableKey] = updating;
+    return updating;
+  }
+
+  Future<ConversationMessage> commitEdit(int messageId, String newText) async {
+    final response = await _service.editMessage(
+      scope.chatId,
+      messageId,
+      newText,
+    );
+    return _mergeMessage(
+      response.toConversation(scope),
+      preferredState: ConversationDeliveryState.sent,
+    );
+  }
+
+  void rollbackEdit(int messageId) {
+    final stableKey = _stableKeyByServerId[messageId];
+    if (stableKey == null) {
+      return;
+    }
+    final snapshot = _optimisticSnapshots.remove(stableKey);
+    if (snapshot != null) {
+      _messagesByStableKey[stableKey] = snapshot;
+    }
+  }
+
+  ConversationMessage? beginOptimisticDelete(int messageId) {
+    final stableKey = _stableKeyByServerId[messageId];
+    if (stableKey == null) {
+      return null;
+    }
+    final message = _messagesByStableKey[stableKey];
+    if (message == null) {
+      return null;
+    }
+    _optimisticSnapshots[stableKey] = message;
+    final deleting = message.copyWith(
+      deliveryState: ConversationDeliveryState.deleting,
+    );
+    _messagesByStableKey[stableKey] = deleting;
+    return deleting;
+  }
+
+  Future<void> commitDelete(int messageId) async {
+    await _service.deleteMessage(scope.chatId, messageId);
+    _tombstoneMessage(messageId);
+  }
+
+  void rollbackDelete(int messageId) {
+    final stableKey = _stableKeyByServerId[messageId];
+    if (stableKey == null) {
+      return;
+    }
+    final snapshot = _optimisticSnapshots.remove(stableKey);
+    if (snapshot != null) {
+      _messagesByStableKey[stableKey] = snapshot;
+    }
+  }
+
+  bool applyRealtimeEvent(ApiWsEvent event) {
     final payload = switch (event) {
       MessageCreatedWsEvent(:final payload) => payload,
       MessageUpdatedWsEvent(:final payload) => payload,
@@ -251,270 +391,224 @@ class ConversationRepository {
       _ => null,
     };
     if (payload == null || payload.chatId.toString() != scope.chatId) {
-      return;
+      return false;
     }
-    if (_threadId != null && payload.replyRootId != int.tryParse(_threadId!)) {
-      return;
+    if (scope.threadRootId != null &&
+        payload.replyRootId?.toString() != scope.threadRootId) {
+      return false;
     }
+
     if (event is MessageDeletedWsEvent) {
-      _store.tombstoneMessage(payload.id);
+      _mergeMessage(
+        payload.toConversation(scope),
+        preferredState: ConversationDeliveryState.sent,
+      );
+      _tombstoneMessage(payload.id);
+      return true;
+    }
+
+    _mergeMessage(
+      payload.toConversation(scope),
+      preferredState: ConversationDeliveryState.sent,
+    );
+    return true;
+  }
+
+  List<ConversationMessage> messagesForWindow(List<String> stableKeys) =>
+      _messagesForWindow(stableKeys);
+
+  ConversationMessage? messageForServerId(int messageId) =>
+      _messageForServerId(messageId);
+
+  ConversationMessage _mergeMessage(
+    ConversationMessage incoming, {
+    required ConversationDeliveryState preferredState,
+  }) {
+    final stableKey = _stableKeyByServerId[incoming.serverMessageId ?? -1];
+    if (stableKey != null) {
+      final previous = _messagesByStableKey[stableKey];
+      final merged = incoming.copyWith(
+        localMessageId: previous?.localMessageId,
+        deliveryState: preferredState,
+      );
+      _messagesByStableKey[stableKey] = merged;
+      _optimisticSnapshots.remove(stableKey);
+      return merged;
+    }
+
+    final optimisticKey =
+        _stableKeyByClientGeneratedId[incoming.clientGeneratedId];
+    if (optimisticKey != null) {
+      final previous = _messagesByStableKey[optimisticKey];
+      final merged = incoming.copyWith(
+        localMessageId: previous?.localMessageId,
+        deliveryState: preferredState,
+      );
+      final previousIndex = _orderedStableKeys.indexOf(optimisticKey);
+      if (previousIndex >= 0) {
+        _orderedStableKeys[previousIndex] = merged.stableKey;
+      } else {
+        _insertOrderedStableKey(merged.stableKey, merged.serverMessageId);
+      }
+      _messagesByStableKey.remove(optimisticKey);
+      _messagesByStableKey[merged.stableKey] = merged;
+      _stableKeyByServerId[merged.serverMessageId!] = merged.stableKey;
+      _stableKeyByClientGeneratedId[merged.clientGeneratedId] =
+          merged.stableKey;
+      _optimisticSnapshots.remove(optimisticKey);
+      return merged;
+    }
+
+    final merged = incoming.copyWith(deliveryState: preferredState);
+    _upsertMessage(merged);
+    return merged;
+  }
+
+  void _mergeDtos(List<MessageItemDto> messages) {
+    for (final dto in messages) {
+      _mergeMessage(
+        dto.toConversation(scope),
+        preferredState: ConversationDeliveryState.sent,
+      );
+    }
+  }
+
+  void _upsertMessage(
+    ConversationMessage message, {
+    bool appendLocalOnly = false,
+  }) {
+    _messagesByStableKey[message.stableKey] = message;
+    _stableKeyByClientGeneratedId[message.clientGeneratedId] =
+        message.stableKey;
+    final serverMessageId = message.serverMessageId;
+    if (serverMessageId != null) {
+      _stableKeyByServerId[serverMessageId] = message.stableKey;
+      _insertOrderedStableKey(message.stableKey, serverMessageId);
+      return;
+    }
+    if (appendLocalOnly && !_orderedStableKeys.contains(message.stableKey)) {
+      _orderedStableKeys.add(message.stableKey);
+    }
+  }
+
+  void _insertOrderedStableKey(String stableKey, int? serverMessageId) {
+    final existingIndex = _orderedStableKeys.indexOf(stableKey);
+    if (existingIndex >= 0) {
+      return;
+    }
+    if (serverMessageId == null || _orderedStableKeys.isEmpty) {
+      _orderedStableKeys.add(stableKey);
+      return;
+    }
+    final insertAt = _orderedStableKeys.indexWhere((candidateKey) {
+      final candidateId = _messagesByStableKey[candidateKey]?.serverMessageId;
+      return candidateId != null && candidateId > serverMessageId;
+    });
+    if (insertAt < 0) {
+      _orderedStableKeys.add(stableKey);
     } else {
-      _store.mergeServerMessage(payload.toConversationMessage(scope));
+      _orderedStableKeys.insert(insertAt, stableKey);
     }
-    _emitChange();
   }
 
-  Future<ConversationMessage> sendMessage(
-    String text, {
-    int? replyToId,
-    List<String> attachmentIds = const <String>[],
-  }) async {
-    final clientGeneratedId = _service.nextClientGeneratedId();
-    final optimistic = ConversationMessage(
-      localId: 'temp-${++_localIdCounter}',
-      clientGeneratedId: clientGeneratedId,
-      scope: scope,
-      message: text,
-      messageType: 'text',
-      sender: const Sender(uid: 0, name: 'You'),
-      createdAt: DateTime.now(),
-      isEdited: false,
-      isDeleted: false,
-      replyRootId: scope is ThreadConversationScope
-          ? (scope as ThreadConversationScope).threadRootId
-          : null,
-      hasAttachments: attachmentIds.isNotEmpty,
-      attachments: const <AttachmentItem>[],
-      deliveryState: ConversationDeliveryState.sending,
+  void _removeStableKey(String stableKey) {
+    final message = _messagesByStableKey.remove(stableKey);
+    if (message == null) {
+      return;
+    }
+    _orderedStableKeys.remove(stableKey);
+    if (message.serverMessageId != null) {
+      _stableKeyByServerId.remove(message.serverMessageId);
+    }
+    _stableKeyByClientGeneratedId.remove(message.clientGeneratedId);
+  }
+
+  List<String> _latestWindowStableKeys(int limit) {
+    if (_orderedStableKeys.isEmpty) {
+      return const <String>[];
+    }
+    final start = (_orderedStableKeys.length - limit).clamp(
+      0,
+      _orderedStableKeys.length,
     );
-    _store.insertOptimisticMessage(optimistic);
-    _emitChange();
-
-    try {
-      final created = await _service.sendMessage(
-        scope.chatId,
-        text,
-        replyToId: replyToId,
-        threadId: _threadId,
-        attachmentIds: attachmentIds,
-        clientGeneratedId: clientGeneratedId,
-      );
-      final message = created.toConversationMessage(scope);
-      _store.mergeServerMessage(message);
-      _emitChange();
-      return message;
-    } catch (_) {
-      _store.updateMessage(
-        optimistic.copyWith(deliveryState: ConversationDeliveryState.failed),
-      );
-      _emitChange();
-      rethrow;
-    }
+    return _orderedStableKeys.sublist(start);
   }
 
-  Future<ConversationMessage> editMessage(int messageId, String text) async {
-    final existing = _store.messageByServerId(messageId);
-    if (existing != null) {
-      _store.updateMessage(
-        existing.copyWith(
-          message: text,
-          deliveryState: ConversationDeliveryState.editing,
-          isEdited: true,
-        ),
-      );
-      _emitChange();
-    }
-    try {
-      final updated = await _service.editMessage(scope.chatId, messageId, text);
-      final message = updated.toConversationMessage(scope);
-      _store.mergeServerMessage(message);
-      _emitChange();
-      return message;
-    } catch (_) {
-      if (existing != null) {
-        _store.updateMessage(existing);
-        _emitChange();
-      }
-      rethrow;
-    }
-  }
-
-  Future<void> deleteMessage(int messageId) async {
-    final existing = _store.messageByServerId(messageId);
-    if (existing != null) {
-      _store.updateMessage(
-        existing.copyWith(deliveryState: ConversationDeliveryState.deleting),
-      );
-      _emitChange();
-    }
-    try {
-      await _service.deleteMessage(scope.chatId, messageId);
-      _store.tombstoneMessage(messageId);
-      _emitChange();
-    } catch (_) {
-      if (existing != null) {
-        _store.updateMessage(existing);
-        _emitChange();
-      }
-      rethrow;
-    }
-  }
-
-  List<TimelineEntry> buildTimelineEntries({
-    required List<ConversationMessage> messages,
-    int? unreadMarkerMessageId,
-    bool isLoadingOlder = false,
-    bool isLoadingNewer = false,
-    bool hasOlder = false,
-    bool hasNewer = false,
+  List<String> _windowKeysAroundServerMessage(
+    int messageId, {
+    required int before,
+    required int after,
   }) {
-    final entries = <TimelineEntry>[];
-    if (isLoadingOlder) {
-      entries.add(const TimelineLoadingOlderEntry());
-    } else if (hasOlder) {
-      entries.add(const TimelineHistoryGapOlderEntry());
+    final stableKey = _stableKeyByServerId[messageId];
+    if (stableKey == null) {
+      return const <String>[];
     }
-    DateTime? previousDay;
-    for (var index = messages.length - 1; index >= 0; index--) {
-      final message = messages[index];
-      final day = _calendarDay(message.createdAt);
-      if (day != null && (previousDay == null || !_sameDay(previousDay, day))) {
-        entries.insert(
-          0,
-          TimelineDateSeparatorEntry(
-            date: day,
-            key: 'date:${day.toIso8601String()}',
-          ),
-        );
-        previousDay = day;
-      }
-      entries.insert(0, TimelineMessageEntry(message: message));
-      if (unreadMarkerMessageId != null &&
-          message.serverId == unreadMarkerMessageId) {
-        entries.insert(0, const TimelineUnreadMarkerEntry());
-      }
+    final index = _orderedStableKeys.indexOf(stableKey);
+    if (index < 0) {
+      return const <String>[];
     }
-    if (isLoadingNewer) {
-      entries.insert(0, const TimelineLoadingNewerEntry());
-    } else if (hasNewer) {
-      entries.insert(0, const TimelineHistoryGapNewerEntry());
-    }
-    return entries;
+    final start = (index - before).clamp(0, _orderedStableKeys.length);
+    final end = (index + after + 1).clamp(0, _orderedStableKeys.length);
+    return _orderedStableKeys.sublist(start, end);
   }
 
-  void cacheViewport({
-    required LaunchRequest launchRequest,
-    required int? anchorMessageId,
-    required List<int> visibleMessageIds,
-    required bool isAtLiveEdge,
-  }) {
-    _cacheWindow(
-      launchRequest: launchRequest,
-      anchorMessageId: anchorMessageId,
-      visibleMessageIds: visibleMessageIds,
-      isAtLiveEdge: isAtLiveEdge,
-    );
+  List<ConversationMessage> _messagesForWindow(List<String> stableKeys) {
+    return stableKeys
+        .map((stableKey) => _messagesByStableKey[stableKey])
+        .whereType<ConversationMessage>()
+        .toList(growable: false);
   }
 
-  void _cacheWindow({
-    required LaunchRequest launchRequest,
-    required int? anchorMessageId,
-    required List<int> visibleMessageIds,
-    required bool isAtLiveEdge,
-  }) {
-    _viewportCache = ConversationViewportCache(
-      launchRequest: launchRequest,
-      anchorMessageId: anchorMessageId,
-      visibleMessageIds: visibleMessageIds,
-      isAtLiveEdge: isAtLiveEdge,
-    );
-  }
-
-  void _emitChange() {
-    if (!_changes.isClosed) {
-      _changes.add(null);
-    }
-  }
-
-  String? get _threadId => switch (scope) {
-    ThreadConversationScope(:final threadRootId) => '$threadRootId',
-    _ => null,
-  };
-
-  DateTime? _calendarDay(DateTime? value) {
-    if (value == null) {
+  ConversationMessage? _messageForServerId(int messageId) {
+    final stableKey = _stableKeyByServerId[messageId];
+    if (stableKey == null) {
       return null;
     }
-    return DateTime(value.year, value.month, value.day);
+    return _messagesByStableKey[stableKey];
   }
 
-  bool _sameDay(DateTime left, DateTime right) =>
-      left.year == right.year &&
-      left.month == right.month &&
-      left.day == right.day;
-}
+  bool _containsServerMessage(int messageId) =>
+      _stableKeyByServerId.containsKey(messageId);
 
-class ConversationRepositoryCache {
-  static final Map<String, ConversationRepository> _cache = {};
+  ReplyToMessage? _replyToMessageForId(int? replyToId) {
+    if (replyToId == null) {
+      return null;
+    }
+    final message = _messageForServerId(replyToId);
+    if (message == null) {
+      return null;
+    }
+    return ReplyToMessage(
+      id: replyToId,
+      message: message.message,
+      sender: message.sender,
+      isDeleted: message.isDeleted,
+    );
+  }
 
-  static ConversationRepository instance({
-    required ConversationScope scope,
-    required MessageApiService service,
-  }) {
-    return _cache.putIfAbsent(
-      scope.cacheKey,
-      () => ConversationRepository(scope: scope, service: service),
+  void _tombstoneMessage(int messageId) {
+    final stableKey = _stableKeyByServerId[messageId];
+    if (stableKey == null) {
+      return;
+    }
+    final current = _messagesByStableKey[stableKey];
+    if (current == null) {
+      return;
+    }
+    _messagesByStableKey[stableKey] = current.copyWith(
+      isDeleted: true,
+      message: null,
+      attachments: const <AttachmentItem>[],
+      hasAttachments: false,
+      deliveryState: ConversationDeliveryState.sent,
     );
   }
 }
 
 final conversationRepositoryProvider =
     Provider.family<ConversationRepository, ConversationScope>((ref, scope) {
-      final repository = ConversationRepositoryCache.instance(
+      return ConversationRepository(
         scope: scope,
-        service: ref.watch(messageApiServiceProvider),
+        service: ref.read(messageApiServiceProvider),
       );
-      ref.listen<AsyncValue<ApiWsEvent>>(wsEventsProvider, (_, next) {
-        final event = next.valueOrNull;
-        if (event != null) {
-          unawaited(repository.applyRealtimeEvent(event));
-        }
-      });
-      return repository;
     });
-
-extension on List<ConversationMessage> {
-  List<int> get serverIds => map(
-    (message) => message.serverId,
-  ).whereType<int>().toList(growable: false);
-
-  int? get firstServerId =>
-      firstWhereOrNull((message) => message.serverId != null)?.serverId;
-
-  int? get lastServerId =>
-      lastWhereOrNull((message) => message.serverId != null)?.serverId;
-
-  ConversationMessage? get firstOrNull => isEmpty ? null : first;
-
-  ConversationMessage? firstWhereOrNull(
-    bool Function(ConversationMessage message) test,
-  ) {
-    for (final message in this) {
-      if (test(message)) {
-        return message;
-      }
-    }
-    return null;
-  }
-
-  ConversationMessage? lastWhereOrNull(
-    bool Function(ConversationMessage message) test,
-  ) {
-    for (final message in reversed) {
-      if (test(message)) {
-        return message;
-      }
-    }
-    return null;
-  }
-}

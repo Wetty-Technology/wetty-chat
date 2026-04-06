@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/session/dev_session_store.dart';
-import '../../features/chats/detail/presentation/attachment_viewer_page.dart';
-import '../../features/chats/detail/presentation/chat_detail_view.dart';
-import '../../features/chats/detail/domain/launch_request.dart';
+import '../../features/chats/conversation/presentation/attachment_viewer_page.dart';
+import '../../features/chats/conversation/presentation/chat_detail_view.dart';
+import '../../features/chats/conversation/domain/launch_request.dart';
 import '../../features/chats/list/presentation/chat_list_view.dart';
 import '../../features/chats/list/presentation/new_chat_view.dart';
 import '../../features/chats/models/message_models.dart';

@@ -543,14 +543,14 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
         children: [
           CupertinoButton(
             padding: EdgeInsets.zero,
-            minSize: 0,
+            minimumSize: Size.zero,
             onPressed: () => context.push(AppRoutes.chatMembers(widget.chatId)),
             child: const Icon(CupertinoIcons.person_2_fill, size: 22),
           ),
           const SizedBox(width: 12),
           CupertinoButton(
             padding: EdgeInsets.zero,
-            minSize: 0,
+            minimumSize: Size.zero,
             onPressed: () => context.push(
               AppRoutes.chatSettings(widget.chatId),
               extra: {'currentName': widget.chatName},

@@ -2,30 +2,150 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/api/models/websocket_api_models.dart';
+import '../../../../core/network/websocket_service.dart';
 import '../data/conversation_repository.dart';
-import '../models/conversation_models.dart';
+import '../domain/conversation_message.dart';
+import '../domain/conversation_scope.dart';
+import '../domain/launch_request.dart';
+import '../domain/timeline_entry.dart';
 
 typedef ConversationTimelineArgs = ({
   ConversationScope scope,
   LaunchRequest launchRequest,
 });
 
-typedef ConversationTimelineState = ({
-  List<TimelineEntry> entries,
-  bool isLoadingOlder,
-  bool isLoadingNewer,
-  bool showJumpToLatest,
-  String? errorMessage,
-  int? highlightedMessageId,
-  int? unreadAnchorMessageId,
-  bool hasOlder,
-  bool hasNewer,
-  bool shouldRefreshChats,
-  bool messageUnavailable,
-  int pendingLiveCount,
-});
-
 enum ConversationWindowMode { liveLatest, anchoredTarget, historyBrowsing }
+
+enum ConversationLocateTarget { latest, message }
+
+enum ConversationLocatePlacement { liveEdge, topPreferred }
+
+enum ConversationLocateExecution { preparedViewport, interactiveViewport }
+
+class ConversationLocatePlan {
+  const ConversationLocatePlan._({
+    required this.target,
+    required this.placement,
+    required this.execution,
+    required this.revision,
+    required this.viewportSessionId,
+    this.messageId,
+  });
+
+  const ConversationLocatePlan.latest({
+    required ConversationLocatePlacement placement,
+    required ConversationLocateExecution execution,
+    required int revision,
+    required int viewportSessionId,
+  }) : this._(
+         target: ConversationLocateTarget.latest,
+         placement: placement,
+         execution: execution,
+         revision: revision,
+         viewportSessionId: viewportSessionId,
+       );
+
+  const ConversationLocatePlan.message({
+    required int messageId,
+    required ConversationLocatePlacement placement,
+    required ConversationLocateExecution execution,
+    required int revision,
+    required int viewportSessionId,
+  }) : this._(
+         target: ConversationLocateTarget.message,
+         placement: placement,
+         execution: execution,
+         revision: revision,
+         viewportSessionId: viewportSessionId,
+         messageId: messageId,
+       );
+
+  final ConversationLocateTarget target;
+  final ConversationLocatePlacement placement;
+  final ConversationLocateExecution execution;
+  final int revision;
+  final int viewportSessionId;
+  final int? messageId;
+}
+
+class ConversationTimelineState {
+  const ConversationTimelineState({
+    required this.entries,
+    required this.windowStableKeys,
+    required this.windowMode,
+    required this.canLoadOlder,
+    required this.canLoadNewer,
+    this.isLoadingOlder = false,
+    this.isLoadingNewer = false,
+    this.pendingLiveCount = 0,
+    this.highlightedMessageId,
+    this.anchorMessageId,
+    this.unreadMarkerMessageId,
+    this.infoMessage,
+    this.shouldRefreshChats = false,
+    this.locatePlan,
+  });
+
+  final List<TimelineEntry> entries;
+  final List<String> windowStableKeys;
+  final ConversationWindowMode windowMode;
+  final bool canLoadOlder;
+  final bool canLoadNewer;
+  final bool isLoadingOlder;
+  final bool isLoadingNewer;
+  final int pendingLiveCount;
+  final int? highlightedMessageId;
+  final int? anchorMessageId;
+  final int? unreadMarkerMessageId;
+  final String? infoMessage;
+  final bool shouldRefreshChats;
+  final ConversationLocatePlan? locatePlan;
+
+  ConversationTimelineState copyWith({
+    List<TimelineEntry>? entries,
+    List<String>? windowStableKeys,
+    ConversationWindowMode? windowMode,
+    bool? canLoadOlder,
+    bool? canLoadNewer,
+    bool? isLoadingOlder,
+    bool? isLoadingNewer,
+    int? pendingLiveCount,
+    Object? highlightedMessageId = _sentinel,
+    Object? anchorMessageId = _sentinel,
+    Object? unreadMarkerMessageId = _sentinel,
+    Object? infoMessage = _sentinel,
+    bool? shouldRefreshChats,
+    Object? locatePlan = _sentinel,
+  }) {
+    return ConversationTimelineState(
+      entries: entries ?? this.entries,
+      windowStableKeys: windowStableKeys ?? this.windowStableKeys,
+      windowMode: windowMode ?? this.windowMode,
+      canLoadOlder: canLoadOlder ?? this.canLoadOlder,
+      canLoadNewer: canLoadNewer ?? this.canLoadNewer,
+      isLoadingOlder: isLoadingOlder ?? this.isLoadingOlder,
+      isLoadingNewer: isLoadingNewer ?? this.isLoadingNewer,
+      pendingLiveCount: pendingLiveCount ?? this.pendingLiveCount,
+      highlightedMessageId: highlightedMessageId == _sentinel
+          ? this.highlightedMessageId
+          : highlightedMessageId as int?,
+      anchorMessageId: anchorMessageId == _sentinel
+          ? this.anchorMessageId
+          : anchorMessageId as int?,
+      unreadMarkerMessageId: unreadMarkerMessageId == _sentinel
+          ? this.unreadMarkerMessageId
+          : unreadMarkerMessageId as int?,
+      infoMessage: infoMessage == _sentinel
+          ? this.infoMessage
+          : infoMessage as String?,
+      shouldRefreshChats: shouldRefreshChats ?? this.shouldRefreshChats,
+      locatePlan: locatePlan == _sentinel
+          ? this.locatePlan
+          : locatePlan as ConversationLocatePlan?,
+    );
+  }
+}
 
 class ConversationTimelineViewModel
     extends
@@ -33,320 +153,476 @@ class ConversationTimelineViewModel
           ConversationTimelineState,
           ConversationTimelineArgs
         > {
-  static const int _windowLimit = 120;
-  static const Duration _readSyncDebounce = Duration(milliseconds: 120);
+  static const int _windowSize = ConversationRepository.defaultWindowSize;
+  static const int _pageSize = ConversationRepository.pageSize;
 
   late final ConversationRepository _repository;
-  late final ConversationTimelineArgs _args;
-  StreamSubscription<void>? _repositorySubscription;
   Timer? _readSyncDebounceTimer;
-
-  ConversationWindowMode _mode = ConversationWindowMode.liveLatest;
-  List<ConversationMessage> _messages = const <ConversationMessage>[];
-  int? _highlightedMessageId;
-  int? _unreadAnchorMessageId;
-  int? _anchorMessageId;
-  int? _currentReadMessageId;
-  int? _lastReadSyncedMessageId;
-  bool _shouldRefreshChats = false;
-  bool _isAtLiveEdge = true;
-  int _pendingLiveCount = 0;
+  Timer? _highlightTimer;
+  int? _currentReadId;
+  int? _lastSyncedReadId;
+  int _locateRevision = 0;
+  int _viewportSessionId = 0;
+  bool _isDisposed = false;
 
   @override
   Future<ConversationTimelineState> build(ConversationTimelineArgs arg) async {
-    _args = arg;
     _repository = ref.read(conversationRepositoryProvider(arg.scope));
-    _repositorySubscription = _repository.changes.listen((_) {
-      _onRepositoryChanged();
+
+    ref.listen<AsyncValue<ApiWsEvent>>(wsEventsProvider, (_, next) {
+      final event = next.valueOrNull;
+      if (event != null) {
+        _handleRealtimeEvent(event);
+      }
     });
+
     ref.onDispose(() {
-      _repositorySubscription?.cancel();
+      _isDisposed = true;
       _readSyncDebounceTimer?.cancel();
+      _highlightTimer?.cancel();
     });
 
-    if (_repository.hasWarmWindow) {
-      _messages = _repository.warmWindow(limit: _windowLimit);
-      _anchorMessageId = _repository.viewportCache.anchorMessageId;
-      _isAtLiveEdge = _repository.viewportCache.isAtLiveEdge;
-      Future<void>(() async {
-        await _loadLaunchRequest(arg.launchRequest, allowWarmStart: true);
-      });
-      return _buildState();
-    }
-
-    await _loadLaunchRequest(arg.launchRequest);
-    return _buildState();
+    return _loadInitial(arg.launchRequest);
   }
 
-  Future<void> _loadLaunchRequest(
-    LaunchRequest request, {
-    bool allowWarmStart = false,
-  }) async {
-    switch (request) {
-      case LaunchLatestRequest():
-        final window = allowWarmStart && _messages.isNotEmpty
-            ? await _repository.refreshLatest(limit: _windowLimit)
-            : await _repository.loadLatest(limit: _windowLimit);
-        _messages = window.messages;
-        _mode = ConversationWindowMode.liveLatest;
-        _highlightedMessageId = null;
-        _unreadAnchorMessageId = null;
-        _anchorMessageId = null;
-        _isAtLiveEdge = true;
-        _pendingLiveCount = 0;
-      case LaunchUnreadRequest(:final unreadMessageId):
-        await _loadAnchored(
-          AnchoredLoadSpec(
-            anchorMessageId: unreadMessageId,
-            insertUnreadMarker: true,
-            highlightTarget: false,
+  Future<ConversationTimelineState> _loadInitial(
+    LaunchRequest launchRequest,
+  ) async {
+    switch (launchRequest.intent) {
+      case LaunchRequestIntent.latest:
+        final messages = await _repository.loadLatestWindow(limit: _windowSize);
+        return _buildState(
+          windowStableKeys: messages.map((item) => item.stableKey).toList(),
+          windowMode: ConversationWindowMode.liveLatest,
+          locatePlan: _nextLatestLocatePlan(
+            execution: ConversationLocateExecution.preparedViewport,
           ),
         );
-      case LaunchMessageRequest(:final messageId, :final highlight):
-        await _loadAnchored(
-          AnchoredLoadSpec(
-            anchorMessageId: messageId,
-            insertUnreadMarker: false,
-            highlightTarget: highlight,
+      case LaunchRequestIntent.unread:
+      case LaunchRequestIntent.message:
+        final anchorId = launchRequest.messageId!;
+        final messages = await _repository.loadAroundMessage(
+          anchorId,
+          before: _windowSize ~/ 2,
+          after: _windowSize ~/ 2,
+        );
+        if (messages.isEmpty) {
+          final latest = await _repository.loadLatestWindow(limit: _windowSize);
+          return _buildState(
+            windowStableKeys: latest.map((item) => item.stableKey).toList(),
+            windowMode: ConversationWindowMode.liveLatest,
+            infoMessage: 'Message unavailable',
+            locatePlan: _nextLatestLocatePlan(
+              execution: ConversationLocateExecution.preparedViewport,
+            ),
+          );
+        }
+        final nextState = _buildState(
+          windowStableKeys: messages.map((item) => item.stableKey).toList(),
+          windowMode: ConversationWindowMode.anchoredTarget,
+          anchorMessageId: anchorId,
+          unreadMarkerMessageId: launchRequest.isUnread ? anchorId : null,
+          highlightedMessageId:
+              launchRequest.intent == LaunchRequestIntent.message &&
+                  launchRequest.highlight
+              ? anchorId
+              : null,
+          locatePlan: _nextMessageLocatePlan(
+            anchorId,
+            execution: ConversationLocateExecution.preparedViewport,
           ),
         );
+        if (launchRequest.highlight) {
+          _scheduleHighlightClear();
+        }
+        return nextState;
     }
   }
 
-  Future<void> _loadAnchored(AnchoredLoadSpec spec) async {
-    final window = await _repository.loadAround(
-      spec.anchorMessageId,
-      before: _windowLimit ~/ 2,
-      after: _windowLimit ~/ 2,
+  ConversationTimelineState _buildState({
+    required List<String> windowStableKeys,
+    required ConversationWindowMode windowMode,
+    int? anchorMessageId,
+    int? unreadMarkerMessageId,
+    int? highlightedMessageId,
+    String? infoMessage,
+    bool shouldRefreshChats = false,
+    int pendingLiveCount = 0,
+    ConversationLocatePlan? locatePlan,
+  }) {
+    final trimmed = _repository.trimWindowAroundAnchor(
+      windowStableKeys,
+      anchorMessageId: anchorMessageId,
     );
-    if (window.messages.isEmpty) {
-      final latest = await _repository.loadLatest(limit: _windowLimit);
-      _messages = latest.messages;
-      _mode = ConversationWindowMode.liveLatest;
-      _highlightedMessageId = null;
-      _unreadAnchorMessageId = null;
-      _anchorMessageId = null;
-      _isAtLiveEdge = true;
-      if (state.hasValue) {
-        state = AsyncData(
-          _buildState(
-            errorMessage: 'message unavailable',
-            messageUnavailable: true,
-          ),
-        );
-      }
-      return;
-    }
-    _messages = window.messages;
-    _mode = ConversationWindowMode.anchoredTarget;
-    _anchorMessageId = spec.anchorMessageId;
-    _highlightedMessageId = spec.highlightTarget ? spec.anchorMessageId : null;
-    _unreadAnchorMessageId = spec.insertUnreadMarker
-        ? spec.anchorMessageId
-        : null;
-    _isAtLiveEdge = false;
-    _pendingLiveCount = 0;
+    return ConversationTimelineState(
+      entries: _buildEntries(
+        _repository.messagesForWindow(trimmed),
+        unreadMarkerMessageId: unreadMarkerMessageId,
+      ),
+      windowStableKeys: trimmed,
+      windowMode: windowMode,
+      canLoadOlder: _repository.hasOlderOutsideWindow(trimmed),
+      canLoadNewer: _repository.hasNewerOutsideWindow(trimmed),
+      pendingLiveCount: pendingLiveCount,
+      highlightedMessageId: highlightedMessageId,
+      anchorMessageId: anchorMessageId,
+      unreadMarkerMessageId: unreadMarkerMessageId,
+      infoMessage: infoMessage,
+      shouldRefreshChats: shouldRefreshChats,
+      locatePlan: locatePlan,
+    );
   }
 
-  void _onRepositoryChanged() {
-    if (!state.hasValue) {
-      return;
-    }
-    final previousNewestId = _messages.firstOrNull?.serverId;
-    if (_mode == ConversationWindowMode.liveLatest && _isAtLiveEdge) {
-      _messages = _repository.latestSync(limit: _windowLimit);
-      state = AsyncData(_buildState());
-      return;
-    }
-
-    if (_anchorMessageId != null) {
-      final window = _repository.currentAroundSync(
-        _anchorMessageId!,
-        before: _windowLimit ~/ 2,
-        after: _windowLimit ~/ 2,
-      );
-      if (window.messages.isNotEmpty) {
-        _messages = window.messages;
+  List<TimelineEntry> _buildEntries(
+    List<ConversationMessage> messages, {
+    int? unreadMarkerMessageId,
+  }) {
+    final entries = <TimelineEntry>[];
+    DateTime? currentDay;
+    for (final message in messages) {
+      final day = message.createdAt == null
+          ? null
+          : DateTime(
+              message.createdAt!.year,
+              message.createdAt!.month,
+              message.createdAt!.day,
+            );
+      if (day != null && day != currentDay) {
+        currentDay = day;
+        entries.add(TimelineDateSeparatorEntry(day: day));
       }
+      if (unreadMarkerMessageId != null &&
+          message.serverMessageId == unreadMarkerMessageId) {
+        entries.add(const TimelineUnreadMarkerEntry());
+      }
+      entries.add(TimelineMessageEntry(message));
+    }
+    return entries;
+  }
+
+  void _handleRealtimeEvent(ApiWsEvent event) {
+    if (!_repository.applyRealtimeEvent(event) || !state.hasValue) {
+      return;
     }
 
-    final newestId = _messages.firstOrNull?.serverId;
-    if (!_isAtLiveEdge &&
-        newestId != null &&
-        previousNewestId != null &&
-        newestId > previousNewestId) {
-      _pendingLiveCount++;
+    final current = state.requireValue;
+    final isAtLiveEdge =
+        current.windowMode == ConversationWindowMode.liveLatest &&
+        !current.canLoadNewer;
+    if (isAtLiveEdge) {
+      final latestWindow = _repository.latestWindowStableKeys(
+        limit: _windowSize,
+      );
+      _setStateIfActive(
+        AsyncData(
+          _buildState(
+            windowStableKeys: latestWindow,
+            windowMode: ConversationWindowMode.liveLatest,
+            shouldRefreshChats: true,
+          ),
+        ),
+      );
+      return;
     }
-    state = AsyncData(_buildState());
+
+    _setStateIfActive(
+      AsyncData(
+        _buildState(
+          windowStableKeys: current.windowStableKeys,
+          windowMode: current.windowMode,
+          anchorMessageId: current.anchorMessageId,
+          unreadMarkerMessageId: current.unreadMarkerMessageId,
+          highlightedMessageId: current.highlightedMessageId,
+          shouldRefreshChats: true,
+          pendingLiveCount: current.pendingLiveCount + 1,
+        ),
+      ),
+    );
   }
 
   Future<bool> loadOlder() async {
-    final oldestVisibleId = _messages.lastServerId;
-    if (oldestVisibleId == null) {
+    final current = state.valueOrNull;
+    if (current == null || current.isLoadingOlder || !current.canLoadOlder) {
       return false;
     }
-    _mode = ConversationWindowMode.historyBrowsing;
-    state = AsyncData(_buildState(isLoadingOlder: true));
-    try {
-      await _repository.loadOlder(oldestVisibleId);
-      _messages = _windowAfterHistoryChange();
-      state = AsyncData(_buildState());
-      return true;
-    } catch (error) {
-      state = AsyncData(_buildState(errorMessage: '$error'));
+    _setStateIfActive(AsyncData(current.copyWith(isLoadingOlder: true)));
+    final oldestStableKey = current.windowStableKeys.firstOrNull;
+    if (oldestStableKey == null) {
+      _setStateIfActive(AsyncData(current.copyWith(isLoadingOlder: false)));
       return false;
+    }
+
+    try {
+      await _repository.extendOlder(
+        anchorStableKey: oldestStableKey,
+        pageSize: _pageSize,
+      );
+      final nextWindow = _repository.prependWindowPage(
+        current.windowStableKeys,
+        oldestStableKey,
+      );
+      _setStateIfActive(
+        AsyncData(
+          _buildState(
+            windowStableKeys: nextWindow,
+            windowMode: current.windowMode == ConversationWindowMode.liveLatest
+                ? ConversationWindowMode.historyBrowsing
+                : current.windowMode,
+            anchorMessageId: current.anchorMessageId,
+            unreadMarkerMessageId: current.unreadMarkerMessageId,
+            highlightedMessageId: current.highlightedMessageId,
+            pendingLiveCount: current.pendingLiveCount,
+            shouldRefreshChats: current.shouldRefreshChats,
+          ),
+        ),
+      );
+      return true;
+    } finally {
+      final latest = state.valueOrNull;
+      if (latest != null) {
+        _setStateIfActive(AsyncData(latest.copyWith(isLoadingOlder: false)));
+      }
     }
   }
 
   Future<bool> loadNewer() async {
-    final newestVisibleId = _messages.firstServerId;
-    if (newestVisibleId == null) {
+    final current = state.valueOrNull;
+    if (current == null || current.isLoadingNewer || !current.canLoadNewer) {
       return false;
     }
-    _mode = ConversationWindowMode.historyBrowsing;
-    state = AsyncData(_buildState(isLoadingNewer: true));
-    try {
-      await _repository.loadNewer(newestVisibleId);
-      _messages = _windowAfterHistoryChange();
-      if (_messages.firstServerId ==
-          _repository.latestSync(limit: 1).firstOrNull?.serverId) {
-        _mode = ConversationWindowMode.liveLatest;
-        _isAtLiveEdge = true;
-        _anchorMessageId = null;
-        _pendingLiveCount = 0;
-      }
-      state = AsyncData(_buildState());
-      return true;
-    } catch (error) {
-      state = AsyncData(_buildState(errorMessage: '$error'));
+    _setStateIfActive(AsyncData(current.copyWith(isLoadingNewer: true)));
+    final newestStableKey = current.windowStableKeys.lastOrNull;
+    if (newestStableKey == null) {
+      _setStateIfActive(AsyncData(current.copyWith(isLoadingNewer: false)));
       return false;
+    }
+
+    try {
+      await _repository.extendNewer(
+        anchorStableKey: newestStableKey,
+        pageSize: _pageSize,
+      );
+      final nextWindow = _repository.appendWindowPage(
+        current.windowStableKeys,
+        newestStableKey,
+      );
+      final reachedLiveEdge = !_repository.hasNewerOutsideWindow(nextWindow);
+      _setStateIfActive(
+        AsyncData(
+          _buildState(
+            windowStableKeys: nextWindow,
+            windowMode: reachedLiveEdge
+                ? ConversationWindowMode.liveLatest
+                : ConversationWindowMode.historyBrowsing,
+            anchorMessageId: reachedLiveEdge ? null : current.anchorMessageId,
+            unreadMarkerMessageId: current.unreadMarkerMessageId,
+            highlightedMessageId: current.highlightedMessageId,
+            pendingLiveCount: reachedLiveEdge ? 0 : current.pendingLiveCount,
+            shouldRefreshChats: current.shouldRefreshChats,
+          ),
+        ),
+      );
+      return true;
+    } finally {
+      final latest = state.valueOrNull;
+      if (latest != null) {
+        _setStateIfActive(AsyncData(latest.copyWith(isLoadingNewer: false)));
+      }
     }
   }
 
   Future<void> jumpToLatest() async {
-    final latest = await _repository.refreshLatest(limit: _windowLimit);
-    _messages = latest.messages;
-    _mode = ConversationWindowMode.liveLatest;
-    _anchorMessageId = null;
-    _highlightedMessageId = null;
-    _unreadAnchorMessageId = null;
-    _pendingLiveCount = 0;
-    _isAtLiveEdge = true;
-    state = AsyncData(_buildState());
+    final current = state.valueOrNull;
+    if (current == null) {
+      return;
+    }
+    if (!_repository.hasNewerOutsideWindow(current.windowStableKeys)) {
+      _setStateIfActive(
+        AsyncData(
+          _buildState(
+            windowStableKeys: current.windowStableKeys,
+            windowMode: ConversationWindowMode.liveLatest,
+            shouldRefreshChats: current.shouldRefreshChats,
+            locatePlan: _nextLatestLocatePlan(
+              execution: ConversationLocateExecution.interactiveViewport,
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+    final latest = await _repository.refreshLatestWindow(limit: _windowSize);
+    _setStateIfActive(
+      AsyncData(
+        _buildState(
+          windowStableKeys: latest.map((item) => item.stableKey).toList(),
+          windowMode: ConversationWindowMode.liveLatest,
+          locatePlan: _nextLatestLocatePlan(
+            execution: ConversationLocateExecution.preparedViewport,
+          ),
+        ),
+      ),
+    );
   }
 
   Future<bool> jumpToMessage(int messageId, {bool highlight = true}) async {
-    await _loadLaunchRequest(
-      LaunchMessageRequest(messageId, highlight: highlight),
+    final current = state.valueOrNull;
+    if (current == null) {
+      return false;
+    }
+    final targetIndex = _repository.findWindowIndex(
+      current.windowStableKeys,
+      messageId,
     );
-    state = AsyncData(_buildState());
-    return _messages.any((message) => message.serverId == messageId);
-  }
-
-  void updateLiveEdge(bool isAtLiveEdge) {
-    _isAtLiveEdge = isAtLiveEdge;
-    if (isAtLiveEdge) {
-      _pendingLiveCount = 0;
-      if (_mode == ConversationWindowMode.historyBrowsing) {
-        _mode = ConversationWindowMode.liveLatest;
+    if (targetIndex != null) {
+      _setStateIfActive(
+        AsyncData(
+          _buildState(
+            windowStableKeys: current.windowStableKeys,
+            windowMode: ConversationWindowMode.anchoredTarget,
+            anchorMessageId: messageId,
+            highlightedMessageId: highlight ? messageId : null,
+            shouldRefreshChats: current.shouldRefreshChats,
+            pendingLiveCount: current.pendingLiveCount,
+            locatePlan: _nextMessageLocatePlan(
+              messageId,
+              execution: ConversationLocateExecution.interactiveViewport,
+            ),
+          ),
+        ),
+      );
+      if (highlight) {
+        _scheduleHighlightClear();
       }
+      return true;
     }
-    if (state.hasValue) {
-      state = AsyncData(_buildState());
-    }
-  }
-
-  void cacheVisibleRange(List<int> visibleServerMessageIds) {
-    _repository.cacheViewport(
-      launchRequest: _args.launchRequest,
-      anchorMessageId: _anchorMessageId,
-      visibleMessageIds: visibleServerMessageIds,
-      isAtLiveEdge: _isAtLiveEdge,
+    final messages = await _repository.loadAroundMessage(
+      messageId,
+      before: _windowSize ~/ 2,
+      after: _windowSize ~/ 2,
     );
+    if (messages.isEmpty) {
+      _setStateIfActive(
+        AsyncData(current.copyWith(infoMessage: 'Message unavailable')),
+      );
+      return false;
+    }
+    _setStateIfActive(
+      AsyncData(
+        _buildState(
+          windowStableKeys: messages.map((item) => item.stableKey).toList(),
+          windowMode: ConversationWindowMode.anchoredTarget,
+          anchorMessageId: messageId,
+          highlightedMessageId: highlight ? messageId : null,
+          shouldRefreshChats: current.shouldRefreshChats,
+          locatePlan: _nextMessageLocatePlan(
+            messageId,
+            execution: ConversationLocateExecution.preparedViewport,
+          ),
+        ),
+      ),
+    );
+    if (highlight) {
+      _scheduleHighlightClear();
+    }
+    return true;
   }
 
-  void onMessageVisible(int? messageId) {
+  void onMessageVisible(ConversationMessage message) {
+    final messageId = message.serverMessageId;
     if (messageId == null) {
       return;
     }
-    if (_currentReadMessageId == null || messageId > _currentReadMessageId!) {
-      _currentReadMessageId = messageId;
+    if (_currentReadId == null || messageId > _currentReadId!) {
+      _currentReadId = messageId;
       _readSyncDebounceTimer?.cancel();
-      _readSyncDebounceTimer = Timer(_readSyncDebounce, () {
-        unawaited(flushReadStatus());
-      });
+      _readSyncDebounceTimer = Timer(
+        const Duration(milliseconds: 100),
+        () => unawaited(_syncReadStatus()),
+      );
     }
   }
 
   Future<bool> flushReadStatus() async {
-    final messageId = _currentReadMessageId;
-    if (messageId == null || messageId == _lastReadSyncedMessageId) {
-      return false;
-    }
-    try {
-      await _repository.markAsRead(messageId);
-      _lastReadSyncedMessageId = messageId;
-      _shouldRefreshChats = true;
-      if (state.hasValue) {
-        state = AsyncData(_buildState());
-      }
-      return true;
-    } catch (_) {
-      return false;
-    }
+    _readSyncDebounceTimer?.cancel();
+    return _syncReadStatus();
   }
 
-  List<ConversationMessage> _windowAfterHistoryChange() {
-    if (_anchorMessageId != null) {
-      final around = _repository.currentAroundSync(
-        _anchorMessageId!,
-        before: _windowLimit ~/ 2,
-        after: _windowLimit ~/ 2,
-      );
-      if (around.messages.isNotEmpty) {
-        return around.messages;
-      }
+  Future<bool> _syncReadStatus() async {
+    if (_currentReadId == null || _currentReadId == _lastSyncedReadId) {
+      return false;
     }
-    return _repository.warmWindow(limit: _windowLimit);
+    final toSync = _currentReadId!;
+    await _repository.markAsRead(toSync);
+    if (_isDisposed) {
+      return false;
+    }
+    _lastSyncedReadId = toSync;
+    final current = state.valueOrNull;
+    if (current != null) {
+      _setStateIfActive(AsyncData(current.copyWith(shouldRefreshChats: true)));
+    }
+    return true;
   }
 
-  ConversationTimelineState _buildState({
-    bool isLoadingOlder = false,
-    bool isLoadingNewer = false,
-    String? errorMessage,
-    bool messageUnavailable = false,
-  }) {
-    final oldestVisibleId = _messages.lastServerId;
-    final newestVisibleId = _messages.firstServerId;
-    final hasOlder = oldestVisibleId != null
-        ? _repository.hasOlderAvailable(oldestVisibleId)
-        : false;
-    final hasNewer = newestVisibleId != null
-        ? _repository.hasNewerAvailable(newestVisibleId)
-        : false;
-    return (
-      entries: _repository.buildTimelineEntries(
-        messages: _messages,
-        unreadMarkerMessageId: _unreadAnchorMessageId,
-        isLoadingOlder: isLoadingOlder,
-        isLoadingNewer: isLoadingNewer,
-        hasOlder: hasOlder,
-        hasNewer: hasNewer && !_isAtLiveEdge,
-      ),
-      isLoadingOlder: isLoadingOlder,
-      isLoadingNewer: isLoadingNewer,
-      showJumpToLatest: !_isAtLiveEdge,
-      errorMessage: errorMessage,
-      highlightedMessageId: _highlightedMessageId,
-      unreadAnchorMessageId: _unreadAnchorMessageId,
-      hasOlder: hasOlder,
-      hasNewer: hasNewer,
-      shouldRefreshChats: _shouldRefreshChats,
-      messageUnavailable: messageUnavailable,
-      pendingLiveCount: _pendingLiveCount,
-    );
+  bool get shouldRefreshChats => state.valueOrNull?.shouldRefreshChats ?? false;
+
+  void clearInfoMessage() {
+    final current = state.valueOrNull;
+    if (current == null || current.infoMessage == null) {
+      return;
+    }
+    _setStateIfActive(AsyncData(current.copyWith(infoMessage: null)));
+  }
+
+  void _scheduleHighlightClear() {
+    _highlightTimer?.cancel();
+    _highlightTimer = Timer(const Duration(seconds: 2), () {
+      final current = state.valueOrNull;
+      if (current != null) {
+        _setStateIfActive(
+          AsyncData(current.copyWith(highlightedMessageId: null)),
+        );
+      }
+    });
+  }
+
+  void _setStateIfActive(AsyncValue<ConversationTimelineState> nextState) {
+    if (_isDisposed) {
+      return;
+    }
+    state = nextState;
+  }
+
+  ConversationLocatePlan _nextLatestLocatePlan({
+    required ConversationLocateExecution execution,
+  }) => ConversationLocatePlan.latest(
+    placement: ConversationLocatePlacement.liveEdge,
+    execution: execution,
+    revision: ++_locateRevision,
+    viewportSessionId: _nextViewportSessionId(execution),
+  );
+
+  ConversationLocatePlan _nextMessageLocatePlan(
+    int messageId, {
+    required ConversationLocateExecution execution,
+  }) => ConversationLocatePlan.message(
+    messageId: messageId,
+    placement: ConversationLocatePlacement.topPreferred,
+    execution: execution,
+    revision: ++_locateRevision,
+    viewportSessionId: _nextViewportSessionId(execution),
+  );
+
+  int _nextViewportSessionId(ConversationLocateExecution execution) {
+    if (execution == ConversationLocateExecution.preparedViewport) {
+      _viewportSessionId += 1;
+    }
+    return _viewportSessionId;
   }
 }
+
+const _sentinel = Object();
 
 final conversationTimelineViewModelProvider =
     AsyncNotifierProvider.family<
@@ -354,35 +630,3 @@ final conversationTimelineViewModelProvider =
       ConversationTimelineState,
       ConversationTimelineArgs
     >(ConversationTimelineViewModel.new);
-
-extension on List<ConversationMessage> {
-  ConversationMessage? get firstOrNull => isEmpty ? null : first;
-
-  int? get firstServerId =>
-      firstWhereOrNull((message) => message.serverId != null)?.serverId;
-
-  int? get lastServerId =>
-      lastWhereOrNull((message) => message.serverId != null)?.serverId;
-
-  ConversationMessage? firstWhereOrNull(
-    bool Function(ConversationMessage message) test,
-  ) {
-    for (final message in this) {
-      if (test(message)) {
-        return message;
-      }
-    }
-    return null;
-  }
-
-  ConversationMessage? lastWhereOrNull(
-    bool Function(ConversationMessage message) test,
-  ) {
-    for (final message in reversed) {
-      if (test(message)) {
-        return message;
-      }
-    }
-    return null;
-  }
-}

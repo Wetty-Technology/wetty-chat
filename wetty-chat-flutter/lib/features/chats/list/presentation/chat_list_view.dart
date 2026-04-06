@@ -6,10 +6,10 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/routing/route_names.dart';
 import '../../../../app/theme/style_config.dart';
 import '../../chat_timestamp_formatter.dart';
-import '../../detail/application/conversation_draft_store.dart';
-import '../../detail/data/conversation_repository.dart';
-import '../../detail/domain/conversation_scope.dart';
-import '../../detail/domain/launch_request.dart';
+import '../../conversation/application/conversation_draft_store.dart';
+import '../../conversation/data/conversation_repository.dart';
+import '../../conversation/domain/conversation_scope.dart';
+import '../../conversation/domain/launch_request.dart';
 import '../../models/chat_models.dart';
 import '../../models/message_models.dart';
 import '../application/chat_list_view_model.dart';
@@ -234,6 +234,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           behavior: HitTestBehavior.opaque,
           onTap: () async {
             final launchRequest = await _launchRequestForChat(chat);
+            if (!context.mounted) return;
             final shouldRefresh = await context.push<bool>(
               AppRoutes.chatDetail(chat.id),
               extra: {

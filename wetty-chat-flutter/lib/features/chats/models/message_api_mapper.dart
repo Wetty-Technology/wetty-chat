@@ -1,6 +1,6 @@
 import '../../../core/api/models/messages_api_models.dart';
-import '../detail/domain/conversation_message.dart';
-import '../detail/domain/conversation_scope.dart';
+import '../conversation/domain/conversation_message.dart';
+import '../conversation/domain/conversation_scope.dart';
 import 'message_models.dart';
 
 extension SenderDtoMapper on SenderDto {
