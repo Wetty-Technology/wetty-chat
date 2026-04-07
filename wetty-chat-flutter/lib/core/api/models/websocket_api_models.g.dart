@@ -69,3 +69,39 @@ Map<String, dynamic> _$MessageDeletedWsEventToJson(
   'type': instance.type,
   'payload': instance.payload.toJson(),
 };
+
+ReactionUpdatePayloadDto _$ReactionUpdatePayloadDtoFromJson(
+  Map<String, dynamic> json,
+) => ReactionUpdatePayloadDto(
+  messageId: const FlexibleIntConverter().fromJson(json['messageId']),
+  chatId: const FlexibleIntConverter().fromJson(json['chatId']),
+  reactions:
+      (json['reactions'] as List<dynamic>?)
+          ?.map((e) => ReactionSummaryDto.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      [],
+);
+
+Map<String, dynamic> _$ReactionUpdatePayloadDtoToJson(
+  ReactionUpdatePayloadDto instance,
+) => <String, dynamic>{
+  'messageId': const FlexibleIntConverter().toJson(instance.messageId),
+  'chatId': const FlexibleIntConverter().toJson(instance.chatId),
+  'reactions': instance.reactions.map((e) => e.toJson()).toList(),
+};
+
+ReactionUpdatedWsEvent _$ReactionUpdatedWsEventFromJson(
+  Map<String, dynamic> json,
+) => ReactionUpdatedWsEvent(
+  type: json['type'] as String? ?? 'reactionUpdated',
+  payload: ReactionUpdatePayloadDto.fromJson(
+    json['payload'] as Map<String, dynamic>,
+  ),
+);
+
+Map<String, dynamic> _$ReactionUpdatedWsEventToJson(
+  ReactionUpdatedWsEvent instance,
+) => <String, dynamic>{
+  'type': instance.type,
+  'payload': instance.payload.toJson(),
+};

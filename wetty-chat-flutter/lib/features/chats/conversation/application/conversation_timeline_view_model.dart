@@ -573,6 +573,28 @@ class ConversationTimelineViewModel
     return _syncReadStatus();
   }
 
+  Future<void> toggleReaction(ConversationMessage message, String emoji) async {
+    final messageId = message.serverMessageId;
+    if (messageId == null ||
+        state.valueOrNull == null ||
+        message.messageType == 'sticker' ||
+        message.isDeleted) {
+      return;
+    }
+
+    final operation = _repository.toggleReaction(
+      messageId: messageId,
+      emoji: emoji,
+    );
+    _rebuildCurrentState();
+    try {
+      await operation;
+    } catch (_) {
+      _rebuildCurrentState();
+      rethrow;
+    }
+  }
+
   Future<bool> _syncReadStatus() async {
     if (_currentReadId == null || _currentReadId == _lastSyncedReadId) {
       return false;
@@ -637,6 +659,28 @@ class ConversationTimelineViewModel
       return;
     }
     state = nextState;
+  }
+
+  void _rebuildCurrentState() {
+    final current = state.valueOrNull;
+    if (current == null) {
+      return;
+    }
+    _setStateIfActive(
+      AsyncData(
+        _buildState(
+          windowStableKeys: current.windowStableKeys,
+          windowMode: current.windowMode,
+          anchorMessageId: current.anchorMessageId,
+          unreadMarkerMessageId: current.unreadMarkerMessageId,
+          highlightedMessageId: current.highlightedMessageId,
+          infoMessage: current.infoMessage,
+          shouldRefreshChats: current.shouldRefreshChats,
+          pendingLiveCount: current.pendingLiveCount,
+          locatePlan: current.locatePlan,
+        ),
+      ),
+    );
   }
 
   ConversationLocatePlan _latestLocatePlan() =>

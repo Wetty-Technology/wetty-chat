@@ -280,6 +280,46 @@ class ConversationRepository {
     return _service.markMessagesAsRead(scope.chatId, messageId);
   }
 
+  Future<ConversationMessage> toggleReaction({
+    required int messageId,
+    required String emoji,
+  }) async {
+    final stableKey = _stableKeyByServerId[messageId];
+    if (stableKey == null) {
+      throw StateError('Message not found: $messageId');
+    }
+    final message = _messagesByStableKey[stableKey];
+    if (message == null) {
+      throw StateError('Message not found: $messageId');
+    }
+    if (_isStickerMessage(message)) {
+      throw UnsupportedError('Sticker reactions are not supported');
+    }
+
+    final snapshot = message;
+    _optimisticSnapshots[stableKey] = snapshot;
+    final updatedReactions = _toggleReactionLocal(message, emoji);
+    final optimistic = message.copyWith(reactions: updatedReactions);
+    _messagesByStableKey[stableKey] = optimistic;
+
+    try {
+      final currentlyReacted = message.reactions.any(
+        (reaction) => reaction.emoji == emoji && reaction.reactedByMe == true,
+      );
+      if (currentlyReacted) {
+        await _service.deleteReaction(scope, messageId, emoji);
+      } else {
+        await _service.putReaction(scope, messageId, emoji);
+      }
+      _optimisticSnapshots.remove(stableKey);
+      return optimistic;
+    } catch (_) {
+      _messagesByStableKey[stableKey] = snapshot;
+      _optimisticSnapshots.remove(stableKey);
+      rethrow;
+    }
+  }
+
   ConversationMessage insertOptimisticSend({
     required Sender sender,
     required String text,
@@ -302,6 +342,7 @@ class ConversationRepository {
       hasAttachments: attachments.isNotEmpty,
       replyToMessage: _replyToMessageForId(replyToId),
       attachments: attachments,
+      reactions: const <ReactionSummary>[],
       mentions: const <MentionInfo>[],
       threadInfo: null,
       deliveryState: ConversationDeliveryState.sending,
@@ -436,34 +477,22 @@ class ConversationRepository {
   }
 
   bool applyRealtimeEvent(ApiWsEvent event) {
-    final payload = switch (event) {
-      MessageCreatedWsEvent(:final payload) => payload,
-      MessageUpdatedWsEvent(:final payload) => payload,
-      MessageDeletedWsEvent(:final payload) => payload,
-      _ => null,
+    return switch (event) {
+      MessageCreatedWsEvent(:final payload) => _applyMessageEvent(
+        payload,
+        deleted: false,
+      ),
+      MessageUpdatedWsEvent(:final payload) => _applyMessageEvent(
+        payload,
+        deleted: false,
+      ),
+      MessageDeletedWsEvent(:final payload) => _applyMessageEvent(
+        payload,
+        deleted: true,
+      ),
+      ReactionUpdatedWsEvent(:final payload) => _applyReactionEvent(payload),
+      _ => false,
     };
-    if (payload == null || payload.chatId.toString() != scope.chatId) {
-      return false;
-    }
-    if (scope.threadRootId != null &&
-        payload.replyRootId?.toString() != scope.threadRootId) {
-      return false;
-    }
-
-    if (event is MessageDeletedWsEvent) {
-      _mergeMessage(
-        payload.toConversation(scope),
-        preferredState: ConversationDeliveryState.sent,
-      );
-      _tombstoneMessage(payload.id);
-      return true;
-    }
-
-    _mergeMessage(
-      payload.toConversation(scope),
-      preferredState: ConversationDeliveryState.sent,
-    );
-    return true;
   }
 
   List<ConversationMessage> messagesForWindow(List<String> stableKeys) =>
@@ -481,6 +510,7 @@ class ConversationRepository {
       final previous = _messagesByStableKey[stableKey];
       final merged = incoming.copyWith(
         localMessageId: previous?.localMessageId,
+        reactions: _mergeReactions(previous?.reactions, incoming.reactions),
         deliveryState: preferredState,
       );
       _messagesByStableKey[stableKey] = merged;
@@ -494,6 +524,7 @@ class ConversationRepository {
       final previous = _messagesByStableKey[optimisticKey];
       final merged = incoming.copyWith(
         localMessageId: previous?.localMessageId,
+        reactions: _mergeReactions(previous?.reactions, incoming.reactions),
         deliveryState: preferredState,
       );
       final previousIndex = _orderedStableKeys.indexOf(optimisticKey);
@@ -514,6 +545,129 @@ class ConversationRepository {
     final merged = incoming.copyWith(deliveryState: preferredState);
     _upsertMessage(merged);
     return merged;
+  }
+
+  bool _applyMessageEvent(MessageItemDto payload, {required bool deleted}) {
+    if (payload.chatId.toString() != scope.chatId) {
+      return false;
+    }
+    if (scope.threadRootId != null &&
+        payload.replyRootId?.toString() != scope.threadRootId) {
+      return false;
+    }
+
+    if (deleted) {
+      _mergeMessage(
+        payload.toConversation(scope),
+        preferredState: ConversationDeliveryState.sent,
+      );
+      _tombstoneMessage(payload.id);
+      return true;
+    }
+
+    _mergeMessage(
+      payload.toConversation(scope),
+      preferredState: ConversationDeliveryState.sent,
+    );
+    return true;
+  }
+
+  bool _applyReactionEvent(ReactionUpdatePayloadDto payload) {
+    if (payload.chatId.toString() != scope.chatId) {
+      return false;
+    }
+
+    final stableKey = _stableKeyByServerId[payload.messageId];
+    if (stableKey == null) {
+      return false;
+    }
+    final message = _messagesByStableKey[stableKey];
+    if (message == null || !_messageBelongsToScope(message)) {
+      return false;
+    }
+
+    _messagesByStableKey[stableKey] = message.copyWith(
+      reactions: _mergeReactions(
+        message.reactions,
+        payload.reactions.map((reaction) => reaction.toDomain()).toList(),
+      ),
+    );
+    _optimisticSnapshots.remove(stableKey);
+    return true;
+  }
+
+  bool _messageBelongsToScope(ConversationMessage message) {
+    final threadRootId = scope.threadRootId;
+    if (threadRootId == null) {
+      return true;
+    }
+    final messageId = message.serverMessageId?.toString();
+    final replyRootId = message.replyRootId?.toString();
+    return messageId == threadRootId || replyRootId == threadRootId;
+  }
+
+  bool _isStickerMessage(ConversationMessage message) =>
+      message.messageType == 'sticker';
+
+  List<ReactionSummary> _toggleReactionLocal(
+    ConversationMessage message,
+    String emoji,
+  ) {
+    final next = <ReactionSummary>[];
+    var handled = false;
+    for (final reaction in message.reactions) {
+      if (reaction.emoji != emoji) {
+        next.add(reaction);
+        continue;
+      }
+      handled = true;
+      final currentlyReacted = reaction.reactedByMe == true;
+      final updatedCount = currentlyReacted
+          ? reaction.count - 1
+          : reaction.count + 1;
+      if (updatedCount <= 0) {
+        continue;
+      }
+      next.add(
+        ReactionSummary(
+          emoji: reaction.emoji,
+          count: updatedCount,
+          reactedByMe: currentlyReacted ? false : true,
+          reactors: reaction.reactors,
+        ),
+      );
+    }
+
+    if (!handled) {
+      next.add(ReactionSummary(emoji: emoji, count: 1, reactedByMe: true));
+    }
+
+    return next;
+  }
+
+  List<ReactionSummary> _mergeReactions(
+    List<ReactionSummary>? previous,
+    List<ReactionSummary> incoming,
+  ) {
+    if (incoming.isEmpty) {
+      return const <ReactionSummary>[];
+    }
+
+    final previousByEmoji = <String, ReactionSummary>{
+      for (final reaction in previous ?? const <ReactionSummary>[])
+        reaction.emoji: reaction,
+    };
+    return incoming
+        .map((reaction) {
+          final prior = previousByEmoji[reaction.emoji];
+          return ReactionSummary(
+            emoji: reaction.emoji,
+            count: reaction.count,
+            reactedByMe: reaction.reactedByMe ?? prior?.reactedByMe,
+            reactors: reaction.reactors ?? prior?.reactors,
+          );
+        })
+        .toList(growable: false);
   }
 
   void _mergeDtos(List<MessageItemDto> messages) {

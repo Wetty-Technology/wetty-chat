@@ -20,6 +20,7 @@ class ConversationMessage {
     required this.hasAttachments,
     required this.replyToMessage,
     required this.attachments,
+    required this.reactions,
     required this.mentions,
     required this.threadInfo,
     this.deliveryState = ConversationDeliveryState.sent,
@@ -40,6 +41,7 @@ class ConversationMessage {
   final bool hasAttachments;
   final ReplyToMessage? replyToMessage;
   final List<AttachmentItem> attachments;
+  final List<ReactionSummary> reactions;
   final List<MentionInfo> mentions;
   final ThreadInfo? threadInfo;
   final ConversationDeliveryState deliveryState;
@@ -71,6 +73,7 @@ class ConversationMessage {
     bool? hasAttachments,
     Object? replyToMessage = _sentinel,
     List<AttachmentItem>? attachments,
+    List<ReactionSummary>? reactions,
     List<MentionInfo>? mentions,
     Object? threadInfo = _sentinel,
     ConversationDeliveryState? deliveryState,
@@ -101,6 +104,7 @@ class ConversationMessage {
           ? this.replyToMessage
           : replyToMessage as ReplyToMessage?,
       attachments: attachments ?? this.attachments,
+      reactions: reactions ?? this.reactions,
       mentions: mentions ?? this.mentions,
       threadInfo: threadInfo == _sentinel
           ? this.threadInfo

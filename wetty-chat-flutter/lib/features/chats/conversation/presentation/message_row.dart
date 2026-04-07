@@ -14,6 +14,18 @@ import 'message_bubble/message_bubble.dart';
 import 'message_bubble/message_bubble_presentation.dart';
 import 'video_popup_player.dart';
 
+class MessageLongPressDetails {
+  const MessageLongPressDetails({
+    required this.message,
+    required this.sourceRect,
+    required this.isMe,
+  });
+
+  final ConversationMessage message;
+  final Rect sourceRect;
+  final bool isMe;
+}
+
 class MessageRow extends StatefulWidget {
   const MessageRow({
     super.key,
@@ -24,6 +36,7 @@ class MessageRow extends StatefulWidget {
     this.onReply,
     this.onTapReply,
     this.onOpenThread,
+    this.onToggleReaction,
     this.showSenderName = true,
     this.showAvatar = true,
   });
@@ -31,10 +44,11 @@ class MessageRow extends StatefulWidget {
   final ConversationMessage message;
   final double chatMessageFontSize;
   final bool isHighlighted;
-  final VoidCallback? onLongPress;
+  final ValueChanged<MessageLongPressDetails>? onLongPress;
   final VoidCallback? onReply;
   final VoidCallback? onTapReply;
   final VoidCallback? onOpenThread;
+  final ValueChanged<String>? onToggleReaction;
   final bool showSenderName;
   final bool showAvatar;
 
@@ -54,6 +68,7 @@ class _MessageRowState extends State<MessageRow>
 
   double _dragOffset = 0;
   bool _hasTriggeredReply = false;
+  final GlobalKey _bubbleKey = GlobalKey();
 
   bool get _isMe {
     final currentUserId = ApiSession.currentUserId;
@@ -77,6 +92,25 @@ class _MessageRowState extends State<MessageRow>
       widget.onReply != null &&
       !widget.message.isDeleted &&
       _replyableMessageTypes.contains(widget.message.messageType);
+
+  void _handleLongPress() {
+    final context = _bubbleKey.currentContext;
+    if (widget.onLongPress == null || context == null) {
+      return;
+    }
+    final renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox == null || !renderBox.attached) {
+      return;
+    }
+    final origin = renderBox.localToGlobal(Offset.zero);
+    widget.onLongPress!(
+      MessageLongPressDetails(
+        message: widget.message,
+        sourceRect: origin & renderBox.size,
+        isMe: _isMe,
+      ),
+    );
+  }
 
   void _onHorizontalDragUpdate(DragUpdateDetails details) {
     if (!_canReply) {
@@ -143,10 +177,8 @@ class _MessageRowState extends State<MessageRow>
         : 0.0;
 
     return GestureDetector(
-      onLongPress: _isDesktopPlatform ? null : widget.onLongPress,
-      onSecondaryTapUp: _isDesktopPlatform
-          ? (_) => widget.onLongPress?.call()
-          : null,
+      onLongPress: _isDesktopPlatform ? null : _handleLongPress,
+      onSecondaryTapUp: _isDesktopPlatform ? (_) => _handleLongPress() : null,
       onHorizontalDragUpdate: _canReply ? _onHorizontalDragUpdate : null,
       onHorizontalDragEnd: _canReply ? _onHorizontalDragEnd : null,
       child: Stack(
@@ -190,6 +222,7 @@ class _MessageRowState extends State<MessageRow>
     MessageBubblePresentation presentation,
   ) {
     final bubble = MessageBubble(
+      key: _bubbleKey,
       message: widget.message,
       presentation: presentation,
       chatMessageFontSize: widget.chatMessageFontSize,
@@ -198,6 +231,7 @@ class _MessageRowState extends State<MessageRow>
       onTapReply: widget.onTapReply,
       onOpenThread: widget.onOpenThread,
       onOpenAttachment: _openAttachment,
+      onToggleReaction: widget.onToggleReaction,
     );
     final avatar = _buildAvatar(context, presentation.senderName);
 

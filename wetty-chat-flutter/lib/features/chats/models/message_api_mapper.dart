@@ -24,6 +24,20 @@ extension StickerSummaryDtoMapper on StickerSummaryDto {
   StickerSummary toDomain() => StickerSummary(emoji: emoji);
 }
 
+extension ReactionReactorDtoMapper on ReactionReactorDto {
+  ReactionReactor toDomain() =>
+      ReactionReactor(uid: uid, name: name, avatarUrl: avatarUrl);
+}
+
+extension ReactionSummaryDtoMapper on ReactionSummaryDto {
+  ReactionSummary toDomain() => ReactionSummary(
+    emoji: emoji,
+    count: count,
+    reactedByMe: reactedByMe,
+    reactors: reactors?.map((reactor) => reactor.toDomain()).toList(),
+  );
+}
+
 extension MentionInfoDtoMapper on MentionInfoDto {
   MentionInfo toDomain() => MentionInfo(uid: uid, username: username);
 }
@@ -66,6 +80,7 @@ extension MessageItemDtoMapper on MessageItemDto {
     attachments: attachments
         .map((attachment) => attachment.toDomain())
         .toList(),
+    reactions: reactions.map((reaction) => reaction.toDomain()).toList(),
     mentions: mentions.map((mention) => mention.toDomain()).toList(),
     threadInfo: threadInfo?.toDomain(),
   );
@@ -88,6 +103,7 @@ extension MessageItemDtoMapper on MessageItemDto {
         attachments: attachments
             .map((attachment) => attachment.toDomain())
             .toList(),
+        reactions: reactions.map((reaction) => reaction.toDomain()).toList(),
         mentions: mentions.map((mention) => mention.toDomain()).toList(),
         threadInfo: threadInfo?.toDomain(),
       );

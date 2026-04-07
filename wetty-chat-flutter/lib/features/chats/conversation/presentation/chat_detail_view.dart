@@ -16,7 +16,14 @@ import '../domain/launch_request.dart';
 import '../domain/timeline_entry.dart';
 import 'anchored_timeline_view.dart';
 import 'conversation_composer_bar.dart';
+import 'message_overlay.dart';
 import 'message_row.dart';
+
+class _ActiveMessageOverlay {
+  const _ActiveMessageOverlay(this.details);
+
+  final MessageLongPressDetails details;
+}
 
 class ChatDetailPage extends ConsumerStatefulWidget {
   const ChatDetailPage({
@@ -38,13 +45,26 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
     with WidgetsBindingObserver {
   static const double _liveEdgeScrollThreshold = 50;
   static const double _timelineEndPadding = 12;
+  static const Duration _overlayAnimationDuration = Duration(milliseconds: 150);
 
   final ScrollController _timelineScrollController = ScrollController();
 
   bool _isPopping = false;
   bool _isAtLiveEdge = true;
+  bool _isOverlayVisible = false;
   int _viewportGeneration = 0;
   Key _timelineViewportKey = const ValueKey<int>(0);
+  _ActiveMessageOverlay? _activeOverlay;
+  Timer? _overlayDismissTimer;
+
+  static const List<String> _quickReactionEmojis = <String>[
+    '👍',
+    '❤️',
+    '😂',
+    '😮',
+    '😢',
+    '🎉',
+  ];
 
   ConversationScope get scope => ConversationScope.chat(widget.chatId);
 
@@ -74,6 +94,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
     WidgetsBinding.instance.removeObserver(this);
     _timelineScrollController.removeListener(_onTimelineScroll);
     _timelineScrollController.dispose();
+    _overlayDismissTimer?.cancel();
     super.dispose();
   }
 
@@ -118,52 +139,91 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
     );
   }
 
-  void _showMessageActions(ConversationMessage message) {
-    if (message.isDeleted) {
+  void _openMessageOverlay(MessageLongPressDetails details) {
+    if (details.message.isDeleted) {
       return;
     }
+    FocusScope.of(context).unfocus();
+    _overlayDismissTimer?.cancel();
+    setState(() {
+      _activeOverlay = _ActiveMessageOverlay(details);
+      _isOverlayVisible = true;
+    });
+  }
+
+  void _dismissMessageOverlay() {
+    if (_activeOverlay == null) {
+      return;
+    }
+    _overlayDismissTimer?.cancel();
+    setState(() {
+      _isOverlayVisible = false;
+    });
+    _overlayDismissTimer = Timer(_overlayAnimationDuration, () {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        if (!_isOverlayVisible) {
+          _activeOverlay = null;
+        }
+      });
+    });
+  }
+
+  Future<void> _toggleReaction(
+    ConversationMessage message,
+    String emoji,
+  ) async {
+    try {
+      await ref
+          .read(conversationTimelineViewModelProvider(_timelineArgs).notifier)
+          .toggleReaction(message, emoji);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      _showErrorDialog('$error');
+    }
+  }
+
+  List<MessageOverlayAction> _overlayActions(ConversationMessage message) {
     final currentUserId = ref.read(devSessionProvider);
     final isOwn = message.sender.uid == currentUserId;
     final composerNotifier = ref.read(
       conversationComposerViewModelProvider(scope).notifier,
     );
 
-    showCupertinoModalPopup<void>(
-      context: context,
-      builder: (_) => CupertinoActionSheet(
-        actions: [
-          CupertinoActionSheetAction(
-            onPressed: () {
-              Navigator.pop(context);
-              composerNotifier.beginReply(message);
-            },
-            child: const Text('Reply'),
-          ),
-          if (isOwn)
-            CupertinoActionSheetAction(
-              onPressed: () {
-                Navigator.pop(context);
-                composerNotifier.clearAttachments();
-                composerNotifier.beginEdit(message);
-              },
-              child: const Text('Edit'),
-            ),
-          if (isOwn)
-            CupertinoActionSheetAction(
-              isDestructiveAction: true,
-              onPressed: () {
-                Navigator.pop(context);
-                _confirmDelete(message);
-              },
-              child: const Text('Delete'),
-            ),
-        ],
-        cancelButton: CupertinoActionSheetAction(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
+    return <MessageOverlayAction>[
+      MessageOverlayAction(
+        label: 'Reply',
+        icon: CupertinoIcons.reply,
+        onPressed: () {
+          _dismissMessageOverlay();
+          composerNotifier.beginReply(message);
+        },
       ),
-    );
+      if (isOwn)
+        MessageOverlayAction(
+          label: 'Edit',
+          icon: CupertinoIcons.pencil,
+          onPressed: () {
+            _dismissMessageOverlay();
+            composerNotifier.clearAttachments();
+            composerNotifier.beginEdit(message);
+          },
+        ),
+      if (isOwn)
+        MessageOverlayAction(
+          label: 'Delete',
+          icon: CupertinoIcons.delete,
+          isDestructive: true,
+          onPressed: () {
+            _dismissMessageOverlay();
+            _confirmDelete(message);
+          },
+        ),
+    ];
   }
 
   void _confirmDelete(ConversationMessage message) {
@@ -460,6 +520,21 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
                             _timelinePadding(context),
                           ),
                         ),
+                        if (_activeOverlay case final overlay?)
+                          MessageOverlay(
+                            details: overlay.details,
+                            visible: _isOverlayVisible,
+                            chatMessageFontSize: settings.fontSize,
+                            actions: _overlayActions(overlay.details.message),
+                            quickReactionEmojis: _quickReactionEmojis,
+                            onDismiss: _dismissMessageOverlay,
+                            onToggleReaction: (emoji) {
+                              _dismissMessageOverlay();
+                              unawaited(
+                                _toggleReaction(overlay.details.message, emoji),
+                              );
+                            },
+                          ),
                         if (timelineAsync.valueOrNull case final viewState?
                             when _shouldShowJumpToLatest(viewState))
                           Positioned(
@@ -567,13 +642,16 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
             chatMessageFontSize: chatMessageFontSize,
             isHighlighted:
                 viewState.highlightedMessageId == message.serverMessageId,
-            onLongPress: () => _showMessageActions(message),
+            onLongPress: _openMessageOverlay,
             onReply: () => ref
                 .read(conversationComposerViewModelProvider(scope).notifier)
                 .beginReply(message),
             onTapReply: message.replyToMessage != null
                 ? () => _jumpToMessage(message.replyToMessage!.id)
                 : null,
+            onToggleReaction: message.messageType == 'sticker'
+                ? null
+                : (emoji) => unawaited(_toggleReaction(message, emoji)),
           ),
           TimelineDateSeparatorEntry(:final day) => _buildDateSeparator(day),
           TimelineUnreadMarkerEntry() => _buildUnreadDivider(),

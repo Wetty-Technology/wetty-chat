@@ -21,6 +21,7 @@ class MessageBubbleContent extends StatelessWidget {
     this.onTapReply,
     this.onOpenThread,
     this.onOpenAttachment,
+    this.onToggleReaction,
   });
 
   final ConversationMessage message;
@@ -31,6 +32,7 @@ class MessageBubbleContent extends StatelessWidget {
   final VoidCallback? onTapReply;
   final VoidCallback? onOpenThread;
   final ValueChanged<AttachmentItem>? onOpenAttachment;
+  final ValueChanged<String>? onToggleReaction;
 
   static const FontWeight _bubbleFontWeight = FontWeight.w400;
 
@@ -101,6 +103,11 @@ class MessageBubbleContent extends StatelessWidget {
         onOpenThread != null) {
       contentChildren.add(const SizedBox(height: 8));
       contentChildren.add(_buildThreadInfo(context, threadInfo));
+    }
+
+    if (message.reactions.isNotEmpty) {
+      contentChildren.add(const SizedBox(height: 8));
+      contentChildren.add(_buildReactions(context));
     }
 
     return Column(
@@ -392,5 +399,68 @@ class MessageBubbleContent extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildReactions(BuildContext context) {
+    final isInteractive =
+        onToggleReaction != null &&
+        message.messageType != 'sticker' &&
+        !message.isDeleted;
+    final pills = message.reactions
+        .map((reaction) {
+          final pill = Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: reaction.reactedByMe == true
+                  ? CupertinoColors.activeBlue.withAlpha(isMe ? 90 : 38)
+                  : (isMe
+                        ? CupertinoColors.white.withAlpha(26)
+                        : CupertinoColors.black.withAlpha(18)),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: reaction.reactedByMe == true
+                    ? CupertinoColors.activeBlue.resolveFrom(context)
+                    : presentation.metaColor.withAlpha(64),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  reaction.emoji,
+                  style: _bubbleStyle(
+                    context,
+                    fontSize: AppFontSizes.bodySmall,
+                    fontWeight: _bubbleFontWeight,
+                  ),
+                ),
+                if (reaction.count > 1) ...[
+                  const SizedBox(width: 4),
+                  Text(
+                    '${reaction.count}',
+                    style: _bubbleStyle(
+                      context,
+                      color: presentation.textColor,
+                      fontSize: AppFontSizes.meta,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          );
+
+          if (!isInteractive) {
+            return pill;
+          }
+
+          return GestureDetector(
+            onTap: () => onToggleReaction?.call(reaction.emoji),
+            child: pill,
+          );
+        })
+        .toList(growable: false);
+
+    return Wrap(spacing: 6, runSpacing: 6, children: pills);
   }
 }

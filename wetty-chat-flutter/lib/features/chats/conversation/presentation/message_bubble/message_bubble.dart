@@ -17,6 +17,7 @@ class MessageBubble extends StatelessWidget {
     this.onTapReply,
     this.onOpenThread,
     this.onOpenAttachment,
+    this.onToggleReaction,
   });
 
   final ConversationMessage message;
@@ -27,6 +28,7 @@ class MessageBubble extends StatelessWidget {
   final VoidCallback? onTapReply;
   final VoidCallback? onOpenThread;
   final ValueChanged<AttachmentItem>? onOpenAttachment;
+  final ValueChanged<String>? onToggleReaction;
 
   static const FontWeight _bubbleFontWeight = FontWeight.w400;
 
@@ -67,6 +69,7 @@ class MessageBubble extends StatelessWidget {
               onTapReply: onTapReply,
               onOpenThread: onOpenThread,
               onOpenAttachment: onOpenAttachment,
+              onToggleReaction: onToggleReaction,
             ),
           ),
         ),

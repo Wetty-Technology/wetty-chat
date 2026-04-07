@@ -186,6 +186,38 @@ class MessageApiService {
     }
   }
 
+  Future<void> putReaction(
+    ConversationScope scope,
+    int messageId,
+    String emoji,
+  ) async {
+    final uri = Uri.parse(
+      '$apiBaseUrl/chats/${scope.chatId}/messages/$messageId/reactions/${Uri.encodeComponent(emoji)}',
+    );
+    final response = await http.put(uri, headers: _headers);
+    if (response.statusCode != 204) {
+      throw Exception(
+        'Failed to add reaction: ${response.statusCode} ${response.body}',
+      );
+    }
+  }
+
+  Future<void> deleteReaction(
+    ConversationScope scope,
+    int messageId,
+    String emoji,
+  ) async {
+    final uri = Uri.parse(
+      '$apiBaseUrl/chats/${scope.chatId}/messages/$messageId/reactions/${Uri.encodeComponent(emoji)}',
+    );
+    final response = await http.delete(uri, headers: _headers);
+    if (response.statusCode != 204) {
+      throw Exception(
+        'Failed to remove reaction: ${response.statusCode} ${response.body}',
+      );
+    }
+  }
+
   Future<MarkChatReadStateResponseDto> markMessagesAsRead(
     String chatId,
     int messageId,

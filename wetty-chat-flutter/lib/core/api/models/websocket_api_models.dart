@@ -1,5 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
 
+import '../converters/flexible_int_converter.dart';
 import 'messages_api_models.dart';
 
 part 'websocket_api_models.g.dart';
@@ -56,6 +57,8 @@ sealed class ApiWsEvent {
         return MessageUpdatedWsEvent.fromJson(json);
       case 'messageDeleted':
         return MessageDeletedWsEvent.fromJson(json);
+      case 'reactionUpdated':
+        return ReactionUpdatedWsEvent.fromJson(json);
       default:
         return null;
     }
@@ -109,4 +112,41 @@ class MessageDeletedWsEvent extends ApiWsEvent {
       _$MessageDeletedWsEventFromJson(json);
 
   Map<String, dynamic> toJson() => _$MessageDeletedWsEventToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
+class ReactionUpdatePayloadDto {
+  const ReactionUpdatePayloadDto({
+    required this.messageId,
+    required this.chatId,
+    this.reactions = const <ReactionSummaryDto>[],
+  });
+
+  @FlexibleIntConverter()
+  final int messageId;
+  @FlexibleIntConverter()
+  final int chatId;
+  @JsonKey(defaultValue: <ReactionSummaryDto>[])
+  final List<ReactionSummaryDto> reactions;
+
+  factory ReactionUpdatePayloadDto.fromJson(Map<String, dynamic> json) =>
+      _$ReactionUpdatePayloadDtoFromJson(json);
+
+  Map<String, dynamic> toJson() => _$ReactionUpdatePayloadDtoToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
+class ReactionUpdatedWsEvent extends ApiWsEvent {
+  const ReactionUpdatedWsEvent({
+    this.type = 'reactionUpdated',
+    required this.payload,
+  });
+
+  final String type;
+  final ReactionUpdatePayloadDto payload;
+
+  factory ReactionUpdatedWsEvent.fromJson(Map<String, dynamic> json) =>
+      _$ReactionUpdatedWsEventFromJson(json);
+
+  Map<String, dynamic> toJson() => _$ReactionUpdatedWsEventToJson(this);
 }

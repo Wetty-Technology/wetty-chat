@@ -72,6 +72,42 @@ class StickerSummaryDto {
 }
 
 @JsonSerializable(explicitToJson: true)
+class ReactionReactorDto {
+  const ReactionReactorDto({required this.uid, this.name, this.avatarUrl});
+
+  @FlexibleIntConverter()
+  final int uid;
+  final String? name;
+  final String? avatarUrl;
+
+  factory ReactionReactorDto.fromJson(Map<String, dynamic> json) =>
+      _$ReactionReactorDtoFromJson(json);
+
+  Map<String, dynamic> toJson() => _$ReactionReactorDtoToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
+class ReactionSummaryDto {
+  const ReactionSummaryDto({
+    required this.emoji,
+    required this.count,
+    this.reactedByMe,
+    this.reactors,
+  });
+
+  final String emoji;
+  @FlexibleIntConverter()
+  final int count;
+  final bool? reactedByMe;
+  final List<ReactionReactorDto>? reactors;
+
+  factory ReactionSummaryDto.fromJson(Map<String, dynamic> json) =>
+      _$ReactionSummaryDtoFromJson(json);
+
+  Map<String, dynamic> toJson() => _$ReactionSummaryDtoToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
 class MentionInfoDto {
   const MentionInfoDto({required this.uid, this.username});
 
@@ -150,6 +186,7 @@ class MessageItemDto {
     this.hasAttachments = false,
     this.replyToMessage,
     this.attachments = const [],
+    this.reactions = const [],
     this.mentions = const <MentionInfoDto>[],
     this.threadInfo,
   });
@@ -178,6 +215,8 @@ class MessageItemDto {
   final ReplyToMessageDto? replyToMessage;
   @JsonKey(defaultValue: <AttachmentItemDto>[])
   final List<AttachmentItemDto> attachments;
+  @JsonKey(defaultValue: <ReactionSummaryDto>[])
+  final List<ReactionSummaryDto> reactions;
   @JsonKey(defaultValue: <MentionInfoDto>[])
   final List<MentionInfoDto> mentions;
   final ThreadInfoDto? threadInfo;
