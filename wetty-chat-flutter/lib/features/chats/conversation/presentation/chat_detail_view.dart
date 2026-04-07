@@ -1,11 +1,6 @@
 import 'dart:async';
 import 'dart:developer' as developer;
-import 'dart:io';
-import 'dart:ui' as ui;
-
-import 'package:file_selector/file_selector.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/routing/route_names.dart';
@@ -15,12 +10,12 @@ import '../../../../core/settings/app_settings_store.dart';
 import '../../../../shared/presentation/app_divider.dart';
 import '../application/conversation_composer_view_model.dart';
 import '../application/conversation_timeline_view_model.dart';
-import '../data/attachment_service.dart';
 import '../domain/conversation_message.dart';
 import '../domain/conversation_scope.dart';
 import '../domain/launch_request.dart';
 import '../domain/timeline_entry.dart';
 import 'anchored_timeline_view.dart';
+import 'conversation_composer_bar.dart';
 import 'message_row.dart';
 
 class ChatDetailPage extends ConsumerStatefulWidget {
@@ -44,12 +39,8 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
   static const double _liveEdgeScrollThreshold = 50;
   static const double _timelineEndPadding = 12;
 
-  final ScrollController _inputScrollController = ScrollController();
-  final TextEditingController _textController = TextEditingController();
   final ScrollController _timelineScrollController = ScrollController();
 
-  late final AttachmentService _attachmentService;
-  bool _isUploadingAttachment = false;
   bool _isPopping = false;
   bool _isAtLiveEdge = true;
   int _viewportGeneration = 0;
@@ -70,14 +61,8 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
       'identity=${identityHashCode(this)}',
       name: 'ChatDetailView',
     );
-    _attachmentService = AttachmentService(ref.read(devSessionProvider));
     _timelineScrollController.addListener(_onTimelineScroll);
     WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final composer = ref.read(conversationComposerViewModelProvider(scope));
-      _textController.text = composer.draft;
-    });
   }
 
   @override
@@ -89,8 +74,6 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
     WidgetsBinding.instance.removeObserver(this);
     _timelineScrollController.removeListener(_onTimelineScroll);
     _timelineScrollController.dispose();
-    _inputScrollController.dispose();
-    _textController.dispose();
     super.dispose();
   }
 
@@ -135,33 +118,6 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
     );
   }
 
-  Future<void> _sendMessage() async {
-    final composer = ref.read(conversationComposerViewModelProvider(scope));
-    final composerNotifier = ref.read(
-      conversationComposerViewModelProvider(scope).notifier,
-    );
-    if (_isUploadingAttachment) {
-      _showErrorDialog('File upload is still in progress.');
-      return;
-    }
-    if (composer.isEditing && composer.attachments.isNotEmpty) {
-      _showErrorDialog('Editing does not support attachments yet.');
-      return;
-    }
-    if (_textController.text.trim().isEmpty && composer.attachments.isEmpty) {
-      return;
-    }
-    try {
-      await composerNotifier.send(text: _textController.text);
-      _textController.clear();
-      await _scrollToLatest();
-    } catch (error) {
-      if (mounted) {
-        _showErrorDialog('$error');
-      }
-    }
-  }
-
   void _showMessageActions(ConversationMessage message) {
     if (message.isDeleted) {
       return;
@@ -189,7 +145,6 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
                 Navigator.pop(context);
                 composerNotifier.clearAttachments();
                 composerNotifier.beginEdit(message);
-                _textController.text = message.message ?? '';
               },
               child: const Text('Edit'),
             ),
@@ -330,103 +285,6 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
     _timelineViewportKey = ValueKey<int>(sessionId);
   }
 
-  Future<(int?, int?)> _decodeImageSize(Uint8List bytes) async {
-    try {
-      final completer = Completer<ui.Image>();
-      ui.decodeImageFromList(bytes, completer.complete);
-      final image = await completer.future.timeout(const Duration(seconds: 2));
-      final size = (image.width, image.height);
-      image.dispose();
-      return size;
-    } catch (_) {
-      return (null, null);
-    }
-  }
-
-  String _guessContentType(String filename) {
-    final lower = filename.toLowerCase();
-    if (lower.endsWith('.png')) return 'image/png';
-    if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
-    if (lower.endsWith('.gif')) return 'image/gif';
-    if (lower.endsWith('.webp')) return 'image/webp';
-    if (lower.endsWith('.bmp')) return 'image/bmp';
-    if (lower.endsWith('.heic')) return 'image/heic';
-    if (lower.endsWith('.pdf')) return 'application/pdf';
-    if (lower.endsWith('.txt')) return 'text/plain';
-    if (lower.endsWith('.json')) return 'application/json';
-    if (lower.endsWith('.zip')) return 'application/zip';
-    return 'application/octet-stream';
-  }
-
-  Future<void> _pickAttachment() async {
-    if (kIsWeb || !Platform.isWindows) {
-      _showErrorDialog(
-        'Attachment upload is currently only implemented on Windows.',
-      );
-      return;
-    }
-    if (_isUploadingAttachment) {
-      return;
-    }
-    final file = await openFile();
-    if (file == null) {
-      return;
-    }
-    setState(() {
-      _isUploadingAttachment = true;
-    });
-    try {
-      final filename = file.name;
-      final contentType = _guessContentType(filename);
-      final size = await file.length();
-      Uint8List? previewBytes;
-      int? width;
-      int? height;
-      if (contentType.startsWith('image/') && size <= 8 * 1024 * 1024) {
-        previewBytes = await file.readAsBytes();
-        final dimensions = await _decodeImageSize(previewBytes);
-        width = dimensions.$1;
-        height = dimensions.$2;
-      }
-
-      final uploadInfo = await _attachmentService.requestUploadUrl(
-        filename: filename,
-        contentType: contentType,
-        size: size,
-        width: width,
-        height: height,
-      );
-      await _attachmentService.uploadFileToS3(
-        uploadUrl: uploadInfo.uploadUrl,
-        file: File(file.path),
-        contentType: contentType,
-      );
-      if (!mounted) {
-        return;
-      }
-      ref
-          .read(conversationComposerViewModelProvider(scope).notifier)
-          .addUploadedAttachment(
-            ComposerAttachment(
-              id: uploadInfo.attachmentId,
-              name: filename,
-              mimeType: contentType,
-              previewBytes: previewBytes,
-            ),
-          );
-    } catch (error) {
-      if (mounted) {
-        _showErrorDialog('Upload failed: $error');
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isUploadingAttachment = false;
-        });
-      }
-    }
-  }
-
   void _showErrorDialog(String message) {
     showCupertinoDialog<void>(
       context: context,
@@ -482,16 +340,15 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
   }
 
   EdgeInsets _timelinePadding(BuildContext context) {
-    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
-    return EdgeInsets.only(top: 8, bottom: bottomInset + _timelineEndPadding);
+    return EdgeInsets.only(top: 8, bottom: _timelineEndPadding);
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final timelineAsync = ref.watch(
       conversationTimelineViewModelProvider(_timelineArgs),
     );
-    final composer = ref.watch(conversationComposerViewModelProvider(scope));
     final settings = ref.watch(appSettingsProvider);
 
     timelineAsync.whenData((state) {
@@ -563,15 +420,14 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
           leading: CupertinoNavigationBarBackButton(onPressed: _popWithResult),
           trailing: _buildNavigationBarTrailing(),
         ),
-        child: Container(
-          color: const Color(0xFFECE5DD),
+        child: SafeArea(
           child: GestureDetector(
             onTap: () => FocusScope.of(context).unfocus(),
-            child: SafeArea(
-              bottom: false,
-              child: Column(
-                children: [
-                  Expanded(
+            child: Column(
+              children: [
+                Expanded(
+                  child: Container(
+                    color: colors.chatBackground,
                     child: Stack(
                       children: [
                         timelineAsync.when(
@@ -648,9 +504,12 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
                       ],
                     ),
                   ),
-                  SafeArea(top: false, child: _buildComposer(composer)),
-                ],
-              ),
+                ),
+                ConversationComposerBar(
+                  scope: scope,
+                  onMessageSent: _scrollToLatest,
+                ),
+              ],
             ),
           ),
         ),
@@ -784,260 +643,6 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
           text,
           style: appSecondaryTextStyle(context, fontSize: AppFontSizes.meta),
         ),
-      ),
-    );
-  }
-
-  Widget _buildComposer(ConversationComposerState composer) {
-    final isEditing = composer.isEditing;
-    final canAttach = !isEditing && !_isUploadingAttachment;
-    return Column(
-      children: [
-        const AppDivider(height: 0.5, color: CupertinoColors.separator),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Column(
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  CupertinoButton(
-                    padding: EdgeInsets.zero,
-                    onPressed: canAttach ? _pickAttachment : null,
-                    child: Icon(
-                      CupertinoIcons.add_circled,
-                      color: canAttach
-                          ? CupertinoColors.activeBlue.resolveFrom(context)
-                          : CupertinoColors.systemGrey2.resolveFrom(context),
-                      size: 28,
-                    ),
-                  ),
-                  if (_isUploadingAttachment)
-                    const Padding(
-                      padding: EdgeInsets.only(left: 4, bottom: 2),
-                      child: CupertinoActivityIndicator(radius: 8),
-                    ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: CupertinoColors.systemBackground.resolveFrom(
-                          context,
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: CupertinoColors.systemGrey4.resolveFrom(
-                            context,
-                          ),
-                        ),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _buildComposerPreview(composer),
-                          if (composer.attachments.isNotEmpty)
-                            _buildAttachmentPreview(composer),
-                          CupertinoScrollbar(
-                            controller: _inputScrollController,
-                            child: CupertinoTextField(
-                              controller: _textController,
-                              scrollController: _inputScrollController,
-                              onChanged: (value) {
-                                unawaited(
-                                  ref
-                                      .read(
-                                        conversationComposerViewModelProvider(
-                                          scope,
-                                        ).notifier,
-                                      )
-                                      .updateDraft(value),
-                                );
-                              },
-                              placeholder: 'Message',
-                              maxLines: 5,
-                              minLines: 1,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                              decoration: null,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: _sendMessage,
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: const BoxDecoration(
-                        color: CupertinoColors.activeBlue,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        CupertinoIcons.paperplane_fill,
-                        size: 20,
-                        color: CupertinoColors.white,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildComposerPreview(ConversationComposerState composer) {
-    final mode = composer.mode;
-    return switch (mode) {
-      ComposerReplying(:final message) => _previewBar(
-        title:
-            'Replying to ${message.sender.name ?? 'User ${message.sender.uid}'}',
-        body: message.message ?? '',
-      ),
-      ComposerEditing(:final message) => _previewBar(
-        title: 'Edit Message',
-        body: message.message ?? '',
-      ),
-      ComposerIdle() => const SizedBox.shrink(),
-    };
-  }
-
-  Widget _previewBar({required String title, required String body}) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 8, 8, 4),
-      decoration: BoxDecoration(
-        color: CupertinoColors.systemGrey5.resolveFrom(context),
-        border: const Border(
-          left: BorderSide(color: CupertinoColors.activeBlue, width: 3),
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: appTextStyle(
-                    context,
-                    fontWeight: FontWeight.w600,
-                    fontSize: AppFontSizes.bodySmall,
-                    color: CupertinoColors.activeBlue,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  body,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: appSecondaryTextStyle(
-                    context,
-                    fontSize: AppFontSizes.bodySmall,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          CupertinoButton(
-            padding: EdgeInsets.zero,
-            minimumSize: const Size(30, 30),
-            onPressed: () {
-              ref
-                  .read(conversationComposerViewModelProvider(scope).notifier)
-                  .clearMode();
-            },
-            child: Icon(
-              CupertinoIcons.xmark_circle_fill,
-              size: 20,
-              color: CupertinoColors.systemGrey3.resolveFrom(context),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAttachmentPreview(ConversationComposerState composer) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          for (int index = 0; index < composer.attachments.length; index++)
-            _attachmentChip(composer.attachments[index], index),
-        ],
-      ),
-    );
-  }
-
-  Widget _attachmentChip(ComposerAttachment attachment, int index) {
-    final borderColor = CupertinoColors.systemGrey4.resolveFrom(context);
-    final background = CupertinoColors.systemGrey5.resolveFrom(context);
-    final thumb = attachment.isImage
-        ? ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: Image.memory(
-              attachment.previewBytes!,
-              width: 36,
-              height: 36,
-              fit: BoxFit.cover,
-            ),
-          )
-        : Icon(
-            CupertinoIcons.doc,
-            size: 28,
-            color: CupertinoColors.activeBlue.resolveFrom(context),
-          );
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          thumb,
-          const SizedBox(width: 6),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 140),
-            child: Text(
-              attachment.name,
-              overflow: TextOverflow.ellipsis,
-              style: appTextStyle(context, fontSize: AppFontSizes.meta),
-            ),
-          ),
-          const SizedBox(width: 6),
-          CupertinoButton(
-            padding: EdgeInsets.zero,
-            minimumSize: const Size(20, 20),
-            onPressed: () {
-              ref
-                  .read(conversationComposerViewModelProvider(scope).notifier)
-                  .removeAttachmentAt(index);
-            },
-            child: Icon(
-              CupertinoIcons.xmark_circle_fill,
-              size: 18,
-              color: CupertinoColors.systemGrey2.resolveFrom(context),
-            ),
-          ),
-        ],
       ),
     );
   }

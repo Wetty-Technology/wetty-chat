@@ -34,6 +34,7 @@ class AppColors {
     required this.separator,
     required this.accentPrimary,
     required this.inactive,
+    required this.chatBackground,
     required this.chatSentBubble,
     required this.chatReceivedBubble,
     required this.chatSentMeta,
@@ -60,6 +61,7 @@ class AppColors {
   final Color separator;
   final Color accentPrimary;
   final Color inactive;
+  final Color chatBackground;
   final Color chatSentBubble;
   final Color chatReceivedBubble;
   final Color chatSentMeta;
@@ -86,6 +88,12 @@ class AppColors {
     separator: Color(0xFFDADDE3),
     accentPrimary: Color(0xFF007AFF),
     inactive: Color(0xFF8E8E93),
+    chatBackground: Color.from(
+      alpha: 1.0,
+      red: 0.921,
+      green: 0.898,
+      blue: 0.871,
+    ),
     chatSentBubble: Color(0xFF007AFF),
     chatReceivedBubble: Color(0xFFFFFFFF),
     chatSentMeta: Color(0xD6FFFFFF),
@@ -113,6 +121,7 @@ class AppColors {
     separator: Color(0xFF3A3A3C),
     accentPrimary: Color(0xFF2B7FFF),
     inactive: Color(0xFF8E8E93),
+    chatBackground: .from(alpha: 1.0, red: 0.921, green: 0.898, blue: 0.871),
     chatSentBubble: Color(0xFF2B7FFF),
     chatReceivedBubble: Color(0xFF2C2C2E),
     chatSentMeta: Color(0xBEFFFFFF),
