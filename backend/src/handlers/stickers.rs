@@ -1099,4 +1099,7 @@ pub fn router() -> OpenApiRouter<crate::AppState> {
         .routes(utoipa_axum::routes!(put_pack_sticker, delete_pack_sticker))
         .routes(utoipa_axum::routes!(get_sticker))
         .routes(utoipa_axum::routes!(put_favorite, delete_favorite))
+        .layer(axum::extract::DefaultBodyLimit::max(
+            MAX_STICKER_UPLOAD_BYTES,
+        ))
 }
