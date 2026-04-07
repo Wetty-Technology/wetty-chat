@@ -21,6 +21,7 @@ class MessageAvatar extends StatefulWidget {
 
 class _MessageAvatarState extends State<MessageAvatar> {
   static const int _maxDecodeRetries = 1;
+  static const double _avatarSize = 36;
 
   late Future<File?> _avatarFuture;
   int _decodeRetryCount = 0;
@@ -82,8 +83,8 @@ class _MessageAvatarState extends State<MessageAvatar> {
           return ClipOval(
             child: Image.file(
               file,
-              width: 30,
-              height: 30,
+              width: _avatarSize,
+              height: _avatarSize,
               fit: BoxFit.cover,
               gaplessPlayback: true,
               errorBuilder: (_, _, _) {
@@ -120,8 +121,8 @@ class _RawAvatar extends StatelessWidget {
     return ClipOval(
       child: Image.network(
         avatarUrl,
-        width: 30,
-        height: 30,
+        width: _MessageAvatarState._avatarSize,
+        height: _MessageAvatarState._avatarSize,
         fit: BoxFit.cover,
         gaplessPlayback: true,
         headers: attachmentRequestHeadersForUrl(avatarUrl),
