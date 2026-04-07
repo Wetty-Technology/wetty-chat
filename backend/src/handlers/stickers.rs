@@ -776,7 +776,8 @@ async fn post_pack_sticker(
         (!trimmed.is_empty()).then_some(trimmed)
     });
 
-    let processed = process_sticker(&content_type, &file_bytes);
+    let processed = process_sticker(&content_type, &file_bytes)
+        .map_err(|_| AppError::BadRequest("Invalid or corrupted sticker image"))?;
 
     let media_id = ids::next_id(state.id_gen.as_ref()).await.map_err(|e| {
         tracing::error!("next_id for sticker media: {:?}", e);

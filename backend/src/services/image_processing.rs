@@ -12,36 +12,36 @@ pub struct ProcessedMedia {
 /// Process an image sticker: resize so the largest dimension is 512px and convert to webp.
 /// Animated GIF/WebP stickers are stored as-is to preserve animation.
 /// For video/webm, only extracts dimensions (no re-encoding).
-pub fn process_sticker(content_type: &str, data: &[u8]) -> ProcessedMedia {
+pub fn process_sticker(
+    content_type: &str,
+    data: &[u8],
+) -> Result<ProcessedMedia, ProcessStickerError> {
     if content_type.starts_with("image/") {
         if is_animated_image(content_type, data) {
             tracing::debug!("animated sticker detected, storing original");
-            return ProcessedMedia {
+            return Ok(ProcessedMedia {
                 data: data.to_vec(),
                 content_type: content_type.to_string(),
                 width: None,
                 height: None,
-            };
+            });
         }
-        if let Some(result) = process_image_sticker(data) {
-            return result;
-        }
-        tracing::warn!("failed to process image sticker, storing original");
+        return process_image_sticker(data).ok_or(ProcessStickerError::InvalidImage);
     } else if content_type == "video/webm" {
         let dims = extract_webm_dimensions(data);
-        return ProcessedMedia {
+        return Ok(ProcessedMedia {
             data: data.to_vec(),
             content_type: content_type.to_string(),
             width: dims.map(|(w, _)| w),
             height: dims.map(|(_, h)| h),
-        };
+        });
     }
-    ProcessedMedia {
-        data: data.to_vec(),
-        content_type: content_type.to_string(),
-        width: None,
-        height: None,
-    }
+    Err(ProcessStickerError::InvalidImage)
+}
+
+#[derive(Debug)]
+pub enum ProcessStickerError {
+    InvalidImage,
 }
 
 fn is_animated_image(content_type: &str, data: &[u8]) -> bool {
