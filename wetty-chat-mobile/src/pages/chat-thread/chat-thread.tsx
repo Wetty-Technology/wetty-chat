@@ -1591,6 +1591,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
                     attachments: replyingTo.attachments,
                     firstAttachmentKind: replyingTo.attachments?.[0]?.kind,
                     isDeleted: replyingTo.isDeleted,
+                    mentions: replyingTo.mentions,
                   }
                 : undefined
             }

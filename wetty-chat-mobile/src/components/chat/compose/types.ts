@@ -1,4 +1,4 @@
-import type { Attachment } from '@/api/messages';
+import type { Attachment, MentionInfo } from '@/api/messages';
 import type { StickerSummary } from '@/api/stickers';
 import type { ImageUploadDraft } from '../UploadPreview';
 
@@ -11,6 +11,7 @@ export interface ReplyTo {
   attachments?: Attachment[];
   firstAttachmentKind?: string;
   isDeleted?: boolean;
+  mentions?: MentionInfo[];
 }
 
 export interface EditingMessage {
