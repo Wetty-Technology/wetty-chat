@@ -32,10 +32,37 @@ export function PermalinkInline({ targetChatId, targetMessageId, encoded, url }:
           url,
         });
 
-        if (ctx && ctx.chatId === targetChatId && !ctx.threadId) {
-          // Same main chat (not inside a thread) — scroll to message in place
+        if (ctx && ctx.chatId === targetChatId) {
+          // Same chat — try in-place jump first (works for both main chat and thread scope)
           console.debug('[PermalinkInline] jumping within current chat', { targetMessageId });
-          ctx.jumpToMessage(targetMessageId);
+          void ctx.jumpToMessage(targetMessageId, { silent: true }).then((found) => {
+            if (found) return;
+            // Target is in a different scope (thread vs main chat) — resolve and navigate
+            console.debug('[PermalinkInline] in-place jump missed, resolving permalink', {
+              targetChatId,
+              targetMessageId,
+              encoded,
+            });
+            void openPermalinkTarget({
+              chatId: targetChatId,
+              messageId: targetMessageId,
+              preserveCurrentEntry: true,
+            }).catch((err) => {
+              console.debug('[PermalinkInline] permalink navigation failed', {
+                targetChatId,
+                targetMessageId,
+                encoded,
+                status: err?.response?.status,
+                err,
+              });
+              presentToast({
+                message: err?.response?.status === 404 ? t`Message not found` : t`Failed to open link`,
+                duration: 2000,
+                color: 'danger',
+              });
+              history.push(`/m/${encoded}`);
+            });
+          });
         } else {
           // Different chat — resolve the destination directly to avoid flashing the resolver page
           console.debug('[PermalinkInline] resolving direct permalink navigation', {

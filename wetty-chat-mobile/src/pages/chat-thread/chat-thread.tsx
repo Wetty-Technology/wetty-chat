@@ -332,7 +332,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
         threadId: threadId ?? null,
       });
     };
-  }, [chatId, storeChatId, threadId]);
+  }, [chatId, storeChatId, threadId, location.state]);
 
   useEffect(() => {
     if (isDesktop) return;
@@ -381,8 +381,6 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
       initialAnchor,
     });
   }, [chatId, storeChatId, messages, chatRows.length, initialAnchor]);
-
-  const getMessageKey = useCallback((message: MessageResponse) => `msg:${message.clientGeneratedId || message.id}`, []);
 
   const startEditingMessage = useCallback((message: MessageResponse) => {
     setReplyingTo(null);
@@ -804,20 +802,19 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   );
 
   const jumpToMessage = useCallback(
-    (messageId: string) => {
+    (messageId: string, options?: { silent?: boolean }): Promise<boolean> => {
       const state = store.getState();
       const currentMessages = selectMessagesForChat(state, storeChatId);
       const idx = currentMessages.findIndex((m) => m.id === messageId);
       if (idx !== -1) {
         scrollApiRef.current?.scrollToMessageId(messageId, 'smooth');
-        return;
+        return Promise.resolve(true);
       }
       // Message not in current window — fetch centered window
-      getMessages(chatId, { around: messageId, max: 50, threadId })
+      return getMessages(chatId, { around: messageId, max: 50, threadId })
         .then((res) => {
           const list = res.data.messages ?? [];
           const targetMessage = list.find((message) => message.id === messageId) ?? null;
-          const anchorKey = targetMessage ? getMessageKey(targetMessage) : `msg:${messageId}`;
 
           if (import.meta.env.DEV) {
             console.log('[ChatThread] jumpToMessage fetched-window', {
@@ -828,8 +825,14 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
               fetchedCount: list.length,
               targetFound: targetMessage != null,
               targetClientGeneratedId: targetMessage?.clientGeneratedId ?? null,
-              anchorKey,
             });
+          }
+
+          if (!targetMessage) {
+            if (!options?.silent) {
+              showToast(t`Message not found`);
+            }
+            return false;
           }
 
           dispatch(
@@ -845,12 +848,16 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
             messageId,
             token: currentAnchor.token + 1,
           }));
+          return true;
         })
         .catch((err: Error) => {
-          showToast(err.message || t`Failed to jump to message`);
+          if (!options?.silent) {
+            showToast(err.message || t`Failed to jump to message`);
+          }
+          return false;
         });
     },
-    [chatId, dispatch, getMessageKey, showToast, storeChatId, threadId],
+    [chatId, dispatch, showToast, storeChatId, threadId],
   );
 
   const nextCursor = useSelector((state: RootState) => selectNextCursorForChat(state, storeChatId));
