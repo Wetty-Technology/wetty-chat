@@ -377,8 +377,14 @@ async fn process_push_job(
         job.message_id
     );
 
-    // 3.5 Calculate unread counts for target users
-    let unread_counts = crate::services::chat::get_unread_counts(&mut conn, &target_uids)
+    // 3.5 Calculate unread counts only for users with push subscriptions
+    let sub_uids: Vec<i32> = {
+        let mut seen = std::collections::HashSet::with_capacity(subs.len());
+        subs.iter()
+            .filter_map(|s| seen.insert(s.user_id).then_some(s.user_id))
+            .collect()
+    };
+    let unread_counts = crate::services::chat::get_unread_counts(&mut conn, &sub_uids)
         .unwrap_or_else(|e| {
             warn!("Failed to load unread counts for push job: {:?}", e);
             std::collections::HashMap::new()

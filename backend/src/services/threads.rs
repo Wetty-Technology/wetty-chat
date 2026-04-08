@@ -8,7 +8,7 @@ use tracing::warn;
 
 use crate::handlers::chats::{build_mention_info, extract_mention_uids, MentionInfo};
 use crate::models::{Attachment, Message, MessageType};
-use crate::schema::{attachments, stickers, thread_subscriptions};
+use crate::schema::{attachments, messages, stickers, thread_meta, thread_subscriptions};
 use crate::services::chat::MAX_UNREAD_COUNT;
 use crate::services::media::build_public_object_url;
 use crate::services::user::{lookup_user_avatars, lookup_user_profiles};
@@ -120,6 +120,100 @@ pub fn get_thread_subscriber_uids(
         .load(conn)
 }
 
+// --- thread_meta maintenance ---
+
+/// Upsert thread_meta after a new reply is created.
+pub fn increment_thread_meta(
+    conn: &mut PgConnection,
+    chat_id: i64,
+    thread_root_id: i64,
+    reply_at: DateTime<Utc>,
+) -> Result<(), diesel::result::Error> {
+    diesel::insert_into(thread_meta::table)
+        .values((
+            thread_meta::chat_id.eq(chat_id),
+            thread_meta::thread_root_id.eq(thread_root_id),
+            thread_meta::reply_count.eq(1i64),
+            thread_meta::last_reply_at.eq(Some(reply_at)),
+        ))
+        .on_conflict((thread_meta::chat_id, thread_meta::thread_root_id))
+        .do_update()
+        .set((
+            thread_meta::reply_count.eq(thread_meta::reply_count + 1),
+            thread_meta::last_reply_at.eq(Some(reply_at)),
+        ))
+        .execute(conn)?;
+    Ok(())
+}
+
+/// Recalculate thread_meta from messages after a reply is deleted.
+pub fn recalculate_thread_meta(
+    conn: &mut PgConnection,
+    chat_id: i64,
+    thread_root_id: i64,
+) -> Result<(), diesel::result::Error> {
+    let stats: Option<(i64, Option<DateTime<Utc>>)> = messages::table
+        .filter(
+            messages::reply_root_id
+                .eq(thread_root_id)
+                .and(messages::deleted_at.is_null()),
+        )
+        .select((
+            diesel::dsl::count_star(),
+            diesel::dsl::max(messages::created_at),
+        ))
+        .first(conn)
+        .optional()?;
+
+    match stats {
+        Some((count, last_at)) if count > 0 => {
+            diesel::insert_into(thread_meta::table)
+                .values((
+                    thread_meta::chat_id.eq(chat_id),
+                    thread_meta::thread_root_id.eq(thread_root_id),
+                    thread_meta::reply_count.eq(count),
+                    thread_meta::last_reply_at.eq(last_at),
+                ))
+                .on_conflict((thread_meta::chat_id, thread_meta::thread_root_id))
+                .do_update()
+                .set((
+                    thread_meta::reply_count.eq(count),
+                    thread_meta::last_reply_at.eq(last_at),
+                ))
+                .execute(conn)?;
+        }
+        _ => {
+            // No active replies — remove the meta row
+            diesel::delete(
+                thread_meta::table.filter(
+                    thread_meta::chat_id
+                        .eq(chat_id)
+                        .and(thread_meta::thread_root_id.eq(thread_root_id)),
+                ),
+            )
+            .execute(conn)?;
+        }
+    }
+    Ok(())
+}
+
+/// Recalculate thread_meta for all threads affected by a bulk delete in a chat.
+pub fn recalculate_thread_meta_for_chat(
+    conn: &mut PgConnection,
+    chat_id: i64,
+) -> Result<(), diesel::result::Error> {
+    // Find all threads in this chat that have a meta row
+    let thread_ids: Vec<i64> = thread_meta::table
+        .filter(thread_meta::chat_id.eq(chat_id))
+        .select(thread_meta::thread_root_id)
+        .load(conn)?;
+
+    for tid in thread_ids {
+        recalculate_thread_meta(conn, chat_id, tid)?;
+    }
+    Ok(())
+}
+
 #[derive(QueryableByName)]
 pub struct ThreadListRow {
     #[diesel(sql_type = diesel::sql_types::BigInt)]
@@ -134,23 +228,8 @@ pub struct ThreadListRow {
     pub reply_count: i64,
     #[diesel(sql_type = diesel::sql_types::Timestamptz)]
     pub last_reply_at: DateTime<Utc>,
-    #[diesel(sql_type = diesel::sql_types::BigInt)]
-    pub unread_count: i64,
     #[diesel(sql_type = diesel::sql_types::Timestamptz)]
     pub subscribed_at: DateTime<Utc>,
-    // Latest reply fields (from second LATERAL join)
-    #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::BigInt>)]
-    pub latest_reply_id: Option<i64>,
-    #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Text>)]
-    pub latest_reply_message: Option<String>,
-    #[diesel(sql_type = diesel::sql_types::Nullable<crate::schema::sql_types::MessageType>)]
-    pub latest_reply_message_type: Option<MessageType>,
-    #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Integer>)]
-    pub latest_reply_sender_uid: Option<i32>,
-    #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::BigInt>)]
-    pub latest_reply_sticker_id: Option<i64>,
-    #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Bool>)]
-    pub latest_reply_has_attachments: Option<bool>,
 }
 
 /// List threads the user is subscribed to, ordered by most recent reply.
@@ -166,52 +245,23 @@ pub fn get_user_threads(
             ts.thread_root_id,
             g.name AS chat_name,
             avatar_media.storage_key AS chat_avatar_key,
-            COALESCE(thread_stats.reply_count, 0)::bigint AS reply_count,
-            COALESCE(thread_stats.last_reply_at, ts.subscribed_at) AS last_reply_at,
-            LEAST(
-                COALESCE(thread_stats.unread_count, 0),
-                $4
-            )::bigint AS unread_count,
-            ts.subscribed_at,
-            latest_reply.id AS latest_reply_id,
-            latest_reply.message AS latest_reply_message,
-            latest_reply.message_type AS latest_reply_message_type,
-            latest_reply.sender_uid AS latest_reply_sender_uid,
-            latest_reply.sticker_id AS latest_reply_sticker_id,
-            latest_reply.has_attachments AS latest_reply_has_attachments
+            COALESCE(tm.reply_count, 0)::bigint AS reply_count,
+            COALESCE(tm.last_reply_at, ts.subscribed_at) AS last_reply_at,
+            ts.subscribed_at
         FROM thread_subscriptions ts
+        LEFT JOIN thread_meta tm ON tm.chat_id = ts.chat_id AND tm.thread_root_id = ts.thread_root_id
         JOIN groups g ON g.id = ts.chat_id
         LEFT JOIN media avatar_media ON g.avatar_image_id = avatar_media.id AND avatar_media.deleted_at IS NULL
         JOIN messages root_msg ON root_msg.id = ts.thread_root_id
-        LEFT JOIN LATERAL (
-            SELECT
-                COUNT(*)::bigint AS reply_count,
-                MAX(m.created_at) AS last_reply_at,
-                COUNT(*) FILTER (
-                    WHERE m.id > COALESCE(ts.last_read_message_id, 0)
-                )::bigint AS unread_count
-            FROM messages m
-            WHERE m.reply_root_id = ts.thread_root_id
-              AND m.deleted_at IS NULL
-        ) thread_stats ON TRUE
-        LEFT JOIN LATERAL (
-            SELECT id, message, message_type, sender_uid, sticker_id, has_attachments
-            FROM messages
-            WHERE reply_root_id = ts.thread_root_id
-              AND deleted_at IS NULL
-            ORDER BY id DESC
-            LIMIT 1
-        ) latest_reply ON TRUE
         WHERE ts.uid = $1
           AND root_msg.deleted_at IS NULL
-          AND ($2::timestamptz IS NULL OR COALESCE(thread_stats.last_reply_at, ts.subscribed_at) < $2)
-        ORDER BY COALESCE(thread_stats.last_reply_at, ts.subscribed_at) DESC
+          AND ($2::timestamptz IS NULL OR COALESCE(tm.last_reply_at, ts.subscribed_at) < $2)
+        ORDER BY COALESCE(tm.last_reply_at, ts.subscribed_at) DESC
         LIMIT $3",
     )
     .bind::<diesel::sql_types::Integer, _>(uid)
     .bind::<diesel::sql_types::Nullable<diesel::sql_types::Timestamptz>, _>(before_cursor)
-    .bind::<diesel::sql_types::BigInt, _>(limit)
-    .bind::<diesel::sql_types::BigInt, _>(MAX_UNREAD_COUNT);
+    .bind::<diesel::sql_types::BigInt, _>(limit);
 
     match query.load::<ThreadListRow>(conn) {
         Ok(rows) => Ok(rows),
@@ -339,18 +389,47 @@ pub fn enrich_thread_list(
     rows: Vec<ThreadListRow>,
     has_more: bool,
     root_messages: Vec<Message>,
+    uid: i32,
     state: &AppState,
-) -> ListThreadsResponse {
+) -> Result<ListThreadsResponse, diesel::result::Error> {
     let root_ids: Vec<i64> = rows.iter().map(|r| r.thread_root_id).collect();
 
     if root_ids.is_empty() {
-        return ListThreadsResponse {
+        return Ok(ListThreadsResponse {
             threads: vec![],
             next_cursor: None,
-        };
+        });
     }
 
     let root_msg_map: HashMap<i64, &Message> = root_messages.iter().map(|m| (m.id, m)).collect();
+
+    // 0. Batch query: unread counts per thread (only for the returned page)
+    #[derive(QueryableByName)]
+    struct UnreadRow {
+        #[diesel(sql_type = diesel::sql_types::BigInt)]
+        thread_root_id: i64,
+        #[diesel(sql_type = diesel::sql_types::BigInt)]
+        unread_count: i64,
+    }
+    let unread_rows: Vec<UnreadRow> = sql_query(
+        "SELECT ts.thread_root_id,
+                LEAST(COUNT(*)::bigint, $3) AS unread_count
+         FROM thread_subscriptions ts
+         JOIN messages m ON m.reply_root_id = ts.thread_root_id
+                        AND m.deleted_at IS NULL
+                        AND m.id > COALESCE(ts.last_read_message_id, 0)
+         WHERE ts.uid = $1
+           AND ts.thread_root_id = ANY($2)
+         GROUP BY ts.thread_root_id",
+    )
+    .bind::<diesel::sql_types::Integer, _>(uid)
+    .bind::<diesel::sql_types::Array<diesel::sql_types::BigInt>, _>(&root_ids)
+    .bind::<diesel::sql_types::BigInt, _>(MAX_UNREAD_COUNT)
+    .load(conn)?;
+    let unread_map: HashMap<i64, i64> = unread_rows
+        .into_iter()
+        .map(|r| (r.thread_root_id, r.unread_count))
+        .collect();
 
     // 1. Batch query: distinct participants per thread (replies + root message author)
     let participant_rows: Vec<ParticipantRow> = sql_query(
@@ -368,16 +447,42 @@ pub fn enrich_thread_list(
          ORDER BY reply_root_id, sender_uid",
     )
     .bind::<diesel::sql_types::Array<diesel::sql_types::BigInt>, _>(&root_ids)
-    .load(conn)
-    .unwrap_or_default();
+    .load(conn)?;
 
-    // 2. Collect ALL UIDs that need profile/avatar lookup in one pass:
-    //    participants + latest reply senders + root message senders + mention UIDs
+    // 2. Batch query: latest reply per thread (DISTINCT ON)
+    #[derive(QueryableByName)]
+    struct LatestReplyRow {
+        #[diesel(sql_type = diesel::sql_types::BigInt)]
+        reply_root_id: i64,
+        #[diesel(sql_type = diesel::sql_types::BigInt)]
+        id: i64,
+        #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Text>)]
+        message: Option<String>,
+        #[diesel(sql_type = crate::schema::sql_types::MessageType)]
+        message_type: MessageType,
+        #[diesel(sql_type = diesel::sql_types::Integer)]
+        sender_uid: i32,
+        #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::BigInt>)]
+        sticker_id: Option<i64>,
+        #[diesel(sql_type = diesel::sql_types::Bool)]
+        has_attachments: bool,
+    }
+    let latest_reply_rows: Vec<LatestReplyRow> = sql_query(
+        "SELECT DISTINCT ON (m.reply_root_id)
+            m.reply_root_id, m.id, m.message, m.message_type,
+            m.sender_uid, m.sticker_id, m.has_attachments
+         FROM messages m
+         WHERE m.reply_root_id = ANY($1)
+           AND m.deleted_at IS NULL
+         ORDER BY m.reply_root_id, m.id DESC",
+    )
+    .bind::<diesel::sql_types::Array<diesel::sql_types::BigInt>, _>(&root_ids)
+    .load(conn)?;
+
+    // 3. Collect ALL UIDs that need profile/avatar lookup in one pass
     let mut all_uids: Vec<i32> = participant_rows.iter().map(|r| r.sender_uid).collect();
-    for row in &rows {
-        if let Some(uid) = row.latest_reply_sender_uid {
-            all_uids.push(uid);
-        }
+    for lr in &latest_reply_rows {
+        all_uids.push(lr.sender_uid);
     }
     for msg in &root_messages {
         all_uids.push(msg.sender_uid);
@@ -393,11 +498,11 @@ pub fn enrich_thread_list(
             mention_uids_per_root.insert(msg.id, uids);
         }
     }
-    for row in &rows {
-        if let Some(ref text) = row.latest_reply_message {
+    for lr in &latest_reply_rows {
+        if let Some(ref text) = lr.message {
             let uids = extract_mention_uids(text);
             all_uids.extend(&uids);
-            mention_uids_per_reply.insert(row.thread_root_id, uids);
+            mention_uids_per_reply.insert(lr.reply_root_id, uids);
         }
     }
 
@@ -405,7 +510,7 @@ pub fn enrich_thread_list(
     all_uids.dedup();
 
     // Single batched profile + avatar lookup
-    let user_profiles = lookup_user_profiles(conn, &all_uids).unwrap_or_default();
+    let user_profiles = lookup_user_profiles(conn, &all_uids)?;
     let user_avatars = lookup_user_avatars(state, &all_uids);
 
     let make_participant = |uid: i32| -> ThreadParticipant {
@@ -417,7 +522,7 @@ pub fn enrich_thread_list(
         }
     };
 
-    // 3. Build participants map: thread_root_id -> Vec<ThreadParticipant>
+    // 4. Build participants map: thread_root_id -> Vec<ThreadParticipant>
     let mut participants_map: HashMap<i64, Vec<ThreadParticipant>> = HashMap::new();
     for row in &participant_rows {
         participants_map
@@ -426,10 +531,10 @@ pub fn enrich_thread_list(
             .push(make_participant(row.sender_uid));
     }
 
-    // 4. Load sticker emoji for latest replies
-    let sticker_ids: Vec<i64> = rows
+    // 5. Load sticker emoji for latest replies
+    let sticker_ids: Vec<i64> = latest_reply_rows
         .iter()
-        .filter_map(|r| r.latest_reply_sticker_id)
+        .filter_map(|r| r.sticker_id)
         .collect();
     let sticker_emoji_map: HashMap<i64, String> = if sticker_ids.is_empty() {
         HashMap::new()
@@ -443,11 +548,11 @@ pub fn enrich_thread_list(
             .collect()
     };
 
-    // 5. Batch load first attachment kind for both root messages and latest replies
-    let mut attachment_msg_ids: Vec<i64> = rows
+    // 6. Batch load first attachment kind for both root messages and latest replies
+    let mut attachment_msg_ids: Vec<i64> = latest_reply_rows
         .iter()
-        .filter(|r| r.latest_reply_has_attachments.unwrap_or(false))
-        .filter_map(|r| r.latest_reply_id)
+        .filter(|r| r.has_attachments)
+        .map(|r| r.id)
         .collect();
     for msg in &root_messages {
         if msg.has_attachments {
@@ -471,41 +576,34 @@ pub fn enrich_thread_list(
         map
     };
 
-    // 6. Build latest reply map
+    // 7. Build latest reply map
     let mut latest_reply_map: HashMap<i64, ThreadReplyPreview> = HashMap::new();
-    for row in &rows {
-        if let (Some(reply_id), Some(message_type), Some(sender_uid)) = (
-            row.latest_reply_id,
-            row.latest_reply_message_type.clone(),
-            row.latest_reply_sender_uid,
-        ) {
-            let has_attachments = row.latest_reply_has_attachments.unwrap_or(false);
-            latest_reply_map.insert(
-                row.thread_root_id,
-                ThreadReplyPreview {
-                    sender: make_participant(sender_uid),
-                    message: row.latest_reply_message.clone(),
-                    message_type,
-                    sticker_emoji: row
-                        .latest_reply_sticker_id
-                        .and_then(|sid| sticker_emoji_map.get(&sid).cloned()),
-                    first_attachment_kind: if has_attachments {
-                        first_attachment_map.get(&reply_id).cloned()
-                    } else {
-                        None
-                    },
-                    is_deleted: false,
-                    mentions: mention_uids_per_reply
-                        .get(&row.thread_root_id)
-                        .map(|uids| {
-                            uids.iter()
-                                .map(|&uid| build_mention_info(uid, &user_avatars, &user_profiles))
-                                .collect()
-                        })
-                        .unwrap_or_default(),
+    for lr in latest_reply_rows {
+        latest_reply_map.insert(
+            lr.reply_root_id,
+            ThreadReplyPreview {
+                sender: make_participant(lr.sender_uid),
+                message: lr.message,
+                message_type: lr.message_type,
+                sticker_emoji: lr
+                    .sticker_id
+                    .and_then(|sid| sticker_emoji_map.get(&sid).cloned()),
+                first_attachment_kind: if lr.has_attachments {
+                    first_attachment_map.get(&lr.id).cloned()
+                } else {
+                    None
                 },
-            );
-        }
+                is_deleted: false,
+                mentions: mention_uids_per_reply
+                    .get(&lr.reply_root_id)
+                    .map(|uids| {
+                        uids.iter()
+                            .map(|&uid| build_mention_info(uid, &user_avatars, &user_profiles))
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+            },
+        );
     }
 
     // 7. Assemble final response
@@ -553,14 +651,14 @@ pub fn enrich_thread_list(
                 last_reply: latest_reply_map.remove(&row.thread_root_id),
                 reply_count: row.reply_count,
                 last_reply_at: row.last_reply_at,
-                unread_count: row.unread_count,
+                unread_count: unread_map.get(&row.thread_root_id).copied().unwrap_or(0),
                 subscribed_at: row.subscribed_at,
             })
         })
         .collect();
 
-    ListThreadsResponse {
+    Ok(ListThreadsResponse {
         threads,
         next_cursor,
-    }
+    })
 }

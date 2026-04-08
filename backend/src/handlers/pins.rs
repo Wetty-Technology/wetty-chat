@@ -224,8 +224,8 @@ async fn create_pin(
         expires_at: pin.expires_at,
     };
 
-    // Send system message
-    let _ = crate::handlers::chats::send_prepared_message(
+    // Send system message (best-effort — pin already saved)
+    if let Ok(send_result) = crate::handlers::chats::send_prepared_message(
         conn,
         &state,
         PreparedMessageSend {
@@ -242,7 +242,10 @@ async fn create_pin(
             push_preview_override: None,
         },
     )
-    .await;
+    .await
+    {
+        send_result.side_effects.fire(&state);
+    }
 
     // Broadcast pin event to all chat members
     let member_uids: Vec<i32> = group_membership::table
@@ -297,8 +300,8 @@ async fn delete_pin(
     diesel::delete(pinned_messages::table.filter(pinned_messages::id.eq(path.pin_id)))
         .execute(conn)?;
 
-    // Send system message
-    let _ = crate::handlers::chats::send_prepared_message(
+    // Send system message (best-effort — unpin already saved)
+    if let Ok(send_result) = crate::handlers::chats::send_prepared_message(
         conn,
         &state,
         PreparedMessageSend {
@@ -315,7 +318,10 @@ async fn delete_pin(
             push_preview_override: None,
         },
     )
-    .await;
+    .await
+    {
+        send_result.side_effects.fire(&state);
+    }
 
     // Broadcast pin removal
     let member_uids: Vec<i32> = group_membership::table

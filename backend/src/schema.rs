@@ -8,7 +8,7 @@ use discuz_manual::discuz::common_member_profile;
 pub use primary::{
     activity_daily_metrics, attachments, clients, group_membership, groups, invites, media,
     message_reactions, messages, pinned_messages, push_subscriptions, sql_types,
-    sticker_pack_stickers, sticker_packs, stickers, thread_subscriptions, user_extra,
+    sticker_pack_stickers, sticker_packs, stickers, thread_meta, thread_subscriptions, user_extra,
     user_favorite_stickers, user_sticker_pack_subscriptions, usergroup_extra,
 };
 

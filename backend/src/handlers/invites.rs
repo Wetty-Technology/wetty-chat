@@ -533,6 +533,7 @@ async fn post_send_invite_message(
         },
     )
     .await?;
+    send_result.side_effects.fire(&state);
 
     Ok((
         StatusCode::CREATED,

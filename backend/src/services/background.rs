@@ -232,10 +232,14 @@ fn process_bulk_delete(
         }
     }
 
-    // 3. Recalculate last_message_id once after all batches
+    // 3. Recalculate last_message_id and thread_meta once after all batches
     if total_deleted > 0 {
         crate::handlers::chats::recalculate_group_last_message(conn, chat_id)
             .map_err(|e| format!("recalculate last message: {e:?}"))?;
+
+        if let Err(e) = crate::services::threads::recalculate_thread_meta_for_chat(conn, chat_id) {
+            warn!("recalculate thread_meta after bulk delete: {:?}", e);
+        }
 
         info!(
             chat_id,

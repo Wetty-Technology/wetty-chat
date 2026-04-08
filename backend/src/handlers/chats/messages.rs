@@ -393,6 +393,7 @@ async fn post_message(
         },
     )
     .await?;
+    send_result.side_effects.fire(&state);
 
     Ok((StatusCode::CREATED, Json(send_result.response)))
 }
@@ -444,78 +445,102 @@ pub(super) async fn post_thread_message(
         .filter_map(|s| s.parse().ok())
         .collect();
     validate_message_payload(conn, uid, &body, &attachment_ids)?;
-    let send_result = send_prepared_message(
-        conn,
-        &state,
-        PreparedMessageSend {
-            chat_id,
-            sender_uid: uid,
-            message: if matches!(body.message_type, MessageType::Sticker) {
-                None
-            } else {
-                body.message
+
+    // Begin transaction: message insert + thread_meta + subscriptions are atomic.
+    // send_prepared_message is async so we use raw BEGIN/COMMIT.
+    diesel::sql_query("BEGIN").execute(conn)?;
+
+    let tx_result: Result<_, AppError> = async {
+        let send_result = send_prepared_message(
+            conn,
+            &state,
+            PreparedMessageSend {
+                chat_id,
+                sender_uid: uid,
+                message: if matches!(body.message_type, MessageType::Sticker) {
+                    None
+                } else {
+                    body.message
+                },
+                message_type: body.message_type,
+                sticker_id: body.sticker_id,
+                reply_to_id: body.reply_to_id,
+                reply_root_id: Some(thread_id),
+                client_generated_id: body.client_generated_id,
+                attachment_ids,
+                update_group_last_message: false,
+                push_preview_override: None,
             },
-            message_type: body.message_type,
-            sticker_id: body.sticker_id,
-            reply_to_id: body.reply_to_id,
-            reply_root_id: Some(thread_id),
-            client_generated_id: body.client_generated_id,
-            attachment_ids,
-            update_group_last_message: false,
-            push_preview_override: None,
-        },
-    )
-    .await?;
-    let response = send_result.response;
-    let member_uids = send_result.member_uids;
+        )
+        .await?;
+        let response = send_result.response;
+        let member_uids = send_result.member_uids;
+        let msg_side_effects = send_result.side_effects;
 
-    // Auto-subscribe the replying user to this thread and mark as read up to their own message
-    if let Err(e) =
-        crate::services::threads::ensure_thread_subscription(conn, chat_id, thread_id, uid)
-    {
-        tracing::warn!("auto-subscribe replier to thread: {:?}", e);
-    }
-    if let Err(e) = crate::services::threads::mark_thread_as_read(conn, thread_id, uid, response.id)
-    {
-        tracing::warn!("mark thread read for replier: {:?}", e);
-    }
-
-    // Auto-subscribe the root message author
-    if root_msg.sender_uid != uid {
-        if let Err(e) = crate::services::threads::ensure_thread_subscription(
+        crate::services::threads::increment_thread_meta(
             conn,
             chat_id,
             thread_id,
-            root_msg.sender_uid,
-        ) {
-            tracing::warn!("auto-subscribe root author to thread: {:?}", e);
-        }
-    }
+            response.created_at,
+        )?;
 
-    // Auto-subscribe mentioned users to this thread
-    if let Some(ref text) = response.message {
-        for mentioned_uid in extract_mention_uids(text) {
-            if mentioned_uid != uid {
-                if let Err(e) = crate::services::threads::ensure_thread_subscription(
-                    conn,
-                    chat_id,
-                    thread_id,
-                    mentioned_uid,
-                ) {
-                    tracing::warn!(
-                        "auto-subscribe mentioned user {mentioned_uid} to thread: {e:?}"
-                    );
+        // Auto-subscribe the replying user and mark as read
+        crate::services::threads::ensure_thread_subscription(conn, chat_id, thread_id, uid)?;
+        crate::services::threads::mark_thread_as_read(conn, thread_id, uid, response.id)?;
+
+        // Auto-subscribe the root message author
+        if root_msg.sender_uid != uid {
+            crate::services::threads::ensure_thread_subscription(
+                conn,
+                chat_id,
+                thread_id,
+                root_msg.sender_uid,
+            )?;
+        }
+
+        // Auto-subscribe mentioned users
+        if let Some(ref text) = response.message {
+            for mentioned_uid in extract_mention_uids(text) {
+                if mentioned_uid != uid {
+                    crate::services::threads::ensure_thread_subscription(
+                        conn,
+                        chat_id,
+                        thread_id,
+                        mentioned_uid,
+                    )?;
                 }
             }
         }
-    }
 
-    // Mark the root message as having a thread
-    let root_msg_updated: Option<Message> =
+        // Mark the root message as having a thread
         diesel::update(messages::table.filter(dsl::id.eq(thread_id)))
             .set(dsl::has_thread.eq(true))
-            .get_result(conn)
-            .ok();
+            .execute(conn)?;
+
+        Ok((response, member_uids, msg_side_effects))
+    }
+    .await;
+
+    let (response, member_uids, msg_side_effects) = match tx_result {
+        Ok(data) => {
+            diesel::sql_query("COMMIT").execute(conn)?;
+            data
+        }
+        Err(e) => {
+            let _ = diesel::sql_query("ROLLBACK").execute(conn);
+            return Err(e);
+        }
+    };
+
+    // Post-commit: fire deferred side effects (new message WS broadcast + push)
+    msg_side_effects.fire(&state);
+
+    // Post-commit: WS broadcasts (root message update + thread update)
+    let root_msg_updated: Option<Message> = messages::table
+        .filter(dsl::id.eq(thread_id))
+        .select(Message::as_select())
+        .first(conn)
+        .ok();
 
     if let Some(root_msg) = root_msg_updated {
         let root_response = attach_metadata(conn, vec![root_msg], &state, uid)
@@ -534,15 +559,19 @@ pub(super) async fn post_thread_message(
         crate::services::threads::get_thread_subscriber_uids(conn, chat_id, thread_id)
     {
         if !subscriber_uids.is_empty() {
-            let reply_count: i64 = messages::table
-                .filter(
-                    messages::reply_root_id
-                        .eq(thread_id)
-                        .and(messages::deleted_at.is_null()),
-                )
-                .count()
-                .get_result(conn)
-                .unwrap_or(0);
+            // Read reply_count from thread_meta (just updated above)
+            let reply_count: i64 = {
+                use crate::schema::thread_meta;
+                thread_meta::table
+                    .filter(
+                        thread_meta::chat_id
+                            .eq(chat_id)
+                            .and(thread_meta::thread_root_id.eq(thread_id)),
+                    )
+                    .select(thread_meta::reply_count)
+                    .first(conn)
+                    .unwrap_or(0)
+            };
 
             let thread_update = std::sync::Arc::new(
                 crate::handlers::ws::messages::ServerWsMessage::ThreadUpdate(
@@ -711,25 +740,34 @@ async fn delete_message(
         return Err(AppError::Gone("Message already deleted"));
     }
 
-    // Soft delete message
+    // Transaction: soft-delete + thread_meta + group last_message
     let now = Utc::now();
-    let deleted_message: Message = diesel::update(messages::table.filter(dsl::id.eq(message_id)))
-        .set(dsl::deleted_at.eq(Some(now)))
-        .returning(Message::as_returning())
-        .get_result(conn)?;
+    let deleted_message: Message = conn.transaction::<_, diesel::result::Error, _>(|conn| {
+        let deleted_message: Message =
+            diesel::update(messages::table.filter(dsl::id.eq(message_id)))
+                .set(dsl::deleted_at.eq(Some(now)))
+                .returning(Message::as_returning())
+                .get_result(conn)?;
 
-    // If the deleted message was the group's last_message_id, recalculate it
-    {
-        use crate::schema::groups::dsl as g_dsl;
-        let group_last_msg: Option<i64> = groups::table
-            .filter(g_dsl::id.eq(chat_id))
-            .select(g_dsl::last_message_id)
-            .first::<Option<i64>>(conn)?;
-
-        if group_last_msg == Some(message_id) {
-            super::recalculate_group_last_message(conn, chat_id)?;
+        if let Some(reply_root_id) = deleted_message.reply_root_id {
+            crate::services::threads::recalculate_thread_meta(conn, chat_id, reply_root_id)?;
         }
-    }
+
+        {
+            use crate::schema::groups::dsl as g_dsl;
+            let group_last_msg: Option<i64> = groups::table
+                .filter(g_dsl::id.eq(chat_id))
+                .select(g_dsl::last_message_id)
+                .first::<Option<i64>>(conn)?;
+
+            if group_last_msg == Some(message_id) {
+                super::recalculate_group_last_message(conn, chat_id)
+                    .map_err(|_| diesel::result::Error::RollbackTransaction)?;
+            }
+        }
+
+        Ok(deleted_message)
+    })?;
 
     let response = attach_metadata(conn, vec![deleted_message], &state, uid)
         .await

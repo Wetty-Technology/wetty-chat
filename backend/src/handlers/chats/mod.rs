@@ -217,6 +217,26 @@ pub(crate) struct PreparedMessageSend {
 pub(crate) struct SendMessageResult {
     pub response: MessageResponse,
     pub member_uids: Vec<i32>,
+    pub side_effects: PendingSideEffects,
+}
+
+#[must_use = "side effects must be fired via .fire()"]
+pub(crate) struct PendingSideEffects {
+    ws_msg: std::sync::Arc<crate::handlers::ws::messages::ServerWsMessage>,
+    broadcast_uids: Vec<i32>,
+    push_job: Option<PushJob>,
+}
+
+impl PendingSideEffects {
+    /// Fire WS broadcast and push notification. Call after transaction commit.
+    pub fn fire(self, state: &AppState) {
+        state
+            .ws_registry
+            .broadcast_to_uids(&self.broadcast_uids, self.ws_msg);
+        if let Some(job) = self.push_job {
+            state.push_service.enqueue(job);
+        }
+    }
 }
 
 #[derive(serde::Deserialize, utoipa::ToSchema)]
@@ -547,9 +567,8 @@ pub(crate) async fn send_prepared_message(
     let ws_msg = std::sync::Arc::new(crate::handlers::ws::messages::ServerWsMessage::Message(
         response.clone(),
     ));
-    state.ws_registry.broadcast_to_uids(&member_uids, ws_msg);
 
-    if !is_system_message {
+    let push_job = if !is_system_message {
         let sender_username = load_username_by_uid(conn, prepared.sender_uid)?
             .unwrap_or_else(|| "Someone".to_string());
         let chat_name = groups::table
@@ -562,7 +581,7 @@ pub(crate) async fn send_prepared_message(
             .as_deref()
             .map(extract_mention_uids)
             .unwrap_or_default();
-        state.push_service.enqueue(PushJob {
+        Some(PushJob {
             chat_id: prepared.chat_id,
             sender_uid: prepared.sender_uid,
             sender_username,
@@ -583,12 +602,21 @@ pub(crate) async fn send_prepared_message(
             message_id: response.id,
             thread_root_id: response.reply_root_id,
             mentioned_uids,
-        });
-    }
+        })
+    } else {
+        None
+    };
+
+    let side_effects = PendingSideEffects {
+        ws_msg,
+        broadcast_uids: member_uids.clone(),
+        push_job,
+    };
 
     Ok(SendMessageResult {
         response,
         member_uids,
+        side_effects,
     })
 }
 

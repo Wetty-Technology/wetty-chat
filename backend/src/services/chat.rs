@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use tracing::warn;
 
 pub const MAX_UNREAD_COUNT: i64 = 100;
+const UNREAD_COUNT_CHUNK_SIZE: usize = 50;
 
 #[derive(QueryableByName)]
 struct UnreadCountRow {
@@ -21,6 +22,7 @@ struct ChatUnreadCountRow {
 }
 
 /// Calculate capped global unread counts for badge-style displays.
+/// UIDs are processed in chunks to keep individual query times bounded.
 pub fn get_unread_counts(
     conn: &mut PgConnection,
     target_uids: &[i32],
@@ -29,6 +31,22 @@ pub fn get_unread_counts(
         return Ok(HashMap::new());
     }
 
+    let mut result = HashMap::with_capacity(target_uids.len());
+
+    for chunk in target_uids.chunks(UNREAD_COUNT_CHUNK_SIZE) {
+        let rows = get_unread_counts_batch(conn, chunk)?;
+        for row in rows {
+            result.insert(row.uid, row.unread_count.min(MAX_UNREAD_COUNT));
+        }
+    }
+
+    Ok(result)
+}
+
+fn get_unread_counts_batch(
+    conn: &mut PgConnection,
+    uids: &[i32],
+) -> Result<Vec<UnreadCountRow>, diesel::result::Error> {
     let query = sql_query(
         "WITH input_uids AS (
              SELECT DISTINCT uid
@@ -50,13 +68,10 @@ pub fn get_unread_counts(
          ) AS unread_messages ON TRUE
          GROUP BY input_uids.uid",
     )
-    .bind::<diesel::sql_types::Array<diesel::sql_types::Integer>, _>(target_uids.to_vec());
+    .bind::<diesel::sql_types::Array<diesel::sql_types::Integer>, _>(uids.to_vec());
 
     match query.load::<UnreadCountRow>(conn) {
-        Ok(rows) => Ok(rows
-            .into_iter()
-            .map(|row| (row.uid, row.unread_count.min(MAX_UNREAD_COUNT)))
-            .collect()),
+        Ok(rows) => Ok(rows),
         Err(e) => {
             warn!("Failed to load unread counts: {:?}", e);
             Err(e)
