@@ -93,7 +93,6 @@ class SettingsPage extends ConsumerWidget {
     final session = ref.watch(authSessionProvider);
     final sections = _sections(context, settings.language, session);
     return CupertinoPageScaffold(
-      backgroundColor: const Color(0xFFF2F2F7),
       navigationBar: CupertinoNavigationBar(middle: Text(l10n.tabSettings)),
       child: SafeArea(
         child: ListView(
