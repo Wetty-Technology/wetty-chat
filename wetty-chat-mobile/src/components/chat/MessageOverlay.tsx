@@ -163,7 +163,7 @@ export function MessageOverlay(props: MessageOverlayProps) {
       }
       const menuLocalLeft = menuGlobalLeft - left;
 
-      const positionMenu = (el: HTMLElement, topY: number, leftX: number, elHeight: number) => {
+      const applyPos = (el: HTMLElement, topY: number, leftX: number, elHeight: number) => {
         el.style.position = 'absolute';
         let desiredTop = topY;
         if (desiredTop < localViewportTop) desiredTop = localViewportTop;
@@ -171,30 +171,46 @@ export function MessageOverlay(props: MessageOverlayProps) {
         el.style.top = `${desiredTop}px`;
         el.style.left = `${leftX}px`;
         el.style.right = 'auto';
-        el.style.zIndex = '1';
+        el.style.zIndex = '1000'; // Higher z-index to cover image overlays
         el.classList.add(styles.opaqueMenu);
       };
 
-      const REACTION_BAR_OFFSET = 8;
-      const ACTION_LIST_OFFSET = 12;
+      const REACTION_BAR_OFFSET = 2; // smaller gap (was 8)
+      const ACTION_LIST_OFFSET = 4; // smaller gap (was 12)
 
       if (reactionBarEl && actionListEl) {
-        positionMenu(
-          reactionBarEl,
-          interactionPos.y - top - reactionHeight - REACTION_BAR_OFFSET,
-          menuLocalLeft,
-          reactionHeight,
-        );
-        positionMenu(actionListEl, interactionPos.y - top + ACTION_LIST_OFFSET, menuLocalLeft, actionHeight);
+        let rTop = interactionPos.y - top - reactionHeight - REACTION_BAR_OFFSET;
+        let aTop = interactionPos.y - top + ACTION_LIST_OFFSET;
+
+        // Push down if reaction bar hits top
+        if (rTop < localViewportTop) {
+          const shift = localViewportTop - rTop;
+          rTop += shift;
+          if (aTop < rTop + reactionHeight + REACTION_BAR_OFFSET) {
+            aTop = rTop + reactionHeight + REACTION_BAR_OFFSET;
+          }
+        }
+
+        // Push up if action list hits bottom
+        if (aTop + actionHeight > localViewportBottom) {
+          const shift = aTop + actionHeight - localViewportBottom;
+          aTop -= shift;
+          if (rTop > aTop - reactionHeight - REACTION_BAR_OFFSET) {
+            rTop = aTop - reactionHeight - REACTION_BAR_OFFSET;
+          }
+        }
+
+        applyPos(reactionBarEl, rTop, menuLocalLeft, reactionHeight);
+        applyPos(actionListEl, aTop, menuLocalLeft, actionHeight);
       } else if (reactionBarEl) {
-        positionMenu(
+        applyPos(
           reactionBarEl,
           interactionPos.y - top - reactionHeight - REACTION_BAR_OFFSET,
           menuLocalLeft,
           reactionHeight,
         );
       } else if (actionListEl) {
-        positionMenu(actionListEl, interactionPos.y - top + ACTION_LIST_OFFSET, menuLocalLeft, actionHeight);
+        applyPos(actionListEl, interactionPos.y - top + ACTION_LIST_OFFSET, menuLocalLeft, actionHeight);
       }
     } else {
       // Clamp vertically: prioritize bottom clamp over top clamp so interactive elements stay reachable

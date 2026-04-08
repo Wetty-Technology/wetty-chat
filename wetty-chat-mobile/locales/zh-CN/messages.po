@@ -237,6 +237,9 @@ msgstr "继续"
 msgid "Copy"
 msgstr "复制"
 
+msgid "Copy text"
+msgstr "复制文本"
+
 #: src/components/chat/settings/ShareInviteModal.tsx
 #: src/pages/chat-thread/manage-invites.tsx
 msgid "Copy code"

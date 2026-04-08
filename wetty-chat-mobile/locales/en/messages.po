@@ -273,6 +273,9 @@ msgstr "Continue"
 msgid "Copy"
 msgstr "Copy"
 
+msgid "Copy text"
+msgstr "Copy text"
+
 #: src/components/chat/settings/ShareInviteModal.tsx
 #: src/pages/chat-thread/manage-invites.tsx
 msgid "Copy code"
