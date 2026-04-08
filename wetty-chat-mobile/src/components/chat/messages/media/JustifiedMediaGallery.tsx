@@ -206,7 +206,6 @@ export const JustifiedMediaGallery: React.FC<JustifiedMediaGalleryProps> = ({
         gap: `${GAP}px`,
         overflow: 'hidden',
         position: 'relative',
-        borderRadius: 'var(--bubble-border-radius, 12px)',
       }}
     >
       {rows.map((row, rIndex) => {
@@ -225,7 +224,7 @@ export const JustifiedMediaGallery: React.FC<JustifiedMediaGalleryProps> = ({
               minHeight: 0,
             }}
           >
-            {row.items.map((cell, cIndex) => {
+            {row.items.map((cell: { item: Attachment; ratio: number; index: number }, cIndex: number) => {
               const isLastPreview = rIndex === rows.length - 1 && cIndex === row.items.length - 1;
               const showOverlay = isLastPreview && extraCount > 0;
 
