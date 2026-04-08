@@ -6,6 +6,7 @@ import 'package:flutter/cupertino.dart';
 import '../../../../app/theme/style_config.dart';
 import 'message_bubble/message_bubble.dart';
 import 'message_bubble/message_bubble_presentation.dart';
+import 'message_overlay_preview.dart';
 import 'message_row.dart';
 
 class MessageOverlayAction {
@@ -20,6 +21,40 @@ class MessageOverlayAction {
   final VoidCallback onPressed;
   final IconData? icon;
   final bool isDestructive;
+}
+
+class _OverlayPlacement {
+  const _OverlayPlacement({
+    required this.left,
+    required this.top,
+    required this.width,
+    required this.height,
+    this.contentOffset = Offset.zero,
+    this.allowsActionOverlap = false,
+  });
+
+  final double left;
+  final double top;
+  final double width;
+  final double height;
+  final Offset contentOffset;
+  final bool allowsActionOverlap;
+}
+
+class _OverlayLayout {
+  const _OverlayLayout({
+    required this.preview,
+    required this.actionTop,
+    required this.actionWidth,
+    required this.reactionTop,
+    required this.actionsPinnedToBottom,
+  });
+
+  final _OverlayPlacement preview;
+  final double actionTop;
+  final double actionWidth;
+  final double? reactionTop;
+  final bool actionsPinnedToBottom;
 }
 
 class MessageOverlay extends StatelessWidget {
@@ -37,8 +72,16 @@ class MessageOverlay extends StatelessWidget {
   static const double _screenPadding = 16;
   static const double _clusterGap = 10;
   static const double _reactionBarHeight = 52;
-  static const double _estimatedBubbleHeight = 132;
   static const double _actionRowHeight = 52;
+  static const double _actionSheetMinWidth = 148;
+  static const double _actionSheetMaxWidth = 240;
+  static const double _actionRowHorizontalPadding = 14;
+  static const double _actionIconSize = 20;
+  static const double _actionIconGap = 10;
+  static const double _minTallPreviewLines = 4;
+  static const double _bubbleVerticalPadding = 16;
+  static const double _senderHeaderHeight = 20;
+  static const double _overlayReactionBarWidth = 236;
 
   final MessageLongPressDetails details;
   final bool visible;
@@ -60,41 +103,48 @@ class MessageOverlay extends StatelessWidget {
         final viewportHeight = constraints.maxHeight;
         final safeTop = mediaQuery.padding.top + _screenPadding;
         final safeBottom = mediaQuery.padding.bottom + _screenPadding;
-        final maxClusterWidth = math.max(
+        final bottomLimit = viewportHeight - safeBottom;
+        final maxPanelWidth = math.max(
           220.0,
           viewportWidth - (_screenPadding * 2),
         );
-        final bubbleWidth = math.min(details.sourceRect.width, maxClusterWidth);
-        final actionWidth = math.min(math.max(bubbleWidth, 220.0), 280.0);
-        final clusterWidth = math.min(
-          maxClusterWidth,
-          math.max(bubbleWidth, actionWidth),
+        final bubbleRect = Rect.fromLTWH(
+          details.bubbleRect.left.clamp(0.0, viewportWidth).toDouble(),
+          details.bubbleRect.top.clamp(0.0, viewportHeight).toDouble(),
+          details.bubbleRect.width.clamp(0.0, viewportWidth).toDouble(),
+          details.bubbleRect.height.clamp(0.0, viewportHeight).toDouble(),
         );
-        final clusterHeight = _estimatedClusterHeight;
-
-        final preferredLeft = details.isMe
-            ? details.sourceRect.right - clusterWidth
-            : details.sourceRect.left;
-        final maxLeft = math.max(
-          _screenPadding,
-          viewportWidth - clusterWidth - _screenPadding,
+        final actionWidth = _measureActionWidth(
+          context,
+          maxWidth: viewportWidth - (_screenPadding * 2),
         );
-        final left = preferredLeft.clamp(_screenPadding, maxLeft);
-
-        final availableAbove = details.sourceRect.top - safeTop;
-        final availableBelow =
-            viewportHeight - safeBottom - details.sourceRect.bottom;
-        final showAbove =
-            availableBelow < clusterHeight && availableAbove > availableBelow;
-
-        final preferredTop = showAbove
-            ? details.sourceRect.top - clusterHeight - 12
-            : details.sourceRect.bottom + 12;
-        final maxTop = math.max(
-          safeTop,
-          viewportHeight - safeBottom - clusterHeight,
+        final overlayLayout = _resolveOverlayLayout(
+          bubbleRect: bubbleRect,
+          safeTop: safeTop,
+          safeBottom: bottomLimit,
+          viewportWidth: viewportWidth,
+          actionWidth: actionWidth,
         );
-        final top = preferredTop.clamp(safeTop, maxTop);
+        final previewPlacement = overlayLayout.preview;
+        final reactionWidth = math.min(_overlayReactionBarWidth, maxPanelWidth);
+        final panelAnchorRect = Rect.fromLTWH(
+          previewPlacement.left,
+          previewPlacement.top,
+          previewPlacement.width,
+          previewPlacement.height,
+        );
+        final reactionLeft = _alignedPanelLeft(
+          bubbleRect: panelAnchorRect,
+          panelWidth: reactionWidth,
+          viewportWidth: viewportWidth,
+        );
+        final actionLeft = _alignedPanelLeft(
+          bubbleRect: panelAnchorRect,
+          panelWidth: actionWidth,
+          viewportWidth: viewportWidth,
+        );
+        final reactionTop = overlayLayout.reactionTop;
+        final actionTop = overlayLayout.actionTop;
 
         return Stack(
           children: [
@@ -121,66 +171,35 @@ class MessageOverlay extends StatelessWidget {
                 ),
               ),
             ),
-            Positioned(
-              left: left,
-              top: top,
-              width: clusterWidth,
-              child: IgnorePointer(
-                ignoring: !visible,
-                child: TweenAnimationBuilder<double>(
-                  tween: Tween<double>(begin: 0, end: visible ? 1 : 0),
-                  duration: const Duration(milliseconds: 150),
-                  curve: const Cubic(0.16, 1, 0.3, 1),
-                  builder: (context, value, child) {
-                    return Opacity(
-                      opacity: value,
-                      child: Transform.scale(
-                        scale: 0.92 + (0.08 * value),
-                        alignment: details.isMe
-                            ? Alignment.topRight
-                            : Alignment.topLeft,
-                        child: child,
-                      ),
-                    );
-                  },
-                  child: GestureDetector(
-                    onTap: () {},
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: details.isMe
-                          ? CrossAxisAlignment.end
-                          : CrossAxisAlignment.start,
-                      children: showAbove
-                          ? [
-                              _buildActionList(context, colors, actionWidth),
-                              const SizedBox(height: _clusterGap),
-                              _buildBubblePreview(context, bubbleWidth),
-                              if (_showReactionBar) ...[
-                                const SizedBox(height: _clusterGap),
-                                _buildReactionBar(
-                                  context,
-                                  colors,
-                                  clusterWidth,
-                                ),
-                              ],
-                            ]
-                          : [
-                              if (_showReactionBar) ...[
-                                _buildReactionBar(
-                                  context,
-                                  colors,
-                                  clusterWidth,
-                                ),
-                                const SizedBox(height: _clusterGap),
-                              ],
-                              _buildBubblePreview(context, bubbleWidth),
-                              const SizedBox(height: _clusterGap),
-                              _buildActionList(context, colors, actionWidth),
-                            ],
-                    ),
-                  ),
-                ),
+            if (_showReactionBar && reactionTop != null)
+              _buildPositionedOverlayItem(
+                left: reactionLeft,
+                top: reactionTop,
+                width: reactionWidth,
+                alignment: details.isMe
+                    ? Alignment.bottomRight
+                    : Alignment.bottomLeft,
+                child: _buildReactionBar(context, colors, reactionWidth),
               ),
+            _buildPositionedOverlayItem(
+              left: previewPlacement.left,
+              top: previewPlacement.top,
+              width: previewPlacement.width,
+              height: previewPlacement.height,
+              alignment: details.isMe
+                  ? Alignment.centerRight
+                  : Alignment.centerLeft,
+              child: _buildBubblePreview(
+                context,
+                previewPlacement: previewPlacement,
+              ),
+            ),
+            _buildPositionedOverlayItem(
+              left: actionLeft,
+              top: actionTop,
+              width: actionWidth,
+              alignment: details.isMe ? Alignment.topRight : Alignment.topLeft,
+              child: _buildActionList(context, colors, actionWidth),
             ),
           ],
         );
@@ -188,32 +207,244 @@ class MessageOverlay extends StatelessWidget {
     );
   }
 
-  double get _estimatedClusterHeight {
-    final actionHeight = actions.length * _actionRowHeight;
-    final reactionHeight = _showReactionBar
-        ? _reactionBarHeight + _clusterGap
-        : 0;
-    return reactionHeight + _estimatedBubbleHeight + _clusterGap + actionHeight;
+  double _actionListHeight(int count) {
+    if (count <= 0) {
+      return 0;
+    }
+    return (count * _actionRowHeight) + math.max(0, count - 1);
   }
 
-  Widget _buildBubblePreview(BuildContext context, double width) {
+  double _measureActionWidth(BuildContext context, {required double maxWidth}) {
+    var widestRowWidth = 0.0;
+
+    for (final action in actions) {
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: action.label,
+          style: appTextStyle(context, fontWeight: FontWeight.w500),
+        ),
+        maxLines: 1,
+        textDirection: TextDirection.ltr,
+      )..layout(maxWidth: double.infinity);
+
+      var rowWidth = _actionRowHorizontalPadding * 2;
+      if (action.icon != null) {
+        rowWidth += _actionIconSize + _actionIconGap;
+      }
+      rowWidth += textPainter.width;
+      widestRowWidth = math.max(widestRowWidth, rowWidth);
+    }
+
+    return widestRowWidth
+        .clamp(_actionSheetMinWidth, math.min(_actionSheetMaxWidth, maxWidth))
+        .toDouble();
+  }
+
+  _OverlayLayout _resolveOverlayLayout({
+    required Rect bubbleRect,
+    required double safeTop,
+    required double safeBottom,
+    required double viewportWidth,
+    required double actionWidth,
+  }) {
+    final actionHeight = _actionListHeight(actions.length);
+    final reservedTop = _showReactionBar
+        ? _reactionBarHeight + _clusterGap
+        : 0.0;
+    final actionTop = math.max(safeTop, safeBottom - actionHeight);
+    final previewMinTop = safeTop + reservedTop;
+    final previewMaxBottomWithoutOverlap = actionTop - _clusterGap;
+    final availableHeightWithoutOverlap = math.max(
+      0.0,
+      previewMaxBottomWithoutOverlap - previewMinTop,
+    );
+    final maxAllowedPreviewBottom = actionTop + actionHeight;
+    final availableHeightWithOverlap = math.max(
+      0.0,
+      maxAllowedPreviewBottom - previewMinTop,
+    );
+    final minVisiblePreviewHeight = _minimumVisiblePreviewHeight();
+    final previewWidth = math.min(
+      bubbleRect.width,
+      math.max(0.0, viewportWidth - (_screenPadding * 2)),
+    );
+    final horizontalClipOffset = details.isMe
+        ? math.max(0.0, bubbleRect.width - previewWidth)
+        : 0.0;
+
+    final previewLeft = _alignedPanelLeft(
+      bubbleRect: Rect.fromLTWH(
+        bubbleRect.left,
+        bubbleRect.top,
+        previewWidth,
+        bubbleRect.height,
+      ),
+      panelWidth: previewWidth,
+      viewportWidth: viewportWidth,
+    );
+
+    late final _OverlayPlacement preview;
+    if (bubbleRect.height <= availableHeightWithoutOverlap) {
+      final previewTop = bubbleRect.top
+          .clamp(
+            previewMinTop,
+            math.max(
+              previewMinTop,
+              previewMaxBottomWithoutOverlap - bubbleRect.height,
+            ),
+          )
+          .toDouble();
+      preview = _OverlayPlacement(
+        left: previewLeft,
+        top: previewTop,
+        width: previewWidth,
+        height: bubbleRect.height,
+        contentOffset: Offset(horizontalClipOffset, 0),
+      );
+
+      return _OverlayLayout(
+        preview: preview,
+        actionTop: preview.top + preview.height + _clusterGap,
+        actionWidth: actionWidth,
+        reactionTop: _showReactionBar
+            ? preview.top - _clusterGap - _reactionBarHeight
+            : null,
+        actionsPinnedToBottom: false,
+      );
+    } else {
+      final previewHeight = math.min(
+        bubbleRect.height,
+        availableHeightWithOverlap,
+      );
+      final resolvedPreviewHeight = math.max(
+        math.min(previewHeight, bubbleRect.height),
+        math.min(minVisiblePreviewHeight, previewHeight),
+      );
+      final previewTop = bubbleRect.top
+          .clamp(
+            previewMinTop,
+            math.max(
+              previewMinTop,
+              maxAllowedPreviewBottom - resolvedPreviewHeight,
+            ),
+          )
+          .toDouble();
+
+      preview = _OverlayPlacement(
+        left: previewLeft,
+        top: previewTop,
+        width: previewWidth,
+        height: resolvedPreviewHeight,
+        contentOffset: Offset(horizontalClipOffset, 0),
+        allowsActionOverlap: true,
+      );
+
+      return _OverlayLayout(
+        preview: preview,
+        actionTop: actionTop,
+        actionWidth: actionWidth,
+        reactionTop: _showReactionBar
+            ? preview.top - _clusterGap - _reactionBarHeight
+            : null,
+        actionsPinnedToBottom: true,
+      );
+    }
+  }
+
+  double _minimumVisiblePreviewHeight() {
+    final lineHeight = chatMessageFontSize * 1.28;
+    final senderHeaderAllowance = details.isMe ? 0.0 : _senderHeaderHeight;
+    return _bubbleVerticalPadding +
+        senderHeaderAllowance +
+        (lineHeight * _minTallPreviewLines);
+  }
+
+  double _alignedPanelLeft({
+    required Rect bubbleRect,
+    required double panelWidth,
+    required double viewportWidth,
+  }) {
+    final preferredLeft = details.isMe
+        ? bubbleRect.right - panelWidth
+        : bubbleRect.left;
+    final maxLeft = math.max(
+      _screenPadding,
+      viewportWidth - panelWidth - _screenPadding,
+    );
+    return preferredLeft.clamp(_screenPadding, maxLeft).toDouble();
+  }
+
+  Widget _buildPositionedOverlayItem({
+    required double left,
+    required double top,
+    required double width,
+    double? height,
+    required Alignment alignment,
+    required Widget child,
+  }) {
+    return Positioned(
+      left: left,
+      top: top,
+      width: width,
+      height: height,
+      child: IgnorePointer(
+        ignoring: !visible,
+        child: TweenAnimationBuilder<double>(
+          tween: Tween<double>(begin: 0, end: visible ? 1 : 0),
+          duration: const Duration(milliseconds: 150),
+          curve: const Cubic(0.16, 1, 0.3, 1),
+          builder: (context, value, _) {
+            return Opacity(
+              opacity: value,
+              child: Transform.scale(
+                scale: 0.92 + (0.08 * value),
+                alignment: alignment,
+                child: child,
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBubblePreview(
+    BuildContext context, {
+    required _OverlayPlacement previewPlacement,
+  }) {
     final message = details.message;
     final presentation = MessageBubblePresentation.fromContext(
       context: context,
       message: message,
       isMe: details.isMe,
       chatMessageFontSize: chatMessageFontSize,
-      maxBubbleWidth: width,
+      maxBubbleWidth: details.bubbleRect.width,
     );
 
-    return SizedBox(
-      width: width,
-      child: MessageBubble(
+    if (previewPlacement.allowsActionOverlap) {
+      return MessageOverlayPreview(
         message: message,
         presentation: presentation,
         chatMessageFontSize: chatMessageFontSize,
         isMe: details.isMe,
         showSenderName: !details.isMe,
+        maxHeight: previewPlacement.height,
+      );
+    }
+
+    return ClipRect(
+      child: Transform.translate(
+        offset: -previewPlacement.contentOffset,
+        child: SizedBox(
+          width: details.bubbleRect.width,
+          child: MessageBubble(
+            message: message,
+            presentation: presentation,
+            chatMessageFontSize: chatMessageFontSize,
+            isMe: details.isMe,
+            showSenderName: !details.isMe,
+          ),
+        ),
       ),
     );
   }

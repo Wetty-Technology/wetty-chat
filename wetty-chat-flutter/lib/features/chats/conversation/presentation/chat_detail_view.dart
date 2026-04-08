@@ -62,6 +62,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
   static const Duration _overlayAnimationDuration = Duration(milliseconds: 150);
 
   final ScrollController _timelineScrollController = ScrollController();
+  final GlobalKey _overlayViewportKey = GlobalKey();
 
   bool _isPopping = false;
   bool _isAtLiveEdge = true;
@@ -157,10 +158,29 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
     if (details.message.isDeleted) {
       return;
     }
+    final viewportContext = _overlayViewportKey.currentContext;
+    final viewportRenderBox = viewportContext?.findRenderObject() as RenderBox?;
+    if (viewportRenderBox == null || !viewportRenderBox.attached) {
+      return;
+    }
+    final bubbleTopLeft = viewportRenderBox.globalToLocal(
+      details.bubbleRect.topLeft,
+    );
+    final bubbleBottomRight = viewportRenderBox.globalToLocal(
+      details.bubbleRect.bottomRight,
+    );
+    final bubbleRect = Rect.fromPoints(bubbleTopLeft, bubbleBottomRight);
+    final viewportRect = Offset.zero & viewportRenderBox.size;
+    final visibleRect = bubbleRect.intersect(viewportRect);
+    if (visibleRect.isEmpty) {
+      return;
+    }
     FocusScope.of(context).unfocus();
     _overlayDismissTimer?.cancel();
     setState(() {
-      _activeOverlay = _ActiveMessageOverlay(details);
+      _activeOverlay = _ActiveMessageOverlay(
+        details.copyWith(bubbleRect: bubbleRect, visibleRect: visibleRect),
+      );
       _isOverlayVisible = true;
     });
   }
@@ -518,6 +538,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
                   child: Container(
                     color: colors.chatBackground,
                     child: Stack(
+                      key: _overlayViewportKey,
                       children: [
                         timelineAsync.when(
                           loading: () =>

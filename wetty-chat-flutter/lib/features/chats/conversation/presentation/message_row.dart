@@ -17,13 +17,32 @@ import 'video_popup_player.dart';
 class MessageLongPressDetails {
   const MessageLongPressDetails({
     required this.message,
-    required this.sourceRect,
+    required this.bubbleRect,
     required this.isMe,
-  });
+    Rect? visibleRect,
+  }) : visibleRect = visibleRect ?? bubbleRect;
+
+  MessageLongPressDetails copyWith({
+    ConversationMessage? message,
+    Rect? bubbleRect,
+    bool? isMe,
+    Rect? visibleRect,
+  }) {
+    final nextBubbleRect = bubbleRect ?? this.bubbleRect;
+    return MessageLongPressDetails(
+      message: message ?? this.message,
+      bubbleRect: nextBubbleRect,
+      isMe: isMe ?? this.isMe,
+      visibleRect: visibleRect ?? nextBubbleRect,
+    );
+  }
 
   final ConversationMessage message;
-  final Rect sourceRect;
+  final Rect bubbleRect;
   final bool isMe;
+  final Rect visibleRect;
+
+  Rect get sourceRect => bubbleRect;
 }
 
 class MessageRow extends StatefulWidget {
@@ -108,7 +127,7 @@ class _MessageRowState extends State<MessageRow>
     widget.onLongPress!(
       MessageLongPressDetails(
         message: widget.message,
-        sourceRect: origin & renderBox.size,
+        bubbleRect: origin & renderBox.size,
         isMe: _isMe,
       ),
     );
