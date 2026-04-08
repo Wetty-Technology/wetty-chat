@@ -1,5 +1,5 @@
 import type { AxiosResponse } from 'axios';
-import type { MentionInfo, MessageResponse } from './messages';
+import type { MentionInfo } from './messages';
 import apiClient from './client';
 
 export interface ThreadParticipant {
@@ -18,11 +18,21 @@ export interface ThreadReplyPreview {
   mentions?: MentionInfo[] | null;
 }
 
+export interface ThreadRootMessagePreview {
+  id: string;
+  sender: ThreadParticipant;
+  message: string | null;
+  messageType: string;
+  firstAttachmentKind?: string | null;
+  isDeleted: boolean;
+  mentions?: MentionInfo[];
+}
+
 export interface ThreadListItem {
   chatId: string;
   chatName: string;
   chatAvatar: string | null;
-  threadRootMessage: MessageResponse;
+  threadRootMessage: ThreadRootMessagePreview;
   participants: ThreadParticipant[];
   lastReply: ThreadReplyPreview | null;
   replyCount: number;

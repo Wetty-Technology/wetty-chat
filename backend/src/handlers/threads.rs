@@ -6,13 +6,11 @@ use axum::{
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use serde::Serialize;
-use std::collections::HashMap;
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::{
     errors::AppError,
     extractors::DbConn,
-    handlers::chats::MessageResponse,
     handlers::members::check_membership,
     models::Message,
     schema::messages,
@@ -20,9 +18,6 @@ use crate::{
     utils::{auth::CurrentUid, pagination::validate_limit},
     AppState,
 };
-
-// Re-use the attach_metadata function from chats
-use crate::handlers::chats::attach_metadata;
 
 // Re-export response type used by the handler
 pub use thread_svc::ListThreadsResponse;
@@ -73,17 +68,13 @@ async fn get_threads(
         }));
     }
 
-    // Load root messages and enrich with metadata
+    // Load raw root messages (no heavy attach_metadata — enrich_thread_list builds lightweight previews)
     let root_messages: Vec<Message> = messages::table
         .filter(messages::id.eq_any(&root_ids))
         .select(Message::as_select())
         .load(conn)?;
 
-    let enriched = attach_metadata(conn, root_messages, &state, uid).await;
-    let msg_map: HashMap<i64, MessageResponse> = enriched.into_iter().map(|m| (m.id, m)).collect();
-
-    // Delegate enrichment and assembly to the service layer
-    let response = thread_svc::enrich_thread_list(conn, rows, has_more, msg_map, &state);
+    let response = thread_svc::enrich_thread_list(conn, rows, has_more, root_messages, &state);
 
     Ok(Json(response))
 }

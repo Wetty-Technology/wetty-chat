@@ -424,15 +424,19 @@ pub(super) async fn post_thread_message(
     check_membership(conn, chat_id, uid)?;
     validate_client_message_type(&body.message_type)?;
 
-    // Fast-path: check if root message actually exists
+    // Load root message: validate existence and message type
     use crate::schema::messages::dsl;
-    let root_msg_exists: bool = diesel::select(diesel::dsl::exists(
-        messages::table.filter(dsl::id.eq(thread_id).and(dsl::chat_id.eq(chat_id))),
-    ))
-    .get_result(conn)?;
+    let root_msg: Message = messages::table
+        .filter(dsl::id.eq(thread_id).and(dsl::chat_id.eq(chat_id)))
+        .select(Message::as_select())
+        .first(conn)
+        .optional()?
+        .ok_or(AppError::NotFound("Thread root message not found"))?;
 
-    if !root_msg_exists {
-        return Err(AppError::NotFound("Thread root message not found"));
+    if root_msg.message_type != MessageType::Text {
+        return Err(AppError::BadRequest(
+            "Threads can only be created on text messages",
+        ));
     }
     let attachment_ids: Vec<i64> = body
         .attachment_ids
@@ -477,20 +481,14 @@ pub(super) async fn post_thread_message(
     }
 
     // Auto-subscribe the root message author
-    if let Ok(root_sender_uid) = messages::table
-        .filter(dsl::id.eq(thread_id))
-        .select(messages::sender_uid)
-        .first::<i32>(conn)
-    {
-        if root_sender_uid != uid {
-            if let Err(e) = crate::services::threads::ensure_thread_subscription(
-                conn,
-                chat_id,
-                thread_id,
-                root_sender_uid,
-            ) {
-                tracing::warn!("auto-subscribe root author to thread: {:?}", e);
-            }
+    if root_msg.sender_uid != uid {
+        if let Err(e) = crate::services::threads::ensure_thread_subscription(
+            conn,
+            chat_id,
+            thread_id,
+            root_msg.sender_uid,
+        ) {
+            tracing::warn!("auto-subscribe root author to thread: {:?}", e);
         }
     }
 

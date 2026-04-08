@@ -6,10 +6,8 @@ use serde::Serialize;
 use std::collections::HashMap;
 use tracing::warn;
 
-use crate::handlers::chats::{
-    build_mention_info, extract_mention_uids, MentionInfo, MessageResponse,
-};
-use crate::models::{Attachment, MessageType};
+use crate::handlers::chats::{build_mention_info, extract_mention_uids, MentionInfo};
+use crate::models::{Attachment, Message, MessageType};
 use crate::schema::{attachments, stickers, thread_subscriptions};
 use crate::services::chat::MAX_UNREAD_COUNT;
 use crate::services::media::build_public_object_url;
@@ -280,6 +278,22 @@ pub struct ThreadReplyPreview {
     pub mentions: Vec<MentionInfo>,
 }
 
+#[derive(Debug, Serialize, Clone, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ThreadRootMessagePreview {
+    #[serde(with = "crate::serde_i64_string")]
+    #[schema(value_type = String)]
+    pub id: i64,
+    pub sender: ThreadParticipant,
+    pub message: Option<String>,
+    pub message_type: MessageType,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub first_attachment_kind: Option<String>,
+    pub is_deleted: bool,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub mentions: Vec<MentionInfo>,
+}
+
 #[derive(Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ThreadListItem {
@@ -288,7 +302,7 @@ pub struct ThreadListItem {
     pub chat_id: i64,
     pub chat_name: String,
     pub chat_avatar: Option<String>,
-    pub thread_root_message: MessageResponse,
+    pub thread_root_message: ThreadRootMessagePreview,
     pub participants: Vec<ThreadParticipant>,
     pub last_reply: Option<ThreadReplyPreview>,
     pub reply_count: i64,
@@ -318,13 +332,13 @@ struct ParticipantRow {
 ///
 /// `rows` — the thread subscription rows (already trimmed to the page size).
 /// `has_more` — whether there are more results beyond this page.
-/// `msg_map` — root messages already enriched via `attach_metadata`, keyed by message id.
+/// `root_messages` — raw root `Message` rows (no heavy enrichment needed).
 /// `state` — application state (for avatar URLs, S3 URLs, etc.).
 pub fn enrich_thread_list(
     conn: &mut PgConnection,
     rows: Vec<ThreadListRow>,
     has_more: bool,
-    mut msg_map: HashMap<i64, MessageResponse>,
+    root_messages: Vec<Message>,
     state: &AppState,
 ) -> ListThreadsResponse {
     let root_ids: Vec<i64> = rows.iter().map(|r| r.thread_root_id).collect();
@@ -335,6 +349,8 @@ pub fn enrich_thread_list(
             next_cursor: None,
         };
     }
+
+    let root_msg_map: HashMap<i64, &Message> = root_messages.iter().map(|m| (m.id, m)).collect();
 
     // 1. Batch query: distinct participants per thread (replies + root message author)
     let participant_rows: Vec<ParticipantRow> = sql_query(
@@ -355,37 +371,42 @@ pub fn enrich_thread_list(
     .load(conn)
     .unwrap_or_default();
 
-    // 2. Collect all UIDs that need profile/avatar lookup
+    // 2. Collect ALL UIDs that need profile/avatar lookup in one pass:
+    //    participants + latest reply senders + root message senders + mention UIDs
     let mut all_uids: Vec<i32> = participant_rows.iter().map(|r| r.sender_uid).collect();
     for row in &rows {
         if let Some(uid) = row.latest_reply_sender_uid {
             all_uids.push(uid);
         }
     }
-    all_uids.sort_unstable();
-    all_uids.dedup();
+    for msg in &root_messages {
+        all_uids.push(msg.sender_uid);
+    }
 
-    let mut user_profiles = lookup_user_profiles(conn, &all_uids).unwrap_or_default();
-    let mut user_avatars = lookup_user_avatars(state, &all_uids);
-
-    // Also collect mentioned UIDs from reply messages so we can resolve them
+    // Pre-scan mentions from both root messages and latest replies
+    let mut mention_uids_per_root: HashMap<i64, Vec<i32>> = HashMap::new();
     let mut mention_uids_per_reply: HashMap<i64, Vec<i32>> = HashMap::new();
-    let mut extra_mention_uids: Vec<i32> = Vec::new();
+    for msg in &root_messages {
+        if let Some(ref text) = msg.message {
+            let uids = extract_mention_uids(text);
+            all_uids.extend(&uids);
+            mention_uids_per_root.insert(msg.id, uids);
+        }
+    }
     for row in &rows {
         if let Some(ref text) = row.latest_reply_message {
             let uids = extract_mention_uids(text);
-            for &uid in &uids {
-                if !user_profiles.contains_key(&uid) && !extra_mention_uids.contains(&uid) {
-                    extra_mention_uids.push(uid);
-                }
-            }
+            all_uids.extend(&uids);
             mention_uids_per_reply.insert(row.thread_root_id, uids);
         }
     }
-    if !extra_mention_uids.is_empty() {
-        user_profiles.extend(lookup_user_profiles(conn, &extra_mention_uids).unwrap_or_default());
-        user_avatars.extend(lookup_user_avatars(state, &extra_mention_uids));
-    }
+
+    all_uids.sort_unstable();
+    all_uids.dedup();
+
+    // Single batched profile + avatar lookup
+    let user_profiles = lookup_user_profiles(conn, &all_uids).unwrap_or_default();
+    let user_avatars = lookup_user_avatars(state, &all_uids);
 
     let make_participant = |uid: i32| -> ThreadParticipant {
         let profile = user_profiles.get(&uid);
@@ -396,7 +417,7 @@ pub fn enrich_thread_list(
         }
     };
 
-    // 4. Build participants map: thread_root_id -> Vec<ThreadParticipant>
+    // 3. Build participants map: thread_root_id -> Vec<ThreadParticipant>
     let mut participants_map: HashMap<i64, Vec<ThreadParticipant>> = HashMap::new();
     for row in &participant_rows {
         participants_map
@@ -405,7 +426,7 @@ pub fn enrich_thread_list(
             .push(make_participant(row.sender_uid));
     }
 
-    // 5. Build latest reply map, load sticker emoji and first attachment kind
+    // 4. Load sticker emoji for latest replies
     let sticker_ids: Vec<i64> = rows
         .iter()
         .filter_map(|r| r.latest_reply_sticker_id)
@@ -422,16 +443,22 @@ pub fn enrich_thread_list(
             .collect()
     };
 
-    let reply_msg_ids: Vec<i64> = rows
+    // 5. Batch load first attachment kind for both root messages and latest replies
+    let mut attachment_msg_ids: Vec<i64> = rows
         .iter()
         .filter(|r| r.latest_reply_has_attachments.unwrap_or(false))
         .filter_map(|r| r.latest_reply_id)
         .collect();
-    let first_attachment_map: HashMap<i64, String> = if reply_msg_ids.is_empty() {
+    for msg in &root_messages {
+        if msg.has_attachments {
+            attachment_msg_ids.push(msg.id);
+        }
+    }
+    let first_attachment_map: HashMap<i64, String> = if attachment_msg_ids.is_empty() {
         HashMap::new()
     } else {
         let atts: Vec<Attachment> = attachments::table
-            .filter(attachments::message_id.eq_any(&reply_msg_ids))
+            .filter(attachments::message_id.eq_any(&attachment_msg_ids))
             .select(Attachment::as_select())
             .load(conn)
             .unwrap_or_default();
@@ -444,6 +471,7 @@ pub fn enrich_thread_list(
         map
     };
 
+    // 6. Build latest reply map
     let mut latest_reply_map: HashMap<i64, ThreadReplyPreview> = HashMap::new();
     for row in &rows {
         if let (Some(reply_id), Some(message_type), Some(sender_uid)) = (
@@ -480,7 +508,7 @@ pub fn enrich_thread_list(
         }
     }
 
-    // 6. Assemble final response
+    // 7. Assemble final response
     let next_cursor = if has_more {
         rows.last().map(|r| r.last_reply_at.to_rfc3339())
     } else {
@@ -490,7 +518,27 @@ pub fn enrich_thread_list(
     let threads: Vec<ThreadListItem> = rows
         .into_iter()
         .filter_map(|row| {
-            let root_msg = msg_map.remove(&row.thread_root_id)?;
+            let root_msg = root_msg_map.get(&row.thread_root_id)?;
+            let root_preview = ThreadRootMessagePreview {
+                id: root_msg.id,
+                sender: make_participant(root_msg.sender_uid),
+                message: root_msg.message.clone(),
+                message_type: root_msg.message_type.clone(),
+                first_attachment_kind: if root_msg.has_attachments {
+                    first_attachment_map.get(&root_msg.id).cloned()
+                } else {
+                    None
+                },
+                is_deleted: false,
+                mentions: mention_uids_per_root
+                    .get(&root_msg.id)
+                    .map(|uids| {
+                        uids.iter()
+                            .map(|&uid| build_mention_info(uid, &user_avatars, &user_profiles))
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+            };
             Some(ThreadListItem {
                 chat_id: row.chat_id,
                 chat_name: row.chat_name,
@@ -498,7 +546,7 @@ pub fn enrich_thread_list(
                     .chat_avatar_key
                     .as_deref()
                     .map(|key| build_public_object_url(state, key)),
-                thread_root_message: root_msg,
+                thread_root_message: root_preview,
                 participants: participants_map
                     .remove(&row.thread_root_id)
                     .unwrap_or_default(),
