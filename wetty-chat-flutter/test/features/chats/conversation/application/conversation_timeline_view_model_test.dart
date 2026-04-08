@@ -10,6 +10,7 @@ import 'package:wetty_chat_flutter/features/chats/conversation/application/conve
 import 'package:wetty_chat_flutter/features/chats/conversation/data/message_api_service.dart';
 import 'package:wetty_chat_flutter/features/chats/conversation/domain/conversation_scope.dart';
 import 'package:wetty_chat_flutter/features/chats/conversation/domain/launch_request.dart';
+import 'package:wetty_chat_flutter/features/chats/conversation/domain/viewport_placement.dart';
 
 void main() {
   group('ConversationTimelineViewModel locate plans', () {
@@ -21,7 +22,11 @@ void main() {
       final state = await container.read(provider.future);
 
       expect(state.locatePlan?.target, ConversationLocateTarget.latest);
-      expect(state.locatePlan?.placement, ConversationLocatePlacement.liveEdge);
+      expect(
+        state.locatePlan?.placement,
+        ConversationViewportPlacement.liveEdge,
+      );
+      expect(state.viewportPlacement, ConversationViewportPlacement.liveEdge);
     });
 
     test(
@@ -44,7 +49,36 @@ void main() {
         expect(state.locatePlan?.target, ConversationLocateTarget.message);
         expect(
           state.locatePlan?.placement,
-          ConversationLocatePlacement.topPreferred,
+          ConversationViewportPlacement.topPreferred,
+        );
+        expect(
+          state.viewportPlacement,
+          ConversationViewportPlacement.topPreferred,
+        );
+      },
+    );
+
+    test(
+      'unread launch at newest message keeps top-preferred placement',
+      () async {
+        final container = _createContainer();
+        addTearDown(container.dispose);
+        final provider = conversationTimelineViewModelProvider((
+          scope: const ConversationScope.chat('1'),
+          launchRequest: const LaunchRequest.unread(150),
+        ));
+
+        final state = await container.read(provider.future);
+
+        expect(state.windowMode, ConversationWindowMode.anchoredTarget);
+        expect(state.anchorMessageId, 150);
+        expect(
+          state.locatePlan?.placement,
+          ConversationViewportPlacement.topPreferred,
+        );
+        expect(
+          state.viewportPlacement,
+          ConversationViewportPlacement.topPreferred,
         );
       },
     );
@@ -89,6 +123,7 @@ void main() {
         expect(state!.windowMode, ConversationWindowMode.liveLatest);
         expect(state.anchorMessageId, isNull);
         expect(state.locatePlan?.target, ConversationLocateTarget.latest);
+        expect(state.viewportPlacement, ConversationViewportPlacement.liveEdge);
       },
     );
 
@@ -112,6 +147,26 @@ void main() {
         expect(state.locatePlan?.target, ConversationLocateTarget.latest);
         expect(state.windowStableKeys.first, 'server:51');
         expect(state.windowStableKeys.last, 'server:150');
+        expect(state.viewportPlacement, ConversationViewportPlacement.liveEdge);
+      },
+    );
+
+    test(
+      'loadOlder preserves live-edge placement when leaving latest mode',
+      () async {
+        final container = _createContainer();
+        addTearDown(container.dispose);
+        final provider = conversationTimelineViewModelProvider(_args());
+
+        await container.read(provider.future);
+        final notifier = container.read(provider.notifier);
+
+        await notifier.loadOlder();
+        final state = container.read(provider).valueOrNull;
+
+        expect(state, isNotNull);
+        expect(state!.windowMode, ConversationWindowMode.historyBrowsing);
+        expect(state.viewportPlacement, ConversationViewportPlacement.liveEdge);
       },
     );
 

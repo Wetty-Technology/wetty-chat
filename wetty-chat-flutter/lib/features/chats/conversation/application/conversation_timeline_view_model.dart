@@ -10,6 +10,7 @@ import '../domain/conversation_message.dart';
 import '../domain/conversation_scope.dart';
 import '../domain/launch_request.dart';
 import '../domain/timeline_entry.dart';
+import '../domain/viewport_placement.dart';
 
 typedef ConversationTimelineArgs = ({
   ConversationScope scope,
@@ -20,8 +21,6 @@ enum ConversationWindowMode { liveLatest, anchoredTarget, historyBrowsing }
 
 enum ConversationLocateTarget { latest, message }
 
-enum ConversationLocatePlacement { liveEdge, topPreferred }
-
 class ConversationLocatePlan {
   const ConversationLocatePlan._({
     required this.target,
@@ -30,12 +29,12 @@ class ConversationLocatePlan {
   });
 
   const ConversationLocatePlan.latest({
-    required ConversationLocatePlacement placement,
+    required ConversationViewportPlacement placement,
   }) : this._(target: ConversationLocateTarget.latest, placement: placement);
 
   const ConversationLocatePlan.message({
     required int messageId,
-    required ConversationLocatePlacement placement,
+    required ConversationViewportPlacement placement,
   }) : this._(
          target: ConversationLocateTarget.message,
          placement: placement,
@@ -43,7 +42,7 @@ class ConversationLocatePlan {
        );
 
   final ConversationLocateTarget target;
-  final ConversationLocatePlacement placement;
+  final ConversationViewportPlacement placement;
   final int? messageId;
 }
 
@@ -52,10 +51,10 @@ class ConversationTimelineState {
     required this.entries,
     required this.windowStableKeys,
     required this.windowMode,
+    required this.viewportPlacement,
     required this.canLoadOlder,
     required this.canLoadNewer,
     required this.anchorEntryIndex,
-    required this.anchorAlignment,
     this.isLoadingOlder = false,
     this.isLoadingNewer = false,
     this.pendingLiveCount = 0,
@@ -70,14 +69,12 @@ class ConversationTimelineState {
   final List<TimelineEntry> entries;
   final List<String> windowStableKeys;
   final ConversationWindowMode windowMode;
+  final ConversationViewportPlacement viewportPlacement;
   final bool canLoadOlder;
   final bool canLoadNewer;
 
   /// Index into [entries] for the scroll anchor.
   final int anchorEntryIndex;
-
-  /// Viewport fraction where the anchor sits: 0.0 = top, 1.0 = bottom.
-  final double anchorAlignment;
 
   final bool isLoadingOlder;
   final bool isLoadingNewer;
@@ -93,10 +90,10 @@ class ConversationTimelineState {
     List<TimelineEntry>? entries,
     List<String>? windowStableKeys,
     ConversationWindowMode? windowMode,
+    ConversationViewportPlacement? viewportPlacement,
     bool? canLoadOlder,
     bool? canLoadNewer,
     int? anchorEntryIndex,
-    double? anchorAlignment,
     bool? isLoadingOlder,
     bool? isLoadingNewer,
     int? pendingLiveCount,
@@ -111,10 +108,10 @@ class ConversationTimelineState {
       entries: entries ?? this.entries,
       windowStableKeys: windowStableKeys ?? this.windowStableKeys,
       windowMode: windowMode ?? this.windowMode,
+      viewportPlacement: viewportPlacement ?? this.viewportPlacement,
       canLoadOlder: canLoadOlder ?? this.canLoadOlder,
       canLoadNewer: canLoadNewer ?? this.canLoadNewer,
       anchorEntryIndex: anchorEntryIndex ?? this.anchorEntryIndex,
-      anchorAlignment: anchorAlignment ?? this.anchorAlignment,
       isLoadingOlder: isLoadingOlder ?? this.isLoadingOlder,
       isLoadingNewer: isLoadingNewer ?? this.isLoadingNewer,
       pendingLiveCount: pendingLiveCount ?? this.pendingLiveCount,
@@ -190,6 +187,7 @@ class ConversationTimelineViewModel
         return _buildState(
           windowStableKeys: messages.map((item) => item.stableKey).toList(),
           windowMode: ConversationWindowMode.liveLatest,
+          viewportPlacement: ConversationViewportPlacement.liveEdge,
           locatePlan: _latestLocatePlan(),
         );
       case LaunchRequestIntent.unread:
@@ -205,6 +203,7 @@ class ConversationTimelineViewModel
           return _buildState(
             windowStableKeys: latest.map((item) => item.stableKey).toList(),
             windowMode: ConversationWindowMode.liveLatest,
+            viewportPlacement: ConversationViewportPlacement.liveEdge,
             infoMessage: 'Message unavailable',
             locatePlan: _latestLocatePlan(),
           );
@@ -212,6 +211,7 @@ class ConversationTimelineViewModel
         final nextState = _buildState(
           windowStableKeys: messages.map((item) => item.stableKey).toList(),
           windowMode: ConversationWindowMode.anchoredTarget,
+          viewportPlacement: ConversationViewportPlacement.topPreferred,
           anchorMessageId: anchorId,
           unreadMarkerMessageId: launchRequest.isUnread ? anchorId : null,
           highlightedMessageId:
@@ -231,6 +231,7 @@ class ConversationTimelineViewModel
   ConversationTimelineState _buildState({
     required List<String> windowStableKeys,
     required ConversationWindowMode windowMode,
+    required ConversationViewportPlacement viewportPlacement,
     int? anchorMessageId,
     int? unreadMarkerMessageId,
     int? highlightedMessageId,
@@ -248,22 +249,16 @@ class ConversationTimelineViewModel
       unreadMarkerMessageId: unreadMarkerMessageId,
     );
 
-    // Compute anchor entry index and alignment for the view layer.
-    // Alignment is derived purely from windowMode to prevent stale values
-    // leaking across mode transitions (e.g. message-jump 0.0 persisting
-    // into liveLatest).
+    // Compute anchor entry index for the view layer. The widget resolves the
+    // feasible viewport alignment from rendered extents, but state still
+    // carries the requested placement for mode transitions and re-keying.
     final anchorEntryIndex = _resolveAnchorEntryIndex(entries, anchorMessageId);
-    final double anchorAlignment = switch (windowMode) {
-      ConversationWindowMode.liveLatest => 1.0,
-      ConversationWindowMode.anchoredTarget => 0.0,
-      ConversationWindowMode.historyBrowsing => 0.0,
-    };
 
     developer.log(
       '_buildState: mode=$windowMode, '
       'anchorMsgId=$anchorMessageId, '
       'anchorIdx=$anchorEntryIndex/${entries.length}, '
-      'alignment=$anchorAlignment, '
+      'placement=$viewportPlacement, '
       'locatePlan=${locatePlan?.placement}, '
       'window=${trimmed.length} keys '
       '(first=${trimmed.firstOrNull}, last=${trimmed.lastOrNull})',
@@ -274,10 +269,10 @@ class ConversationTimelineViewModel
       entries: entries,
       windowStableKeys: trimmed,
       windowMode: windowMode,
+      viewportPlacement: viewportPlacement,
       canLoadOlder: _repository.hasOlderOutsideWindow(trimmed),
       canLoadNewer: _repository.hasNewerOutsideWindow(trimmed),
       anchorEntryIndex: anchorEntryIndex,
-      anchorAlignment: anchorAlignment,
       pendingLiveCount: pendingLiveCount,
       highlightedMessageId: highlightedMessageId,
       anchorMessageId: anchorMessageId,
@@ -353,6 +348,7 @@ class ConversationTimelineViewModel
           _buildState(
             windowStableKeys: latestWindow,
             windowMode: ConversationWindowMode.liveLatest,
+            viewportPlacement: ConversationViewportPlacement.liveEdge,
             shouldRefreshChats: true,
           ),
         ),
@@ -365,6 +361,7 @@ class ConversationTimelineViewModel
         _buildState(
           windowStableKeys: current.windowStableKeys,
           windowMode: current.windowMode,
+          viewportPlacement: current.viewportPlacement,
           anchorMessageId: current.anchorMessageId,
           unreadMarkerMessageId: current.unreadMarkerMessageId,
           highlightedMessageId: current.highlightedMessageId,
@@ -403,6 +400,7 @@ class ConversationTimelineViewModel
             windowMode: current.windowMode == ConversationWindowMode.liveLatest
                 ? ConversationWindowMode.historyBrowsing
                 : current.windowMode,
+            viewportPlacement: current.viewportPlacement,
             anchorMessageId: current.anchorMessageId,
             unreadMarkerMessageId: current.unreadMarkerMessageId,
             highlightedMessageId: current.highlightedMessageId,
@@ -449,6 +447,9 @@ class ConversationTimelineViewModel
             windowMode: reachedLiveEdge
                 ? ConversationWindowMode.liveLatest
                 : ConversationWindowMode.historyBrowsing,
+            viewportPlacement: reachedLiveEdge
+                ? ConversationViewportPlacement.liveEdge
+                : current.viewportPlacement,
             anchorMessageId: reachedLiveEdge ? null : current.anchorMessageId,
             unreadMarkerMessageId: current.unreadMarkerMessageId,
             highlightedMessageId: current.highlightedMessageId,
@@ -477,6 +478,7 @@ class ConversationTimelineViewModel
           _buildState(
             windowStableKeys: current.windowStableKeys,
             windowMode: ConversationWindowMode.liveLatest,
+            viewportPlacement: ConversationViewportPlacement.liveEdge,
             shouldRefreshChats: current.shouldRefreshChats,
             locatePlan: _latestLocatePlan(),
           ),
@@ -490,6 +492,7 @@ class ConversationTimelineViewModel
         _buildState(
           windowStableKeys: latest.map((item) => item.stableKey).toList(),
           windowMode: ConversationWindowMode.liveLatest,
+          viewportPlacement: ConversationViewportPlacement.liveEdge,
           locatePlan: _latestLocatePlan(),
         ),
       ),
@@ -511,6 +514,7 @@ class ConversationTimelineViewModel
           _buildState(
             windowStableKeys: current.windowStableKeys,
             windowMode: ConversationWindowMode.anchoredTarget,
+            viewportPlacement: ConversationViewportPlacement.topPreferred,
             anchorMessageId: messageId,
             highlightedMessageId: highlight ? messageId : null,
             shouldRefreshChats: current.shouldRefreshChats,
@@ -540,6 +544,7 @@ class ConversationTimelineViewModel
         _buildState(
           windowStableKeys: messages.map((item) => item.stableKey).toList(),
           windowMode: ConversationWindowMode.anchoredTarget,
+          viewportPlacement: ConversationViewportPlacement.topPreferred,
           anchorMessageId: messageId,
           highlightedMessageId: highlight ? messageId : null,
           shouldRefreshChats: current.shouldRefreshChats,
@@ -671,6 +676,7 @@ class ConversationTimelineViewModel
         _buildState(
           windowStableKeys: current.windowStableKeys,
           windowMode: current.windowMode,
+          viewportPlacement: current.viewportPlacement,
           anchorMessageId: current.anchorMessageId,
           unreadMarkerMessageId: current.unreadMarkerMessageId,
           highlightedMessageId: current.highlightedMessageId,
@@ -685,13 +691,13 @@ class ConversationTimelineViewModel
 
   ConversationLocatePlan _latestLocatePlan() =>
       const ConversationLocatePlan.latest(
-        placement: ConversationLocatePlacement.liveEdge,
+        placement: ConversationViewportPlacement.liveEdge,
       );
 
   ConversationLocatePlan _messageLocatePlan(int messageId) =>
       ConversationLocatePlan.message(
         messageId: messageId,
-        placement: ConversationLocatePlacement.topPreferred,
+        placement: ConversationViewportPlacement.topPreferred,
       );
 }
 

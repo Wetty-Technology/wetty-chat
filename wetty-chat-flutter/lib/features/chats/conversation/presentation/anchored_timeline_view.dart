@@ -1,23 +1,40 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/rendering.dart';
 
 import '../domain/timeline_entry.dart';
+import '../domain/viewport_placement.dart';
 
 typedef TimelineEntryBuilder =
     Widget Function(BuildContext context, TimelineEntry entry, int index);
 typedef TimelineEdgeCallback = void Function();
 
+@visibleForTesting
+double resolveTopPreferredAnchorAlignment({
+  required double afterExtent,
+  required double viewportExtent,
+}) {
+  if (viewportExtent <= 0) {
+    return 0;
+  }
+  final visibleFractionBelowAnchor = (afterExtent / viewportExtent).clamp(
+    0.0,
+    1.0,
+  );
+  return 1.0 - visibleFractionBelowAnchor;
+}
+
 /// A chat timeline view built on [CustomScrollView] with the `center` key
 /// pattern to anchor a specific entry at a given viewport fraction.
 ///
 /// Content before the anchor grows upward (older messages) and content after
-/// grows downward (newer messages). The scroll extent is computed from actual
-/// content on both sides, so programmatic positioning never overscrolls.
+/// grows downward (newer messages). Requested top placement is clamped against
+/// rendered trailing extent so the anchor is never placed into empty space.
 class AnchoredTimelineView extends StatefulWidget {
   const AnchoredTimelineView({
     super.key,
     required this.entries,
     required this.anchorIndex,
-    required this.anchorAlignment,
+    required this.viewportPlacement,
     required this.entryBuilder,
     this.onNearOlderEdge,
     this.onNearNewerEdge,
@@ -32,8 +49,7 @@ class AnchoredTimelineView extends StatefulWidget {
   /// Index into [entries] that serves as the scroll anchor.
   final int anchorIndex;
 
-  /// Where the anchor sits in the viewport: 0.0 = top, 1.0 = bottom.
-  final double anchorAlignment;
+  final ConversationViewportPlacement viewportPlacement;
 
   final TimelineEntryBuilder entryBuilder;
   final TimelineEdgeCallback? onNearOlderEdge;
@@ -49,9 +65,11 @@ class AnchoredTimelineView extends StatefulWidget {
 class _AnchoredTimelineViewState extends State<AnchoredTimelineView> {
   static const double _edgeThresholdPixels = 200;
 
-  final _centerKey = UniqueKey();
+  final _centerKey = GlobalKey();
   late ScrollController _scrollController;
   bool _ownsController = false;
+  bool _isMeasureScheduled = false;
+  double _topPreferredAlignment = 0;
 
   @override
   void initState() {
@@ -70,6 +88,12 @@ class _AnchoredTimelineViewState extends State<AnchoredTimelineView> {
         _scrollController.removeListener(_onScroll);
       }
       _initController();
+    }
+    if (widget.viewportPlacement != oldWidget.viewportPlacement ||
+        widget.anchorIndex != oldWidget.anchorIndex ||
+        widget.entries.length != oldWidget.entries.length ||
+        widget.bottomPadding != oldWidget.bottomPadding) {
+      _topPreferredAlignment = 0;
     }
   }
 
@@ -110,13 +134,58 @@ class _AnchoredTimelineViewState extends State<AnchoredTimelineView> {
     }
   }
 
+  void _scheduleTopPreferredMeasurement() {
+    if (_isMeasureScheduled ||
+        widget.viewportPlacement !=
+            ConversationViewportPlacement.topPreferred) {
+      return;
+    }
+    _isMeasureScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _isMeasureScheduled = false;
+      if (!mounted ||
+          widget.viewportPlacement !=
+              ConversationViewportPlacement.topPreferred) {
+        return;
+      }
+      final renderObject = _centerKey.currentContext?.findRenderObject();
+      if (renderObject is! RenderSliver) {
+        return;
+      }
+      final afterExtent = renderObject.geometry?.scrollExtent;
+      final viewportExtent = _scrollController.hasClients
+          ? _scrollController.position.viewportDimension
+          : context.size?.height;
+      if (afterExtent == null ||
+          viewportExtent == null ||
+          viewportExtent <= 0) {
+        return;
+      }
+      final nextAlignment = resolveTopPreferredAnchorAlignment(
+        afterExtent: afterExtent + widget.bottomPadding,
+        viewportExtent: viewportExtent,
+      );
+      if ((nextAlignment - _topPreferredAlignment).abs() < 0.001) {
+        return;
+      }
+      setState(() {
+        _topPreferredAlignment = nextAlignment;
+      });
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.entries.isEmpty) {
       return const CustomScrollView(slivers: []);
     }
     final anchorIndex = widget.anchorIndex.clamp(0, widget.entries.length - 1);
-    final isBottomAnchored = widget.anchorAlignment >= 1.0;
+    final isBottomAnchored =
+        widget.viewportPlacement == ConversationViewportPlacement.liveEdge;
+    if (!isBottomAnchored) {
+      _scheduleTopPreferredMeasurement();
+    }
+    final anchorAlignment = isBottomAnchored ? 1.0 : _topPreferredAlignment;
 
     // For bottom-anchored (liveEdge): ALL entries go in the before-center
     // sliver which grows upward. The center sliver is empty. This ensures
@@ -144,7 +213,7 @@ class _AnchoredTimelineViewState extends State<AnchoredTimelineView> {
     return CustomScrollView(
       controller: _scrollController,
       center: _centerKey,
-      anchor: widget.anchorAlignment,
+      anchor: anchorAlignment,
       physics: const AlwaysScrollableScrollPhysics(
         parent: BouncingScrollPhysics(),
       ),

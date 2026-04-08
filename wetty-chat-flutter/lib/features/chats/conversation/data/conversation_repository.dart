@@ -66,13 +66,19 @@ class ConversationRepository {
     int after = defaultWindowSize ~/ 2,
   }) async {
     final alreadyCached = _containsServerMessage(messageId);
+    final hasCachedWindow = _hasWindowAroundServerMessage(
+      messageId,
+      before: before,
+      after: after,
+    );
     developer.log(
       'loadAroundMessage: msgId=$messageId, '
       'alreadyCached=$alreadyCached, '
+      'hasCachedWindow=$hasCachedWindow, '
       'stableKey=${_stableKeyByServerId[messageId]}',
       name: 'ConvRepo',
     );
-    if (!alreadyCached) {
+    if (!hasCachedWindow) {
       final response = await _service.fetchConversationMessages(
         scope,
         around: messageId,
@@ -97,19 +103,6 @@ class ConversationRepository {
       name: 'ConvRepo',
     );
     return _messagesForWindow(keys);
-  }
-
-  Future<int?> resolveFirstUnreadMessageId(int lastReadMessageId) async {
-    final response = await _service.fetchConversationMessages(
-      scope,
-      after: lastReadMessageId,
-      max: 1,
-    );
-    _mergeDtos(response.messages);
-    if (response.messages.isEmpty) {
-      return null;
-    }
-    return response.messages.first.id;
   }
 
   Future<List<ConversationMessage>> extendOlder({
@@ -756,6 +749,26 @@ class ConversationRepository {
     final start = (index - before).clamp(0, _orderedStableKeys.length);
     final end = (index + after + 1).clamp(0, _orderedStableKeys.length);
     return _orderedStableKeys.sublist(start, end);
+  }
+
+  bool _hasWindowAroundServerMessage(
+    int messageId, {
+    required int before,
+    required int after,
+  }) {
+    final stableKey = _stableKeyByServerId[messageId];
+    if (stableKey == null) {
+      return false;
+    }
+    final index = _orderedStableKeys.indexOf(stableKey);
+    if (index < 0) {
+      return false;
+    }
+    final availableBefore = index;
+    final availableAfter = _orderedStableKeys.length - index - 1;
+    final hasEnoughBefore = availableBefore >= before || _hasReachedOldest;
+    final hasEnoughAfter = availableAfter >= after || _hasReachedNewest;
+    return hasEnoughBefore && hasEnoughAfter;
   }
 
   List<ConversationMessage> _messagesForWindow(List<String> stableKeys) {

@@ -7,12 +7,12 @@ import '../../../../app/routing/route_names.dart';
 import '../../../../app/theme/style_config.dart';
 import '../../chat_timestamp_formatter.dart';
 import '../../conversation/application/conversation_draft_store.dart';
-import '../../conversation/data/conversation_repository.dart';
 import '../../conversation/domain/conversation_scope.dart';
 import '../../conversation/domain/launch_request.dart';
 import '../../models/chat_models.dart';
 import '../../models/message_models.dart';
 import '../application/chat_list_view_model.dart';
+import '../data/chat_launch_service.dart';
 
 class ChatPage extends ConsumerStatefulWidget {
   const ChatPage({super.key});
@@ -93,21 +93,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   Future<LaunchRequest> _launchRequestForChat(ChatListItem chat) async {
-    final lastReadMessageId = chat.lastReadMessageId;
-    if (chat.unreadCount <= 0 || lastReadMessageId == null) {
-      return const LaunchRequest.latest();
-    }
-    final parsedId = int.tryParse(lastReadMessageId);
-    if (parsedId == null) {
-      return const LaunchRequest.latest();
-    }
-    final unreadMessageId = await ref
-        .read(conversationRepositoryProvider(ConversationScope.chat(chat.id)))
-        .resolveFirstUnreadMessageId(parsedId);
-    if (unreadMessageId == null) {
-      return const LaunchRequest.latest();
-    }
-    return LaunchRequest.unread(unreadMessageId);
+    return ref.read(chatLaunchServiceProvider).resolveLaunchRequest(chat);
   }
 
   @override

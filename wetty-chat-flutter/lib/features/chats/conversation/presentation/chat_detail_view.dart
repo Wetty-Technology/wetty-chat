@@ -16,6 +16,7 @@ import '../domain/conversation_message.dart';
 import '../domain/conversation_scope.dart';
 import '../domain/launch_request.dart';
 import '../domain/timeline_entry.dart';
+import '../domain/viewport_placement.dart';
 import 'anchored_timeline_view.dart';
 import 'conversation_composer_bar.dart';
 import 'message_overlay.dart';
@@ -25,6 +26,19 @@ class _ActiveMessageOverlay {
   const _ActiveMessageOverlay(this.details);
 
   final MessageLongPressDetails details;
+}
+
+bool shouldShowJumpToLatestFab({
+  required ConversationTimelineState state,
+  required bool isAtLiveEdge,
+}) {
+  if (state.pendingLiveCount > 0) {
+    return true;
+  }
+  if (state.canLoadNewer) {
+    return true;
+  }
+  return !isAtLiveEdge;
 }
 
 class ChatDetailPage extends ConsumerStatefulWidget {
@@ -428,8 +442,8 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
       developer.log(
         'whenData: locatePlan=${locatePlan?.placement}, '
         'mode=${state.windowMode}, '
+        'placement=${state.viewportPlacement}, '
         'anchorIdx=${state.anchorEntryIndex}/${state.entries.length}, '
-        'alignment=${state.anchorAlignment}, '
         'canLoadNewer=${state.canLoadNewer}, '
         'viewportKey=$_timelineViewportKey, '
         'generation=$_viewportGeneration',
@@ -441,10 +455,12 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
         // then clear it so it isn't re-applied on unrelated rebuilds.
         _viewportGeneration += 1;
         _isAtLiveEdge =
-            locatePlan.placement == ConversationLocatePlacement.liveEdge;
+            state.viewportPlacement == ConversationViewportPlacement.liveEdge &&
+            !state.canLoadNewer;
         _resetViewportSession(_viewportGeneration);
         developer.log(
           'applied locatePlan: placement=${locatePlan.placement}, '
+          'resolvedPlacement=${state.viewportPlacement}, '
           'isAtLiveEdge=$_isAtLiveEdge, '
           'newKey=$_timelineViewportKey, '
           'newGeneration=$_viewportGeneration',
@@ -612,13 +628,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
   }
 
   bool _shouldShowJumpToLatest(ConversationTimelineState state) {
-    if (state.windowMode != ConversationWindowMode.liveLatest) {
-      return true;
-    }
-    if (state.canLoadNewer) {
-      return true;
-    }
-    return !_isAtLiveEdge;
+    return shouldShowJumpToLatestFab(state: state, isAtLiveEdge: _isAtLiveEdge);
   }
 
   Widget _buildTimeline(
@@ -631,8 +641,8 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
     }
     developer.log(
       '_buildTimeline: key=$_timelineViewportKey, '
+      'placement=${viewState.viewportPlacement}, '
       'anchorIdx=${viewState.anchorEntryIndex}/${viewState.entries.length}, '
-      'alignment=${viewState.anchorAlignment}, '
       'mode=${viewState.windowMode}',
       name: 'ChatDetailView',
     );
@@ -640,7 +650,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
       key: _timelineViewportKey,
       entries: viewState.entries,
       anchorIndex: viewState.anchorEntryIndex,
-      anchorAlignment: viewState.anchorAlignment,
+      viewportPlacement: viewState.viewportPlacement,
       scrollController: _timelineScrollController,
       onNearOlderEdge: _onNearOlderEdge,
       onNearNewerEdge: _onNearNewerEdge,
