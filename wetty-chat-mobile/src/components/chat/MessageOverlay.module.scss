@@ -179,3 +179,15 @@
     }
   }
 }
+
+.opaqueMenu {
+  background: var(--ion-background-color, #ffffff) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .opaqueMenu {
+    background: var(--ion-background-color, #1e1e1e) !important;
+  }
+}

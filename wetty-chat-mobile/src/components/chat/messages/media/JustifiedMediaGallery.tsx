@@ -199,8 +199,10 @@ export const JustifiedMediaGallery: React.FC<JustifiedMediaGalleryProps> = ({
       className={styles.galleryContainer}
       style={{
         width: '100%',
-        maxWidth: MAX_WIDTH,
-        aspectRatio: `${MAX_WIDTH} / ${finalTotalHeight}`,
+        minWidth: MAX_WIDTH,
+        maxWidth: '100%',
+        maxHeight: `${MAX_HEIGHT}px`, // Cap the height like single images
+        aspectRatio: `${MAX_WIDTH} / ${finalTotalHeight}`, // Let it grow height proportionally to width
         display: 'flex',
         flexDirection: 'column',
         gap: `${GAP}px`,
@@ -209,8 +211,8 @@ export const JustifiedMediaGallery: React.FC<JustifiedMediaGalleryProps> = ({
       }}
     >
       {rows.map((row, rIndex) => {
-        // 如果高度超纲被收缩过了，应用比例缩放真实行高
-        const calculatedHeight = row.height * scale;
+        // distribute height proportionally using flex-grow
+        const flexWeight = row.height * scale;
 
         return (
           <div
@@ -220,7 +222,7 @@ export const JustifiedMediaGallery: React.FC<JustifiedMediaGalleryProps> = ({
               flexDirection: 'row',
               gap: `${GAP}px`,
               width: '100%',
-              flex: `${calculatedHeight} 1 0px`, // 利用flex弹缩解决宽度不足时的按比自适应收缩
+              flex: `${flexWeight} 1 0px`,
               minHeight: 0,
             }}
           >
@@ -236,7 +238,8 @@ export const JustifiedMediaGallery: React.FC<JustifiedMediaGalleryProps> = ({
                     position: 'relative',
                     overflow: 'hidden',
                     cursor: interactive ? 'pointer' : 'default',
-                    height: '100%',
+                    backgroundColor: '#f4f4f5',
+                    minHeight: 0,
                   }}
                   onClick={(e) => {
                     if (!interactive) return;
@@ -249,9 +252,16 @@ export const JustifiedMediaGallery: React.FC<JustifiedMediaGalleryProps> = ({
                     height: '100%',
                     objectFit: 'cover',
                     display: 'block',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
                   })}
 
-                  {showOverlay && <div className={styles.moreOverlay}>+{extraCount}</div>}
+                  {showOverlay && (
+                    <div className={styles.moreOverlay} style={{ zIndex: 2 }}>
+                      +{extraCount}
+                    </div>
+                  )}
                 </div>
               );
             })}

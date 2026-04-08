@@ -12,12 +12,12 @@ const LONG_PRESS_DELAY_MS = 350;
 type StickerChatBubbleProps = StickerBubbleProps & {
   messageType: 'sticker';
   swipeDirection?: 'left' | 'right';
-  onLongPress?: (rect: DOMRect) => void;
+  onLongPress?: (rect: DOMRect, interactionPos?: { x: number; y: number }) => void;
 };
 
 type RegularChatBubbleProps = ChatBubbleBaseProps & {
   swipeDirection?: 'left' | 'right';
-  onLongPress?: (rect: DOMRect) => void;
+  onLongPress?: (rect: DOMRect, interactionPos?: { x: number; y: number }) => void;
 };
 
 export type ChatBubbleProps = StickerChatBubbleProps | RegularChatBubbleProps;
@@ -83,7 +83,10 @@ export function ChatBubble(props: ChatBubbleProps) {
     if (onLongPress) {
       longPressTimer.current = setTimeout(() => {
         if (bubbleRef.current) {
-          onLongPress(bubbleRef.current.getBoundingClientRect());
+          onLongPress(bubbleRef.current.getBoundingClientRect(), {
+            x: startX.current,
+            y: startY.current,
+          });
         }
       }, LONG_PRESS_DELAY_MS);
     }
@@ -128,7 +131,10 @@ export function ChatBubble(props: ChatBubbleProps) {
   function handleContextMenu(e: React.MouseEvent) {
     if (onLongPress && bubbleRef.current) {
       e.preventDefault();
-      onLongPress(bubbleRef.current.getBoundingClientRect());
+      onLongPress(bubbleRef.current.getBoundingClientRect(), {
+        x: e.clientX,
+        y: e.clientY,
+      });
     }
   }
 

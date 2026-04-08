@@ -28,6 +28,7 @@ interface MessageOverlayBaseProps {
   edited?: boolean;
   isConfirmed?: boolean;
   sourceRect: DOMRect;
+  interactionPos?: { x: number; y: number };
   actions: MessageOverlayAction[];
   reactions?: {
     emojis: string[];
@@ -62,6 +63,7 @@ export function MessageOverlay(props: MessageOverlayProps) {
     edited,
     isConfirmed,
     sourceRect,
+    interactionPos,
     actions,
     reactions,
     onClose,
@@ -127,15 +129,7 @@ export function MessageOverlay(props: MessageOverlayProps) {
     const topPad = Math.max(40, 12 + safeTop);
     const sidePad = 12;
 
-    // Clamp vertically: prioritize bottom clamp over top clamp so interactive elements stay reachable
-    if (top < offsetTop + topPad) {
-      top = offsetTop + topPad;
-    }
-    if (top + currentContentHeight > offsetTop + vh - bottomPad) {
-      top = offsetTop + vh - bottomPad - currentContentHeight;
-    }
-
-    // Clamp horizontally
+    // Clamp horizontally for main content
     if (left + currentContentWidth > offsetLeft + vw - sidePad) {
       left = offsetLeft + vw - sidePad - currentContentWidth;
     }
@@ -143,10 +137,79 @@ export function MessageOverlay(props: MessageOverlayProps) {
       left = offsetLeft + sidePad;
     }
 
+    const actionHeight = actionListEl ? actionListEl.offsetHeight : 0;
+    const reactionHeight = reactionBarEl ? reactionBarEl.offsetHeight : 0;
+    const maxMenuWidth = Math.max(
+      actionListEl ? actionListEl.offsetWidth : 0,
+      reactionBarEl ? reactionBarEl.offsetWidth : 0,
+    );
+
+    // Check if the current content height exceeds available vertical space
+    // and we have an interaction position so we can overlay the menus on the bubble
+    if (interactionPos && currentContentHeight > offsetTop + vh - bottomPad - topPad) {
+      // Because we position them absolute, bubbleOffsetThis will be 0.
+      // So content top will be exactly sourceRect.top
+      top = sourceRect.top;
+
+      const localViewportTop = offsetTop + topPad - top;
+      const localViewportBottom = offsetTop + vh - bottomPad - top;
+
+      let menuGlobalLeft = interactionPos.x;
+      if (menuGlobalLeft + maxMenuWidth > offsetLeft + vw - sidePad) {
+        menuGlobalLeft = offsetLeft + vw - sidePad - maxMenuWidth;
+      }
+      if (menuGlobalLeft < offsetLeft + sidePad) {
+        menuGlobalLeft = offsetLeft + sidePad;
+      }
+      const menuLocalLeft = menuGlobalLeft - left;
+
+      const positionMenu = (el: HTMLElement, topY: number, leftX: number, elHeight: number) => {
+        el.style.position = 'absolute';
+        let desiredTop = topY;
+        if (desiredTop < localViewportTop) desiredTop = localViewportTop;
+        if (desiredTop + elHeight > localViewportBottom) desiredTop = localViewportBottom - elHeight;
+        el.style.top = `${desiredTop}px`;
+        el.style.left = `${leftX}px`;
+        el.style.right = 'auto';
+        el.style.zIndex = '1';
+        el.classList.add(styles.opaqueMenu);
+      };
+
+      const REACTION_BAR_OFFSET = 8;
+      const ACTION_LIST_OFFSET = 12;
+
+      if (reactionBarEl && actionListEl) {
+        positionMenu(
+          reactionBarEl,
+          interactionPos.y - top - reactionHeight - REACTION_BAR_OFFSET,
+          menuLocalLeft,
+          reactionHeight,
+        );
+        positionMenu(actionListEl, interactionPos.y - top + ACTION_LIST_OFFSET, menuLocalLeft, actionHeight);
+      } else if (reactionBarEl) {
+        positionMenu(
+          reactionBarEl,
+          interactionPos.y - top - reactionHeight - REACTION_BAR_OFFSET,
+          menuLocalLeft,
+          reactionHeight,
+        );
+      } else if (actionListEl) {
+        positionMenu(actionListEl, interactionPos.y - top + ACTION_LIST_OFFSET, menuLocalLeft, actionHeight);
+      }
+    } else {
+      // Clamp vertically: prioritize bottom clamp over top clamp so interactive elements stay reachable
+      if (top < offsetTop + topPad) {
+        top = offsetTop + topPad;
+      }
+      if (top + currentContentHeight > offsetTop + vh - bottomPad) {
+        top = offsetTop + vh - bottomPad - currentContentHeight;
+      }
+    }
+
     content.style.top = `${top}px`;
     content.style.left = `${left}px`;
     content.style.visibility = 'visible';
-  }, [isSent, sourceRect]);
+  }, [isSent, sourceRect, interactionPos]);
 
   // Body scroll lock
   useEffect(() => {
@@ -168,10 +231,12 @@ export function MessageOverlay(props: MessageOverlayProps) {
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [onClose]);
 
-  function handleBackdropClick(e: React.MouseEvent) {
-    if (e.target === e.currentTarget) {
-      onClose();
+  function handleOverlayClick(e: React.MouseEvent) {
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-action-list]') || target.closest('[data-reaction-bar]')) {
+      return;
     }
+    onClose();
   }
 
   const bubbleCloneProps = {
@@ -219,7 +284,7 @@ export function MessageOverlay(props: MessageOverlayProps) {
   }
 
   const overlay = (
-    <div className={styles.overlay} onClick={handleBackdropClick}>
+    <div className={styles.overlay} onClick={handleOverlayClick}>
       <div
         ref={contentRef}
         className={`${styles.content} ${isSent ? styles.contentSent : ''} ${styles.contentVisible}`}

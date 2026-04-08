@@ -315,7 +315,11 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
 
   const [presentToast] = useIonToast();
   const [presentAlert] = useIonAlert();
-  const [overlayMessage, setOverlayMessage] = useState<{ message: MessageResponse; sourceRect: DOMRect } | null>(null);
+  const [overlayMessage, setOverlayMessage] = useState<{
+    message: MessageResponse;
+    sourceRect: DOMRect;
+    interactionPos?: { x: number; y: number };
+  } | null>(null);
 
   useEffect(() => {
     if (!import.meta.env.DEV) return;
@@ -1313,13 +1317,13 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   const isKeyboardOpen = !isDesktop && composeFocused && baselineViewportHeight - viewportHeight > 120;
 
   const onClickChatItem = useCallback(
-    (msg: MessageResponse, sourceRect: DOMRect) => {
+    (msg: MessageResponse, sourceRect: DOMRect, interactionPos?: { x: number; y: number }) => {
       if (isKeyboardOpen) {
         composeBarRef.current?.blurInput();
         return;
       }
 
-      setOverlayMessage({ message: msg, sourceRect });
+      setOverlayMessage({ message: msg, sourceRect, interactionPos });
     },
     [isKeyboardOpen],
   );
@@ -1333,15 +1337,37 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
     const actions: MessageOverlayAction[] = [];
 
     if (!audioMessage && !stickerMessage) {
-      actions.push({
-        key: 'copy',
-        label: t`Copy`,
-        icon: copyOutline,
-        disabled: !navigator.clipboard?.writeText,
-        handler: () => {
-          navigator.clipboard.writeText(msg.message ?? '');
-        },
-      });
+      const hasText = !!msg.message?.trim();
+      const hasAttachments = msg.attachments && msg.attachments.length > 0;
+
+      if (hasText) {
+        actions.push({
+          key: 'copy',
+          label: hasAttachments ? t`Copy text` : t`Copy`,
+          icon: copyOutline,
+          handler: () => {
+            const textToCopy = msg.message ?? '';
+            if (navigator.clipboard?.writeText) {
+              navigator.clipboard.writeText(textToCopy).catch(console.error);
+            } else {
+              // Fallback for environments lacking navigator.clipboard.writeText (e.g. insecure contexts or some WebViews)
+              const textArea = document.createElement('textarea');
+              textArea.value = textToCopy;
+              textArea.style.position = 'fixed';
+              textArea.style.left = '-9999px';
+              document.body.appendChild(textArea);
+              textArea.focus();
+              textArea.select();
+              try {
+                document.execCommand('copy');
+              } catch (err) {
+                console.error('Fallback copy failed', err);
+              }
+              document.body.removeChild(textArea);
+            }
+          },
+        });
+      }
     }
 
     actions.push({
@@ -1645,6 +1671,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
                   }
                 : undefined,
               sourceRect: overlayMessage.sourceRect,
+              interactionPos: overlayMessage.interactionPos,
               actions: overlayActions,
               reactions: {
                 emojis: QUICK_REACTION_EMOJIS,

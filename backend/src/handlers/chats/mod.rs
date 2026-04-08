@@ -1525,6 +1525,7 @@ mod tests {
             deleted_at: None,
             width: Some(100),
             height: Some(100),
+            client_queued_at: Utc::now(),
         };
 
         let mut attachments_map = HashMap::new();

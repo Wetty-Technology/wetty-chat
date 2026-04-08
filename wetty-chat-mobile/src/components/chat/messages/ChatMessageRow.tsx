@@ -14,7 +14,7 @@ interface ChatMessageRowProps {
   threadId?: string;
   onReply: (message: MessageResponse) => void;
   onJumpToReply: (messageId: string) => void;
-  onLongPress: (message: MessageResponse, rect: DOMRect) => void;
+  onLongPress: (message: MessageResponse, rect: DOMRect, interactionPos?: { x: number; y: number }) => void;
   onAvatarClick: (sender: Sender) => void;
   onThreadClick: (message: MessageResponse) => void;
   onReactionToggle: (message: MessageResponse, emoji: string, currentlyReacted: boolean) => void;
@@ -82,7 +82,7 @@ export function ChatMessageRow({
     avatarUrl: msg.sender.avatarUrl,
     onReply: () => onReply(msg),
     onReplyTap: replyToMessage && !replyToMessage.isDeleted ? () => onJumpToReply(replyToMessage.id) : undefined,
-    onLongPress: (rect: DOMRect) => onLongPress(msg, rect),
+    onLongPress: (rect: DOMRect, interactionPos?: { x: number; y: number }) => onLongPress(msg, rect, interactionPos),
     showAvatar: row.showAvatar,
     timestamp: msg.createdAt,
     edited: msg.isEdited,
