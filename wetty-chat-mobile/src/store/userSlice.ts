@@ -24,10 +24,7 @@ export const fetchCurrentUser = createAsyncThunk('user/fetchCurrentUser', async 
   try {
     const user = await usersApi.getCurrentUser();
     if (user.stickerPackOrder && user.stickerPackOrder.length > 0) {
-      await kvSet(
-        'stickerPackOrder',
-        user.stickerPackOrder.map((o) => o.stickerPackId),
-      );
+      await kvSet('stickerPackOrder', user.stickerPackOrder);
       window.dispatchEvent(new Event('stickerPackOrderChanged'));
     }
     return user;
