@@ -12,4 +12,14 @@ platform :ios do
       force_for_new_certificates: options.fetch(:force_for_new_certificates, false)
     )
   end
+
+  desc "Sync App Store production signing"
+  lane :sync_appstore_signing do |options|
+    match(
+      type: "appstore",
+      git_url: "git@github.com:Codetector1374/apple_developer_certs.git",
+      readonly: options.fetch(:readonly, true),
+      force: options.fetch(:force, false)
+    )
+  end
 end

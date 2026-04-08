@@ -23,6 +23,14 @@ For _fastlane_ installation instructions, see [Installing _fastlane_](https://do
 
 Sync development signing
 
+### ios sync_appstore_signing
+
+```sh
+[bundle exec] fastlane ios sync_appstore_signing
+```
+
+Sync App Store production signing
+
 ----
 
 This README.md is auto-generated and will be re-generated every time [_fastlane_](https://fastlane.tools) is run.
