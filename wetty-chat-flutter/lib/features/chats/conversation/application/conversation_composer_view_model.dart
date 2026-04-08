@@ -32,6 +32,7 @@ class ComposerAttachment {
     this.previewBytes,
     this.width,
     this.height,
+    this.progress = 0,
     this.attachmentId,
     this.errorMessage,
   });
@@ -48,6 +49,7 @@ class ComposerAttachment {
   final int? width;
   final int? height;
   final ComposerAttachmentUploadStatus status;
+  final double progress;
 
   /// Backend attachment id returned after requesting the upload URL.
   final String? attachmentId;
@@ -74,6 +76,7 @@ class ComposerAttachment {
     int? width,
     int? height,
     ComposerAttachmentUploadStatus? status,
+    double? progress,
     String? attachmentId,
     String? errorMessage,
     bool clearAttachmentId = false,
@@ -90,6 +93,7 @@ class ComposerAttachment {
       width: width ?? this.width,
       height: height ?? this.height,
       status: status ?? this.status,
+      progress: progress ?? this.progress,
       attachmentId: clearAttachmentId
           ? null
           : (attachmentId ?? this.attachmentId),
@@ -152,6 +156,8 @@ class ConversationComposerState {
   bool get hasUploadedAttachments => attachments.any((item) => item.isUploaded);
   bool get hasAttachmentCapacity =>
       attachments.length < maxAttachmentsPerMessage;
+  bool get isAtAttachmentLimit =>
+      attachments.length >= maxAttachmentsPerMessage;
   bool get canSend =>
       !hasPendingAttachmentUploads &&
       !hasFailedAttachments &&
@@ -381,6 +387,7 @@ class ConversationComposerViewModel
       localId,
       (current) => current.copyWith(
         status: ComposerAttachmentUploadStatus.uploading,
+        progress: 0,
         clearAttachmentId: true,
         clearErrorMessage: true,
       ),
@@ -409,12 +416,19 @@ class ConversationComposerViewModel
         uploadUrl: uploadInfo.uploadUrl,
         file: current.file,
         uploadHeaders: uploadInfo.uploadHeaders,
+        onProgress: (progress) {
+          _updateAttachmentByLocalId(
+            localId,
+            (latest) => latest.copyWith(progress: progress),
+          );
+        },
       );
       debugPrint('Upload completed for ${current.name}');
       _updateAttachmentByLocalId(
         localId,
         (latest) => latest.copyWith(
           status: ComposerAttachmentUploadStatus.uploaded,
+          progress: 1,
           attachmentId: uploadInfo.attachmentId,
           clearErrorMessage: true,
         ),
@@ -426,6 +440,7 @@ class ConversationComposerViewModel
         localId,
         (latest) => latest.copyWith(
           status: ComposerAttachmentUploadStatus.failed,
+          progress: 0,
           errorMessage: 'Upload failed',
           clearAttachmentId: true,
         ),
@@ -476,6 +491,7 @@ class ConversationComposerViewModel
       previewBytes: item.previewBytes,
       width: item.width,
       height: item.height,
+      progress: 0,
       status: ComposerAttachmentUploadStatus.queued,
     );
   }

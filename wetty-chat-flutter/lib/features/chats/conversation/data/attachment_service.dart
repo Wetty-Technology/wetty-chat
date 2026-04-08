@@ -59,6 +59,7 @@ class AttachmentService {
     required String uploadUrl,
     required PlatformFile file,
     required Map<String, String> uploadHeaders,
+    void Function(double progress)? onProgress,
   }) async {
     final s3Dio = Dio(
       BaseOptions(sendTimeout: _uploadTimeout, receiveTimeout: _uploadTimeout),
@@ -68,6 +69,13 @@ class AttachmentService {
       await s3Dio.put<void>(
         uploadUrl,
         data: stream,
+        onSendProgress: (sent, total) {
+          if (onProgress == null || total <= 0) {
+            return;
+          }
+          final value = (sent / total).clamp(0, 1).toDouble();
+          onProgress(value);
+        },
         options: Options(
           headers: {...uploadHeaders, Headers.contentLengthHeader: file.size},
         ),
