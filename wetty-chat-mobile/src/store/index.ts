@@ -1,7 +1,16 @@
-import { configureStore, createListenerMiddleware } from '@reduxjs/toolkit';
+import { combineReducers, configureStore, createListenerMiddleware } from '@reduxjs/toolkit';
 import connectionReducer from './connectionSlice';
 import messagesReducer from './messagesSlice';
 import settingsReducer, { type SettingsState } from './settingsSlice';
+import stickerPreferencesReducer, {
+  hydrateStickerPreferencesFromKv,
+  removeStickerPackOrderItem,
+  replaceStickerPackOrderFromWs,
+  setAutoSortEnabled,
+  syncStickerPackOrder,
+  upsertStickerPackOrderItem,
+  type StickerPreferencesState,
+} from './stickerPreferencesSlice';
 import threadsReducer, {
   incrementThreadUnread,
   removeThread,
@@ -15,10 +24,12 @@ import chatsReducer, {
   projectChatMessagePatched,
 } from './chatsSlice';
 import pinsReducer from './pinsSlice';
-import userReducer from './userSlice';
+import userReducer, { fetchCurrentUser } from './userSlice';
 import type { MessageResponse } from '@/api/messages';
 import { messageAdded, messageConfirmed, messagePatched, messagesBulkDeleted } from './messageEvents';
 import { findLatestEligibleRootMessage, isOptimisticMessageId } from './messageProjection';
+import { kvSet } from '@/utils/db';
+import { isAnyOf } from '@reduxjs/toolkit';
 
 const listenerMiddleware = createListenerMiddleware();
 
@@ -212,18 +223,52 @@ listenerMiddleware.startListening({
   },
 });
 
-export function createStore(initialSettings?: SettingsState) {
+listenerMiddleware.startListening({
+  matcher: isAnyOf(
+    fetchCurrentUser.fulfilled,
+    hydrateStickerPreferencesFromKv,
+    removeStickerPackOrderItem,
+    replaceStickerPackOrderFromWs,
+    setAutoSortEnabled,
+    upsertStickerPackOrderItem,
+  ),
+  effect: async (_action, api) => {
+    const state = api.getState() as RootState;
+    const { packOrder, autoSortEnabled } = state.stickerPreferences;
+    await Promise.all([kvSet('stickerPackOrder', packOrder), kvSet('autoSortStickerPacks', autoSortEnabled)]);
+  },
+});
+
+listenerMiddleware.startListening({
+  actionCreator: syncStickerPackOrder.rejected,
+  effect: async (action) => {
+    console.error('Failed to sync sticker pack order', action.payload ?? action.error.message);
+  },
+});
+
+const rootReducer = combineReducers({
+  connection: connectionReducer,
+  messages: messagesReducer,
+  settings: settingsReducer,
+  stickerPreferences: stickerPreferencesReducer,
+  chats: chatsReducer,
+  threads: threadsReducer,
+  pins: pinsReducer,
+  user: userReducer,
+});
+
+export function createStore(initialSettings?: SettingsState, initialStickerPreferences?: StickerPreferencesState) {
+  const preloadedState =
+    initialSettings || initialStickerPreferences
+      ? {
+          ...(initialSettings ? { settings: initialSettings } : {}),
+          ...(initialStickerPreferences ? { stickerPreferences: initialStickerPreferences } : {}),
+        }
+      : undefined;
+
   return configureStore({
-    reducer: {
-      connection: connectionReducer,
-      messages: messagesReducer,
-      settings: settingsReducer,
-      chats: chatsReducer,
-      threads: threadsReducer,
-      pins: pinsReducer,
-      user: userReducer,
-    },
-    preloadedState: initialSettings ? { settings: initialSettings } : undefined,
+    reducer: rootReducer,
+    ...(preloadedState ? { preloadedState } : {}),
     middleware: (getDefaultMiddleware) => getDefaultMiddleware().prepend(listenerMiddleware.middleware),
   });
 }

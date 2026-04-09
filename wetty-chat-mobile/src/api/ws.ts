@@ -5,6 +5,7 @@ import { setActiveConnections, setWsConnected } from '@/store/connectionSlice';
 import { selectEffectiveLocale } from '@/store/settingsSlice';
 import { updateThreadFromWs, setThreadsList, type ThreadUpdatePayload } from '@/store/threadsSlice';
 import { addPin, removePin } from '@/store/pinsSlice';
+import { replaceStickerPackOrderFromWs } from '@/store/stickerPreferencesSlice';
 import type { PinResponse } from '@/api/pins';
 import { getThreads } from '@/api/threads';
 import store from '@/store/index';
@@ -16,7 +17,6 @@ import {
   reactionsUpdated,
 } from '@/store/messageEvents';
 import { getStoredJwtToken } from '@/utils/jwtToken';
-import { kvSet } from '@/utils/db';
 import { formatNotificationBody, getNotificationPreviewLabels } from '@/utils/messagePreview';
 import { buildNotificationNavigationData } from '@/utils/notificationNavigation';
 
@@ -447,11 +447,7 @@ async function connectWebSocket(): Promise<void> {
         if (message.type === 'stickerPackOrderUpdated' && message.payload != null) {
           const payload = message.payload as { order: { stickerPackId: string; lastUsedOn: number }[] };
           if (payload.order) {
-            kvSet('stickerPackOrder', payload.order)
-              .then(() => {
-                window.dispatchEvent(new Event('stickerPackOrderChanged'));
-              })
-              .catch((err) => console.error('Failed to update stickerPackOrder from ws', err));
+            store.dispatch(replaceStickerPackOrderFromWs(payload.order));
           }
         }
       } catch {

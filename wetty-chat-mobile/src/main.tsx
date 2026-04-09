@@ -22,8 +22,9 @@ import { activateDetectedLocale, i18n } from '@/i18n';
 import { createStore, setStoreInstance } from '@/store/index';
 import { initializeClientId } from '@/utils/clientId';
 import { syncJwtTokenToIdb } from '@/utils/jwtToken';
-import { kvGet } from '@/utils/db';
+import { kvDelete, kvGet, kvSet } from '@/utils/db';
 import { hydrateSettings, type SettingsState } from '@/store/settingsSlice';
+import { hydrateStickerPreferences } from '@/store/stickerPreferencesSlice';
 import { installBootstrapRecoveryHandlers } from '@/bootstrapRecovery';
 import App from './App';
 import { setupIonicReact } from '@ionic/react';
@@ -38,17 +39,32 @@ installBootstrapRecoveryHandlers();
 
 async function bootstrap() {
   // Load persisted state from IndexedDB
-  const [savedSettings] = await Promise.all([
+  const [savedSettings, savedStickerPackOrder, savedAutoSort] = await Promise.all([
     kvGet<Partial<SettingsState>>('settings'),
+    kvGet<unknown>('stickerPackOrder'),
+    kvGet<unknown>('autoSortStickerPacks'),
     initializeClientId(),
     syncJwtTokenToIdb(),
   ]);
 
   const settings = hydrateSettings(savedSettings);
+  const hydratedStickerPreferences = hydrateStickerPreferences(savedStickerPackOrder, savedAutoSort);
+
+  if (hydratedStickerPreferences.clearPackOrder) {
+    await kvDelete('stickerPackOrder');
+  } else if (hydratedStickerPreferences.persistPackOrder) {
+    await kvSet('stickerPackOrder', hydratedStickerPreferences.state.packOrder);
+  }
+
+  if (hydratedStickerPreferences.clearAutoSort) {
+    await kvDelete('autoSortStickerPacks');
+  } else if (hydratedStickerPreferences.persistAutoSort) {
+    await kvSet('autoSortStickerPacks', hydratedStickerPreferences.state.autoSortEnabled);
+  }
 
   await activateDetectedLocale(settings.locale);
 
-  const store = createStore(settings);
+  const store = createStore(settings, hydratedStickerPreferences.state);
   setStoreInstance(store);
 
   createRoot(document.getElementById('root')!).render(

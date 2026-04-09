@@ -18,7 +18,7 @@ import { t } from '@lingui/core/macro';
 import { StickerImage } from '@/components/shared/StickerImage';
 import { Trans } from '@lingui/react/macro';
 import { useHistory } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { BackButton } from '@/components/BackButton';
 import { AddStickerModal } from '@/components/chat/compose/AddStickerModal';
 import { useAddSticker } from '@/hooks/useAddSticker';
@@ -31,6 +31,8 @@ import {
   unsubscribeStickerPack,
 } from '@/api/stickers';
 import type { RootState } from '@/store';
+import type { AppDispatch } from '@/store/index';
+import { removeStickerPackOrderItem } from '@/store/stickerPreferencesSlice';
 import type { BackAction } from '@/types/back-action';
 import styles from './StickerPackDetail.module.scss';
 
@@ -40,6 +42,7 @@ interface StickerPackDetailCoreProps {
 }
 
 export function StickerPackDetailCore({ packId, backAction }: StickerPackDetailCoreProps) {
+  const dispatch = useDispatch<AppDispatch>();
   const history = useHistory();
   const currentUserId = useSelector((state: RootState) => state.user.uid);
   const [pack, setPack] = useState<StickerPackDetailResponse | null>(null);
@@ -146,6 +149,7 @@ export function StickerPackDetailCore({ packId, backAction }: StickerPackDetailC
           handler: async () => {
             try {
               await unsubscribeStickerPack(packId);
+              dispatch(removeStickerPackOrderItem(packId));
               history.replace('/settings/stickers');
             } catch (error) {
               console.error('Failed to unsubscribe from sticker pack', error);
@@ -169,6 +173,7 @@ export function StickerPackDetailCore({ packId, backAction }: StickerPackDetailC
           handler: async () => {
             try {
               await deleteStickerPack(packId);
+              dispatch(removeStickerPackOrderItem(packId));
               history.replace('/settings/stickers');
             } catch (error) {
               console.error('Failed to delete sticker pack', error);

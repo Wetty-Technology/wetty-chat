@@ -7,14 +7,15 @@ use utoipa_axum::routes;
 use crate::errors::AppError;
 use crate::extractors::DbConn;
 use crate::handlers::ws::messages::{ServerWsMessage, StickerPackOrderUpdatePayload};
-use crate::models::UserExtra;
-use crate::schema::user_extra;
+use crate::models::{NewUserExtra, UserExtra};
+use crate::schema::{sticker_packs, user_extra, user_sticker_pack_subscriptions};
 use crate::services::user::{lookup_user_avatars, lookup_user_profiles};
 use crate::utils::auth::{
     encode_auth_token, extract_auth_context, required_client_id, AuthClaims, AuthSource, CurrentUid,
 };
 use crate::AppState;
 use diesel::prelude::*;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 #[derive(Debug, Clone, serde::Deserialize, Serialize, ToSchema)]
@@ -55,6 +56,13 @@ async fn put_stickerpack_order(
     Json(req): Json<UpdateStickerPackOrderRequest>,
 ) -> Result<Json<()>, AppError> {
     let conn = &mut *conn;
+    let requested_order = req.order;
+
+    let requested_pack_ids: Vec<i64> = requested_order
+        .iter()
+        .filter_map(|item| item.sticker_pack_id.parse::<i64>().ok())
+        .collect();
+    let accessible_pack_ids = load_accessible_sticker_pack_ids(conn, uid, &requested_pack_ids)?;
 
     let extra = user_extra::table
         .filter(user_extra::uid.eq(uid))
@@ -74,15 +82,24 @@ async fn put_stickerpack_order(
     use crate::MAX_AUTO_SORT_LIMIT;
     let auto_sort_limit = MAX_AUTO_SORT_LIMIT;
 
-    for inc in req.order {
+    for inc in requested_order {
+        let Ok(pack_id) = inc.sticker_pack_id.parse::<i64>() else {
+            continue;
+        };
+
+        if !accessible_pack_ids.contains(&pack_id) {
+            continue;
+        }
+
         if inc.is_auto_sort.unwrap_or(false) {
             let current_pos = sorted_order
                 .iter()
                 .position(|o| o.sticker_pack_id == inc.sticker_pack_id);
-            if let Some(pos) = current_pos {
-                if pos >= auto_sort_limit {
-                    continue; // Skip this update if it's outside the auto-sort limit
-                }
+            let Some(pos) = current_pos else {
+                continue;
+            };
+            if pos >= auto_sort_limit {
+                continue;
             }
         }
 
@@ -97,13 +114,28 @@ async fn put_stickerpack_order(
                 last_used_on: inc.last_used_on,
             });
         }
+
+        sorted_order = current_order.clone();
+        sorted_order.sort_by_key(|item| -item.last_used_on);
     }
 
     let order_json = serde_json::to_value(&current_order).unwrap_or(serde_json::json!([]));
 
-    diesel::update(user_extra::table.filter(user_extra::uid.eq(uid)))
+    let affected = diesel::update(user_extra::table.filter(user_extra::uid.eq(uid)))
         .set(user_extra::sticker_pack_order.eq(&order_json))
         .execute(conn)?;
+
+    if affected == 0 {
+        let now = chrono::Utc::now().naive_utc();
+        diesel::insert_into(user_extra::table)
+            .values(NewUserExtra {
+                uid,
+                first_seen_at: now,
+                last_seen_at: now,
+                sticker_pack_order: order_json.clone(),
+            })
+            .execute(conn)?;
+    }
 
     let msg = Arc::new(ServerWsMessage::StickerPackOrderUpdated(
         StickerPackOrderUpdatePayload {
@@ -213,4 +245,31 @@ pub fn router() -> OpenApiRouter<crate::AppState> {
         .routes(routes!(get_me))
         .routes(routes!(get_auth_token))
         .routes(routes!(put_stickerpack_order))
+}
+
+fn load_accessible_sticker_pack_ids(
+    conn: &mut PgConnection,
+    uid: i32,
+    pack_ids: &[i64],
+) -> Result<HashSet<i64>, AppError> {
+    if pack_ids.is_empty() {
+        return Ok(HashSet::new());
+    }
+
+    let owned_pack_ids: Vec<i64> = sticker_packs::table
+        .filter(sticker_packs::owner_uid.eq(uid))
+        .filter(sticker_packs::id.eq_any(pack_ids))
+        .select(sticker_packs::id)
+        .load(conn)?;
+
+    let subscribed_pack_ids: Vec<i64> = user_sticker_pack_subscriptions::table
+        .filter(user_sticker_pack_subscriptions::uid.eq(uid))
+        .filter(user_sticker_pack_subscriptions::pack_id.eq_any(pack_ids))
+        .select(user_sticker_pack_subscriptions::pack_id)
+        .load(conn)?;
+
+    Ok(owned_pack_ids
+        .into_iter()
+        .chain(subscribed_pack_ids)
+        .collect())
 }

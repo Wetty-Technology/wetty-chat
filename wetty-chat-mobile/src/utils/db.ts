@@ -31,6 +31,11 @@ export async function kvSet<T>(key: string, value: T): Promise<void> {
   await db.put('kv', value, key);
 }
 
+export async function kvDelete(key: string): Promise<void> {
+  const db = await getDb();
+  await db.delete('kv', key);
+}
+
 export async function getHighWaterMark(chatId: string): Promise<string | undefined> {
   const db = await getDb();
   return db.get('notification_hwm', chatId);

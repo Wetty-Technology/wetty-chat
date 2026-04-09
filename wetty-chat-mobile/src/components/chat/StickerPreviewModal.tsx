@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { IonContent, IonIcon, IonModal } from '@ionic/react';
 import { close, addCircleOutline, removeCircleOutline, settingsOutline } from 'ionicons/icons';
 import { useHistory, useLocation } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import type { RootState } from '@/store';
 import { t } from '@lingui/core/macro';
 import { StickerImage } from '@/components/shared/StickerImage';
@@ -16,6 +16,8 @@ import {
   type StickerPackDetailResponse,
 } from '@/api/stickers';
 import { useIsDesktop } from '@/hooks/platformHooks';
+import type { AppDispatch } from '@/store/index';
+import { removeStickerPackOrderItem, upsertStickerPackOrderItem } from '@/store/stickerPreferencesSlice';
 import styles from './StickerPreviewModal.module.scss';
 
 interface StickerPreviewModalProps {
@@ -41,6 +43,7 @@ export function StickerPreviewModal({ stickerId, onDismiss }: StickerPreviewModa
 }
 
 function StickerPreviewModalContent({ stickerId, isDesktop, onDismiss }: StickerPreviewModalContentProps) {
+  const dispatch = useDispatch<AppDispatch>();
   const history = useHistory();
   const location = useLocation();
   const currentUserId = useSelector((state: RootState) => state.user.uid);
@@ -93,8 +96,10 @@ function StickerPreviewModalContent({ stickerId, isDesktop, onDismiss }: Sticker
     try {
       if (prev) {
         await unsubscribeStickerPack(pack.id);
+        dispatch(removeStickerPackOrderItem(pack.id));
       } else {
         await subscribeStickerPack(pack.id);
+        dispatch(upsertStickerPackOrderItem({ stickerPackId: pack.id, lastUsedOn: Date.now() }));
       }
     } catch {
       setIsSubscribed(prev);

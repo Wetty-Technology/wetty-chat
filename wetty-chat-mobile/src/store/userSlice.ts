@@ -2,7 +2,6 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import type { RootState } from './index';
 import { usersApi } from '@/api/users';
-import { kvSet } from '@/utils/db';
 
 export interface UserState {
   uid: number | null;
@@ -22,12 +21,7 @@ const initialState: UserState = {
 
 export const fetchCurrentUser = createAsyncThunk('user/fetchCurrentUser', async (_, { rejectWithValue }) => {
   try {
-    const user = await usersApi.getCurrentUser();
-    if (user.stickerPackOrder && user.stickerPackOrder.length > 0) {
-      await kvSet('stickerPackOrder', user.stickerPackOrder);
-      window.dispatchEvent(new Event('stickerPackOrderChanged'));
-    }
-    return user;
+    return await usersApi.getCurrentUser();
   } catch (err: any) {
     return rejectWithValue(err.response?.data || err.message);
   }

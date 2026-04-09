@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   IonBackButton,
   IonButtons,
@@ -20,6 +20,7 @@ import {
   type ItemReorderEventDetail,
 } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import { addOutline, cubeOutline } from 'ionicons/icons';
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
@@ -32,8 +33,15 @@ import {
   getSubscribedStickerPacks,
   type StickerPackSummary,
 } from '@/api/stickers';
-import { kvGet, kvSet } from '@/utils/db';
-import { usersApi, type StickerPackOrderItem } from '@/api/users';
+import type { AppDispatch } from '@/store/index';
+import {
+  selectStickerAutoSortEnabled,
+  selectStickerPackOrder,
+  setAutoSortEnabled,
+  sortStickerPacksByPreference,
+  syncStickerPackOrder,
+  upsertStickerPackOrderItem,
+} from '@/store/stickerPreferencesSlice';
 import type { BackAction } from '@/types/back-action';
 
 interface StickerSettingsCoreProps {
@@ -42,6 +50,7 @@ interface StickerSettingsCoreProps {
 }
 
 export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsCoreProps) {
+  const dispatch = useDispatch<AppDispatch>();
   const history = useHistory();
   const [presentAlert] = useIonAlert();
   const [presentToast] = useIonToast();
@@ -49,6 +58,10 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
   const [allPacks, setAllPacks] = useState<StickerPackSummary[]>([]);
   const [itemHeight, setItemHeight] = useState(0);
   const listRef = useRef<HTMLIonReorderGroupElement>(null);
+  const autoSort = useSelector(selectStickerAutoSortEnabled);
+  const packOrder = useSelector(selectStickerPackOrder);
+  const ownedPackIds = useMemo(() => new Set(ownedPacks.map((pack) => pack.id)), [ownedPacks]);
+  const orderedPacks = useMemo(() => sortStickerPacksByPreference(allPacks, packOrder), [allPacks, packOrder]);
 
   useEffect(() => {
     if (listRef.current) {
@@ -59,111 +72,16 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
         }
       }, 100);
     }
-  }, [allPacks.length]);
-  const [autoSort, setAutoSort] = useState<boolean>(false);
-  const [packOrder, setPackOrder] = useState<StickerPackOrderItem[]>([]);
-  const [initialized, setInitialized] = useState(false);
-
-  useEffect(() => {
-    const initStorage = async () => {
-      try {
-        const storedAutoSort = await kvGet<boolean>('autoSortStickerPacks');
-        setAutoSort(storedAutoSort ?? false);
-
-        const storedOrderRaw = await kvGet<any[]>('stickerPackOrder');
-        let storedOrder = storedOrderRaw ?? [];
-        if (storedOrder.length > 0 && typeof storedOrder[0] === 'string') {
-          storedOrder = storedOrder.map((id) => ({ stickerPackId: id, lastUsedOn: 0 }));
-          void kvSet('stickerPackOrder', storedOrder);
-        }
-        setPackOrder(storedOrder);
-      } catch (error) {
-        console.error('Failed to init sticker storage', error);
-      } finally {
-        setInitialized(true);
-      }
-    };
-    void initStorage();
-
-    const handleOrderChange = async () => {
-      try {
-        const _orderRaw = await kvGet<any[]>('stickerPackOrder');
-        let order = _orderRaw ?? [];
-        if (order.length > 0 && typeof order[0] === 'string') {
-          order = order.map((id) => ({ stickerPackId: id, lastUsedOn: 0 }));
-        }
-        setPackOrder(order);
-        setAllPacks((prev) => {
-          const copy = [...prev];
-          if (order.length > 0) {
-            copy.sort((a, b) => {
-              const itemA = order.find((o: StickerPackOrderItem) => o.stickerPackId === a.id);
-              const itemB = order.find((o: StickerPackOrderItem) => o.stickerPackId === b.id);
-              const timeA = itemA ? itemA.lastUsedOn : 0;
-              const timeB = itemB ? itemB.lastUsedOn : 0;
-              return timeB - timeA;
-            });
-          }
-          return copy;
-        });
-      } catch (e) {
-        console.error('Failed to handle order change', e);
-      }
-    };
-
-    window.addEventListener('stickerPackOrderChanged', handleOrderChange);
-    return () => {
-      window.removeEventListener('stickerPackOrderChanged', handleOrderChange);
-    };
-  }, []);
+  }, [orderedPacks.length]);
 
   const loadPacks = useCallback(async () => {
     try {
-      const [ownedRes, subscribedRes, currentOrder] = await Promise.all([
-        getOwnedStickerPacks(),
-        getSubscribedStickerPacks(),
-        kvGet<any[]>('stickerPackOrder'),
-      ]);
+      const [ownedRes, subscribedRes] = await Promise.all([getOwnedStickerPacks(), getSubscribedStickerPacks()]);
       setOwnedPacks(ownedRes.data.packs);
       const subs = subscribedRes.data.packs.filter(
         (pack) => !ownedRes.data.packs.some((ownedPack) => ownedPack.id === pack.id),
       );
-
-      const merged = [...ownedRes.data.packs, ...subs];
-      let order = currentOrder ?? [];
-      if (order.length > 0 && typeof order[0] === 'string') {
-        const now = Date.now();
-        order = order.map((id, index) => ({ stickerPackId: id, lastUsedOn: now - index * 60000 }));
-        void kvSet('stickerPackOrder', order);
-        void usersApi.updateStickerPackOrder(order).catch(console.error);
-      }
-
-      // Assure everything rendered gets an initial lastUsedOn spacing to prevent zero-tie issues
-      const unassigned = merged.filter((pack) => !order.some((o: StickerPackOrderItem) => o.stickerPackId === pack.id));
-      if (unassigned.length > 0) {
-        const now = Date.now();
-        const base = order.length > 0 ? Math.min(...order.map((o: StickerPackOrderItem) => o.lastUsedOn)) - 60000 : now;
-        const newOrderItems = unassigned.map((pack, i) => ({
-          stickerPackId: pack.id,
-          lastUsedOn: base - i * 60000,
-        }));
-        order = [...order, ...newOrderItems];
-        void kvSet('stickerPackOrder', order);
-        void usersApi.updateStickerPackOrder(newOrderItems).catch(console.error);
-      }
-
-      if (order.length > 0) {
-        merged.sort((a, b) => {
-          const itemA = order.find((o: StickerPackOrderItem) => o.stickerPackId === a.id);
-          const itemB = order.find((o: StickerPackOrderItem) => o.stickerPackId === b.id);
-          const timeA = itemA ? itemA.lastUsedOn : 0;
-          const timeB = itemB ? itemB.lastUsedOn : 0;
-          return timeB - timeA;
-        });
-      }
-
-      setAllPacks(merged);
-      setPackOrder(order);
+      setAllPacks([...ownedRes.data.packs, ...subs]);
     } catch (error) {
       console.error('Failed to load sticker packs', error);
       presentToast({ message: t`Failed to load sticker packs`, duration: 2000, position: 'bottom' });
@@ -171,17 +89,16 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
   }, [presentToast]);
 
   useEffect(() => {
-    if (!initialized) return;
     const run = async () => {
       await loadPacks();
     };
 
     void run();
-  }, [loadPacks, initialized]);
+  }, [loadPacks]);
 
   const handleReorder = (event: CustomEvent<ItemReorderEventDetail>) => {
     const toIndex = event.detail.to;
-    const newItems = event.detail.complete(allPacks);
+    const newItems = event.detail.complete(orderedPacks);
     setAllPacks(newItems);
 
     const movedPack = newItems[toIndex];
@@ -206,17 +123,8 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
     }
 
     const updatedItem = { stickerPackId: movedPack.id, lastUsedOn: newLastUsedOn };
-    const newOrderObjects = packOrder.map((o) => (o.stickerPackId === updatedItem.stickerPackId ? updatedItem : o));
-    if (!newOrderObjects.some((o) => o.stickerPackId === updatedItem.stickerPackId)) {
-      newOrderObjects.push(updatedItem);
-    }
-
-    setPackOrder(newOrderObjects);
-    void kvSet('stickerPackOrder', newOrderObjects);
-    void usersApi
-      .updateStickerPackOrder([updatedItem])
-      .catch((e) => console.error('Failed to sync sticker pack order', e));
-    window.dispatchEvent(new Event('stickerPackOrderChanged'));
+    dispatch(upsertStickerPackOrderItem(updatedItem));
+    void dispatch(syncStickerPackOrder([updatedItem]));
   };
 
   const handleOpenPack = (packId: string) => {
@@ -242,10 +150,12 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
               const res = await createStickerPack({ name });
               setOwnedPacks((prev) => [res.data, ...prev]);
               setAllPacks((prev) => [res.data, ...prev]);
-              const newItem = { stickerPackId: res.data.id, lastUsedOn: Date.now() };
-              const newOrderObjects = [newItem, ...packOrder];
-              setPackOrder(newOrderObjects);
-              void kvSet('stickerPackOrder', newOrderObjects);
+              dispatch(
+                upsertStickerPackOrderItem({
+                  stickerPackId: res.data.id,
+                  lastUsedOn: Date.now(),
+                }),
+              );
 
               handleOpenPack(res.data.id);
             } catch (error) {
@@ -280,9 +190,7 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
               slot="end"
               checked={autoSort}
               onIonChange={(e) => {
-                const val = e.detail.checked;
-                setAutoSort(val);
-                void kvSet('autoSortStickerPacks', val);
+                dispatch(setAutoSortEnabled(e.detail.checked));
               }}
             />
           </IonItem>
@@ -298,9 +206,9 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
 
           <div style={{ position: 'relative' }}>
             <IonReorderGroup ref={listRef} disabled={false} onIonItemReorder={handleReorder}>
-              {allPacks.map((pack) => {
+              {orderedPacks.map((pack) => {
                 if (!pack) return null; // Safety check
-                const isOwned = ownedPacks.some((p) => p.id === pack.id);
+                const isOwned = ownedPackIds.has(pack.id);
                 return (
                   <React.Fragment key={pack.id}>
                     <IonItem button detail={false} onClick={() => handleOpenPack(pack.id)}>
@@ -349,7 +257,7 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
               })}
             </IonReorderGroup>
 
-            {autoSort && allPacks.length > STICKER_AUTO_SORT_LIMIT && itemHeight > 0 && (
+            {autoSort && orderedPacks.length > STICKER_AUTO_SORT_LIMIT && itemHeight > 0 && (
               <div
                 style={{
                   position: 'absolute',

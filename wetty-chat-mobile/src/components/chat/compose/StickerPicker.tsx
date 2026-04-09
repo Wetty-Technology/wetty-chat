@@ -3,12 +3,11 @@ import { createPortal } from 'react-dom';
 import { IonIcon, useIonAlert, useIonToast } from '@ionic/react';
 import { heart, heartDislike } from 'ionicons/icons';
 import { starOutline, cubeOutline } from 'ionicons/icons';
+import { useDispatch, useSelector } from 'react-redux';
 import { t } from '@lingui/core/macro';
 import { StickerImage } from '@/components/shared/StickerImage';
 import { AddStickerModal } from './AddStickerModal';
 import styles from './StickerPicker.module.scss';
-import { kvGet, kvSet } from '@/utils/db';
-import { usersApi } from '@/api/users';
 import {
   createStickerPack,
   getFavoriteStickers,
@@ -23,6 +22,14 @@ import {
 } from '@/api/stickers';
 import { useAddSticker } from '@/hooks/useAddSticker';
 import { STICKER_AUTO_SORT_LIMIT } from '@/constants/stickers';
+import type { AppDispatch } from '@/store/index';
+import {
+  selectStickerAutoSortEnabled,
+  selectStickerPackOrder,
+  sortStickerPacksByPreference,
+  syncStickerPackOrder,
+  upsertStickerPackOrderItem,
+} from '@/store/stickerPreferencesSlice';
 
 interface StickerPickerProps {
   isOpen: boolean;
@@ -40,18 +47,20 @@ interface PickerPack {
 }
 
 export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: StickerPickerProps) {
+  const dispatch = useDispatch<AppDispatch>();
   const [ownedPacks, setOwnedPacks] = useState<StickerPackSummary[]>([]);
   const [subscribedPacks, setSubscribedPacks] = useState<StickerPackSummary[]>([]);
   const [favoriteStickers, setFavoriteStickers] = useState<StickerSummary[]>([]);
   const [packDetails, setPackDetails] = useState<Record<string, StickerPackDetailResponse>>({});
   const [selectedPackId, setSelectedPackId] = useState('favorites');
   const [isLibraryLoading, setIsLibraryLoading] = useState(false);
-  const [packOrder, setPackOrder] = useState<{ stickerPackId: string; lastUsedOn: number }[]>([]);
   const hasLoaded = useRef(false);
   const [loadingPackIds, setLoadingPackIds] = useState<Record<string, boolean>>({});
   const [popover, setPopover] = useState<{ sticker: StickerSummary; rect: DOMRect } | null>(null);
   const [presentAlert] = useIonAlert();
   const [presentToast] = useIonToast();
+  const autoSort = useSelector(selectStickerAutoSortEnabled);
+  const packOrder = useSelector(selectStickerPackOrder);
 
   const loadPackDetail = useCallback(async (packId: string) => {
     setLoadingPackIds((prev) => ({ ...prev, [packId]: true }));
@@ -97,27 +106,6 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
     void loadLibrary();
   }, [isOpen, loadLibrary]);
 
-  useEffect(() => {
-    const handleStorageChange = async () => {
-      try {
-        let order = await kvGet<any[]>('stickerPackOrder');
-        if (order !== undefined) {
-          if (order.length > 0 && typeof order[0] === 'string') {
-            order = order.map((id) => ({ stickerPackId: id, lastUsedOn: 0 }));
-          }
-          setPackOrder(order);
-        } else {
-          setPackOrder([]);
-        }
-      } catch {
-        // ignore
-      }
-    };
-    void handleStorageChange();
-    window.addEventListener('stickerPackOrderChanged', handleStorageChange);
-    return () => window.removeEventListener('stickerPackOrderChanged', handleStorageChange);
-  }, []);
-
   const packs = useMemo<PickerPack[]>(() => {
     const packEntries = [...ownedPacks, ...subscribedPacks].map((pack) => ({
       id: pack.id,
@@ -128,7 +116,7 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
       isLoading: !!loadingPackIds[pack.id],
     }));
 
-    const allPacks = [
+    return [
       {
         id: 'favorites',
         name: t`Favorites`,
@@ -137,22 +125,8 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
         stickers: favoriteStickers,
         isLoading: isLibraryLoading,
       },
-      ...packEntries,
+      ...sortStickerPacksByPreference(packEntries, packOrder),
     ];
-
-    if (packOrder.length > 0) {
-      allPacks.sort((a, b) => {
-        if (a.id === 'favorites') return -1;
-        if (b.id === 'favorites') return 1;
-        const itemA = packOrder.find((o) => o.stickerPackId === a.id);
-        const itemB = packOrder.find((o) => o.stickerPackId === b.id);
-        const timeA = itemA ? itemA.lastUsedOn : 0;
-        const timeB = itemB ? itemB.lastUsedOn : 0;
-        return timeB - timeA;
-      });
-    }
-
-    return allPacks;
   }, [favoriteStickers, isLibraryLoading, loadingPackIds, ownedPacks, packDetails, subscribedPacks, packOrder]);
 
   useEffect(() => {
@@ -174,35 +148,18 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
     (sticker: StickerSummary) => {
       const run = async () => {
         try {
-          const autoSort = (await kvGet<boolean>('autoSortStickerPacks')) ?? false;
           if (autoSort && activePack && activePack.id !== 'favorites') {
-            const packIndex = packs.findIndex((p) => p.id === activePack.id);
-            if (packIndex > STICKER_AUTO_SORT_LIMIT) return;
-            let rawOrder = await kvGet<any[]>('stickerPackOrder');
-            if (rawOrder === undefined) {
-              rawOrder = [];
-            }
-            if (Array.isArray(rawOrder)) {
-              if (rawOrder.length > 0 && typeof rawOrder[0] === 'string') {
-                rawOrder = rawOrder.map((id) => ({ stickerPackId: id, lastUsedOn: 0 }));
-              }
-              const newOrder: { stickerPackId: string; lastUsedOn: number }[] = rawOrder;
-              const targetObj = newOrder.find((o) => o.stickerPackId === activePack.id) || {
-                stickerPackId: activePack.id,
-                lastUsedOn: 0,
-              };
+            const packIndex = packs
+              .filter((pack) => pack.id !== 'favorites')
+              .findIndex((pack) => pack.id === activePack.id);
+            if (packIndex < 0 || packIndex >= STICKER_AUTO_SORT_LIMIT) return;
 
-              const now = Date.now();
-              if (targetObj.lastUsedOn !== now) {
-                targetObj.lastUsedOn = now;
-                const filtered = newOrder.filter((o) => o.stickerPackId !== activePack.id);
-                filtered.unshift(targetObj);
-
-                await kvSet('stickerPackOrder', filtered);
-                void usersApi.updateStickerPackOrder([{ ...targetObj, isAutoSort: true }]).catch(console.error);
-                window.dispatchEvent(new Event('stickerPackOrderChanged'));
-              }
-            }
+            const updatedItem = {
+              stickerPackId: activePack.id,
+              lastUsedOn: Date.now(),
+            };
+            dispatch(upsertStickerPackOrderItem(updatedItem));
+            void dispatch(syncStickerPackOrder([{ ...updatedItem, isAutoSort: true }]));
           }
         } catch (err) {
           console.error('Failed to auto-sort sticker pack order window event:', err);
@@ -211,7 +168,7 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
       void run();
       onStickerSelect(sticker);
     },
-    [activePack, onStickerSelect, packs],
+    [activePack, autoSort, dispatch, onStickerSelect, packs],
   );
 
   const { addStickerFile, setAddStickerFile, fileInputRef, handleFileChange, handleAddSticker } = useAddSticker({
@@ -263,6 +220,12 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
                 ...prev,
                 [res.data.id]: { ...res.data, stickers: [] },
               }));
+              dispatch(
+                upsertStickerPackOrderItem({
+                  stickerPackId: res.data.id,
+                  lastUsedOn: Date.now(),
+                }),
+              );
               setSelectedPackId(res.data.id);
             } catch (error) {
               console.error('Failed to create pack', error);
