@@ -632,6 +632,14 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
               shouldResetAnchor,
             });
           }
+          console.debug('[msg-trace] fetchLatestWindow:resolved', {
+            storeChatId,
+            forceReopen,
+            fetchedCount: list.length,
+            shouldResetAnchor,
+            firstFetchedId: list[0]?.id ?? null,
+            lastFetchedId: list[list.length - 1]?.id ?? null,
+          });
           dispatch(
             refreshLatest({
               chatId: storeChatId,
@@ -664,6 +672,10 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
           }
         })
         .catch((err: Error) => {
+          console.debug('[msg-trace] fetchLatestWindow:error', {
+            storeChatId,
+            error: err.message,
+          });
           dispatch(resetChat({ chatId: storeChatId, messages: [], nextCursor: null, prevCursor: null }));
           setInitialAnchor((currentAnchor) => {
             const nextAnchor = { type: 'bottom' as const, token: currentAnchor.token + 1 };
@@ -884,7 +896,23 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   }, []);
 
   const revealLatestAfterSend = useCallback(() => {
+    const state = store.getState();
+    const chatState = state.messages.chats[storeChatId];
+    const winInfo = chatState
+      ? {
+          winCount: chatState.windows.length,
+          activeWin: chatState.activeWindowIndex,
+          lastWin: chatState.windows.length - 1,
+          winMsgCounts: chatState.windows.map((w: { messages: unknown[] }) => w.messages.length),
+        }
+      : null;
+
     if (prevCursor != null) {
+      console.debug('[msg-trace] revealLatestAfterSend:activateLatest', {
+        storeChatId,
+        prevCursor,
+        ...winInfo,
+      });
       // Synchronously switch to the latest window so the optimistic message
       // (which addMessageToWindow placed in the last window) becomes visible
       // via selectMessagesForChat immediately. Then reset the virtual scroll
@@ -895,6 +923,10 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
       return;
     }
 
+    console.debug('[msg-trace] revealLatestAfterSend:scrollToBottom', {
+      storeChatId,
+      ...winInfo,
+    });
     scrollApiRef.current?.scrollToBottom();
   }, [dispatch, fetchLatestWindow, prevCursor, storeChatId]);
 
@@ -992,6 +1024,12 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
           attachments: optimisticUploadedAttachments,
           threadInfo: undefined,
         };
+        console.debug('[msg-trace] handleSend:optimistic', {
+          cgId: clientGeneratedId,
+          chatId,
+          storeChatId,
+          threadId: threadId ?? null,
+        });
         dispatch(
           messageAdded({
             chatId,
@@ -1029,6 +1067,11 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
                   }
                 : optimistic.replyToMessage,
             };
+            console.debug('[msg-trace] handleSend:apiConfirm', {
+              cgId: clientGeneratedId,
+              confirmedId: confirmed.id,
+              storeChatId,
+            });
             dispatch(
               messageConfirmed({
                 chatId,

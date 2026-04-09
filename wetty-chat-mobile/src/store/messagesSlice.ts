@@ -81,9 +81,27 @@ function addMessageToWindow(state: MessagesState, chatId: string, message: Messa
     chat.windows.push({ messages: [], nextCursor: null, prevCursor: null });
     chat.activeWindowIndex = 0;
   }
-  if (hasLogicalMessage(chat, message)) return;
-  const lastWin = chat.windows[chat.windows.length - 1];
+  if (hasLogicalMessage(chat, message)) {
+    console.debug('[msg-trace] addMessageToWindow:dedup', {
+      chatId,
+      msgId: message.id,
+      cgId: message.clientGeneratedId ?? null,
+    });
+    return;
+  }
+  const lastWinIdx = chat.windows.length - 1;
+  const lastWin = chat.windows[lastWinIdx];
   lastWin.messages = insertMessageSorted(lastWin.messages, message);
+  console.debug('[msg-trace] addMessageToWindow', {
+    chatId,
+    msgId: message.id,
+    cgId: message.clientGeneratedId ?? null,
+    targetWin: lastWinIdx,
+    activeWin: chat.activeWindowIndex,
+    mismatch: lastWinIdx !== chat.activeWindowIndex,
+    winCount: chat.windows.length,
+    winMsgCounts: chat.windows.map((w) => w.messages.length),
+  });
 }
 
 function confirmPendingInWindows(
@@ -111,14 +129,26 @@ function confirmPendingInWindows(
     }
   }
 
-  for (const win of chat.windows) {
+  const removedCounts = chat.windows.map((win) => {
+    const before = win.messages.length;
     win.messages = win.messages.filter((current) => !isSameLogicalMessage(current, resolvedMessage, clientGeneratedId));
-  }
+    return before - win.messages.length;
+  });
 
   chat.windows[targetWindowIndex].messages = insertMessageSorted(
     chat.windows[targetWindowIndex].messages,
     resolvedMessage,
   );
+
+  console.debug('[msg-trace] confirmPendingInWindows', {
+    chatId,
+    cgId: clientGeneratedId,
+    confirmedId: message.id,
+    targetWin: targetWindowIndex,
+    activeWin: chat.activeWindowIndex,
+    mismatch: targetWindowIndex !== chat.activeWindowIndex,
+    removedPerWin: removedCounts,
+  });
 }
 
 function patchMessageInWindows(
@@ -292,8 +322,16 @@ const messagesSlice = createSlice({
     activateLatestWindow(state, action: { payload: { chatId: string } }) {
       const chat = state.chats[action.payload.chatId];
       if (chat && chat.windows.length > 0 && chat.activeWindowIndex !== chat.windows.length - 1) {
+        const from = chat.activeWindowIndex;
         chat.activeWindowIndex = chat.windows.length - 1;
         chat.generation++;
+        console.debug('[msg-trace] activateLatestWindow', {
+          chatId: action.payload.chatId,
+          from,
+          to: chat.activeWindowIndex,
+          winCount: chat.windows.length,
+          winMsgCounts: chat.windows.map((w) => w.messages.length),
+        });
       }
     },
 
@@ -348,8 +386,25 @@ const messagesSlice = createSlice({
         // use prevCursor from API response
         lastWin.prevCursor = prevCursor;
         chat.activeWindowIndex = lastWinIdx;
+        console.debug('[msg-trace] refreshLatest:merge', {
+          chatId,
+          hasOverlap,
+          optimisticCount: pendingOptimistic.length,
+          optimisticIds: pendingOptimistic.map((m) => m.id),
+          unmatchedCount: unmatchedExisting.length,
+          fetchedCount: messages.length,
+          finalCount: nextMessages.length,
+          activeWin: lastWinIdx,
+        });
       } else {
         // No overlap — stale data, full reset
+        console.debug('[msg-trace] refreshLatest:reset', {
+          chatId,
+          existingMsgCount: lastWin.messages.length,
+          existingIds: lastWin.messages.slice(-3).map((m) => m.id),
+          fetchedCount: messages.length,
+          fetchedIds: messages.slice(-3).map((m) => m.id),
+        });
         chat.windows = [{ messages, nextCursor, prevCursor }];
         chat.activeWindowIndex = 0;
       }

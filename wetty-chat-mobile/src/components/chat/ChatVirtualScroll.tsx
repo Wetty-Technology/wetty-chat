@@ -1040,7 +1040,14 @@ export function ChatVirtualScroll({
   ]);
 
   const ensureBottomMeasured = useCallback(() => {
-    if (rowKeys.length === 0 || pendingBatch) return;
+    if (rowKeys.length === 0 || pendingBatch) {
+      console.debug('[msg-trace] ensureBottomMeasured:bail', {
+        rowCount: rowKeys.length,
+        pendingBatch: pendingBatch ? { reason: pendingBatch.reason, size: pendingBatch.keys.length } : null,
+        pendingScrollToBottom: pendingScrollToBottomRef.current,
+      });
+      return;
+    }
 
     const container = containerRef.current;
     const fallbackRange = { start: Math.max(0, rowKeys.length - BOOTSTRAP_BOTTOM_SEED), end: rowKeys.length - 1 };
@@ -1481,6 +1488,19 @@ export function ChatVirtualScroll({
         });
         pendingAnchorDriftCheckRef.current = null;
       }
+    }
+
+    if (mutation !== 'none') {
+      console.debug('[msg-trace] vs:layoutEffect:mutation', {
+        mutation,
+        phase: phaseRef.current,
+        isAtBottom: isAtBottomRef.current,
+        pendingScrollToBottom: pendingScrollToBottomRef.current,
+        hasScrollToKeyIntent: !!intent?.scrollToKey,
+        prevKeyCount: prevKeysRef.current.length,
+        nextKeyCount: rowKeys.length,
+        mounted: mountedRef.current,
+      });
     }
 
     if (mutation === 'reset' && rowKeys.length > 0) {

@@ -199,6 +199,12 @@ function handleWsMessage(payload: unknown): void {
   );
 
   if (pending) {
+    console.debug('[msg-trace] ws:confirm', {
+      msgId: message.id,
+      cgId: message.clientGeneratedId,
+      pendingId: pending.id,
+      chatId: message.chatId,
+    });
     store.dispatch(
       messageConfirmed({
         chatId: message.chatId,
@@ -214,6 +220,12 @@ function handleWsMessage(payload: unknown): void {
       (current) => current.id === message.id || current.clientGeneratedId === message.clientGeneratedId,
     );
     if (!exists) {
+      console.debug('[msg-trace] ws:add', {
+        msgId: message.id,
+        cgId: message.clientGeneratedId ?? null,
+        chatId: message.chatId,
+        storeChatId,
+      });
       store.dispatch(
         messageAdded({
           chatId: message.chatId,
@@ -224,6 +236,12 @@ function handleWsMessage(payload: unknown): void {
         }),
       );
       showLocalNotification(message);
+    } else {
+      console.debug('[msg-trace] ws:skip-exists', {
+        msgId: message.id,
+        cgId: message.clientGeneratedId ?? null,
+        chatId: message.chatId,
+      });
     }
   }
 }
