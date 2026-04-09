@@ -23,7 +23,7 @@ export interface EditingMessage {
 export interface ComposeUploadInput {
   file: File;
   signal: AbortSignal;
-  clientQueuedAt?: string | Date;
+  order?: number;
   onProgress: (progress: number) => void;
   dimensions?: {
     width?: number;

@@ -54,7 +54,7 @@ diesel::table! {
         file_name -> Varchar,
         width -> Nullable<Int4>,
         height -> Nullable<Int4>,
-        client_queued_at -> Timestamptz,
+        order -> Int2,
     }
 }
 

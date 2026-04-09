@@ -14,7 +14,7 @@ export interface ImageUploadDraft {
   size: number;
   width?: number;
   height?: number;
-  clientQueuedAt?: Date | string;
+  order?: number;
   progress: number;
   status: ComposeUploadDraftStatus;
   attachmentId?: string;

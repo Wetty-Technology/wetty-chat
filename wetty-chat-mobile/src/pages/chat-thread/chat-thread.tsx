@@ -868,23 +868,20 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   const nextCursor = useSelector((state: RootState) => selectNextCursorForChat(state, storeChatId));
   const prevCursor = useSelector((state: RootState) => selectPrevCursorForChat(state, storeChatId));
 
-  const uploadAttachment = useCallback(
-    async ({ file, dimensions, onProgress, signal, clientQueuedAt }: ComposeUploadInput) => {
-      const res = await requestUploadUrl({
-        filename: file.name,
-        contentType: file.type || 'application/octet-stream',
-        size: file.size,
-        clientQueuedAt,
-        ...dimensions,
-      });
+  const uploadAttachment = useCallback(async ({ file, dimensions, onProgress, signal, order }: ComposeUploadInput) => {
+    const res = await requestUploadUrl({
+      filename: file.name,
+      contentType: file.type || 'application/octet-stream',
+      size: file.size,
+      order,
+      ...dimensions,
+    });
 
-      const { uploadUrl, attachmentId, uploadHeaders } = res.data;
-      await uploadFileToS3(uploadUrl, file, uploadHeaders, { onProgress, signal });
+    const { uploadUrl, attachmentId, uploadHeaders } = res.data;
+    await uploadFileToS3(uploadUrl, file, uploadHeaders, { onProgress, signal });
 
-      return { attachmentId };
-    },
-    [],
-  );
+    return { attachmentId };
+  }, []);
 
   const revealLatestAfterSend = useCallback(() => {
     if (prevCursor != null) {

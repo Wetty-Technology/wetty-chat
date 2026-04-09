@@ -139,7 +139,7 @@ export function useComposeAttachments({
         const result = await uploadAttachment({
           file,
           dimensions,
-          clientQueuedAt: currentDraft?.clientQueuedAt,
+          order: currentDraft?.order,
           signal: abortController.signal,
           onProgress: (progress) => {
             setDrafts((prev) =>
@@ -219,7 +219,6 @@ export function useComposeAttachments({
         allowedFiles = mediaFiles.slice(0, available);
       }
 
-      const queueBaseTime = Date.now();
       const queuedDrafts: DraftUploadRecord[] = allowedFiles.map((file, index) => ({
         file,
         draft: {
@@ -229,7 +228,7 @@ export function useComposeAttachments({
           previewUrl: URL.createObjectURL(file),
           mimeType: file.type || 'application/octet-stream',
           size: file.size,
-          clientQueuedAt: new Date(queueBaseTime + index),
+          order: index,
           progress: 0,
           status: 'uploading' as const,
         },

@@ -1,1 +1,1 @@
-ALTER TABLE attachments DROP COLUMN IF EXISTS client_queued_at;
+ALTER TABLE attachments DROP COLUMN IF EXISTS "order";
