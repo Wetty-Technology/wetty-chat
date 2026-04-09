@@ -83,8 +83,6 @@ async fn put_stickerpack_order(
                 if pos >= auto_sort_limit {
                     continue; // Skip this update if it's outside the auto-sort limit
                 }
-            } else {
-                continue; // Can't auto-sort a pack that doesn't exist
             }
         }
 
