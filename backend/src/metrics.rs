@@ -117,7 +117,7 @@ impl Metrics {
                 "push_notifications_total",
                 "Total number of push notification delivery attempts"
             ),
-            &["result"],
+            &["provider", "result"],
         )
         .expect("push_notifications_total metric should be valid");
         let push_notification_jobs_total = IntCounterVec::new(
@@ -498,10 +498,10 @@ impl Metrics {
         self.messages_total.with_label_values(&[&chat_id]).inc();
     }
 
-    pub(crate) fn record_push_notification(&self, success: bool) {
+    pub(crate) fn record_push_notification(&self, provider: &str, success: bool) {
         let result = if success { "success" } else { "failure" };
         self.push_notifications_total
-            .with_label_values(&[result])
+            .with_label_values(&[provider, result])
             .inc();
     }
 
@@ -718,7 +718,7 @@ mod tests {
         metrics.record_http("GET", "/seed", StatusCode::OK, 0.001);
         metrics.record_http_multipart("POST", "/upload", StatusCode::CREATED, 0.05);
         metrics.record_message(42);
-        metrics.record_push_notification(true);
+        metrics.record_push_notification("web_push", true);
         metrics.record_push_job("success", 0.002);
         metrics.record_push_suppressed();
         metrics.set_ws_connected_users(2);
@@ -892,8 +892,8 @@ mod tests {
     fn discuz_metrics_render_expected_values() {
         let metrics = Metrics::new();
         metrics.record_message(123);
-        metrics.record_push_notification(true);
-        metrics.record_push_notification(false);
+        metrics.record_push_notification("web_push", true);
+        metrics.record_push_notification("apns", false);
         metrics.record_push_job("success", 0.2);
         metrics.record_push_job("failure", 0.4);
         metrics.record_push_suppressed();
@@ -922,8 +922,11 @@ mod tests {
 
         let rendered = metrics.render().expect("metrics should render");
         assert!(rendered.contains("messages_total{chat_id=\"123\"} 1"));
-        assert!(rendered.contains("push_notifications_total{result=\"success\"} 1"));
-        assert!(rendered.contains("push_notifications_total{result=\"failure\"} 1"));
+        assert!(rendered
+            .contains("push_notifications_total{provider=\"web_push\",result=\"success\"} 1"));
+        assert!(
+            rendered.contains("push_notifications_total{provider=\"apns\",result=\"failure\"} 1")
+        );
         assert!(rendered.contains("push_notification_jobs_total{result=\"success\"} 1"));
         assert!(rendered.contains("push_notification_jobs_total{result=\"failure\"} 1"));
         assert!(

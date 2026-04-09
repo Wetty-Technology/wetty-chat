@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
     diesel_derive_enum::DbEnum,
     Debug,
     Clone,
+    Copy,
     Serialize,
     Deserialize,
     PartialEq,
@@ -25,6 +26,7 @@ pub enum GroupVisibility {
     diesel_derive_enum::DbEnum,
     Debug,
     Clone,
+    Copy,
     Serialize,
     Deserialize,
     PartialEq,
@@ -43,6 +45,7 @@ pub enum MediaPurpose {
     diesel_derive_enum::DbEnum,
     Debug,
     Clone,
+    Copy,
     Serialize,
     Deserialize,
     PartialEq,
@@ -112,6 +115,62 @@ pub enum MessageType {
     Sticker,
     Invite,
     System,
+}
+
+#[derive(
+    diesel_derive_enum::DbEnum,
+    Debug,
+    Clone,
+    Copy,
+    Serialize,
+    Deserialize,
+    PartialEq,
+    Eq,
+    utoipa::ToSchema,
+)]
+#[ExistingTypePath = "crate::schema::sql_types::PushProvider"]
+#[serde(rename_all = "snake_case")]
+pub enum PushProvider {
+    WebPush,
+    Apns,
+}
+
+impl PushProvider {
+    pub fn as_metrics_label(&self) -> &'static str {
+        match self {
+            Self::WebPush => "web_push",
+            Self::Apns => "apns",
+        }
+    }
+}
+
+#[derive(
+    diesel_derive_enum::DbEnum,
+    Debug,
+    Clone,
+    Copy,
+    Serialize,
+    Deserialize,
+    PartialEq,
+    Eq,
+    utoipa::ToSchema,
+)]
+#[ExistingTypePath = "crate::schema::sql_types::PushEnvironment"]
+#[serde(rename_all = "snake_case")]
+pub enum PushEnvironment {
+    Sandbox,
+    Production,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct WebPushSubscriptionData {
+    pub p256dh: String,
+    pub auth: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ApnsSubscriptionData {
+    pub environment: PushEnvironment,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
@@ -591,11 +650,23 @@ pub struct NewThreadSubscription {
 pub struct PushSubscription {
     pub id: i64,
     pub user_id: i32,
-    pub endpoint: String,
-    pub p256dh: String,
-    pub auth: String,
+    pub provider: PushProvider,
+    pub endpoint: Option<String>,
+    pub device_token: Option<String>,
+    pub apns_environment: Option<PushEnvironment>,
+    pub provider_data: serde_json::Value,
     pub created_at: chrono::NaiveDateTime,
     pub client_id: Option<String>,
+}
+
+impl PushSubscription {
+    pub fn web_push_data(&self) -> Result<WebPushSubscriptionData, serde_json::Error> {
+        serde_json::from_value(self.provider_data.clone())
+    }
+
+    pub fn apns_data(&self) -> Result<ApnsSubscriptionData, serde_json::Error> {
+        serde_json::from_value(self.provider_data.clone())
+    }
 }
 
 #[derive(Debug, Clone, Insertable)]
@@ -603,9 +674,11 @@ pub struct PushSubscription {
 pub struct NewPushSubscription {
     pub id: i64,
     pub user_id: i32,
-    pub endpoint: String,
-    pub p256dh: String,
-    pub auth: String,
+    pub provider: PushProvider,
+    pub endpoint: Option<String>,
+    pub device_token: Option<String>,
+    pub apns_environment: Option<PushEnvironment>,
+    pub provider_data: serde_json::Value,
     pub created_at: chrono::NaiveDateTime,
     pub client_id: Option<String>,
 }

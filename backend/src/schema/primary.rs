@@ -24,6 +24,14 @@ pub mod sql_types {
     #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "message_type"))]
     pub struct MessageType;
+
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "push_environment"))]
+    pub struct PushEnvironment;
+
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "push_provider"))]
+    pub struct PushProvider;
 }
 
 diesel::table! {
@@ -189,15 +197,21 @@ diesel::table! {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::PushProvider;
+    use super::sql_types::PushEnvironment;
+
     push_subscriptions (id) {
         id -> Int8,
         user_id -> Int4,
-        endpoint -> Text,
-        p256dh -> Text,
-        auth -> Text,
+        endpoint -> Nullable<Text>,
         created_at -> Timestamp,
         #[max_length = 64]
         client_id -> Nullable<Varchar>,
+        provider -> PushProvider,
+        device_token -> Nullable<Text>,
+        apns_environment -> Nullable<PushEnvironment>,
+        provider_data -> Jsonb,
     }
 }
 

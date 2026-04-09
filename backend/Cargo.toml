@@ -40,6 +40,7 @@ futures = "0.3"
 web-push = { version = "0.11.0", features = [
     "hyper-client",
 ], default-features = false }
+a2 = "0.10.0"
 aws-config = { version = "1.8.15", features = ["credentials-login"] }
 aws-sdk-s3 = "1.125.0"
 md5 = "0.8"

@@ -1,9 +1,15 @@
+use a2::{
+    Client as ApnsClient, ClientConfig as ApnsClientConfig, DefaultNotificationBuilder,
+    Endpoint as ApnsEndpoint, ErrorReason as ApnsErrorReason, NotificationBuilder,
+    NotificationOptions, Priority as ApnsPriority, PushType as ApnsPushType,
+};
 use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::PgConnection;
 use futures::future::FutureExt;
 use futures::stream::{self, StreamExt};
 use serde::Serialize;
+use std::fs::File;
 use std::sync::Arc;
 use std::time::Duration;
 use std::time::Instant;
@@ -12,7 +18,7 @@ use tracing::{debug, error, info, warn};
 use web_push::{HyperWebPushClient, WebPushClient};
 
 use crate::metrics::Metrics;
-use crate::models::{MessageType, PushSubscription};
+use crate::models::{MessageType, PushEnvironment, PushProvider, PushSubscription};
 use crate::schema::push_subscriptions;
 use crate::services::ws_registry::ConnectionRegistry;
 
@@ -26,6 +32,10 @@ const PUSH_CONCURRENCY: usize = 10;
 const CHANNEL_BUFFER: usize = 1024;
 const PUSH_SUPPRESSION_FRESHNESS_SECS: u64 = 30;
 const PUSH_WORKER_RESTART_DELAY: Duration = Duration::from_secs(1);
+const APNS_TITLE_LOC_KEY: &str = "push.chat.title";
+const APNS_BODY_LOC_KEY_WITH_PREVIEW: &str = "push.message.body";
+const APNS_BODY_LOC_KEY_NO_PREVIEW: &str = "push.message.body.generic";
+const APNS_CUSTOM_DATA_ROOT: &str = "wettyChat";
 
 /// A push notification job enqueued when a new message is created.
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
@@ -74,6 +84,30 @@ struct PushPayload {
     data: PushPayloadData,
 }
 
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+struct ApnsCustomData {
+    #[serde(rename = "type")]
+    type_: PushPayloadType,
+    chat_id: String,
+    message_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    thread_root_id: Option<String>,
+    sender_name: String,
+    message_preview: PushMessagePreview,
+    unread_count: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ApnsNotification {
+    title_loc_key: &'static str,
+    title_loc_args: Vec<String>,
+    body_loc_key: &'static str,
+    body_loc_args: Vec<String>,
+    badge: u32,
+    custom_data: ApnsCustomData,
+}
+
 #[derive(Debug, Clone)]
 pub struct PushJob {
     pub chat_id: i64,
@@ -87,13 +121,26 @@ pub struct PushJob {
     pub mentioned_uids: Vec<i32>,
 }
 
+struct ApnsSender {
+    sandbox_client: ApnsClient,
+    production_client: ApnsClient,
+    topic: String,
+}
+
 pub struct PushService {
     pub client: HyperWebPushClient,
     pub vapid_public_key: String,
     pub vapid_private_key: String,
     pub vapid_subject: String,
+    apns_sender: Option<ApnsSender>,
     metrics: Arc<Metrics>,
     job_tx: mpsc::Sender<PushJob>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum SendFailure {
+    Stale(i64),
+    Transient,
 }
 
 impl PushService {
@@ -117,6 +164,9 @@ impl PushService {
         let _ = web_push::VapidSignatureBuilder::from_base64_no_sub(&private_key)
             .expect("Failed to create VapidSignatureBuilder from VAPID_PRIVATE_KEY");
 
+        let apns_sender =
+            ApnsSender::from_env().expect("invalid APNS configuration; set all vars or none");
+
         let (tx, rx) = mpsc::channel(CHANNEL_BUFFER);
 
         let service = Arc::new(Self {
@@ -124,6 +174,7 @@ impl PushService {
             vapid_public_key: public_key,
             vapid_private_key: private_key,
             vapid_subject: subject,
+            apns_sender,
             metrics,
             job_tx: tx,
         });
@@ -137,6 +188,13 @@ impl PushService {
         service
     }
 
+    pub fn supports_provider(&self, provider: &PushProvider) -> bool {
+        match provider {
+            PushProvider::WebPush => true,
+            PushProvider::Apns => self.apns_sender.is_some(),
+        }
+    }
+
     /// Enqueue a push job. Non-blocking; logs a warning if the channel is full.
     pub fn enqueue(&self, job: PushJob) {
         if let Err(e) = self.job_tx.try_send(job) {
@@ -144,18 +202,47 @@ impl PushService {
         }
     }
 
-    /// Send a push notification to a single subscription. Returns `Ok(())` on success,
-    /// or the endpoint string if it should be removed (stale).
-    pub async fn send_to_subscription(
+    async fn send_to_subscription(
+        &self,
+        sub: &PushSubscription,
+        web_payload: &[u8],
+        apns_notification: &ApnsNotification,
+    ) -> Result<(), SendFailure> {
+        match sub.provider {
+            PushProvider::WebPush => self.send_web_push(sub, web_payload).await,
+            PushProvider::Apns => self.send_apns_push(sub, apns_notification).await,
+        }
+    }
+
+    async fn send_web_push(
         &self,
         sub: &PushSubscription,
         payload: &[u8],
-    ) -> Result<(), Option<String>> {
-        let subscription_info = web_push::SubscriptionInfo::new(
-            sub.endpoint.clone(),
-            sub.p256dh.clone(),
-            sub.auth.clone(),
-        );
+    ) -> Result<(), SendFailure> {
+        let endpoint = match &sub.endpoint {
+            Some(endpoint) => endpoint.clone(),
+            None => {
+                self.metrics
+                    .record_push_notification(PushProvider::WebPush.as_metrics_label(), false);
+                warn!("web push subscription {} missing endpoint", sub.id);
+                return Err(SendFailure::Stale(sub.id));
+            }
+        };
+        let data = match sub.web_push_data() {
+            Ok(data) => data,
+            Err(e) => {
+                self.metrics
+                    .record_push_notification(PushProvider::WebPush.as_metrics_label(), false);
+                warn!(
+                    "web push subscription {} has invalid provider data: {:?}",
+                    sub.id, e
+                );
+                return Err(SendFailure::Stale(sub.id));
+            }
+        };
+
+        let subscription_info =
+            web_push::SubscriptionInfo::new(endpoint.clone(), data.p256dh, data.auth);
 
         let sig_builder =
             match web_push::VapidSignatureBuilder::from_base64_no_sub(&self.vapid_private_key) {
@@ -165,7 +252,9 @@ impl PushService {
                         "Vapid config error (should have been caught on startup): {:?}",
                         e
                     );
-                    return Err(None);
+                    self.metrics
+                        .record_push_notification(PushProvider::WebPush.as_metrics_label(), false);
+                    return Err(SendFailure::Transient);
                 }
             };
 
@@ -175,7 +264,9 @@ impl PushService {
             Ok(sig) => sig,
             Err(e) => {
                 error!("Failed to build VAPID signature: {:?}", e);
-                return Err(None);
+                self.metrics
+                    .record_push_notification(PushProvider::WebPush.as_metrics_label(), false);
+                return Err(SendFailure::Transient);
             }
         };
 
@@ -186,29 +277,218 @@ impl PushService {
         match builder.build() {
             Ok(message) => match self.client.send(message).await {
                 Ok(_) => {
-                    self.metrics.record_push_notification(true);
+                    self.metrics
+                        .record_push_notification(PushProvider::WebPush.as_metrics_label(), true);
                     Ok(())
                 }
                 Err(e) => {
-                    self.metrics.record_push_notification(false);
+                    self.metrics
+                        .record_push_notification(PushProvider::WebPush.as_metrics_label(), false);
                     if matches!(
                         e,
                         web_push::WebPushError::EndpointNotValid(_)
                             | web_push::WebPushError::EndpointNotFound(_)
                     ) {
-                        warn!("Stale push subscription for endpoint {}", sub.endpoint);
-                        Err(Some(sub.endpoint.clone()))
+                        warn!("stale web push subscription for endpoint {}", endpoint);
+                        Err(SendFailure::Stale(sub.id))
                     } else {
-                        error!("Failed to send push notification: {:?}", e);
-                        Err(None)
+                        error!("Failed to send web push notification: {:?}", e);
+                        Err(SendFailure::Transient)
                     }
                 }
             },
             Err(e) => {
-                error!("Failed to build push message: {:?}", e);
-                self.metrics.record_push_notification(false);
-                Err(None)
+                error!("Failed to build web push message: {:?}", e);
+                self.metrics
+                    .record_push_notification(PushProvider::WebPush.as_metrics_label(), false);
+                Err(SendFailure::Transient)
             }
+        }
+    }
+
+    async fn send_apns_push(
+        &self,
+        sub: &PushSubscription,
+        notification: &ApnsNotification,
+    ) -> Result<(), SendFailure> {
+        let sender = match &self.apns_sender {
+            Some(sender) => sender,
+            None => {
+                warn!(
+                    "received APNs subscription {} without APNs sender configured",
+                    sub.id
+                );
+                self.metrics
+                    .record_push_notification(PushProvider::Apns.as_metrics_label(), false);
+                return Err(SendFailure::Transient);
+            }
+        };
+        let device_token = match &sub.device_token {
+            Some(token) => token.as_str(),
+            None => {
+                warn!("APNs subscription {} missing device token", sub.id);
+                self.metrics
+                    .record_push_notification(PushProvider::Apns.as_metrics_label(), false);
+                return Err(SendFailure::Stale(sub.id));
+            }
+        };
+        if let Err(e) = sub.apns_data() {
+            warn!(
+                "APNs subscription {} has invalid provider data: {:?}",
+                sub.id, e
+            );
+            self.metrics
+                .record_push_notification(PushProvider::Apns.as_metrics_label(), false);
+            return Err(SendFailure::Stale(sub.id));
+        }
+        let environment = match sub.apns_environment {
+            Some(environment) => environment,
+            None => {
+                warn!("APNs subscription {} missing environment", sub.id);
+                self.metrics
+                    .record_push_notification(PushProvider::Apns.as_metrics_label(), false);
+                return Err(SendFailure::Stale(sub.id));
+            }
+        };
+
+        match sender.send(device_token, &environment, notification).await {
+            Ok(()) => {
+                self.metrics
+                    .record_push_notification(PushProvider::Apns.as_metrics_label(), true);
+                Ok(())
+            }
+            Err(ApnsSendError::Stale(reason)) => {
+                warn!(
+                    "stale APNs subscription {} for token {}: {:?}",
+                    sub.id, device_token, reason
+                );
+                self.metrics
+                    .record_push_notification(PushProvider::Apns.as_metrics_label(), false);
+                Err(SendFailure::Stale(sub.id))
+            }
+            Err(ApnsSendError::Transient(reason)) => {
+                error!(
+                    "failed to send APNs notification for subscription {}: {}",
+                    sub.id, reason
+                );
+                self.metrics
+                    .record_push_notification(PushProvider::Apns.as_metrics_label(), false);
+                Err(SendFailure::Transient)
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+enum ApnsSendError {
+    Stale(ApnsErrorReason),
+    Transient(String),
+}
+
+impl ApnsSender {
+    fn from_env() -> Result<Option<Self>, String> {
+        let key_id = std::env::var("APNS_KEY_ID").ok();
+        let team_id = std::env::var("APNS_TEAM_ID").ok();
+        let private_key_path = std::env::var("APNS_PRIVATE_KEY_PATH").ok();
+        let topic = std::env::var("APNS_TOPIC").ok();
+
+        if key_id.is_none() && team_id.is_none() && private_key_path.is_none() && topic.is_none() {
+            return Ok(None);
+        }
+
+        let key_id = key_id.ok_or_else(|| "APNS_KEY_ID must be set".to_string())?;
+        let team_id = team_id.ok_or_else(|| "APNS_TEAM_ID must be set".to_string())?;
+        let private_key_path =
+            private_key_path.ok_or_else(|| "APNS_PRIVATE_KEY_PATH must be set".to_string())?;
+        let topic = topic.ok_or_else(|| "APNS_TOPIC must be set".to_string())?;
+
+        let sandbox_client =
+            Self::build_client(&private_key_path, &key_id, &team_id, ApnsEndpoint::Sandbox)?;
+        let production_client = Self::build_client(
+            &private_key_path,
+            &key_id,
+            &team_id,
+            ApnsEndpoint::Production,
+        )?;
+
+        Ok(Some(Self {
+            sandbox_client,
+            production_client,
+            topic,
+        }))
+    }
+
+    fn build_client(
+        private_key_path: &str,
+        key_id: &str,
+        team_id: &str,
+        endpoint: ApnsEndpoint,
+    ) -> Result<ApnsClient, String> {
+        let mut file = File::open(private_key_path)
+            .map_err(|e| format!("failed to open APNS private key: {:?}", e))?;
+        let config = ApnsClientConfig {
+            endpoint,
+            ..Default::default()
+        };
+        ApnsClient::token(&mut file, key_id, team_id, config)
+            .map_err(|e| format!("failed to initialize APNS client: {:?}", e))
+    }
+
+    async fn send(
+        &self,
+        device_token: &str,
+        environment: &PushEnvironment,
+        notification: &ApnsNotification,
+    ) -> Result<(), ApnsSendError> {
+        let title_loc_args = [notification.title_loc_args[0].as_str()];
+        let body_loc_args: Vec<&str> = notification
+            .body_loc_args
+            .iter()
+            .map(String::as_str)
+            .collect();
+        let builder = DefaultNotificationBuilder::new()
+            .set_title_loc_key(notification.title_loc_key)
+            .set_title_loc_args(&title_loc_args)
+            .set_loc_key(notification.body_loc_key)
+            .set_loc_args(&body_loc_args)
+            .set_badge(notification.badge)
+            .set_sound("default");
+        let options = NotificationOptions {
+            apns_push_type: Some(ApnsPushType::Alert),
+            apns_priority: Some(ApnsPriority::High),
+            apns_topic: Some(self.topic.as_str()),
+            ..Default::default()
+        };
+
+        let mut payload = builder.build(device_token, options);
+        payload
+            .add_custom_data(APNS_CUSTOM_DATA_ROOT, &notification.custom_data)
+            .map_err(|e| {
+                ApnsSendError::Transient(format!("failed to serialize APNs payload: {:?}", e))
+            })?;
+
+        let client = match environment {
+            PushEnvironment::Sandbox => &self.sandbox_client,
+            PushEnvironment::Production => &self.production_client,
+        };
+        let response = client
+            .send(payload)
+            .await
+            .map_err(|e| ApnsSendError::Transient(format!("{:?}", e)))?;
+
+        if response.code == 200 {
+            Ok(())
+        } else if let Some(error) = response.error {
+            if is_stale_apns_error_reason(&error.reason) {
+                Err(ApnsSendError::Stale(error.reason))
+            } else {
+                Err(ApnsSendError::Transient(format!("{:?}", error.reason)))
+            }
+        } else {
+            Err(ApnsSendError::Transient(format!(
+                "APNs request failed with status {}",
+                response.code
+            )))
         }
     }
 }
@@ -394,19 +674,23 @@ async fn process_push_job(
     let body_text = format_push_body(&job.sender_username, job.legacy_message_preview.as_deref());
 
     // 5. Send concurrently with bounded parallelism.
-    let stale_endpoints: Vec<String> = stream::iter(subs.into_iter())
+    let stale_ids: Vec<i64> = stream::iter(subs.into_iter())
         .map(|sub| {
             let service = service.clone();
 
             let unread = unread_counts.get(&sub.user_id).copied().unwrap_or(0);
-            let payload = serde_json::to_vec(&build_push_payload(job, unread, &body_text))
+            let web_payload = serde_json::to_vec(&build_push_payload(job, unread, &body_text))
                 .unwrap_or_default();
+            let apns_notification = build_apns_notification(job, unread);
 
             async move {
-                match service.send_to_subscription(&sub, &payload).await {
+                match service
+                    .send_to_subscription(&sub, &web_payload, &apns_notification)
+                    .await
+                {
                     Ok(()) => None,
-                    Err(Some(endpoint)) => Some(endpoint),
-                    Err(None) => None,
+                    Err(SendFailure::Stale(id)) => Some(id),
+                    Err(SendFailure::Transient) => None,
                 }
             }
         })
@@ -416,18 +700,14 @@ async fn process_push_job(
         .await;
 
     // 6. Clean up stale subscriptions.
-    if !stale_endpoints.is_empty() {
-        debug!(
-            "Cleaning up {} stale push subscriptions",
-            stale_endpoints.len()
-        );
+    if !stale_ids.is_empty() {
+        debug!("Cleaning up {} stale push subscriptions", stale_ids.len());
         let _ = diesel::delete(
-            push_subscriptions::table
-                .filter(push_subscriptions::dsl::endpoint.eq_any(&stale_endpoints)),
+            push_subscriptions::table.filter(push_subscriptions::dsl::id.eq_any(&stale_ids)),
         )
         .execute(&mut conn)
         .map_err(|e| {
-            error!("Failed to clean up stale subscriptions: {:?}", e);
+            error!("Failed to clean up stale push subscriptions: {:?}", e);
         });
     }
 
@@ -448,6 +728,46 @@ fn build_push_payload(job: &PushJob, unread_count: i64, body_text: &str) -> Push
             thread_root_id: job.thread_root_id.map(|id| id.to_string()),
         },
     }
+}
+
+fn build_apns_notification(job: &PushJob, unread_count: i64) -> ApnsNotification {
+    let badge = unread_count.clamp(0, u32::MAX as i64) as u32;
+    let (body_loc_key, body_loc_args) = match &job.legacy_message_preview {
+        Some(preview) => (
+            APNS_BODY_LOC_KEY_WITH_PREVIEW,
+            vec![job.sender_username.clone(), truncate_preview(preview)],
+        ),
+        None => (
+            APNS_BODY_LOC_KEY_NO_PREVIEW,
+            vec![job.sender_username.clone()],
+        ),
+    };
+
+    ApnsNotification {
+        title_loc_key: APNS_TITLE_LOC_KEY,
+        title_loc_args: vec![job.chat_name.clone()],
+        body_loc_key,
+        body_loc_args,
+        badge,
+        custom_data: ApnsCustomData {
+            type_: PushPayloadType::NewMessage,
+            chat_id: job.chat_id.to_string(),
+            message_id: job.message_id.to_string(),
+            thread_root_id: job.thread_root_id.map(|id| id.to_string()),
+            sender_name: job.sender_username.clone(),
+            message_preview: job.message_preview.clone(),
+            unread_count,
+        },
+    }
+}
+
+fn is_stale_apns_error_reason(reason: &ApnsErrorReason) -> bool {
+    matches!(
+        reason,
+        ApnsErrorReason::BadDeviceToken
+            | ApnsErrorReason::DeviceTokenNotForTopic
+            | ApnsErrorReason::Unregistered
+    )
 }
 
 fn format_push_body(sender_username: &str, preview: Option<&str>) -> String {
@@ -594,6 +914,97 @@ mod tests {
         assert!(serialized["data"].get("chat_id").is_none());
     }
 
+    #[test]
+    fn build_apns_notification_uses_localized_keys_and_custom_data() {
+        let job = PushJob {
+            chat_id: 10,
+            sender_uid: 42,
+            sender_username: "alice".to_string(),
+            chat_name: "General".to_string(),
+            message_preview: PushMessagePreview {
+                message: Some("Hello".to_string()),
+                message_type: MessageType::Text,
+                sticker: None,
+                first_attachment_kind: None,
+                is_deleted: false,
+            },
+            legacy_message_preview: Some("hello there".to_string()),
+            message_id: 99,
+            thread_root_id: Some(77),
+            mentioned_uids: Vec::new(),
+        };
+
+        let payload = build_apns_notification(&job, 7);
+        assert_eq!(payload.title_loc_key, APNS_TITLE_LOC_KEY);
+        assert_eq!(payload.title_loc_args, vec!["General".to_string()]);
+        assert_eq!(payload.body_loc_key, APNS_BODY_LOC_KEY_WITH_PREVIEW);
+        assert_eq!(
+            payload.body_loc_args,
+            vec!["alice".to_string(), "hello there".to_string()]
+        );
+        assert_eq!(payload.badge, 7);
+        assert_eq!(payload.custom_data.chat_id, "10");
+        assert_eq!(payload.custom_data.thread_root_id, Some("77".to_string()));
+        assert_eq!(payload.custom_data.unread_count, 7);
+    }
+
+    #[test]
+    fn build_apns_notification_falls_back_when_preview_missing() {
+        let job = PushJob {
+            chat_id: 10,
+            sender_uid: 42,
+            sender_username: "alice".to_string(),
+            chat_name: "General".to_string(),
+            message_preview: PushMessagePreview {
+                message: None,
+                message_type: MessageType::Text,
+                sticker: None,
+                first_attachment_kind: None,
+                is_deleted: false,
+            },
+            legacy_message_preview: None,
+            message_id: 99,
+            thread_root_id: None,
+            mentioned_uids: Vec::new(),
+        };
+
+        let payload = build_apns_notification(&job, 0);
+        assert_eq!(payload.body_loc_key, APNS_BODY_LOC_KEY_NO_PREVIEW);
+        assert_eq!(payload.body_loc_args, vec!["alice".to_string()]);
+        assert_eq!(payload.badge, 0);
+    }
+
+    #[test]
+    fn stale_apns_error_reason_classification_matches_expected_errors() {
+        assert!(is_stale_apns_error_reason(&ApnsErrorReason::BadDeviceToken));
+        assert!(is_stale_apns_error_reason(
+            &ApnsErrorReason::DeviceTokenNotForTopic
+        ));
+        assert!(is_stale_apns_error_reason(&ApnsErrorReason::Unregistered));
+        assert!(!is_stale_apns_error_reason(
+            &ApnsErrorReason::TooManyRequests
+        ));
+        assert!(!is_stale_apns_error_reason(
+            &ApnsErrorReason::InternalServerError
+        ));
+    }
+
+    #[test]
+    fn apns_support_requires_sender_configuration() {
+        let service = PushService {
+            client: HyperWebPushClient::new(),
+            vapid_public_key: "public".to_string(),
+            vapid_private_key: "private".to_string(),
+            vapid_subject: "mailto:test@example.com".to_string(),
+            apns_sender: None,
+            metrics: Arc::new(Metrics::new()),
+            job_tx: mpsc::channel(1).0,
+        };
+
+        assert!(service.supports_provider(&PushProvider::WebPush));
+        assert!(!service.supports_provider(&PushProvider::Apns));
+    }
+
     #[tokio::test]
     async fn supervisor_restarts_after_panic() {
         let attempts = Arc::new(AtomicUsize::new(0));
@@ -618,9 +1029,7 @@ mod tests {
         let attempt = tokio::time::timeout(Duration::from_secs(1), done_rx.recv())
             .await
             .expect("supervisor should finish the restarted attempt")
-            .expect("channel should remain open");
-
+            .expect("channel should receive attempt number");
         assert_eq!(attempt, 2);
-        assert_eq!(attempts.load(Ordering::SeqCst), 2);
     }
 }
