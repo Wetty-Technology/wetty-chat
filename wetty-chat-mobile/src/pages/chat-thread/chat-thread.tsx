@@ -907,10 +907,17 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
         }
       : null;
 
-    if (prevCursor != null) {
+    // Check whether the active window is behind the latest window.
+    // We can't rely on prevCursor alone — the active window's prevCursor may be
+    // null even though a newer window exists (the message was inserted there).
+    const needsWindowSwitch =
+      chatState != null && chatState.windows.length > 1 && chatState.activeWindowIndex !== chatState.windows.length - 1;
+
+    if (needsWindowSwitch || prevCursor != null) {
       console.debug('[msg-trace] revealLatestAfterSend:activateLatest', {
         storeChatId,
         prevCursor,
+        needsWindowSwitch,
         ...winInfo,
       });
       // Synchronously switch to the latest window so the optimistic message
