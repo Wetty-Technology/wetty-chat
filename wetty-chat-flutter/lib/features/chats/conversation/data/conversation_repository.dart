@@ -317,6 +317,7 @@ class ConversationRepository {
   ConversationMessage insertOptimisticSend({
     required Sender sender,
     required String text,
+    required String messageType,
     required List<AttachmentItem> attachments,
     required String clientGeneratedId,
     int? replyToId,
@@ -327,7 +328,7 @@ class ConversationRepository {
       clientGeneratedId: clientGeneratedId,
       sender: sender,
       message: text,
-      messageType: 'text',
+      messageType: messageType,
       sticker: null,
       createdAt: DateTime.now().toUtc(),
       isEdited: false,
@@ -348,12 +349,14 @@ class ConversationRepository {
   Future<ConversationMessage> commitSend({
     required String clientGeneratedId,
     required String text,
+    required String messageType,
     required List<String> attachmentIds,
     int? replyToId,
   }) async {
     final response = await _service.sendConversationMessage(
       scope,
       text,
+      messageType: messageType,
       replyToId: replyToId,
       attachmentIds: attachmentIds,
       clientGeneratedId: clientGeneratedId,
@@ -388,6 +391,7 @@ class ConversationRepository {
     return commitSend(
       clientGeneratedId: optimistic.clientGeneratedId,
       text: optimistic.message ?? '',
+      messageType: optimistic.messageType,
       attachmentIds: optimistic.attachments.map((item) => item.id).toList(),
       replyToId: optimistic.replyRootId,
     );

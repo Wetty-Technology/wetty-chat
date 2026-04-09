@@ -5,6 +5,7 @@ import 'package:flutter/material.dart' show CircularProgressIndicator;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/style_config.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/presentation/app_divider.dart';
 import '../../models/message_preview_formatter.dart';
 import '../application/conversation_composer_view_model.dart';
@@ -28,6 +29,10 @@ class ConversationComposerBar extends ConsumerStatefulWidget {
 
 class _ConversationComposerBarState
     extends ConsumerState<ConversationComposerBar> {
+  static const double _audioGestureThreshold = 26;
+  static const double _composerActionButtonSize = 36;
+  static const double _composerActionSlotWidth = 48;
+  static const double _composerFieldMinHeight = 36;
   final ScrollController _inputScrollController = ScrollController();
   final TextEditingController _textController = TextEditingController();
   final LayerLink _attachmentMenuLink = LayerLink();
@@ -35,6 +40,9 @@ class _ConversationComposerBarState
   ProviderSubscription<ConversationComposerState>? _composerSubscription;
   bool _isAttachmentPanelOpen = false;
   OverlayEntry? _attachmentMenuEntry;
+  int? _activeAudioPointerId;
+  Offset? _audioPointerOrigin;
+  _AudioRecordSnapPosition _audioSnapPosition = _AudioRecordSnapPosition.origin;
 
   @override
   void initState() {
@@ -91,6 +99,25 @@ class _ConversationComposerBarState
       _closeAttachmentMenu();
       _textController.clear();
       await widget.onMessageSent?.call();
+    } catch (error) {
+      if (mounted) {
+        _showErrorDialog('$error');
+      }
+    }
+  }
+
+  Future<void> _sendRecordedAudio() async {
+    final composerNotifier = ref.read(
+      conversationComposerViewModelProvider(widget.scope).notifier,
+    );
+    try {
+      await composerNotifier.sendRecordedAudio();
+      _closeAttachmentMenu();
+      await widget.onMessageSent?.call();
+    } on ComposerAudioException catch (error) {
+      if (mounted) {
+        _showErrorDialog(_audioErrorMessage(error));
+      }
     } catch (error) {
       if (mounted) {
         _showErrorDialog('$error');
@@ -230,19 +257,159 @@ class _ConversationComposerBarState
   }
 
   void _showErrorDialog(String message) {
+    final l10n = AppLocalizations.of(context)!;
     showCupertinoDialog<void>(
       context: context,
       builder: (context) => CupertinoAlertDialog(
-        title: const Text('Error'),
+        title: Text(l10n.error),
         content: Text(message),
         actions: [
           CupertinoDialogAction(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+            child: Text(l10n.ok),
           ),
         ],
       ),
     );
+  }
+
+  String _audioErrorMessage(ComposerAudioException error) {
+    final l10n = AppLocalizations.of(context)!;
+    return switch (error.code) {
+      ComposerAudioErrorCode.unsupported => l10n.voiceRecordingUnsupported,
+      ComposerAudioErrorCode.permissionDenied =>
+        l10n.voiceMicrophonePermissionDenied,
+      ComposerAudioErrorCode.tooShort => l10n.voiceRecordingTooShort,
+      ComposerAudioErrorCode.startFailed => l10n.voiceRecordingStartFailed,
+      ComposerAudioErrorCode.uploadFailed => l10n.voiceMessageUploadFailed,
+    };
+  }
+
+  _AudioRecordSnapPosition _resolveAudioSnapPosition(Offset currentPosition) {
+    final origin = _audioPointerOrigin;
+    if (origin == null) {
+      return _AudioRecordSnapPosition.origin;
+    }
+    final dx = currentPosition.dx - origin.dx;
+    final dy = currentPosition.dy - origin.dy;
+    final leftProgress = -dx;
+    final upProgress = -dy;
+    final crossedLeft = leftProgress >= _audioGestureThreshold;
+    final crossedTop = upProgress >= _audioGestureThreshold;
+
+    if (!crossedLeft && !crossedTop) {
+      return _AudioRecordSnapPosition.origin;
+    }
+    if (crossedLeft && crossedTop) {
+      return leftProgress >= upProgress
+          ? _AudioRecordSnapPosition.left
+          : _AudioRecordSnapPosition.top;
+    }
+    return crossedLeft
+        ? _AudioRecordSnapPosition.left
+        : _AudioRecordSnapPosition.top;
+  }
+
+  Future<void> _handleAudioPointerDown(PointerDownEvent event) async {
+    if (_activeAudioPointerId != null) {
+      return;
+    }
+    _activeAudioPointerId = event.pointer;
+    _audioPointerOrigin = event.position;
+    setState(() {
+      _audioSnapPosition = _AudioRecordSnapPosition.origin;
+    });
+    try {
+      await ref
+          .read(conversationComposerViewModelProvider(widget.scope).notifier)
+          .startAudioRecording();
+    } on ComposerAudioException catch (error) {
+      if (mounted) {
+        _showErrorDialog(_audioErrorMessage(error));
+      }
+    } catch (error) {
+      if (mounted) {
+        _showErrorDialog('$error');
+      }
+    }
+  }
+
+  void _handleAudioPointerMove(PointerMoveEvent event) {
+    if (_activeAudioPointerId != event.pointer) {
+      return;
+    }
+    final next = _resolveAudioSnapPosition(event.position);
+    if (next == _audioSnapPosition) {
+      return;
+    }
+    setState(() {
+      _audioSnapPosition = next;
+    });
+  }
+
+  Future<void> _finalizeAudioGesture(_AudioRecordSnapPosition position) async {
+    final composerNotifier = ref.read(
+      conversationComposerViewModelProvider(widget.scope).notifier,
+    );
+    try {
+      switch (position) {
+        case _AudioRecordSnapPosition.left:
+          await composerNotifier.cancelAudioRecording();
+          break;
+        case _AudioRecordSnapPosition.top:
+          await composerNotifier.finishAudioRecording();
+          await _sendRecordedAudio();
+          break;
+        case _AudioRecordSnapPosition.origin:
+          await composerNotifier.finishAudioRecording();
+          break;
+      }
+    } on ComposerAudioException catch (error) {
+      if (mounted) {
+        _showErrorDialog(_audioErrorMessage(error));
+      }
+    } catch (error) {
+      if (mounted) {
+        _showErrorDialog('$error');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _activeAudioPointerId = null;
+          _audioPointerOrigin = null;
+          _audioSnapPosition = _AudioRecordSnapPosition.origin;
+        });
+      } else {
+        _activeAudioPointerId = null;
+        _audioPointerOrigin = null;
+        _audioSnapPosition = _AudioRecordSnapPosition.origin;
+      }
+    }
+  }
+
+  Future<void> _handleAudioPointerFinish(PointerEvent event) async {
+    if (_activeAudioPointerId != event.pointer) {
+      return;
+    }
+    await _finalizeAudioGesture(_resolveAudioSnapPosition(event.position));
+  }
+
+  bool _isRecordingPhase(ConversationComposerState composer) {
+    final draft = composer.audioDraft;
+    if (draft == null) {
+      return false;
+    }
+    return draft.phase == ComposerAudioDraftPhase.requestingPermission ||
+        draft.phase == ComposerAudioDraftPhase.recording;
+  }
+
+  bool _isSavedDraftPhase(ConversationComposerState composer) {
+    final draft = composer.audioDraft;
+    if (draft == null) {
+      return false;
+    }
+    return draft.phase == ComposerAudioDraftPhase.recorded ||
+        draft.phase == ComposerAudioDraftPhase.uploading;
   }
 
   @override
@@ -250,9 +417,19 @@ class _ConversationComposerBarState
     final composer = ref.watch(
       conversationComposerViewModelProvider(widget.scope),
     );
+    final l10n = AppLocalizations.of(context)!;
     final colors = context.appColors;
     final selectionLocked = composer.isAtAttachmentLimit;
-    final canAttach = !composer.isEditing && !selectionLocked;
+    final canAttach =
+        !composer.isEditing &&
+        !selectionLocked &&
+        !composer.hasAudioDraft &&
+        !composer.hasPendingAudioRecording;
+    final isRecordingPhase = _isRecordingPhase(composer);
+    final isSavedDraftPhase = _isSavedDraftPhase(composer);
+    final showAudioRecordButton =
+        !composer.canSend && (composer.canStartAudio || isRecordingPhase);
+    final showAudioTargets = _activeAudioPointerId != null;
 
     return ColoredBox(
       color: colors.backgroundSecondary,
@@ -311,31 +488,63 @@ class _ConversationComposerBarState
                             _buildComposerPreview(composer),
                             if (composer.attachments.isNotEmpty)
                               _buildAttachmentPreview(composer),
-                            CupertinoScrollbar(
-                              controller: _inputScrollController,
-                              child: CupertinoTextField(
-                                controller: _textController,
-                                scrollController: _inputScrollController,
-                                onChanged: (value) {
-                                  unawaited(
-                                    ref
-                                        .read(
-                                          conversationComposerViewModelProvider(
-                                            widget.scope,
-                                          ).notifier,
-                                        )
-                                        .updateDraft(value),
-                                  );
-                                },
-                                placeholder: 'Message',
-                                maxLines: 5,
-                                minLines: 1,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 8,
-                                ),
-                                decoration: null,
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(
+                                minHeight: _composerFieldMinHeight,
                               ),
+                              child: isRecordingPhase
+                                  ? _VoiceDraftPanel(
+                                      draft: composer.audioDraft!,
+                                      snapPosition: _audioSnapPosition,
+                                      onDelete: null,
+                                      showDelete: false,
+                                    )
+                                  : isSavedDraftPhase
+                                  ? _VoiceDraftPanel(
+                                      draft: composer.audioDraft!,
+                                      snapPosition: _audioSnapPosition,
+                                      onDelete: composer.hasUploadingAudioDraft
+                                          ? null
+                                          : () {
+                                              unawaited(
+                                                ref
+                                                    .read(
+                                                      conversationComposerViewModelProvider(
+                                                        widget.scope,
+                                                      ).notifier,
+                                                    )
+                                                    .cancelAudioRecording(),
+                                              );
+                                            },
+                                      showDelete: true,
+                                    )
+                                  : CupertinoScrollbar(
+                                      controller: _inputScrollController,
+                                      child: CupertinoTextField(
+                                        controller: _textController,
+                                        scrollController:
+                                            _inputScrollController,
+                                        onChanged: (value) {
+                                          unawaited(
+                                            ref
+                                                .read(
+                                                  conversationComposerViewModelProvider(
+                                                    widget.scope,
+                                                  ).notifier,
+                                                )
+                                                .updateDraft(value),
+                                          );
+                                        },
+                                        placeholder: l10n.message,
+                                        maxLines: 5,
+                                        minLines: 1,
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 8,
+                                        ),
+                                        decoration: null,
+                                      ),
+                                    ),
                             ),
                           ],
                         ),
@@ -345,31 +554,96 @@ class _ConversationComposerBarState
                 ),
                 const SizedBox(width: 4),
                 SizedBox(
-                  width: 48,
+                  width: _composerActionSlotWidth,
+                  height: _composerActionButtonSize,
                   child: Align(
                     alignment: Alignment.bottomCenter,
-                    child: CupertinoButton(
-                      padding: EdgeInsets.zero,
-                      minimumSize: const Size(36, 36),
-                      onPressed: composer.canSend ? _sendMessage : null,
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: composer.canSend
-                              ? CupertinoColors.activeBlue.resolveFrom(context)
-                              : CupertinoColors.systemGrey3.resolveFrom(
-                                  context,
-                                ),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          CupertinoIcons.paperplane_fill,
-                          size: 20,
-                          color: CupertinoColors.white,
-                        ),
-                      ),
-                    ),
+                    child: showAudioRecordButton
+                        ? _AudioRecordButton(
+                            isActive: showAudioTargets,
+                            size: _composerActionButtonSize,
+                            snapPosition: _audioSnapPosition,
+                            buttonChild: const Icon(
+                              CupertinoIcons.mic_fill,
+                              size: 20,
+                              color: CupertinoColors.white,
+                            ),
+                            onPressed: null,
+                            onPointerDown: _handleAudioPointerDown,
+                            onPointerMove: _handleAudioPointerMove,
+                            onPointerFinish: _handleAudioPointerFinish,
+                          )
+                        : isSavedDraftPhase
+                        ? CupertinoButton(
+                            padding: EdgeInsets.zero,
+                            minimumSize: const Size(
+                              _composerActionButtonSize,
+                              _composerActionButtonSize,
+                            ),
+                            onPressed: composer.hasUploadingAudioDraft
+                                ? null
+                                : _sendRecordedAudio,
+                            child: Container(
+                              width: _composerActionButtonSize,
+                              height: _composerActionButtonSize,
+                              decoration: BoxDecoration(
+                                color: composer.hasUploadingAudioDraft
+                                    ? CupertinoColors.systemGrey3.resolveFrom(
+                                        context,
+                                      )
+                                    : CupertinoColors.activeBlue.resolveFrom(
+                                        context,
+                                      ),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: composer.hasUploadingAudioDraft
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                CupertinoColors.white,
+                                              ),
+                                        ),
+                                      )
+                                    : const Icon(
+                                        CupertinoIcons.paperplane_fill,
+                                        size: 20,
+                                        color: CupertinoColors.white,
+                                      ),
+                              ),
+                            ),
+                          )
+                        : CupertinoButton(
+                            padding: EdgeInsets.zero,
+                            minimumSize: const Size(
+                              _composerActionButtonSize,
+                              _composerActionButtonSize,
+                            ),
+                            onPressed: composer.canSend ? _sendMessage : null,
+                            child: Container(
+                              width: _composerActionButtonSize,
+                              height: _composerActionButtonSize,
+                              decoration: BoxDecoration(
+                                color: composer.canSend
+                                    ? CupertinoColors.activeBlue.resolveFrom(
+                                        context,
+                                      )
+                                    : CupertinoColors.systemGrey3.resolveFrom(
+                                        context,
+                                      ),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                CupertinoIcons.paperplane_fill,
+                                size: 20,
+                                color: CupertinoColors.white,
+                              ),
+                            ),
+                          ),
                   ),
                 ),
               ],
@@ -409,22 +683,22 @@ class _ConversationComposerBarState
           mainAxisSize: MainAxisSize.min,
           children: [
             _sourceAction(
-              label: 'Photos',
+              label: AppLocalizations.of(context)!.photos,
               source: ComposerAttachmentSource.photos,
               showDivider: true,
             ),
             _sourceAction(
-              label: 'GIFs',
+              label: AppLocalizations.of(context)!.gifs,
               source: ComposerAttachmentSource.gifs,
               showDivider: true,
             ),
             _sourceAction(
-              label: 'Videos',
+              label: AppLocalizations.of(context)!.videos,
               source: ComposerAttachmentSource.videos,
               showDivider: true,
             ),
             _sourceAction(
-              label: 'Files',
+              label: AppLocalizations.of(context)!.files,
               source: ComposerAttachmentSource.files,
               showDivider: false,
             ),
@@ -439,7 +713,7 @@ class _ConversationComposerBarState
     return switch (mode) {
       ComposerReplying(:final message) => _previewBar(
         title:
-            'Replying to ${message.sender.name ?? 'User ${message.sender.uid}'}',
+            '${AppLocalizations.of(context)!.reply} ${message.sender.name ?? 'User ${message.sender.uid}'}',
         body: formatMessagePreview(
           message: message.message,
           messageType: message.messageType,
@@ -453,7 +727,7 @@ class _ConversationComposerBarState
         ),
       ),
       ComposerEditing(:final message) => _previewBar(
-        title: 'Edit message',
+        title: AppLocalizations.of(context)!.edit,
         body: formatMessagePreview(
           message: message.message,
           messageType: message.messageType,
@@ -752,6 +1026,270 @@ class _ConversationComposerBarState
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+enum _AudioRecordSnapPosition { origin, left, top }
+
+class _AudioRecordButton extends StatelessWidget {
+  const _AudioRecordButton({
+    required this.isActive,
+    required this.size,
+    required this.snapPosition,
+    required this.buttonChild,
+    required this.onPressed,
+    required this.onPointerDown,
+    required this.onPointerMove,
+    required this.onPointerFinish,
+  });
+
+  static const double _targetGap = 18;
+
+  final bool isActive;
+  final double size;
+  final _AudioRecordSnapPosition snapPosition;
+  final Widget buttonChild;
+  final VoidCallback? onPressed;
+  final ValueChanged<PointerDownEvent> onPointerDown;
+  final ValueChanged<PointerMoveEvent> onPointerMove;
+  final ValueChanged<PointerEvent> onPointerFinish;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = snapPosition != _AudioRecordSnapPosition.origin;
+    final icon = switch (snapPosition) {
+      _AudioRecordSnapPosition.left => CupertinoIcons.delete,
+      _AudioRecordSnapPosition.top => CupertinoIcons.arrow_up_circle_fill,
+      _AudioRecordSnapPosition.origin => CupertinoIcons.mic_fill,
+    };
+
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 120),
+            left: -(size + _targetGap),
+            top: 0,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 120),
+              opacity: isActive ? 1 : 0,
+              child: IgnorePointer(
+                ignoring: !isActive,
+                child: _AudioGestureTarget(
+                  size: size,
+                  icon: CupertinoIcons.delete,
+                  active: snapPosition == _AudioRecordSnapPosition.left,
+                ),
+              ),
+            ),
+          ),
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 120),
+            left: 0,
+            top: -(size + _targetGap),
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 120),
+              opacity: isActive ? 1 : 0,
+              child: IgnorePointer(
+                ignoring: !isActive,
+                child: _AudioGestureTarget(
+                  size: size,
+                  icon: CupertinoIcons.arrow_up_circle_fill,
+                  active: snapPosition == _AudioRecordSnapPosition.top,
+                ),
+              ),
+            ),
+          ),
+          Listener(
+            onPointerDown: onPointerDown,
+            onPointerMove: onPointerMove,
+            onPointerUp: onPointerFinish,
+            onPointerCancel: onPointerFinish,
+            child: CupertinoButton(
+              padding: EdgeInsets.zero,
+              minimumSize: Size(size, size),
+              onPressed: onPressed,
+              child: Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  color: CupertinoColors.activeBlue.resolveFrom(context),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: CupertinoColors.activeBlue.withAlpha(80),
+                      blurRadius: active ? 16 : 10,
+                      spreadRadius: active ? 1 : 0,
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: active
+                      ? Icon(icon, size: 20, color: CupertinoColors.white)
+                      : buttonChild,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AudioGestureTarget extends StatelessWidget {
+  const _AudioGestureTarget({
+    required this.size,
+    required this.icon,
+    required this.active,
+  });
+
+  final double size;
+  final IconData icon;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 120),
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: active
+            ? CupertinoColors.activeBlue.resolveFrom(context)
+            : CupertinoColors.systemGrey4.resolveFrom(context),
+        shape: BoxShape.circle,
+      ),
+      child: Icon(
+        icon,
+        size: 20,
+        color: active
+            ? CupertinoColors.white
+            : CupertinoColors.systemGrey.resolveFrom(context),
+      ),
+    );
+  }
+}
+
+class _VoiceDraftPanel extends StatelessWidget {
+  const _VoiceDraftPanel({
+    required this.draft,
+    required this.snapPosition,
+    required this.onDelete,
+    required this.showDelete,
+  });
+
+  final ComposerAudioDraft draft;
+  final _AudioRecordSnapPosition snapPosition;
+  final VoidCallback? onDelete;
+  final bool showDelete;
+
+  String _formatDuration(Duration duration) {
+    final totalSeconds = duration.inSeconds;
+    final minutes = totalSeconds ~/ 60;
+    final seconds = totalSeconds % 60;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final colors = context.appColors;
+    final hint = switch (draft.phase) {
+      ComposerAudioDraftPhase.requestingPermission =>
+        l10n.voiceWaitingForMicrophone,
+      ComposerAudioDraftPhase.recording =>
+        snapPosition == _AudioRecordSnapPosition.left
+            ? l10n.deleteRecording
+            : snapPosition == _AudioRecordSnapPosition.top
+            ? l10n.sendVoiceMessage
+            : l10n.voiceReleaseToSave,
+      ComposerAudioDraftPhase.recorded => l10n.voiceMessage,
+      ComposerAudioDraftPhase.uploading => l10n.voiceUploadingProgress(
+        (draft.progress * 100).round(),
+      ),
+    };
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 6, 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: draft.isRecording
+                  ? CupertinoColors.systemRed.withAlpha(30)
+                  : colors.composerReplyPreviewSurface,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              draft.isRecording
+                  ? CupertinoIcons.mic_fill
+                  : CupertinoIcons.doc_fill,
+              size: 16,
+              color: draft.isRecording
+                  ? CupertinoColors.systemRed
+                  : CupertinoColors.activeBlue.resolveFrom(context),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _formatDuration(draft.duration),
+                  style: appTextStyle(
+                    context,
+                    fontSize: AppFontSizes.body,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  hint,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: appSecondaryTextStyle(
+                    context,
+                    fontSize: AppFontSizes.meta,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (showDelete) ...[
+            const SizedBox(width: 6),
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              minimumSize: const Size(30, 30),
+              onPressed: onDelete,
+              child: Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: onDelete == null
+                      ? CupertinoColors.systemGrey3.resolveFrom(context)
+                      : CupertinoColors.systemGrey.resolveFrom(context),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  CupertinoIcons.delete_solid,
+                  size: 16,
+                  color: CupertinoColors.white,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

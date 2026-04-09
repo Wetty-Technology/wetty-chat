@@ -9,6 +9,29 @@ import 'package:chahua/features/chats/conversation/domain/conversation_scope.dar
 import 'package:chahua/features/chats/models/message_models.dart';
 
 void main() {
+  group('ConversationRepository sends', () {
+    test('commitSend forwards audio message type and attachment ids', () async {
+      final service = _FakeMessageApiService(messages: const []);
+      final repository = ConversationRepository(
+        scope: const ConversationScope.chat('1'),
+        service: service,
+      );
+
+      await repository.commitSend(
+        clientGeneratedId: 'audio-cg-1',
+        text: '',
+        messageType: 'audio',
+        attachmentIds: const ['att-1'],
+        replyToId: 7,
+      );
+
+      expect(service.lastSendMessageType, 'audio');
+      expect(service.lastSendText, '');
+      expect(service.lastSendAttachmentIds, const ['att-1']);
+      expect(service.lastSendReplyToId, 7);
+    });
+  });
+
   group('ConversationRepository reactions', () {
     test(
       'toggleReaction removes an existing self reaction optimistically',
@@ -154,17 +177,20 @@ void main() {
 }
 
 MessageItemDto _message({
+  String? message = 'Hello',
   String messageType = 'text',
+  List<AttachmentItemDto> attachments = const <AttachmentItemDto>[],
   List<ReactionSummaryDto> reactions = const <ReactionSummaryDto>[],
 }) {
   return MessageItemDto(
     id: 1,
-    message: 'Hello',
+    message: message,
     messageType: messageType,
     sender: const SenderDto(uid: 7, name: 'Tester'),
     chatId: 1,
     createdAt: DateTime.utc(2026, 1, 1),
     clientGeneratedId: 'cg-1',
+    attachments: attachments,
     reactions: reactions,
   );
 }
@@ -178,6 +204,10 @@ class _FakeMessageApiService extends MessageApiService {
   final List<String> reactionCalls = <String>[];
   bool failPut = false;
   bool failDelete = false;
+  String? lastSendText;
+  String? lastSendMessageType;
+  List<String>? lastSendAttachmentIds;
+  int? lastSendReplyToId;
 
   @override
   Future<ListMessagesResponseDto> fetchConversationMessages(
@@ -212,5 +242,33 @@ class _FakeMessageApiService extends MessageApiService {
     if (failDelete) {
       throw Exception('delete failed');
     }
+  }
+
+  @override
+  Future<MessageItemDto> sendConversationMessage(
+    ConversationScope scope,
+    String text, {
+    required String messageType,
+    int? replyToId,
+    List<String> attachmentIds = const <String>[],
+    required String clientGeneratedId,
+  }) async {
+    lastSendText = text;
+    lastSendMessageType = messageType;
+    lastSendAttachmentIds = attachmentIds;
+    lastSendReplyToId = replyToId;
+    return _message(
+      message: text,
+      messageType: messageType,
+      attachments: attachmentIds
+          .map(
+            (id) => AttachmentItemDto(
+              id: id,
+              kind: messageType == 'audio' ? 'audio/mp4' : 'application/pdf',
+              fileName: id,
+            ),
+          )
+          .toList(growable: false),
+    );
   }
 }

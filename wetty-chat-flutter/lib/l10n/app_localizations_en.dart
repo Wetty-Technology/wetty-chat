@@ -163,6 +163,79 @@ class AppLocalizationsEn extends AppLocalizations {
   String get copied => 'Copied';
 
   @override
+  String get message => 'Message';
+
+  @override
+  String get photos => 'Photos';
+
+  @override
+  String get gifs => 'GIFs';
+
+  @override
+  String get videos => 'Videos';
+
+  @override
+  String get files => 'Files';
+
+  @override
+  String get reply => 'Reply';
+
+  @override
+  String get edit => 'Edit';
+
+  @override
+  String get delete => 'Delete';
+
+  @override
+  String get deleteMessageTitle => 'Delete message?';
+
+  @override
+  String get deleteMessageBody => 'This cannot be undone.';
+
+  @override
+  String get voiceMessage => 'Voice message';
+
+  @override
+  String get voiceWaitingForMicrophone => 'Waiting for microphone…';
+
+  @override
+  String get voiceReleaseToSave => 'Release to save';
+
+  @override
+  String get voiceSlideLeftToCancel => 'Slide left to cancel';
+
+  @override
+  String voiceUploadingProgress(int progress) {
+    return 'Uploading $progress%';
+  }
+
+  @override
+  String get voiceRecordingUnsupported =>
+      'Voice recording is not supported on this device.';
+
+  @override
+  String get voiceMicrophonePermissionDenied =>
+      'Microphone permission is required to record audio.';
+
+  @override
+  String get voiceRecordingTooShort => 'Recording is too short.';
+
+  @override
+  String get voiceRecordingStartFailed => 'Failed to start recording.';
+
+  @override
+  String get voiceMessageUploadFailed => 'Failed to upload voice message.';
+
+  @override
+  String get voiceMessageSendFailed => 'Failed to send voice message.';
+
+  @override
+  String get deleteRecording => 'Delete recording';
+
+  @override
+  String get sendVoiceMessage => 'Send voice message';
+
+  @override
   String get fontSize => 'Font Size';
 
   @override

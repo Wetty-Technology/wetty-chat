@@ -206,7 +206,7 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline> {
           composerNotifier.beginReply(message);
         },
       ),
-      if (isOwn)
+      if (isOwn && message.messageType != 'audio')
         MessageOverlayAction(
           label: 'Edit',
           icon: CupertinoIcons.pencil,

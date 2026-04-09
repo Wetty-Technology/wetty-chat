@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 
@@ -65,7 +67,11 @@ class AttachmentService {
       BaseOptions(sendTimeout: _uploadTimeout, receiveTimeout: _uploadTimeout),
     );
     try {
-      final stream = file.readStream ?? file.xFile.openRead();
+      final stream =
+          file.readStream ??
+          (file.path != null
+              ? File(file.path!).openRead()
+              : file.xFile.openRead());
       await s3Dio.put<void>(
         uploadUrl,
         data: stream,

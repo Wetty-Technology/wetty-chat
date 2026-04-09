@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
@@ -10,6 +11,7 @@ import '../../../../core/session/dev_session_store.dart';
 import '../../models/message_models.dart';
 import '../data/attachment_picker_service.dart';
 import '../data/attachment_service.dart';
+import '../data/audio_recorder_service.dart';
 import '../data/conversation_repository.dart';
 import '../domain/conversation_message.dart';
 import '../domain/conversation_scope.dart';
@@ -17,8 +19,88 @@ import 'conversation_draft_store.dart';
 
 const int composerMaxAttachments =
     ConversationComposerState.maxAttachmentsPerMessage;
+const Duration composerMinAudioDuration = Duration(milliseconds: 500);
 
 enum ComposerAttachmentUploadStatus { queued, uploading, uploaded, failed }
+
+enum ComposerAudioDraftPhase {
+  requestingPermission,
+  recording,
+  recorded,
+  uploading,
+}
+
+enum ComposerAudioErrorCode {
+  unsupported,
+  permissionDenied,
+  tooShort,
+  startFailed,
+  uploadFailed,
+}
+
+class ComposerAudioException implements Exception {
+  const ComposerAudioException(this.code);
+
+  final ComposerAudioErrorCode code;
+
+  @override
+  String toString() => 'ComposerAudioException($code)';
+}
+
+class ComposerAudioDraft {
+  const ComposerAudioDraft({
+    required this.path,
+    required this.fileName,
+    required this.mimeType,
+    required this.sizeBytes,
+    required this.duration,
+    required this.phase,
+    this.progress = 0,
+  });
+
+  final String path;
+  final String fileName;
+  final String mimeType;
+  final int sizeBytes;
+  final Duration duration;
+  final ComposerAudioDraftPhase phase;
+  final double progress;
+
+  bool get isUploading => phase == ComposerAudioDraftPhase.uploading;
+  bool get isRecording =>
+      phase == ComposerAudioDraftPhase.requestingPermission ||
+      phase == ComposerAudioDraftPhase.recording;
+  bool get isRecorded => phase == ComposerAudioDraftPhase.recorded;
+
+  ComposerAudioDraft copyWith({
+    String? path,
+    String? fileName,
+    String? mimeType,
+    int? sizeBytes,
+    Duration? duration,
+    ComposerAudioDraftPhase? phase,
+    double? progress,
+  }) {
+    return ComposerAudioDraft(
+      path: path ?? this.path,
+      fileName: fileName ?? this.fileName,
+      mimeType: mimeType ?? this.mimeType,
+      sizeBytes: sizeBytes ?? this.sizeBytes,
+      duration: duration ?? this.duration,
+      phase: phase ?? this.phase,
+      progress: progress ?? this.progress,
+    );
+  }
+
+  AttachmentItem toAttachmentItem({required String attachmentId}) =>
+      AttachmentItem(
+        id: attachmentId,
+        url: '',
+        kind: mimeType,
+        size: sizeBytes,
+        fileName: fileName,
+      );
+}
 
 class ComposerAttachment {
   const ComposerAttachment({
@@ -139,6 +221,7 @@ class ConversationComposerState {
     required this.draft,
     required this.mode,
     required this.attachments,
+    required this.audioDraft,
   });
 
   static const int maxAttachmentsPerMessage = 10;
@@ -146,6 +229,7 @@ class ConversationComposerState {
   final String draft;
   final ConversationComposerMode mode;
   final List<ComposerAttachment> attachments;
+  final ComposerAudioDraft? audioDraft;
 
   bool get isEditing => mode is ComposerEditing;
   bool get hasUploadingAttachments =>
@@ -154,6 +238,14 @@ class ConversationComposerState {
       attachments.any((item) => item.isQueued || item.isUploading);
   bool get hasFailedAttachments => attachments.any((item) => item.hasFailed);
   bool get hasUploadedAttachments => attachments.any((item) => item.isUploaded);
+  bool get hasAudioDraft => audioDraft != null;
+  bool get hasPendingAudioRecording =>
+      audioDraft?.phase == ComposerAudioDraftPhase.requestingPermission ||
+      audioDraft?.phase == ComposerAudioDraftPhase.recording;
+  bool get hasRecordedAudioDraft =>
+      audioDraft?.phase == ComposerAudioDraftPhase.recorded;
+  bool get hasUploadingAudioDraft =>
+      audioDraft?.phase == ComposerAudioDraftPhase.uploading;
   bool get hasAttachmentCapacity =>
       attachments.length < maxAttachmentsPerMessage;
   bool get isAtAttachmentLimit =>
@@ -162,6 +254,13 @@ class ConversationComposerState {
       !hasPendingAttachmentUploads &&
       !hasFailedAttachments &&
       (draft.trim().isNotEmpty || hasUploadedAttachments);
+  bool get canStartAudio =>
+      draft.trim().isEmpty &&
+      attachments.isEmpty &&
+      !isEditing &&
+      !hasPendingAttachmentUploads &&
+      !hasFailedAttachments &&
+      audioDraft == null;
   int get remainingAttachmentSlots =>
       maxAttachmentsPerMessage - attachments.length;
   List<String> get uploadedAttachmentIds => attachments
@@ -173,11 +272,15 @@ class ConversationComposerState {
     String? draft,
     ConversationComposerMode? mode,
     List<ComposerAttachment>? attachments,
+    Object? audioDraft = _sentinel,
   }) {
     return ConversationComposerState(
       draft: draft ?? this.draft,
       mode: mode ?? this.mode,
       attachments: attachments ?? this.attachments,
+      audioDraft: audioDraft == _sentinel
+          ? this.audioDraft
+          : audioDraft as ComposerAudioDraft?,
     );
   }
 }
@@ -188,7 +291,11 @@ class ConversationComposerViewModel
   late final ConversationDraftStore _draftStore;
   late final AttachmentService _attachmentService;
   late final AttachmentPickerService _pickerService;
+  late final AudioRecorderService _audioRecorderService;
   late final ConversationScope _scope;
+  Timer? _audioDurationTimer;
+  DateTime? _audioRecordingStartedAt;
+  bool _cancelPendingAudioStart = false;
 
   @override
   ConversationComposerState build(ConversationScope arg) {
@@ -197,11 +304,17 @@ class ConversationComposerViewModel
     _draftStore = ref.read(conversationDraftProvider);
     _attachmentService = ref.read(attachmentServiceProvider);
     _pickerService = ref.read(attachmentPickerServiceProvider);
+    _audioRecorderService = ref.read(audioRecorderServiceProvider);
+    ref.onDispose(() {
+      _audioDurationTimer?.cancel();
+      unawaited(_audioRecorderService.dispose());
+    });
     final draft = _draftStore.getDraft(arg) ?? '';
     return ConversationComposerState(
       draft: draft,
       mode: const ComposerIdle(),
       attachments: const <ComposerAttachment>[],
+      audioDraft: null,
     );
   }
 
@@ -214,6 +327,7 @@ class ConversationComposerViewModel
     state = state.copyWith(
       mode: ComposerReplying(message),
       attachments: const <ComposerAttachment>[],
+      audioDraft: null,
     );
   }
 
@@ -222,6 +336,7 @@ class ConversationComposerViewModel
       mode: ComposerEditing(message),
       draft: message.message ?? '',
       attachments: const <ComposerAttachment>[],
+      audioDraft: null,
     );
   }
 
@@ -234,6 +349,9 @@ class ConversationComposerViewModel
   ) async {
     if (state.isEditing) {
       throw Exception('Editing messages does not support attachments');
+    }
+    if (state.audioDraft != null) {
+      throw Exception('Clear the voice message draft before adding files.');
     }
 
     final remaining = state.remainingAttachmentSlots;
@@ -312,6 +430,7 @@ class ConversationComposerViewModel
           draft: '',
           mode: ComposerIdle(),
           attachments: <ComposerAttachment>[],
+          audioDraft: null,
         );
         await _draftStore.clearDraft(_scope);
       } catch (_) {
@@ -332,6 +451,7 @@ class ConversationComposerViewModel
     _repository.insertOptimisticSend(
       sender: Sender(uid: currentUserId, name: 'You'),
       text: trimmed,
+      messageType: 'text',
       attachments: optimisticAttachments,
       clientGeneratedId: clientGeneratedId,
       replyToId: mode is ComposerReplying ? mode.message.serverMessageId : null,
@@ -341,6 +461,7 @@ class ConversationComposerViewModel
       await _repository.commitSend(
         clientGeneratedId: clientGeneratedId,
         text: trimmed,
+        messageType: 'text',
         attachmentIds: attachmentIds,
         replyToId: mode is ComposerReplying
             ? mode.message.serverMessageId
@@ -350,6 +471,7 @@ class ConversationComposerViewModel
         draft: '',
         mode: ComposerIdle(),
         attachments: <ComposerAttachment>[],
+        audioDraft: null,
       );
       await _draftStore.clearDraft(_scope);
     } catch (_) {
@@ -496,6 +618,260 @@ class ConversationComposerViewModel
     );
   }
 
+  Future<void> startAudioRecording() async {
+    if (!state.canStartAudio) {
+      return;
+    }
+
+    _cancelPendingAudioStart = false;
+    _audioDurationTimer?.cancel();
+    state = state.copyWith(
+      audioDraft: const ComposerAudioDraft(
+        path: '',
+        fileName: '',
+        mimeType: 'audio/mp4',
+        sizeBytes: 0,
+        duration: Duration.zero,
+        phase: ComposerAudioDraftPhase.requestingPermission,
+      ),
+    );
+
+    try {
+      final hasPermission = await _audioRecorderService.hasPermission();
+      if (!hasPermission) {
+        state = state.copyWith(audioDraft: null);
+        throw const ComposerAudioException(
+          ComposerAudioErrorCode.permissionDenied,
+        );
+      }
+
+      await _audioRecorderService.start();
+      if (_cancelPendingAudioStart) {
+        _cancelPendingAudioStart = false;
+        await _audioRecorderService.cancel();
+        state = state.copyWith(audioDraft: null);
+        return;
+      }
+
+      _audioRecordingStartedAt = DateTime.now();
+      state = state.copyWith(
+        audioDraft: state.audioDraft?.copyWith(
+          phase: ComposerAudioDraftPhase.recording,
+          duration: Duration.zero,
+        ),
+      );
+      _audioDurationTimer = Timer.periodic(const Duration(milliseconds: 200), (
+        _,
+      ) {
+        final startedAt = _audioRecordingStartedAt;
+        final currentDraft = state.audioDraft;
+        if (startedAt == null ||
+            currentDraft == null ||
+            currentDraft.phase != ComposerAudioDraftPhase.recording) {
+          return;
+        }
+        state = state.copyWith(
+          audioDraft: currentDraft.copyWith(
+            duration: DateTime.now().difference(startedAt),
+          ),
+        );
+      });
+    } on UnsupportedError {
+      state = state.copyWith(audioDraft: null);
+      throw const ComposerAudioException(ComposerAudioErrorCode.unsupported);
+    } on ComposerAudioException {
+      rethrow;
+    } catch (_) {
+      state = state.copyWith(audioDraft: null);
+      throw const ComposerAudioException(ComposerAudioErrorCode.startFailed);
+    }
+  }
+
+  Future<void> finishAudioRecording() async {
+    final currentDraft = state.audioDraft;
+    if (currentDraft == null) {
+      return;
+    }
+
+    if (currentDraft.phase == ComposerAudioDraftPhase.requestingPermission) {
+      _cancelPendingAudioStart = true;
+      state = state.copyWith(audioDraft: null);
+      return;
+    }
+    if (currentDraft.phase != ComposerAudioDraftPhase.recording) {
+      return;
+    }
+
+    _audioDurationTimer?.cancel();
+    final duration = _currentAudioDuration();
+
+    try {
+      final recorded = await _audioRecorderService.stop(duration: duration);
+      _audioRecordingStartedAt = null;
+      if (recorded == null) {
+        state = state.copyWith(audioDraft: null);
+        return;
+      }
+      if (recorded.duration < composerMinAudioDuration) {
+        state = state.copyWith(audioDraft: null);
+        await _deleteFileIfExists(recorded.path);
+        throw const ComposerAudioException(ComposerAudioErrorCode.tooShort);
+      }
+
+      state = state.copyWith(
+        audioDraft: ComposerAudioDraft(
+          path: recorded.path,
+          fileName: recorded.fileName,
+          mimeType: recorded.mimeType,
+          sizeBytes: recorded.sizeBytes,
+          duration: recorded.duration,
+          phase: ComposerAudioDraftPhase.recorded,
+        ),
+      );
+    } on ComposerAudioException {
+      rethrow;
+    } catch (_) {
+      state = state.copyWith(audioDraft: null);
+      throw const ComposerAudioException(ComposerAudioErrorCode.startFailed);
+    }
+  }
+
+  Future<void> cancelAudioRecording() async {
+    final currentDraft = state.audioDraft;
+    if (currentDraft == null) {
+      return;
+    }
+
+    _audioDurationTimer?.cancel();
+    _audioRecordingStartedAt = null;
+
+    if (currentDraft.phase == ComposerAudioDraftPhase.requestingPermission) {
+      _cancelPendingAudioStart = true;
+      state = state.copyWith(audioDraft: null);
+      return;
+    }
+
+    if (currentDraft.phase == ComposerAudioDraftPhase.recording) {
+      final isRecording = await _audioRecorderService.isRecording();
+      if (isRecording) {
+        await _audioRecorderService.cancel();
+      }
+    }
+
+    state = state.copyWith(audioDraft: null);
+    await _deleteFileIfExists(currentDraft.path);
+  }
+
+  Future<void> sendRecordedAudio() async {
+    final audioDraft = state.audioDraft;
+    if (audioDraft == null ||
+        audioDraft.phase != ComposerAudioDraftPhase.recorded) {
+      return;
+    }
+
+    final platformFile = PlatformFile(
+      name: audioDraft.fileName,
+      size: audioDraft.sizeBytes,
+      path: audioDraft.path,
+      readStream: File(audioDraft.path).openRead(),
+    );
+
+    state = state.copyWith(
+      audioDraft: audioDraft.copyWith(
+        phase: ComposerAudioDraftPhase.uploading,
+        progress: 0,
+      ),
+    );
+
+    late final UploadUrlResponse uploadInfo;
+    try {
+      uploadInfo = await _attachmentService.requestUploadUrl(
+        filename: audioDraft.fileName,
+        contentType: audioDraft.mimeType,
+        size: audioDraft.sizeBytes,
+      );
+      await _attachmentService.uploadFileToS3(
+        uploadUrl: uploadInfo.uploadUrl,
+        file: platformFile,
+        uploadHeaders: uploadInfo.uploadHeaders,
+        onProgress: (progress) {
+          final latest = state.audioDraft;
+          if (latest == null ||
+              latest.phase != ComposerAudioDraftPhase.uploading) {
+            return;
+          }
+          state = state.copyWith(
+            audioDraft: latest.copyWith(progress: progress),
+          );
+        },
+      );
+    } catch (_) {
+      state = state.copyWith(
+        audioDraft: audioDraft.copyWith(
+          phase: ComposerAudioDraftPhase.recorded,
+          progress: 0,
+        ),
+      );
+      throw const ComposerAudioException(ComposerAudioErrorCode.uploadFailed);
+    }
+
+    final currentUserId = ref.read(authSessionProvider).currentUserId;
+    final clientGeneratedId =
+        '${DateTime.now().microsecondsSinceEpoch}-$currentUserId-${_scope.storageKey}';
+    final mode = state.mode;
+    _repository.insertOptimisticSend(
+      sender: Sender(uid: currentUserId, name: 'You'),
+      text: '',
+      messageType: 'audio',
+      attachments: [
+        audioDraft.toAttachmentItem(attachmentId: uploadInfo.attachmentId),
+      ],
+      clientGeneratedId: clientGeneratedId,
+      replyToId: mode is ComposerReplying ? mode.message.serverMessageId : null,
+    );
+    state = state.copyWith(audioDraft: null);
+
+    try {
+      await _repository.commitSend(
+        clientGeneratedId: clientGeneratedId,
+        text: '',
+        messageType: 'audio',
+        attachmentIds: [uploadInfo.attachmentId],
+        replyToId: mode is ComposerReplying
+            ? mode.message.serverMessageId
+            : null,
+      );
+      state = const ConversationComposerState(
+        draft: '',
+        mode: ComposerIdle(),
+        attachments: <ComposerAttachment>[],
+        audioDraft: null,
+      );
+      await _draftStore.clearDraft(_scope);
+    } catch (_) {
+      _repository.markSendFailed(clientGeneratedId);
+      rethrow;
+    }
+  }
+
+  Duration _currentAudioDuration() {
+    final startedAt = _audioRecordingStartedAt;
+    if (startedAt == null) {
+      return state.audioDraft?.duration ?? Duration.zero;
+    }
+    return DateTime.now().difference(startedAt);
+  }
+
+  Future<void> _deleteFileIfExists(String path) async {
+    if (path.isEmpty) {
+      return;
+    }
+    final file = File(path);
+    if (await file.exists()) {
+      await file.delete();
+    }
+  }
+
   Future<void> delete(ConversationMessage message) async {
     final messageId = message.serverMessageId;
     if (messageId == null) {
@@ -530,9 +906,15 @@ final attachmentPickerServiceProvider = Provider<AttachmentPickerService>((
   return AttachmentPickerService();
 });
 
+final audioRecorderServiceProvider = Provider<AudioRecorderService>((ref) {
+  return AudioRecorderService();
+});
+
 final conversationComposerViewModelProvider =
     NotifierProvider.family<
       ConversationComposerViewModel,
       ConversationComposerState,
       ConversationScope
     >(ConversationComposerViewModel.new);
+
+const _sentinel = Object();

@@ -12,6 +12,7 @@ import '../../conversation/domain/conversation_scope.dart';
 import '../../conversation/domain/launch_request.dart';
 import '../../models/chat_models.dart';
 import '../../models/message_models.dart';
+import '../../models/message_preview_formatter.dart';
 import '../../threads/application/thread_list_view_model.dart';
 import '../../threads/models/thread_models.dart';
 import '../../threads/presentation/thread_list_row.dart';
@@ -618,22 +619,17 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   String _messagePreviewText(MessageItem? message) {
     if (message == null) return '';
-    if (message.isDeleted) return '[Deleted]';
-
-    final text = message.message?.trim();
-    if (text != null && text.isNotEmpty) return text;
-
-    // TODO: implement options of preview text later
-    if (message.attachments.any((attachment) => attachment.isImage)) {
-      return '[Image]';
-    }
-    if (message.attachments.any((attachment) => attachment.isVideo)) {
-      return '[Video]';
-    }
-    if (message.attachments.isNotEmpty || message.hasAttachments) {
-      return '[Attachment]';
-    }
-    return '';
+    return formatMessagePreview(
+      message: message.message,
+      messageType: message.messageType,
+      sticker: message.sticker,
+      attachments: message.attachments,
+      firstAttachmentKind: message.attachments.isNotEmpty
+          ? message.attachments.first.kind
+          : null,
+      isDeleted: message.isDeleted,
+      mentions: message.mentions,
+    );
   }
 
   Widget _unreadBadge(int count) {

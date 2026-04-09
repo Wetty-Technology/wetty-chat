@@ -81,6 +81,7 @@ class MessageApiService {
   Future<MessageItemDto> sendMessage(
     String chatId,
     String text, {
+    String messageType = 'text',
     int? replyToId,
     String? threadId,
     List<String> attachmentIds = const <String>[],
@@ -91,7 +92,7 @@ class MessageApiService {
         : '/chats/$chatId/threads/$threadId/messages';
     final body = SendMessageRequestDto(
       message: text,
-      messageType: 'text',
+      messageType: messageType,
       clientGeneratedId: clientGeneratedId ?? nextClientGeneratedId(),
       attachmentIds: attachmentIds,
       replyToId: replyToId,
@@ -107,13 +108,14 @@ class MessageApiService {
   Future<MessageItemDto> sendConversationMessage(
     ConversationScope scope,
     String text, {
+    required String messageType,
     int? replyToId,
     List<String> attachmentIds = const <String>[],
     required String clientGeneratedId,
   }) async {
     final body = SendMessageRequestDto(
       message: text,
-      messageType: 'text',
+      messageType: messageType,
       clientGeneratedId: clientGeneratedId,
       attachmentIds: attachmentIds,
       replyToId: replyToId,

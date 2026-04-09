@@ -11,6 +11,7 @@ import 'linkified_message_text.dart';
 import 'message_bubble_presentation.dart';
 import 'message_reactions.dart';
 import 'message_thread_indicator.dart';
+import 'voice_message_bubble.dart';
 
 class MessageBubbleContent extends StatelessWidget {
   const MessageBubbleContent({
@@ -294,6 +295,11 @@ class MessageBubbleContent extends StatelessWidget {
     AttachmentItem attachment, {
     required double maxAttachmentWidth,
   }) {
+    if (attachment.isAudio &&
+        message.messageType == 'audio' &&
+        attachment.url.isNotEmpty) {
+      return VoiceMessageBubble(attachment: attachment, isMe: isMe);
+    }
     if (attachment.isVideo && attachment.url.isNotEmpty) {
       return VideoAttachmentPreview(
         attachment: attachment,
@@ -330,7 +336,9 @@ class MessageBubbleContent extends StatelessWidget {
       child: Row(
         children: [
           Icon(
-            attachment.isVideo
+            attachment.isAudio
+                ? CupertinoIcons.mic_fill
+                : attachment.isVideo
                 ? CupertinoIcons.play_rectangle
                 : CupertinoIcons.doc,
             size: 18,

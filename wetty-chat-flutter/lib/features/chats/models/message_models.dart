@@ -35,6 +35,7 @@ class AttachmentItem {
 
   bool get isImage => kind.startsWith('image/');
   bool get isVideo => kind.startsWith('video/');
+  bool get isAudio => kind.startsWith('audio/');
 }
 
 class StickerSummary {

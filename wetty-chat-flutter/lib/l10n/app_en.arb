@@ -154,6 +154,82 @@
   "copied": "Copied",
   "@copied": { "description": "Toast shown when text is copied" },
 
+  "message": "Message",
+  "@message": { "description": "Composer placeholder for a text message" },
+
+  "photos": "Photos",
+  "@photos": { "description": "Attachment source label for photos" },
+
+  "gifs": "GIFs",
+  "@gifs": { "description": "Attachment source label for GIFs" },
+
+  "videos": "Videos",
+  "@videos": { "description": "Attachment source label for videos" },
+
+  "files": "Files",
+  "@files": { "description": "Attachment source label for files" },
+
+  "reply": "Reply",
+  "@reply": { "description": "Message action label for replying" },
+
+  "edit": "Edit",
+  "@edit": { "description": "Message action label for editing" },
+
+  "delete": "Delete",
+  "@delete": { "description": "Message action label for deleting" },
+
+  "deleteMessageTitle": "Delete message?",
+  "@deleteMessageTitle": { "description": "Delete confirmation title for a message" },
+
+  "deleteMessageBody": "This cannot be undone.",
+  "@deleteMessageBody": { "description": "Delete confirmation message for a message" },
+
+  "voiceMessage": "Voice message",
+  "@voiceMessage": { "description": "Label for an audio message" },
+
+  "voiceWaitingForMicrophone": "Waiting for microphone…",
+  "@voiceWaitingForMicrophone": { "description": "Recorder hint shown while waiting for microphone access" },
+
+  "voiceReleaseToSave": "Release to save",
+  "@voiceReleaseToSave": { "description": "Recorder hint shown while holding the audio record button" },
+
+  "voiceSlideLeftToCancel": "Slide left to cancel",
+  "@voiceSlideLeftToCancel": { "description": "Recorder hint shown while recording audio" },
+
+  "voiceUploadingProgress": "Uploading {progress}%",
+  "@voiceUploadingProgress": {
+    "description": "Recorder hint shown while uploading an audio message",
+    "placeholders": {
+      "progress": {
+        "type": "int"
+      }
+    }
+  },
+
+  "voiceRecordingUnsupported": "Voice recording is not supported on this device.",
+  "@voiceRecordingUnsupported": { "description": "Error shown when audio recording is unsupported" },
+
+  "voiceMicrophonePermissionDenied": "Microphone permission is required to record audio.",
+  "@voiceMicrophonePermissionDenied": { "description": "Error shown when microphone permission is denied" },
+
+  "voiceRecordingTooShort": "Recording is too short.",
+  "@voiceRecordingTooShort": { "description": "Error shown when an audio recording is below the minimum duration" },
+
+  "voiceRecordingStartFailed": "Failed to start recording.",
+  "@voiceRecordingStartFailed": { "description": "Error shown when audio recording cannot start" },
+
+  "voiceMessageUploadFailed": "Failed to upload voice message.",
+  "@voiceMessageUploadFailed": { "description": "Error shown when an audio message upload fails" },
+
+  "voiceMessageSendFailed": "Failed to send voice message.",
+  "@voiceMessageSendFailed": { "description": "Error shown when an audio message send fails" },
+
+  "deleteRecording": "Delete recording",
+  "@deleteRecording": { "description": "Accessibility label or action for deleting a recorded audio draft" },
+
+  "sendVoiceMessage": "Send voice message",
+  "@sendVoiceMessage": { "description": "Accessibility label or action for sending a recorded audio message" },
+
   "fontSize": "Font Size",
   "@fontSize": { "description": "Font size settings page title" },
 

@@ -162,6 +162,77 @@ class AppLocalizationsZh extends AppLocalizations {
   String get copied => '已复制';
 
   @override
+  String get message => '消息';
+
+  @override
+  String get photos => '照片';
+
+  @override
+  String get gifs => 'GIF 动图';
+
+  @override
+  String get videos => '视频';
+
+  @override
+  String get files => '文件';
+
+  @override
+  String get reply => '回复';
+
+  @override
+  String get edit => '编辑';
+
+  @override
+  String get delete => '删除';
+
+  @override
+  String get deleteMessageTitle => '删除消息？';
+
+  @override
+  String get deleteMessageBody => '此操作无法撤销。';
+
+  @override
+  String get voiceMessage => '语音消息';
+
+  @override
+  String get voiceWaitingForMicrophone => '正在等待麦克风…';
+
+  @override
+  String get voiceReleaseToSave => '松开发送到草稿';
+
+  @override
+  String get voiceSlideLeftToCancel => '左滑取消';
+
+  @override
+  String voiceUploadingProgress(int progress) {
+    return '上传中 $progress%';
+  }
+
+  @override
+  String get voiceRecordingUnsupported => '此设备不支持语音录制。';
+
+  @override
+  String get voiceMicrophonePermissionDenied => '需要麦克风权限才能录制语音。';
+
+  @override
+  String get voiceRecordingTooShort => '录音时间太短。';
+
+  @override
+  String get voiceRecordingStartFailed => '无法开始录音。';
+
+  @override
+  String get voiceMessageUploadFailed => '语音消息上传失败。';
+
+  @override
+  String get voiceMessageSendFailed => '语音消息发送失败。';
+
+  @override
+  String get deleteRecording => '删除录音';
+
+  @override
+  String get sendVoiceMessage => '发送语音消息';
+
+  @override
   String get fontSize => '字体大小';
 
   @override
@@ -346,6 +417,77 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get copied => '已複製';
+
+  @override
+  String get message => '訊息';
+
+  @override
+  String get photos => '照片';
+
+  @override
+  String get gifs => 'GIF 動圖';
+
+  @override
+  String get videos => '影片';
+
+  @override
+  String get files => '檔案';
+
+  @override
+  String get reply => '回覆';
+
+  @override
+  String get edit => '編輯';
+
+  @override
+  String get delete => '刪除';
+
+  @override
+  String get deleteMessageTitle => '刪除訊息？';
+
+  @override
+  String get deleteMessageBody => '此操作無法復原。';
+
+  @override
+  String get voiceMessage => '語音訊息';
+
+  @override
+  String get voiceWaitingForMicrophone => '正在等待麥克風…';
+
+  @override
+  String get voiceReleaseToSave => '放開以儲存';
+
+  @override
+  String get voiceSlideLeftToCancel => '向左滑動取消';
+
+  @override
+  String voiceUploadingProgress(int progress) {
+    return '上傳中 $progress%';
+  }
+
+  @override
+  String get voiceRecordingUnsupported => '此裝置不支援語音錄製。';
+
+  @override
+  String get voiceMicrophonePermissionDenied => '需要麥克風權限才能錄製語音。';
+
+  @override
+  String get voiceRecordingTooShort => '錄音時間太短。';
+
+  @override
+  String get voiceRecordingStartFailed => '無法開始錄音。';
+
+  @override
+  String get voiceMessageUploadFailed => '語音訊息上傳失敗。';
+
+  @override
+  String get voiceMessageSendFailed => '語音訊息傳送失敗。';
+
+  @override
+  String get deleteRecording => '刪除錄音';
+
+  @override
+  String get sendVoiceMessage => '傳送語音訊息';
 
   @override
   String get fontSize => '字型大小';

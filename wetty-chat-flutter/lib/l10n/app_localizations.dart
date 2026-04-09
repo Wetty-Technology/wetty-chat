@@ -405,6 +405,144 @@ abstract class AppLocalizations {
   /// **'Copied'**
   String get copied;
 
+  /// Composer placeholder for a text message
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get message;
+
+  /// Attachment source label for photos
+  ///
+  /// In en, this message translates to:
+  /// **'Photos'**
+  String get photos;
+
+  /// Attachment source label for GIFs
+  ///
+  /// In en, this message translates to:
+  /// **'GIFs'**
+  String get gifs;
+
+  /// Attachment source label for videos
+  ///
+  /// In en, this message translates to:
+  /// **'Videos'**
+  String get videos;
+
+  /// Attachment source label for files
+  ///
+  /// In en, this message translates to:
+  /// **'Files'**
+  String get files;
+
+  /// Message action label for replying
+  ///
+  /// In en, this message translates to:
+  /// **'Reply'**
+  String get reply;
+
+  /// Message action label for editing
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get edit;
+
+  /// Message action label for deleting
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get delete;
+
+  /// Delete confirmation title for a message
+  ///
+  /// In en, this message translates to:
+  /// **'Delete message?'**
+  String get deleteMessageTitle;
+
+  /// Delete confirmation message for a message
+  ///
+  /// In en, this message translates to:
+  /// **'This cannot be undone.'**
+  String get deleteMessageBody;
+
+  /// Label for an audio message
+  ///
+  /// In en, this message translates to:
+  /// **'Voice message'**
+  String get voiceMessage;
+
+  /// Recorder hint shown while waiting for microphone access
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for microphone…'**
+  String get voiceWaitingForMicrophone;
+
+  /// Recorder hint shown while holding the audio record button
+  ///
+  /// In en, this message translates to:
+  /// **'Release to save'**
+  String get voiceReleaseToSave;
+
+  /// Recorder hint shown while recording audio
+  ///
+  /// In en, this message translates to:
+  /// **'Slide left to cancel'**
+  String get voiceSlideLeftToCancel;
+
+  /// Recorder hint shown while uploading an audio message
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading {progress}%'**
+  String voiceUploadingProgress(int progress);
+
+  /// Error shown when audio recording is unsupported
+  ///
+  /// In en, this message translates to:
+  /// **'Voice recording is not supported on this device.'**
+  String get voiceRecordingUnsupported;
+
+  /// Error shown when microphone permission is denied
+  ///
+  /// In en, this message translates to:
+  /// **'Microphone permission is required to record audio.'**
+  String get voiceMicrophonePermissionDenied;
+
+  /// Error shown when an audio recording is below the minimum duration
+  ///
+  /// In en, this message translates to:
+  /// **'Recording is too short.'**
+  String get voiceRecordingTooShort;
+
+  /// Error shown when audio recording cannot start
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to start recording.'**
+  String get voiceRecordingStartFailed;
+
+  /// Error shown when an audio message upload fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to upload voice message.'**
+  String get voiceMessageUploadFailed;
+
+  /// Error shown when an audio message send fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to send voice message.'**
+  String get voiceMessageSendFailed;
+
+  /// Accessibility label or action for deleting a recorded audio draft
+  ///
+  /// In en, this message translates to:
+  /// **'Delete recording'**
+  String get deleteRecording;
+
+  /// Accessibility label or action for sending a recorded audio message
+  ///
+  /// In en, this message translates to:
+  /// **'Send voice message'**
+  String get sendVoiceMessage;
+
   /// Font size settings page title
   ///
   /// In en, this message translates to:
