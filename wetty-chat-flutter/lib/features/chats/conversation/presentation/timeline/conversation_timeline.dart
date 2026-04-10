@@ -66,11 +66,14 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline> {
 
   final ScrollController _timelineScrollController = ScrollController();
   final GlobalKey _overlayViewportKey = GlobalKey();
+  final Map<String, GlobalKey> _messageRowKeys = <String, GlobalKey>{};
 
   bool _isAtLiveEdge = true;
   bool _isOverlayVisible = false;
+  bool _isVisibleMessageReportScheduled = false;
   int _viewportGeneration = 0;
   Key _timelineViewportKey = const ValueKey<int>(0);
+  String? _lastVisibleMessageReportSignature;
   _ActiveMessageOverlay? _activeOverlay;
   Timer? _overlayDismissTimer;
 
@@ -327,15 +330,77 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline> {
 
   /// Report visible messages for read-status tracking.
   void _reportVisibleMessages(ConversationTimelineState viewState) {
+    final viewportContext = _overlayViewportKey.currentContext;
+    final viewportRenderBox = viewportContext?.findRenderObject() as RenderBox?;
+    if (viewportRenderBox == null || !viewportRenderBox.attached) {
+      return;
+    }
+    final viewportRect =
+        viewportRenderBox.localToGlobal(Offset.zero) & viewportRenderBox.size;
     final notifier = ref.read(
       conversationTimelineViewModelProvider(widget.timelineArgs).notifier,
     );
     for (final entry in viewState.entries) {
       if (entry is TimelineMessageEntry) {
+        final rowContext =
+            _messageRowKeys[entry.message.stableKey]?.currentContext;
+        final rowRenderBox = rowContext?.findRenderObject() as RenderBox?;
+        if (rowRenderBox == null || !rowRenderBox.attached) {
+          continue;
+        }
+        final rowRect =
+            rowRenderBox.localToGlobal(Offset.zero) & rowRenderBox.size;
+        if (rowRect.intersect(viewportRect).isEmpty) {
+          continue;
+        }
         notifier.onMessageVisible(entry.message);
         widget.onMessageVisible?.call(entry.message);
       }
     }
+  }
+
+  GlobalKey _messageRowKey(String stableKey) =>
+      _messageRowKeys.putIfAbsent(stableKey, GlobalKey.new);
+
+  void _scheduleVisibleMessageReport(ConversationTimelineState viewState) {
+    if (_isVisibleMessageReportScheduled) {
+      return;
+    }
+    final signature =
+        '$_timelineViewportKey'
+        '|${viewState.entries.length}'
+        '|${viewState.anchorEntryIndex}'
+        '|${viewState.viewportPlacement}'
+        '|${viewState.windowStableKeys.firstOrNull ?? ''}'
+        '|${viewState.windowStableKeys.lastOrNull ?? ''}';
+    if (_lastVisibleMessageReportSignature == signature) {
+      return;
+    }
+    _isVisibleMessageReportScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _isVisibleMessageReportScheduled = false;
+      if (!mounted) {
+        return;
+      }
+      final currentState = ref
+          .read(conversationTimelineViewModelProvider(widget.timelineArgs))
+          .value;
+      if (currentState == null) {
+        return;
+      }
+      _lastVisibleMessageReportSignature = signature;
+      _reportVisibleMessages(currentState);
+    });
+  }
+
+  void _pruneMessageRowKeys(ConversationTimelineState viewState) {
+    final activeKeys = viewState.entries
+        .whereType<TimelineMessageEntry>()
+        .map((entry) => entry.message.stableKey)
+        .toSet();
+    _messageRowKeys.removeWhere(
+      (stableKey, _) => !activeKeys.contains(stableKey),
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -505,6 +570,8 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline> {
     if (viewState.entries.isEmpty) {
       return const Center(child: Text('No messages yet'));
     }
+    _pruneMessageRowKeys(viewState);
+    _scheduleVisibleMessageReport(viewState);
     developer.log(
       '_buildTimeline: key=$_timelineViewportKey, '
       'placement=${viewState.viewportPlacement}, '
@@ -525,7 +592,7 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline> {
       entryBuilder: (context, entry, index) {
         return switch (entry) {
           TimelineMessageEntry(:final message) => MessageRow(
-            key: ValueKey(message.stableKey),
+            key: _messageRowKey(message.stableKey),
             message: message,
             chatMessageFontSize: chatMessageFontSize,
             isHighlighted:
