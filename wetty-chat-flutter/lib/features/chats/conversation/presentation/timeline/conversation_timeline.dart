@@ -83,6 +83,24 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline> {
     '🎉',
   ];
 
+  ConversationMessage? _messageAtEntryIndex(
+    List<TimelineEntry> entries,
+    int index,
+  ) {
+    if (index < 0 || index >= entries.length) {
+      return null;
+    }
+    return switch (entries[index]) {
+      TimelineMessageEntry(:final message) => message,
+      _ => null,
+    };
+  }
+
+  bool _hasSameSenderNeighbor(
+    ConversationMessage message,
+    ConversationMessage? neighbor,
+  ) => neighbor != null && neighbor.sender.uid == message.sender.uid;
+
   @override
   void initState() {
     super.initState();
@@ -524,31 +542,50 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline> {
       bottomPadding: _timelineEndPadding,
       entryBuilder: (context, entry, index) {
         return switch (entry) {
-          TimelineMessageEntry(:final message) => MessageRow(
-            key: ValueKey(message.stableKey),
-            message: message,
-            chatMessageFontSize: chatMessageFontSize,
-            isHighlighted:
-                viewState.highlightedMessageId == message.serverMessageId,
-            onLongPress: _openMessageOverlay,
-            onReply: () => ref
-                .read(
-                  conversationComposerViewModelProvider(widget.scope).notifier,
-                )
-                .beginReply(message),
-            onTapReply: message.replyToMessage != null
-                ? () => _jumpToMessage(message.replyToMessage!.id)
-                : null,
-            onOpenThread:
-                widget.onOpenThread != null &&
-                    message.threadInfo != null &&
-                    message.threadInfo!.replyCount > 0
-                ? () => widget.onOpenThread!(message)
-                : null,
-            onToggleReaction: message.messageType == 'sticker'
-                ? null
-                : (emoji) => unawaited(_toggleReaction(message, emoji)),
-          ),
+          TimelineMessageEntry(:final message) => () {
+            final previousMessage = _messageAtEntryIndex(
+              viewState.entries,
+              index - 1,
+            );
+            final nextMessage = _messageAtEntryIndex(
+              viewState.entries,
+              index + 1,
+            );
+            final isFirstInRun = !_hasSameSenderNeighbor(
+              message,
+              previousMessage,
+            );
+            final isLastInRun = !_hasSameSenderNeighbor(message, nextMessage);
+            return MessageRow(
+              key: ValueKey(message.stableKey),
+              message: message,
+              chatMessageFontSize: chatMessageFontSize,
+              isHighlighted:
+                  viewState.highlightedMessageId == message.serverMessageId,
+              onLongPress: _openMessageOverlay,
+              onReply: () => ref
+                  .read(
+                    conversationComposerViewModelProvider(
+                      widget.scope,
+                    ).notifier,
+                  )
+                  .beginReply(message),
+              onTapReply: message.replyToMessage != null
+                  ? () => _jumpToMessage(message.replyToMessage!.id)
+                  : null,
+              onOpenThread:
+                  widget.onOpenThread != null &&
+                      message.threadInfo != null &&
+                      message.threadInfo!.replyCount > 0
+                  ? () => widget.onOpenThread!(message)
+                  : null,
+              onToggleReaction: message.messageType == 'sticker'
+                  ? null
+                  : (emoji) => unawaited(_toggleReaction(message, emoji)),
+              showSenderName: isFirstInRun,
+              showAvatar: isLastInRun,
+            );
+          }(),
           TimelineDateSeparatorEntry(:final day) => DateSeparator(day: day),
           TimelineUnreadMarkerEntry() => const UnreadDivider(),
           TimelineHistoryGapOlderEntry() => const GapLabel(

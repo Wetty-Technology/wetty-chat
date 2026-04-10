@@ -242,6 +242,9 @@ class _MessageRowState extends State<MessageRow>
     BuildContext context,
     MessageBubblePresentation presentation,
   ) {
+    final avatarColumnWidth =
+        MessageBubblePresentation.avatarSlotWidth +
+        MessageBubblePresentation.avatarGap;
     final bubble = MessageBubble(
       key: _bubbleKey,
       message: widget.message,
@@ -255,6 +258,24 @@ class _MessageRowState extends State<MessageRow>
       onToggleReaction: widget.onToggleReaction,
     );
     final avatar = _buildAvatar(context, presentation.senderName);
+    final trailingAvatarColumn = SizedBox(
+      width: avatarColumnWidth,
+      child: Row(
+        children: [
+          const SizedBox(width: MessageBubblePresentation.avatarGap),
+          if (widget.showAvatar) avatar,
+        ],
+      ),
+    );
+    final leadingAvatarColumn = SizedBox(
+      width: avatarColumnWidth,
+      child: Row(
+        children: [
+          if (widget.showAvatar) avatar,
+          const SizedBox(width: MessageBubblePresentation.avatarGap),
+        ],
+      ),
+    );
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 600),
@@ -275,30 +296,8 @@ class _MessageRowState extends State<MessageRow>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: _isMe
-                ? [
-                    bubble,
-                    if (widget.showAvatar) ...[
-                      const SizedBox(
-                        width: MessageBubblePresentation.avatarGap,
-                      ),
-                      avatar,
-                    ] else
-                      const SizedBox(
-                        width: MessageBubblePresentation.avatarSlotWidth,
-                      ),
-                  ]
-                : [
-                    if (widget.showAvatar) ...[
-                      avatar,
-                      const SizedBox(
-                        width: MessageBubblePresentation.avatarGap,
-                      ),
-                    ] else
-                      const SizedBox(
-                        width: MessageBubblePresentation.avatarSlotWidth,
-                      ),
-                    bubble,
-                  ],
+                ? [bubble, trailingAvatarColumn]
+                : [leadingAvatarColumn, bubble],
           ),
         ),
       ),
