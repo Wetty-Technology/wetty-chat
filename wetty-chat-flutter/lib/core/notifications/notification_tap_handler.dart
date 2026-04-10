@@ -13,12 +13,17 @@ import 'apns_channel.dart';
 /// provider. It subscribes to [ApnsChannel.onNotificationTapped] and uses
 /// [GoRouter] to navigate.
 class NotificationTapHandler {
-  NotificationTapHandler(this._apns, this._router) {
+  NotificationTapHandler(
+    this._apns,
+    this._router, {
+    this.onNotificationHandled,
+  }) {
     _sub = _apns.onNotificationTapped.listen(_handleTap);
   }
 
   final ApnsChannel _apns;
   final GoRouter _router;
+  final Future<void> Function()? onNotificationHandled;
   StreamSubscription<Map<String, dynamic>>? _sub;
 
   /// Process the launch notification that cold-started the app, if any.
@@ -40,11 +45,11 @@ class NotificationTapHandler {
     final messageIdStr = payload['messageId'] as String?;
     final messageId = messageIdStr != null ? int.tryParse(messageIdStr) : null;
 
-    _apns.clearBadge();
-
     if (threadRootId != null && threadRootId.isNotEmpty) {
-      developer.log('Navigating to thread $threadRootId in chat $chatId',
-          name: 'NotificationTap');
+      developer.log(
+        'Navigating to thread $threadRootId in chat $chatId',
+        name: 'NotificationTap',
+      );
       _router.push(AppRoutes.threadDetail(chatId, threadRootId));
     } else {
       developer.log('Navigating to chat $chatId', name: 'NotificationTap');
@@ -56,6 +61,11 @@ class NotificationTapHandler {
         AppRoutes.chatDetail(chatId),
         extra: extra.isNotEmpty ? extra : null,
       );
+    }
+
+    final refresh = onNotificationHandled;
+    if (refresh != null) {
+      unawaited(refresh());
     }
   }
 

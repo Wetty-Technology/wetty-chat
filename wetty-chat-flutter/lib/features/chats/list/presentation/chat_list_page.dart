@@ -5,9 +5,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/routing/route_names.dart';
 import '../../../../app/theme/style_config.dart';
+import '../../../../core/notifications/unread_badge_provider.dart';
 import '../../../../core/settings/app_settings_store.dart';
 import '../../models/chat_models.dart';
-import '../../threads/models/thread_models.dart';
 import '../../threads/application/thread_list_view_model.dart';
 import '../application/chat_list_view_model.dart';
 import 'chat_list_segment.dart';
@@ -43,6 +43,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   void initState() {
     super.initState();
     _scrollController = ScrollController()..addListener(_onScroll);
+    Future.microtask(() {
+      if (!mounted) {
+        return;
+      }
+      ref.read(unreadBadgeProvider.notifier).refresh();
+    });
   }
 
   @override
@@ -61,24 +67,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       return ChatListTab.groups;
     }
     return tab;
-  }
-
-  int _groupsUnreadCount(List<ChatListItem> chats) {
-    final now = DateTime.now();
-    var total = 0;
-    for (final chat in chats) {
-      if (chat.mutedUntil != null && chat.mutedUntil!.isAfter(now)) continue;
-      total += chat.unreadCount;
-    }
-    return total;
-  }
-
-  int _threadsUnreadCount(List<ThreadListItem> threads) {
-    var total = 0;
-    for (final thread in threads) {
-      total += thread.unreadCount;
-    }
-    return total;
   }
 
   void _onScroll() {
@@ -156,6 +144,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       ref
           .read(threadListViewModelProvider.notifier)
           .refreshThreads(userInitiated: true),
+      ref.read(unreadBadgeProvider.notifier).refresh(),
     ]);
   }
 
@@ -167,13 +156,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
     final chatAsync = ref.watch(chatListViewModelProvider);
     final threadAsync = ref.watch(threadListViewModelProvider);
+    final unreadState = ref.watch(unreadBadgeProvider);
 
     final chatList = chatAsync.value?.chats ?? const [];
     final threadList = threadAsync.value?.threads ?? const [];
 
-    final groupsUnread = _groupsUnreadCount(chatList);
-    final threadsUnread = _threadsUnreadCount(threadList);
-    final allUnread = groupsUnread + threadsUnread;
+    final groupsUnread = unreadState.chatUnreadTotal;
+    final threadsUnread = unreadState.threadUnreadTotal;
+    final allUnread = unreadState.combinedUnreadTotal;
     final mergedItems = buildMergedList(chatList, threadList);
 
     return CupertinoPageScaffold(

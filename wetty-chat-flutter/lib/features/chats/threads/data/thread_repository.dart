@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/api/models/messages_api_models.dart';
 import '../../../../core/api/models/websocket_api_models.dart';
 import '../../../../core/network/websocket_service.dart';
+import '../../../../core/notifications/unread_badge_provider.dart';
 import '../../../../core/session/dev_session_store.dart';
 import '../../models/message_api_mapper.dart';
 import '../models/thread_api_mapper.dart';
@@ -55,6 +56,9 @@ class ThreadListNotifier extends Notifier<ThreadListState> {
       hasMore: res.nextCursor != null && res.nextCursor!.isNotEmpty,
       totalUnreadCount: unreadRes.unreadThreadCount,
     );
+    ref
+        .read(unreadBadgeProvider.notifier)
+        .replaceThreadUnreadTotal(unreadRes.unreadThreadCount);
   }
 
   /// Load more threads (next page) using cursor-based pagination.
@@ -106,6 +110,10 @@ class ThreadListNotifier extends Notifier<ThreadListState> {
       hasMore: state.hasMore,
       totalUnreadCount: nextUnread < 0 ? 0 : nextUnread,
     );
+    ref
+        .read(unreadBadgeProvider.notifier)
+        .applyThreadUnreadDelta(-previous.unreadCount);
+    ref.read(unreadBadgeProvider.notifier).scheduleReconcile();
   }
 
   void _applyRealtimeEvent(ApiWsEvent event) {
@@ -163,6 +171,7 @@ class ThreadListNotifier extends Notifier<ThreadListState> {
     }
     if (shouldIncrementUnread) {
       _replaceState(totalUnreadCount: state.totalUnreadCount + 1);
+      ref.read(unreadBadgeProvider.notifier).applyThreadUnreadDelta(1);
     }
   }
 
@@ -183,7 +192,10 @@ class ThreadListNotifier extends Notifier<ThreadListState> {
       return;
     }
 
-    _patchThreadAt(index, previous.copyWith(lastReply: _toReplyPreview(payload)));
+    _patchThreadAt(
+      index,
+      previous.copyWith(lastReply: _toReplyPreview(payload)),
+    );
   }
 
   void applyRealtimeDeleted(MessageItemDto payload) {
@@ -203,7 +215,10 @@ class ThreadListNotifier extends Notifier<ThreadListState> {
       return;
     }
 
-    _patchThreadAt(index, previous.copyWith(lastReply: _toReplyPreview(payload)));
+    _patchThreadAt(
+      index,
+      previous.copyWith(lastReply: _toReplyPreview(payload)),
+    );
   }
 
   void applyThreadUpdated(ThreadUpdatePayloadDto payload) {
@@ -224,7 +239,9 @@ class ThreadListNotifier extends Notifier<ThreadListState> {
   int get _currentUserId => ref.read(authSessionProvider).currentUserId;
 
   int _indexOfThread(int threadRootId) {
-    return state.threads.indexWhere((thread) => thread.threadRootId == threadRootId);
+    return state.threads.indexWhere(
+      (thread) => thread.threadRootId == threadRootId,
+    );
   }
 
   ThreadReplyPreview _toReplyPreview(MessageItemDto payload) {
@@ -274,7 +291,10 @@ class ThreadListNotifier extends Notifier<ThreadListState> {
     }
 
     final previous = state.threads[index];
-    _patchThreadAt(index, previous.copyWith(threadRootMessage: payload.toDomain()));
+    _patchThreadAt(
+      index,
+      previous.copyWith(threadRootMessage: payload.toDomain()),
+    );
   }
 
   void _moveThreadToTop(int index, ThreadListItem updated) {
@@ -297,6 +317,9 @@ class ThreadListNotifier extends Notifier<ThreadListState> {
       threads: threads,
       totalUnreadCount: totalUnreadCount < 0 ? 0 : totalUnreadCount,
     );
+    ref
+        .read(unreadBadgeProvider.notifier)
+        .applyThreadUnreadDelta(-removed.unreadCount);
   }
 
   void _replaceState({
