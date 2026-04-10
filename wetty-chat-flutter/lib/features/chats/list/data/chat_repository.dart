@@ -101,6 +101,30 @@ class ChatListNotifier extends Notifier<ChatListState> {
     );
   }
 
+  void removeChat(String chatId) {
+    final chats = state.chats.where((c) => c.id != chatId).toList();
+    state = (
+      chats: chats,
+      nextCursor: state.nextCursor,
+      hasMore: state.hasMore,
+    );
+  }
+
+  void updateChatMutedUntil({
+    required String chatId,
+    required DateTime? mutedUntil,
+  }) {
+    final index = state.chats.indexWhere((chat) => chat.id == chatId);
+    if (index < 0) return;
+    final chats = [...state.chats];
+    chats[index] = state.chats[index].copyWith(mutedUntil: mutedUntil);
+    state = (
+      chats: chats,
+      nextCursor: state.nextCursor,
+      hasMore: state.hasMore,
+    );
+  }
+
   void markChatRead({required String chatId, required int messageId}) {
     final index = state.chats.indexWhere((chat) => chat.id == chatId);
     if (index < 0) {

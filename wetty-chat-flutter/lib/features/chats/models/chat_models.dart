@@ -27,7 +27,7 @@ class ChatListItem {
     int? unreadCount,
     Object? lastReadMessageId = _sentinel,
     MessageItem? lastMessage,
-    DateTime? mutedUntil,
+    Object? mutedUntil = _sentinel,
   }) {
     return ChatListItem(
       id: id ?? this.id,
@@ -38,7 +38,8 @@ class ChatListItem {
           ? this.lastReadMessageId
           : lastReadMessageId as String?,
       lastMessage: lastMessage ?? this.lastMessage,
-      mutedUntil: mutedUntil ?? this.mutedUntil,
+      mutedUntil:
+          mutedUntil == _sentinel ? this.mutedUntil : mutedUntil as DateTime?,
     );
   }
 }

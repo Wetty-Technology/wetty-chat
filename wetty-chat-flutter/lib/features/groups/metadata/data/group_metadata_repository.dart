@@ -30,6 +30,14 @@ class GroupMetadataRepository {
     );
     return response.toDomain();
   }
+
+  Future<DateTime> muteChat(String chatId, {int? durationSeconds}) {
+    return _apiService.muteChat(chatId, durationSeconds: durationSeconds);
+  }
+
+  Future<void> unmuteChat(String chatId) {
+    return _apiService.unmuteChat(chatId);
+  }
 }
 
 final groupMetadataRepositoryProvider = Provider<GroupMetadataRepository>((

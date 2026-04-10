@@ -32,6 +32,23 @@ class GroupMetadataApiService {
     );
     return GroupInfoResponseDto.fromJson(response.data!);
   }
+
+  /// PUT /group/:chatId/mute
+  /// Body: { "duration_seconds": int? } (null/omitted = forever)
+  /// Returns the server-assigned muted_until timestamp.
+  Future<DateTime> muteChat(String chatId, {int? durationSeconds}) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      '/group/$chatId/mute',
+      data: MuteChatRequestDto(durationSeconds: durationSeconds).toJson(),
+    );
+    final raw = response.data!['mutedUntil'] as String;
+    return DateTime.parse(raw);
+  }
+
+  /// DELETE /group/:chatId/mute
+  Future<void> unmuteChat(String chatId) async {
+    await _dio.delete<void>('/group/$chatId/mute');
+  }
 }
 
 final groupMetadataApiServiceProvider = Provider<GroupMetadataApiService>((

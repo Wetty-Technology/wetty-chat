@@ -240,6 +240,9 @@ class _ChatListRowBuilder extends ConsumerWidget {
         .read(conversationDraftProvider)
         .getDraft(ConversationScope.chat(chat.id));
 
+    final isMuted = chat.mutedUntil != null &&
+        chat.mutedUntil!.isAfter(DateTime.now());
+
     return ChatListRow(
       chatName: chatName,
       timestampText: dateText,
@@ -247,6 +250,7 @@ class _ChatListRowBuilder extends ConsumerWidget {
       senderName: lastMessage?.sender.name,
       lastMessageText: _messagePreviewText(lastMessage),
       draftText: draftText,
+      isMuted: isMuted,
       onTap: () async {
         final launchRequest = await _launchRequestForChat(ref, chat);
         if (!context.mounted) return;

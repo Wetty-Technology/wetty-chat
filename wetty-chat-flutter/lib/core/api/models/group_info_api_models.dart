@@ -42,6 +42,18 @@ class GroupInfoResponseDto {
 }
 
 @JsonSerializable(explicitToJson: true, includeIfNull: false)
+class MuteChatRequestDto {
+  const MuteChatRequestDto({this.durationSeconds});
+
+  final int? durationSeconds;
+
+  factory MuteChatRequestDto.fromJson(Map<String, dynamic> json) =>
+      _$MuteChatRequestDtoFromJson(json);
+
+  Map<String, dynamic> toJson() => _$MuteChatRequestDtoToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true, includeIfNull: false)
 class UpdateGroupRequestDto {
   const UpdateGroupRequestDto({
     this.name,

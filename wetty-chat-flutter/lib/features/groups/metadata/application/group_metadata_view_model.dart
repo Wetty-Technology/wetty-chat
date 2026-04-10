@@ -58,6 +58,39 @@ class GroupMetadataViewModel extends AsyncNotifier<ChatMetadata> {
       rethrow;
     }
   }
+
+  Future<void> muteChat({int? durationSeconds}) async {
+    final repository = ref.read(groupMetadataRepositoryProvider);
+    final mutedUntil = await repository.muteChat(
+      arg,
+      durationSeconds: durationSeconds,
+    );
+    // Update local ChatMetadata state
+    final current = state.value;
+    if (current != null) {
+      state = AsyncData(current.copyWith(mutedUntil: mutedUntil));
+    }
+    // Sync to chat list
+    ref.read(chatListStateProvider.notifier).updateChatMutedUntil(
+      chatId: arg,
+      mutedUntil: mutedUntil,
+    );
+  }
+
+  Future<void> unmuteChat() async {
+    final repository = ref.read(groupMetadataRepositoryProvider);
+    await repository.unmuteChat(arg);
+    // Update local ChatMetadata state
+    final current = state.value;
+    if (current != null) {
+      state = AsyncData(current.copyWith(mutedUntil: null));
+    }
+    // Sync to chat list (clear mute)
+    ref.read(chatListStateProvider.notifier).updateChatMutedUntil(
+      chatId: arg,
+      mutedUntil: null,
+    );
+  }
 }
 
 final groupMetadataViewModelProvider =

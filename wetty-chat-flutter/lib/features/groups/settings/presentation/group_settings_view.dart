@@ -1,11 +1,21 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
+import '../../../../app/routing/route_names.dart';
+import '../../../../app/theme/style_config.dart';
+import '../../../../core/session/dev_session_store.dart';
+import '../../../chats/list/data/chat_repository.dart';
+import '../../members/data/group_member_repository.dart';
+import '../../members/presentation/widgets/group_member_actions.dart';
 import '../../metadata/application/group_metadata_view_model.dart';
-import '../../../../shared/presentation/app_divider.dart';
+import '../../metadata/data/group_metadata_models.dart';
 
-/// Group Settings page: edit group name, description, and save.
+/// Group Settings page: hero section, mute/leave actions, edit group name,
+/// description, and save.
 class GroupSettingsPage extends ConsumerStatefulWidget {
   const GroupSettingsPage({super.key, required this.chatId});
 
@@ -16,49 +26,12 @@ class GroupSettingsPage extends ConsumerStatefulWidget {
 }
 
 class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
-  late TextEditingController _nameController;
-  late TextEditingController _descriptionController;
-  final ScrollController _descScrollController = ScrollController();
-  bool _didHydrateInitialValues = false;
-  bool _isSaving = false;
-
-  TextStyle _inputStyle(BuildContext context) {
-    return TextStyle(color: CupertinoColors.label.resolveFrom(context));
-  }
+  bool _isLeavingGroup = false;
 
   TextStyle _placeholderStyle(BuildContext context) {
     return TextStyle(
       color: CupertinoColors.placeholderText.resolveFrom(context),
     );
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _nameController = TextEditingController();
-    _descriptionController = TextEditingController();
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _descriptionController.dispose();
-    _descScrollController.dispose();
-    super.dispose();
-  }
-
-  void _hydrateInitialValues(String name, String? description) {
-    if (_didHydrateInitialValues) {
-      return;
-    }
-    _didHydrateInitialValues = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) {
-        return;
-      }
-      _nameController.text = name;
-      _descriptionController.text = description ?? '';
-    });
   }
 
   void _showErrorDialog(String message) {
@@ -77,55 +50,261 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
     );
   }
 
-  Future<void> _onSave() async {
-    if (_isSaving) {
+  void _showToast(String message) {
+    final overlay = Navigator.of(context).overlay;
+    if (overlay == null) {
       return;
     }
 
-    final metadata = ref
-        .read(groupMetadataViewModelProvider(widget.chatId))
-        .value;
-    if (metadata == null) {
-      return;
-    }
+    late OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (_) => Positioned(
+        left: 24,
+        right: 24,
+        bottom: 80,
+        child: _ToastWidget(message: message, onDismiss: () => entry.remove()),
+      ),
+    );
+    overlay.insert(entry);
+  }
 
-    final nextName = _nameController.text.trim();
-    final nextDescription = _descriptionController.text.trim();
-    final normalizedDescription = nextDescription.isEmpty
-        ? null
-        : nextDescription;
-    final hasChanged =
-        nextName != metadata.name ||
-        normalizedDescription != metadata.description;
-    if (!hasChanged) {
-      context.pop();
-      return;
-    }
+  void _showMuteActionSheet() {
+    showCupertinoModalPopup<void>(
+      context: context,
+      builder: (context) => CupertinoActionSheet(
+        title: const Text('Mute notifications'),
+        actions: [
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _muteChat(durationSeconds: 3600);
+            },
+            child: const Text('1 hour'),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _muteChat(durationSeconds: 28800);
+            },
+            child: const Text('8 hours'),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _muteChat(durationSeconds: 86400);
+            },
+            child: const Text('1 day'),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _muteChat(durationSeconds: 604800);
+            },
+            child: const Text('7 days'),
+          ),
+          CupertinoActionSheetAction(
+            isDestructiveAction: true,
+            onPressed: () {
+              Navigator.pop(context);
+              _muteChat();
+            },
+            child: const Text('Forever'),
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+      ),
+    );
+  }
 
-    setState(() {
-      _isSaving = true;
-    });
-
+  Future<void> _muteChat({int? durationSeconds}) async {
     try {
       await ref
           .read(groupMetadataViewModelProvider(widget.chatId).notifier)
-          .updateMetadata(name: nextName, description: normalizedDescription);
-      if (!mounted) {
-        return;
-      }
-      context.pop();
+          .muteChat(durationSeconds: durationSeconds);
+      if (!mounted) return;
+      _showToast('Notifications muted');
     } catch (error) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
+      _showErrorDialog('$error');
+    }
+  }
+
+  Future<void> _unmuteChat() async {
+    try {
+      await ref
+          .read(groupMetadataViewModelProvider(widget.chatId).notifier)
+          .unmuteChat();
+      if (!mounted) return;
+      _showToast('Notifications unmuted');
+    } catch (error) {
+      if (!mounted) return;
+      _showErrorDialog('$error');
+    }
+  }
+
+  Future<void> _leaveGroup() async {
+    final confirmed = await GroupMemberActions.confirmAction(
+      context,
+      title: 'Leave Group',
+      message: 'Are you sure you want to leave this group?',
+      confirmLabel: 'Leave',
+      isDestructive: true,
+    );
+    if (!confirmed || !mounted) return;
+
+    setState(() {
+      _isLeavingGroup = true;
+    });
+
+    try {
+      final currentUserId = ref.read(authSessionProvider).currentUserId;
+      await ref
+          .read(groupMemberRepositoryProvider)
+          .removeMember(widget.chatId, userId: currentUserId);
+      if (!mounted) return;
+      ref.read(chatListStateProvider.notifier).removeChat(widget.chatId);
+      context.go(AppRoutes.chats);
+    } catch (error) {
+      if (!mounted) return;
       _showErrorDialog('$error');
     } finally {
       if (mounted) {
         setState(() {
-          _isSaving = false;
+          _isLeavingGroup = false;
         });
       }
     }
+  }
+
+  String _formatMutedLabel(DateTime mutedUntil) {
+    if (mutedUntil.year >= 9000) {
+      return 'Muted indefinitely';
+    }
+    final difference = mutedUntil.difference(DateTime.now());
+    if (difference.inHours < 24) {
+      return 'Muted until ${DateFormat.jm().format(mutedUntil)}';
+    }
+    return 'Muted until ${DateFormat.MMMd().format(mutedUntil)}';
+  }
+
+  Widget _buildHeroSection(BuildContext context, ChatMetadata metadata) {
+    final firstLetter = metadata.displayName.isNotEmpty
+        ? metadata.displayName[0].toUpperCase()
+        : '?';
+
+    return Column(
+      children: [
+        Container(
+          width: 80,
+          height: 80,
+          decoration: const BoxDecoration(
+            color: CupertinoColors.systemGrey4,
+            shape: BoxShape.circle,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            firstLetter,
+            style: appOnDarkTextStyle(
+              context,
+              fontSize: 32,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          metadata.displayName,
+          style: appTextStyle(
+            context,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 4),
+        if (metadata.description != null &&
+            metadata.description!.trim().isNotEmpty)
+          Text(
+            metadata.description!,
+            style: appSecondaryTextStyle(context),
+            textAlign: TextAlign.center,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          )
+        else
+          Text(
+            'No group description yet.',
+            style: _placeholderStyle(context),
+            textAlign: TextAlign.center,
+          ),
+      ],
+    );
+  }
+
+  Widget _buildActionButtons(BuildContext context, ChatMetadata metadata) {
+    final isMuted = metadata.mutedUntil != null &&
+        metadata.mutedUntil!.isAfter(DateTime.now());
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _buildActionButton(
+          context,
+          icon: isMuted
+              ? CupertinoIcons.bell_slash_fill
+              : CupertinoIcons.bell,
+          label: isMuted
+              ? _formatMutedLabel(metadata.mutedUntil!)
+              : 'Mute',
+          onTap: isMuted ? _unmuteChat : _showMuteActionSheet,
+        ),
+        const SizedBox(width: 12),
+        _buildActionButton(
+          context,
+          icon: CupertinoIcons.square_arrow_right,
+          label: 'Leave',
+          color: CupertinoColors.destructiveRed,
+          onTap: _isLeavingGroup ? null : _leaveGroup,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButton(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    Color? color,
+    VoidCallback? onTap,
+  }) {
+    final resolvedColor = color ?? CupertinoColors.label.resolveFrom(context);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        constraints: const BoxConstraints(minWidth: 90),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        decoration: BoxDecoration(
+          color: CupertinoColors.systemGrey6.resolveFrom(context),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 28, color: resolvedColor),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(fontSize: 12, color: resolvedColor),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -133,10 +312,6 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
     final metadataAsync = ref.watch(
       groupMetadataViewModelProvider(widget.chatId),
     );
-    final metadata = metadataAsync.value;
-    if (metadata != null) {
-      _hydrateInitialValues(metadata.name, metadata.description);
-    }
 
     return CupertinoPageScaffold(
       navigationBar: const CupertinoNavigationBar(
@@ -168,62 +343,62 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
                   ],
                 ),
               ),
-              data: (_) => Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Name',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 8),
-                  CupertinoTextField(
-                    controller: _nameController,
-                    placeholder: 'Group name',
-                    enabled: !_isSaving,
-                    style: _inputStyle(context),
-                    placeholderStyle: _placeholderStyle(context),
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    decoration: null,
-                  ),
-                  const AppDivider(height: 1),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Description',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 8),
-                  CupertinoScrollbar(
-                    controller: _descScrollController,
-                    child: CupertinoTextField(
-                      controller: _descriptionController,
-                      scrollController: _descScrollController,
-                      placeholder: 'Enter group description',
-                      enabled: !_isSaving,
-                      style: _inputStyle(context),
-                      placeholderStyle: _placeholderStyle(context),
-                      maxLines: 4,
-                      minLines: 2,
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: null,
-                    ),
-                  ),
-                  const AppDivider(height: 1),
-                  const SizedBox(height: 32),
-                  SizedBox(
-                    width: double.infinity,
-                    child: CupertinoButton.filled(
-                      onPressed: !_isSaving ? _onSave : null,
-                      child: _isSaving
-                          ? const CupertinoActivityIndicator(
-                              color: CupertinoColors.white,
-                            )
-                          : const Text('Save Settings'),
-                    ),
-                  ),
-                ],
+              data: (data) => SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildHeroSection(context, data),
+                    const SizedBox(height: 20),
+                    _buildActionButtons(context, data),
+                  ],
+                ),
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ToastWidget extends StatefulWidget {
+  const _ToastWidget({required this.message, required this.onDismiss});
+
+  final String message;
+  final VoidCallback onDismiss;
+
+  @override
+  State<_ToastWidget> createState() => _ToastWidgetState();
+}
+
+class _ToastWidgetState extends State<_ToastWidget> {
+  Timer? _dismissTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _dismissTimer = Timer(const Duration(seconds: 2), widget.onDismiss);
+  }
+
+  @override
+  void dispose() {
+    _dismissTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemGrey.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Text(
+          widget.message,
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: CupertinoColors.white),
         ),
       ),
     );

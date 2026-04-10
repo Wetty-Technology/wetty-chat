@@ -38,6 +38,14 @@ Map<String, dynamic> _$GroupInfoResponseDtoToJson(
   'myRole': instance.myRole,
 };
 
+MuteChatRequestDto _$MuteChatRequestDtoFromJson(Map<String, dynamic> json) =>
+    MuteChatRequestDto(
+      durationSeconds: (json['durationSeconds'] as num?)?.toInt(),
+    );
+
+Map<String, dynamic> _$MuteChatRequestDtoToJson(MuteChatRequestDto instance) =>
+    <String, dynamic>{'durationSeconds': ?instance.durationSeconds};
+
 UpdateGroupRequestDto _$UpdateGroupRequestDtoFromJson(
   Map<String, dynamic> json,
 ) => UpdateGroupRequestDto(

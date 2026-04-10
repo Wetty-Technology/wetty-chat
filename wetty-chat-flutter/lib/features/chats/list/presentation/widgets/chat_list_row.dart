@@ -12,6 +12,7 @@ class ChatListRow extends StatelessWidget {
     this.senderName,
     this.lastMessageText,
     this.draftText,
+    this.isMuted = false,
   });
 
   final String chatName;
@@ -21,6 +22,7 @@ class ChatListRow extends StatelessWidget {
   final String? senderName;
   final String? lastMessageText;
   final String? draftText;
+  final bool isMuted;
 
   @override
   Widget build(BuildContext context) {
@@ -60,11 +62,27 @@ class ChatListRow extends StatelessWidget {
                       Row(
                         children: [
                           Expanded(
-                            child: Text(
-                              chatName,
-                              style: appChatEntryTitleTextStyle(context),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                            child: Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    chatName,
+                                    style: appChatEntryTitleTextStyle(context),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (isMuted)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 4),
+                                    child: Icon(
+                                      CupertinoIcons.bell_slash,
+                                      size: 14,
+                                      color: CupertinoColors.systemGrey
+                                          .resolveFrom(context),
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
                           if (timestampText != null)
@@ -86,6 +104,7 @@ class ChatListRow extends StatelessWidget {
                         lastMessageText: lastMessageText,
                         draftText: draftText,
                         unreadCount: unreadCount,
+                        isMuted: isMuted,
                       ),
                     ],
                   ),
@@ -118,12 +137,14 @@ class _Subtitle extends StatelessWidget {
     required this.lastMessageText,
     required this.draftText,
     required this.unreadCount,
+    this.isMuted = false,
   });
 
   final String? senderName;
   final String? lastMessageText;
   final String? draftText;
   final int unreadCount;
+  final bool isMuted;
 
   bool get _hasDraft => draftText != null;
   bool get _hasMessagePreview =>
@@ -160,7 +181,8 @@ class _Subtitle extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          if (unreadCount > 0) _UnreadBadge(count: unreadCount),
+          if (unreadCount > 0)
+            _UnreadBadge(count: unreadCount, isMuted: isMuted),
         ],
       );
     }
@@ -199,16 +221,18 @@ class _Subtitle extends StatelessWidget {
                   ),
                 ),
         ),
-        if (unreadCount > 0) _UnreadBadge(count: unreadCount),
+        if (unreadCount > 0)
+          _UnreadBadge(count: unreadCount, isMuted: isMuted),
       ],
     );
   }
 }
 
 class _UnreadBadge extends StatelessWidget {
-  const _UnreadBadge({required this.count});
+  const _UnreadBadge({required this.count, this.isMuted = false});
 
   final int count;
+  final bool isMuted;
 
   @override
   Widget build(BuildContext context) {
@@ -216,7 +240,7 @@ class _UnreadBadge extends StatelessWidget {
       margin: const EdgeInsets.only(left: 8),
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: CupertinoColors.systemRed,
+        color: isMuted ? CupertinoColors.systemGrey : CupertinoColors.systemRed,
         borderRadius: BorderRadius.circular(10),
       ),
       constraints: const BoxConstraints(minWidth: 20),
