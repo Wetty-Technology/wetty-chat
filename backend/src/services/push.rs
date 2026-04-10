@@ -1,7 +1,7 @@
 use a2::{
-    Client as ApnsClient, ClientConfig as ApnsClientConfig, DefaultNotificationBuilder,
-    Endpoint as ApnsEndpoint, ErrorReason as ApnsErrorReason, NotificationBuilder,
-    NotificationOptions, Priority as ApnsPriority, PushType as ApnsPushType,
+    request::payload::PayloadLike, Client as ApnsClient, ClientConfig as ApnsClientConfig,
+    DefaultNotificationBuilder, Endpoint as ApnsEndpoint, ErrorReason as ApnsErrorReason,
+    NotificationBuilder, NotificationOptions, Priority as ApnsPriority, PushType as ApnsPushType,
 };
 use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, Pool};
@@ -36,6 +36,14 @@ const APNS_TITLE_LOC_KEY: &str = "push.chat.title";
 const APNS_BODY_LOC_KEY_WITH_PREVIEW: &str = "push.message.body";
 const APNS_BODY_LOC_KEY_NO_PREVIEW: &str = "push.message.body.generic";
 const APNS_CUSTOM_DATA_ROOT: &str = "wettyChat";
+const APNS_BODY_LOC_KEY_AUDIO: &str = "push.message.body.audio";
+const APNS_BODY_LOC_KEY_IMAGE: &str = "push.message.body.image";
+const APNS_BODY_LOC_KEY_VIDEO: &str = "push.message.body.video";
+const APNS_BODY_LOC_KEY_STICKER: &str = "push.message.body.sticker";
+const APNS_BODY_LOC_KEY_STICKER_EMOJI: &str = "push.message.body.sticker.emoji";
+const APNS_BODY_LOC_KEY_INVITE: &str = "push.message.body.invite";
+const APNS_BODY_LOC_KEY_ATTACHMENT: &str = "push.message.body.attachment";
+const APNS_BODY_LOC_KEY_DELETED: &str = "push.message.body.deleted";
 
 /// A push notification job enqueued when a new message is created.
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
@@ -105,7 +113,43 @@ struct ApnsNotification {
     body_loc_key: &'static str,
     body_loc_args: Vec<String>,
     badge: u32,
+    thread_id: String,
     custom_data: ApnsCustomData,
+}
+
+/// Wraps an a2 `Payload` to inject `thread-id` into the APS dictionary.
+/// The `a2` crate's APS struct does not support this field natively.
+#[derive(Debug)]
+struct PayloadWithThreadId<'a> {
+    inner: a2::request::payload::Payload<'a>,
+    thread_id: String,
+}
+
+impl serde::Serialize for PayloadWithThreadId<'_> {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::Error as _;
+        let mut value = serde_json::to_value(&self.inner).map_err(S::Error::custom)?;
+        if let Some(aps) = value
+            .as_object_mut()
+            .and_then(|o| o.get_mut("aps"))
+            .and_then(|v| v.as_object_mut())
+        {
+            aps.insert(
+                "thread-id".to_string(),
+                serde_json::Value::String(self.thread_id.clone()),
+            );
+        }
+        value.serialize(serializer)
+    }
+}
+
+impl PayloadLike for PayloadWithThreadId<'_> {
+    fn get_device_token(&self) -> &str {
+        self.inner.get_device_token()
+    }
+    fn get_options(&self) -> &NotificationOptions<'_> {
+        self.inner.get_options()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -460,12 +504,16 @@ impl ApnsSender {
             ..Default::default()
         };
 
-        let mut payload = builder.build(device_token, options);
-        payload
+        let mut inner_payload = builder.build(device_token, options);
+        inner_payload
             .add_custom_data(APNS_CUSTOM_DATA_ROOT, &notification.custom_data)
             .map_err(|e| {
                 ApnsSendError::Transient(format!("failed to serialize APNs payload: {:?}", e))
             })?;
+        let payload = PayloadWithThreadId {
+            inner: inner_payload,
+            thread_id: notification.thread_id.clone(),
+        };
 
         let client = match environment {
             PushEnvironment::Sandbox => &self.sandbox_client,
@@ -732,15 +780,45 @@ fn build_push_payload(job: &PushJob, unread_count: i64, body_text: &str) -> Push
 
 fn build_apns_notification(job: &PushJob, unread_count: i64) -> ApnsNotification {
     let badge = unread_count.clamp(0, u32::MAX as i64) as u32;
-    let (body_loc_key, body_loc_args) = match &job.legacy_message_preview {
-        Some(preview) => (
-            APNS_BODY_LOC_KEY_WITH_PREVIEW,
-            vec![job.sender_username.clone(), truncate_preview(preview)],
-        ),
-        None => (
-            APNS_BODY_LOC_KEY_NO_PREVIEW,
-            vec![job.sender_username.clone()],
-        ),
+    let preview = &job.message_preview;
+
+    let (body_loc_key, body_loc_args) = if preview.is_deleted {
+        (APNS_BODY_LOC_KEY_DELETED, vec![job.sender_username.clone()])
+    } else {
+        match preview.message_type {
+            MessageType::Audio => (APNS_BODY_LOC_KEY_AUDIO, vec![job.sender_username.clone()]),
+            MessageType::Sticker => match &preview.sticker {
+                Some(s) if !s.emoji.trim().is_empty() => (
+                    APNS_BODY_LOC_KEY_STICKER_EMOJI,
+                    vec![job.sender_username.clone(), s.emoji.clone()],
+                ),
+                _ => (APNS_BODY_LOC_KEY_STICKER, vec![job.sender_username.clone()]),
+            },
+            MessageType::Invite => (APNS_BODY_LOC_KEY_INVITE, vec![job.sender_username.clone()]),
+            _ => {
+                if let Some(ref msg) = preview.message {
+                    (
+                        APNS_BODY_LOC_KEY_WITH_PREVIEW,
+                        vec![job.sender_username.clone(), truncate_preview(msg)],
+                    )
+                } else if let Some(ref kind) = preview.first_attachment_kind {
+                    (
+                        attachment_kind_loc_key(kind),
+                        vec![job.sender_username.clone()],
+                    )
+                } else {
+                    (
+                        APNS_BODY_LOC_KEY_NO_PREVIEW,
+                        vec![job.sender_username.clone()],
+                    )
+                }
+            }
+        }
+    };
+
+    let thread_id = match job.thread_root_id {
+        Some(root_id) => format!("chat_{}_thread_{}", job.chat_id, root_id),
+        None => format!("chat_{}", job.chat_id),
     };
 
     ApnsNotification {
@@ -749,6 +827,7 @@ fn build_apns_notification(job: &PushJob, unread_count: i64) -> ApnsNotification
         body_loc_key,
         body_loc_args,
         badge,
+        thread_id,
         custom_data: ApnsCustomData {
             type_: PushPayloadType::NewMessage,
             chat_id: job.chat_id.to_string(),
@@ -758,6 +837,18 @@ fn build_apns_notification(job: &PushJob, unread_count: i64) -> ApnsNotification
             message_preview: job.message_preview.clone(),
             unread_count,
         },
+    }
+}
+
+fn attachment_kind_loc_key(kind: &str) -> &'static str {
+    if kind.starts_with("image/") {
+        APNS_BODY_LOC_KEY_IMAGE
+    } else if kind.starts_with("video/") {
+        APNS_BODY_LOC_KEY_VIDEO
+    } else if kind.starts_with("audio/") {
+        APNS_BODY_LOC_KEY_AUDIO
+    } else {
+        APNS_BODY_LOC_KEY_ATTACHMENT
     }
 }
 
@@ -934,18 +1025,19 @@ mod tests {
             mentioned_uids: Vec::new(),
         };
 
-        let payload = build_apns_notification(&job, 7);
-        assert_eq!(payload.title_loc_key, APNS_TITLE_LOC_KEY);
-        assert_eq!(payload.title_loc_args, vec!["General".to_string()]);
-        assert_eq!(payload.body_loc_key, APNS_BODY_LOC_KEY_WITH_PREVIEW);
+        let n = build_apns_notification(&job, 7);
+        assert_eq!(n.title_loc_key, APNS_TITLE_LOC_KEY);
+        assert_eq!(n.title_loc_args, vec!["General".to_string()]);
+        assert_eq!(n.body_loc_key, APNS_BODY_LOC_KEY_WITH_PREVIEW);
         assert_eq!(
-            payload.body_loc_args,
-            vec!["alice".to_string(), "hello there".to_string()]
+            n.body_loc_args,
+            vec!["alice".to_string(), "Hello".to_string()]
         );
-        assert_eq!(payload.badge, 7);
-        assert_eq!(payload.custom_data.chat_id, "10");
-        assert_eq!(payload.custom_data.thread_root_id, Some("77".to_string()));
-        assert_eq!(payload.custom_data.unread_count, 7);
+        assert_eq!(n.badge, 7);
+        assert_eq!(n.thread_id, "chat_10_thread_77");
+        assert_eq!(n.custom_data.chat_id, "10");
+        assert_eq!(n.custom_data.thread_root_id, Some("77".to_string()));
+        assert_eq!(n.custom_data.unread_count, 7);
     }
 
     #[test]
@@ -968,10 +1060,137 @@ mod tests {
             mentioned_uids: Vec::new(),
         };
 
-        let payload = build_apns_notification(&job, 0);
-        assert_eq!(payload.body_loc_key, APNS_BODY_LOC_KEY_NO_PREVIEW);
-        assert_eq!(payload.body_loc_args, vec!["alice".to_string()]);
-        assert_eq!(payload.badge, 0);
+        let n = build_apns_notification(&job, 0);
+        assert_eq!(n.body_loc_key, APNS_BODY_LOC_KEY_NO_PREVIEW);
+        assert_eq!(n.body_loc_args, vec!["alice".to_string()]);
+        assert_eq!(n.badge, 0);
+        assert_eq!(n.thread_id, "chat_10");
+    }
+
+    #[test]
+    fn build_apns_notification_audio_message() {
+        let job = PushJob {
+            chat_id: 5,
+            sender_uid: 1,
+            sender_username: "bob".to_string(),
+            chat_name: "DMs".to_string(),
+            message_preview: PushMessagePreview {
+                message: None,
+                message_type: MessageType::Audio,
+                sticker: None,
+                first_attachment_kind: None,
+                is_deleted: false,
+            },
+            legacy_message_preview: None,
+            message_id: 50,
+            thread_root_id: None,
+            mentioned_uids: Vec::new(),
+        };
+
+        let n = build_apns_notification(&job, 2);
+        assert_eq!(n.body_loc_key, APNS_BODY_LOC_KEY_AUDIO);
+        assert_eq!(n.body_loc_args, vec!["bob".to_string()]);
+    }
+
+    #[test]
+    fn build_apns_notification_sticker_with_emoji() {
+        let job = PushJob {
+            chat_id: 5,
+            sender_uid: 1,
+            sender_username: "bob".to_string(),
+            chat_name: "DMs".to_string(),
+            message_preview: PushMessagePreview {
+                message: None,
+                message_type: MessageType::Sticker,
+                sticker: Some(PushMessagePreviewSticker {
+                    emoji: "🎉".to_string(),
+                }),
+                first_attachment_kind: None,
+                is_deleted: false,
+            },
+            legacy_message_preview: Some("[Sticker] 🎉".to_string()),
+            message_id: 51,
+            thread_root_id: None,
+            mentioned_uids: Vec::new(),
+        };
+
+        let n = build_apns_notification(&job, 0);
+        assert_eq!(n.body_loc_key, APNS_BODY_LOC_KEY_STICKER_EMOJI);
+        assert_eq!(n.body_loc_args, vec!["bob".to_string(), "🎉".to_string()]);
+    }
+
+    #[test]
+    fn build_apns_notification_image_attachment() {
+        let job = PushJob {
+            chat_id: 5,
+            sender_uid: 1,
+            sender_username: "bob".to_string(),
+            chat_name: "DMs".to_string(),
+            message_preview: PushMessagePreview {
+                message: None,
+                message_type: MessageType::File,
+                sticker: None,
+                first_attachment_kind: Some("image/jpeg".to_string()),
+                is_deleted: false,
+            },
+            legacy_message_preview: None,
+            message_id: 52,
+            thread_root_id: None,
+            mentioned_uids: Vec::new(),
+        };
+
+        let n = build_apns_notification(&job, 1);
+        assert_eq!(n.body_loc_key, APNS_BODY_LOC_KEY_IMAGE);
+        assert_eq!(n.body_loc_args, vec!["bob".to_string()]);
+    }
+
+    #[test]
+    fn build_apns_notification_video_attachment() {
+        let job = PushJob {
+            chat_id: 5,
+            sender_uid: 1,
+            sender_username: "bob".to_string(),
+            chat_name: "DMs".to_string(),
+            message_preview: PushMessagePreview {
+                message: None,
+                message_type: MessageType::File,
+                sticker: None,
+                first_attachment_kind: Some("video/mp4".to_string()),
+                is_deleted: false,
+            },
+            legacy_message_preview: None,
+            message_id: 53,
+            thread_root_id: None,
+            mentioned_uids: Vec::new(),
+        };
+
+        let n = build_apns_notification(&job, 0);
+        assert_eq!(n.body_loc_key, APNS_BODY_LOC_KEY_VIDEO);
+    }
+
+    #[test]
+    fn build_apns_notification_invite() {
+        let job = PushJob {
+            chat_id: 5,
+            sender_uid: 1,
+            sender_username: "bob".to_string(),
+            chat_name: "DMs".to_string(),
+            message_preview: PushMessagePreview {
+                message: None,
+                message_type: MessageType::Invite,
+                sticker: None,
+                first_attachment_kind: None,
+                is_deleted: false,
+            },
+            legacy_message_preview: Some("sent an invite".to_string()),
+            message_id: 54,
+            thread_root_id: None,
+            mentioned_uids: Vec::new(),
+        };
+
+        let n = build_apns_notification(&job, 0);
+        assert_eq!(n.body_loc_key, APNS_BODY_LOC_KEY_INVITE);
+        assert_eq!(n.body_loc_args, vec!["bob".to_string()]);
     }
 
     #[test]
