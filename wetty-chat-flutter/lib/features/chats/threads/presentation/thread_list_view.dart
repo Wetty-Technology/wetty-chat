@@ -173,6 +173,7 @@ class _ThreadListViewState extends ConsumerState<ThreadListView> {
 
   Widget _buildThreadRow(ThreadListItem thread) {
     return SwipeToActionRow(
+      key: ValueKey('thread-${thread.chatId}-${thread.threadRootId}'),
       icon: thread.unreadCount > 0
           ? CupertinoIcons.checkmark_alt
           : CupertinoIcons.mail,
