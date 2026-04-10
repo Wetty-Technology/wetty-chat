@@ -1295,7 +1295,7 @@ async fn mark_as_unread(
     CurrentUid(uid): CurrentUid,
     Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
     mut conn: DbConn,
-    body: Option<Json<MarkAsUnreadBody>>,
+    Json(body): Json<Option<MarkAsUnreadBody>>,
 ) -> Result<Json<MarkChatReadStateResponse>, AppError> {
     let conn = &mut *conn;
 
