@@ -1060,11 +1060,11 @@ mod tests {
             mentioned_uids: Vec::new(),
         };
 
-        let n = build_apns_notification(&job, 0);
-        assert_eq!(n.body_loc_key, APNS_BODY_LOC_KEY_NO_PREVIEW);
-        assert_eq!(n.body_loc_args, vec!["alice".to_string()]);
-        assert_eq!(n.badge, 0);
-        assert_eq!(n.thread_id, "chat_10");
+        let payload = build_apns_notification(&job, 0);
+        assert_eq!(payload.body_loc_key, APNS_BODY_LOC_KEY_NO_PREVIEW);
+        assert_eq!(payload.body_loc_args, vec!["alice".to_string()]);
+        assert_eq!(payload.badge, 0);
+        assert_eq!(payload.thread_id, "chat_10");
     }
 
     #[test]
