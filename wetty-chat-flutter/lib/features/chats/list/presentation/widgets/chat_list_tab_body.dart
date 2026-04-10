@@ -211,6 +211,7 @@ class _MergedListRow extends StatelessWidget {
     return switch (item) {
       MergedChatItem(:final chat) => _ChatListRowBuilder(chat: chat),
       MergedThreadItem(:final thread) => SwipeToActionRow(
+        key: ValueKey('thread-${thread.chatId}-${thread.threadRootId}'),
         icon: thread.unreadCount > 0
             ? CupertinoIcons.checkmark_alt
             : CupertinoIcons.mail,
@@ -256,6 +257,7 @@ class _ChatListRowBuilder extends ConsumerWidget {
     final isUnread = chat.unreadCount > 0;
 
     return SwipeToActionRow(
+      key: ValueKey('chat-${chat.id}'),
       icon: isUnread
           ? CupertinoIcons.checkmark_alt
           : CupertinoIcons.mail,

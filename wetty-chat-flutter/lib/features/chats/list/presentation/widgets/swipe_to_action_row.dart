@@ -1,8 +1,8 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:flutter_swipe_action_cell/flutter_swipe_action_cell.dart';
 
-/// iOS-style swipe-to-reveal-action row for chat list items.
-/// Swipe left-to-right to reveal an action from the left edge.
+/// iOS-style swipe-to-action row for chat list items.
+/// Partial swipe reveals the action button; full swipe triggers it automatically.
 class SwipeToActionRow extends StatelessWidget {
   const SwipeToActionRow({
     super.key,
@@ -21,21 +21,23 @@ class SwipeToActionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Slidable(
-      key: key,
-      startActionPane: ActionPane(
-        motion: const DrawerMotion(),
-        extentRatio: 0.25,
-        children: [
-          SlidableAction(
-            onPressed: (_) => onAction(),
-            backgroundColor: actionColor ?? CupertinoColors.activeBlue,
-            foregroundColor: CupertinoColors.white,
-            icon: icon,
-            label: label,
-          ),
-        ],
-      ),
+    final color = actionColor ?? CupertinoColors.activeBlue;
+
+    return SwipeActionCell(
+      key: key!,
+      leadingActions: [
+        SwipeAction(
+          performsFirstActionWithFullSwipe: true,
+          onTap: (handler) async {
+            onAction();
+            await handler(false);
+          },
+          color: color,
+          icon: Icon(icon, color: CupertinoColors.white),
+          title: label,
+          style: const TextStyle(color: CupertinoColors.white, fontSize: 12),
+        ),
+      ],
       child: child,
     );
   }
