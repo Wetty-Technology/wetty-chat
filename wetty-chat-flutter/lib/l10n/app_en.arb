@@ -258,5 +258,11 @@
   "@relativeHours": {
     "description": "Relative time in hours (e.g. 3 hours ago)",
     "placeholders": { "count": { "type": "int" } }
-  }
+  },
+
+  "swipeActionMarkRead": "Read",
+  "@swipeActionMarkRead": { "description": "Swipe action label to mark a chat as read" },
+
+  "swipeActionMarkUnread": "Unread",
+  "@swipeActionMarkUnread": { "description": "Swipe action label to mark a chat as unread" }
 }

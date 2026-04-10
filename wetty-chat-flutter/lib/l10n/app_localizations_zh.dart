@@ -259,6 +259,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String relativeHours(int count) {
     return '$count小时前';
   }
+
+  @override
+  String get swipeActionMarkRead => '已读';
+
+  @override
+  String get swipeActionMarkUnread => '未读';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -516,4 +522,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String relativeHours(int count) {
     return '$count小時前';
   }
+
+  @override
+  String get swipeActionMarkRead => '已讀';
+
+  @override
+  String get swipeActionMarkUnread => '未讀';
 }

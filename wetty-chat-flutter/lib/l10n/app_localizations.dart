@@ -590,6 +590,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 hour ago} other{{count} hours ago}}'**
   String relativeHours(int count);
+
+  /// Swipe action label to mark a chat as read
+  ///
+  /// In en, this message translates to:
+  /// **'Read'**
+  String get swipeActionMarkRead;
+
+  /// Swipe action label to mark a chat as unread
+  ///
+  /// In en, this message translates to:
+  /// **'Unread'**
+  String get swipeActionMarkUnread;
 }
 
 class _AppLocalizationsDelegate

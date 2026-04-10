@@ -7,6 +7,7 @@ import '../../../../app/routing/route_names.dart';
 import '../../../../app/theme/style_config.dart';
 import '../application/thread_list_view_model.dart';
 import '../models/thread_models.dart';
+import '../../list/presentation/widgets/swipe_to_action_row.dart';
 import 'thread_list_row.dart';
 
 /// Displays a paginated list of threads the current user is subscribed to.
@@ -171,13 +172,25 @@ class _ThreadListViewState extends ConsumerState<ThreadListView> {
   }
 
   Widget _buildThreadRow(ThreadListItem thread) {
-    return ThreadListRow(
-      thread: thread,
-      onTap: () {
-        context.push(
-          AppRoutes.threadDetail(thread.chatId, thread.threadRootId.toString()),
-        );
+    return SwipeToActionRow(
+      icon: thread.unreadCount > 0
+          ? CupertinoIcons.checkmark_alt
+          : CupertinoIcons.mail,
+      label: thread.unreadCount > 0 ? 'Read' : 'Unread',
+      onAction: () {
+        // TODO: implement when backend supports thread mark-read/unread from list
       },
+      child: ThreadListRow(
+        thread: thread,
+        onTap: () {
+          context.push(
+            AppRoutes.threadDetail(
+              thread.chatId,
+              thread.threadRootId.toString(),
+            ),
+          );
+        },
+      ),
     );
   }
 }

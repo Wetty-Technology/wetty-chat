@@ -18,6 +18,7 @@ import '../../data/chat_launch_service.dart';
 import '../chat_list_segment.dart';
 import '../models/merged_list_item.dart';
 import 'chat_list_row.dart';
+import 'swipe_to_action_row.dart';
 
 class ChatListTabBody extends ConsumerWidget {
   const ChatListTabBody({
@@ -209,16 +210,25 @@ class _MergedListRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return switch (item) {
       MergedChatItem(:final chat) => _ChatListRowBuilder(chat: chat),
-      MergedThreadItem(:final thread) => ThreadListRow(
-        thread: thread,
-        onTap: () {
-          context.push(
-            AppRoutes.threadDetail(
-              thread.chatId,
-              thread.threadRootId.toString(),
-            ),
-          );
+      MergedThreadItem(:final thread) => SwipeToActionRow(
+        icon: thread.unreadCount > 0
+            ? CupertinoIcons.checkmark_alt
+            : CupertinoIcons.mail,
+        label: thread.unreadCount > 0 ? 'Read' : 'Unread',
+        onAction: () {
+          // TODO: implement when backend supports thread mark-read/unread from list
         },
+        child: ThreadListRow(
+          thread: thread,
+          onTap: () {
+            context.push(
+              AppRoutes.threadDetail(
+                thread.chatId,
+                thread.threadRootId.toString(),
+              ),
+            );
+          },
+        ),
       ),
     };
   }
@@ -243,25 +253,38 @@ class _ChatListRowBuilder extends ConsumerWidget {
     final isMuted =
         chat.mutedUntil != null && chat.mutedUntil!.isAfter(DateTime.now());
 
-    return ChatListRow(
-      chatName: chatName,
-      timestampText: dateText,
-      unreadCount: chat.unreadCount,
-      senderName: lastMessage?.sender.name,
-      lastMessageText: _messagePreviewText(lastMessage),
-      draftText: draftText,
-      isMuted: isMuted,
-      onTap: () async {
-        final launchRequest = await _launchRequestForChat(ref, chat);
-        if (!context.mounted) return;
-        final shouldRefresh = await context.push<bool>(
-          AppRoutes.chatDetail(chat.id),
-          extra: {'launchRequest': launchRequest},
-        );
-        if (shouldRefresh == true) {
-          await ref.read(chatListViewModelProvider.notifier).refreshChats();
-        }
+    final isUnread = chat.unreadCount > 0;
+
+    return SwipeToActionRow(
+      icon: isUnread
+          ? CupertinoIcons.checkmark_alt
+          : CupertinoIcons.mail,
+      label: isUnread ? 'Read' : 'Unread',
+      onAction: () {
+        ref
+            .read(chatListViewModelProvider.notifier)
+            .toggleChatReadState(chatId: chat.id);
       },
+      child: ChatListRow(
+        chatName: chatName,
+        timestampText: dateText,
+        unreadCount: chat.unreadCount,
+        senderName: lastMessage?.sender.name,
+        lastMessageText: _messagePreviewText(lastMessage),
+        draftText: draftText,
+        isMuted: isMuted,
+        onTap: () async {
+          final launchRequest = await _launchRequestForChat(ref, chat);
+          if (!context.mounted) return;
+          final shouldRefresh = await context.push<bool>(
+            AppRoutes.chatDetail(chat.id),
+            extra: {'launchRequest': launchRequest},
+          );
+          if (shouldRefresh == true) {
+            await ref.read(chatListViewModelProvider.notifier).refreshChats();
+          }
+        },
+      ),
     );
   }
 

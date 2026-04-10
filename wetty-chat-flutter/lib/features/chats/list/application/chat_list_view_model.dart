@@ -120,6 +120,24 @@ class ChatListViewModel extends AsyncNotifier<ChatListViewState> {
     }
   }
 
+  Future<void> toggleChatReadState({required String chatId}) async {
+    final chat = ref
+        .read(chatListStateProvider)
+        .chats
+        .where((c) => c.id == chatId)
+        .firstOrNull;
+    if (chat == null) return;
+    if (chat.unreadCount > 0) {
+      await ref
+          .read(chatListStateProvider.notifier)
+          .markChatReadViaSwipe(chatId: chatId);
+    } else {
+      await ref
+          .read(chatListStateProvider.notifier)
+          .markChatUnread(chatId: chatId);
+    }
+  }
+
   void insertChat(ChatListItem chat) {
     ref.read(chatListStateProvider.notifier).insertChat(chat);
   }

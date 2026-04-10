@@ -89,5 +89,8 @@
   "dateToday": "今天",
   "dateYesterday": "昨天",
   "relativeMinutes": "{count}分钟前",
-  "relativeHours": "{count}小时前"
+  "relativeHours": "{count}小时前",
+
+  "swipeActionMarkRead": "已读",
+  "swipeActionMarkUnread": "未读"
 }

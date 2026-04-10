@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/websocket_api_models.dart';
@@ -9,6 +10,7 @@ import '../../models/chat_api_mapper.dart';
 import '../../models/chat_models.dart';
 import '../../models/message_api_mapper.dart';
 import '../../models/message_models.dart';
+import '../../conversation/data/message_api_service.dart';
 import '../../conversation/domain/conversation_message.dart';
 import 'chat_api_service.dart';
 
@@ -169,6 +171,105 @@ class ChatListNotifier extends Notifier<ChatListState> {
       nextCursor: state.nextCursor,
       hasMore: state.hasMore,
     );
+  }
+
+  Future<void> markChatReadViaSwipe({required String chatId}) async {
+    final index = state.chats.indexWhere((chat) => chat.id == chatId);
+    if (index < 0) return;
+
+    final current = state.chats[index];
+    final lastMessageId = current.lastMessage?.id;
+    if (lastMessageId == null) return;
+
+    final originalUnreadCount = current.unreadCount;
+    final originalLastReadMessageId = current.lastReadMessageId;
+
+    // Optimistic update.
+    final chats = [...state.chats];
+    chats[index] = current.copyWith(
+      unreadCount: 0,
+      lastReadMessageId: lastMessageId.toString(),
+    );
+    state = (
+      chats: chats,
+      nextCursor: state.nextCursor,
+      hasMore: state.hasMore,
+    );
+
+    try {
+      await ref
+          .read(messageApiServiceProvider)
+          .markMessagesAsRead(chatId, lastMessageId);
+    } catch (e) {
+      debugPrint('markChatReadViaSwipe failed: $e');
+      // Revert on failure.
+      final revertIndex = state.chats.indexWhere((chat) => chat.id == chatId);
+      if (revertIndex >= 0) {
+        final revertChats = [...state.chats];
+        revertChats[revertIndex] = state.chats[revertIndex].copyWith(
+          unreadCount: originalUnreadCount,
+          lastReadMessageId: originalLastReadMessageId,
+        );
+        state = (
+          chats: revertChats,
+          nextCursor: state.nextCursor,
+          hasMore: state.hasMore,
+        );
+      }
+    }
+  }
+
+  Future<void> markChatUnread({required String chatId}) async {
+    final index = state.chats.indexWhere((chat) => chat.id == chatId);
+    if (index < 0) return;
+
+    final current = state.chats[index];
+    final originalUnreadCount = current.unreadCount;
+    final originalLastReadMessageId = current.lastReadMessageId;
+
+    // Optimistic update.
+    final chats = [...state.chats];
+    chats[index] = current.copyWith(unreadCount: 1);
+    state = (
+      chats: chats,
+      nextCursor: state.nextCursor,
+      hasMore: state.hasMore,
+    );
+
+    try {
+      final response =
+          await ref.read(chatApiServiceProvider).markChatAsUnread(chatId);
+      // Update from server response.
+      final successIndex = state.chats.indexWhere((chat) => chat.id == chatId);
+      if (successIndex >= 0) {
+        final successChats = [...state.chats];
+        successChats[successIndex] = state.chats[successIndex].copyWith(
+          unreadCount: response.unreadCount,
+          lastReadMessageId: response.lastReadMessageId,
+        );
+        state = (
+          chats: successChats,
+          nextCursor: state.nextCursor,
+          hasMore: state.hasMore,
+        );
+      }
+    } catch (e) {
+      debugPrint('markChatUnread failed: $e');
+      // Revert on failure.
+      final revertIndex = state.chats.indexWhere((chat) => chat.id == chatId);
+      if (revertIndex >= 0) {
+        final revertChats = [...state.chats];
+        revertChats[revertIndex] = state.chats[revertIndex].copyWith(
+          unreadCount: originalUnreadCount,
+          lastReadMessageId: originalLastReadMessageId,
+        );
+        state = (
+          chats: revertChats,
+          nextCursor: state.nextCursor,
+          hasMore: state.hasMore,
+        );
+      }
+    }
   }
 
   void _applyRealtimeEvent(ApiWsEvent event) {
