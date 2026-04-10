@@ -42,11 +42,49 @@ Map<String, dynamic> _$AttachmentItemDtoToJson(AttachmentItemDto instance) =>
       'height': instance.height,
     };
 
+StickerMediaDto _$StickerMediaDtoFromJson(Map<String, dynamic> json) =>
+    StickerMediaDto(
+      id: const StringValueConverter().fromJson(json['id']),
+      url: json['url'] as String? ?? '',
+      contentType: json['contentType'] as String? ?? 'image/webp',
+      size: (json['size'] as num?)?.toInt() ?? 0,
+      width: (json['width'] as num?)?.toInt(),
+      height: (json['height'] as num?)?.toInt(),
+    );
+
+Map<String, dynamic> _$StickerMediaDtoToJson(StickerMediaDto instance) =>
+    <String, dynamic>{
+      'id': const StringValueConverter().toJson(instance.id),
+      'url': instance.url,
+      'contentType': instance.contentType,
+      'size': instance.size,
+      'width': instance.width,
+      'height': instance.height,
+    };
+
 StickerSummaryDto _$StickerSummaryDtoFromJson(Map<String, dynamic> json) =>
-    StickerSummaryDto(emoji: json['emoji'] as String?);
+    StickerSummaryDto(
+      id: json['id'] as String?,
+      media: json['media'] == null
+          ? null
+          : StickerMediaDto.fromJson(json['media'] as Map<String, dynamic>),
+      emoji: json['emoji'] as String?,
+      name: json['name'] as String?,
+      description: json['description'] as String?,
+      createdAt: const NullableDateTimeConverter().fromJson(json['createdAt']),
+      isFavorited: json['isFavorited'] as bool?,
+    );
 
 Map<String, dynamic> _$StickerSummaryDtoToJson(StickerSummaryDto instance) =>
-    <String, dynamic>{'emoji': instance.emoji};
+    <String, dynamic>{
+      'id': instance.id,
+      'media': instance.media?.toJson(),
+      'emoji': instance.emoji,
+      'name': instance.name,
+      'description': instance.description,
+      'createdAt': const NullableDateTimeConverter().toJson(instance.createdAt),
+      'isFavorited': instance.isFavorited,
+    };
 
 ReactionReactorDto _$ReactionReactorDtoFromJson(Map<String, dynamic> json) =>
     ReactionReactorDto(
@@ -235,6 +273,7 @@ SendMessageRequestDto _$SendMessageRequestDtoFromJson(
           .toList() ??
       const <String>[],
   replyToId: (json['replyToId'] as num?)?.toInt(),
+  stickerId: json['stickerId'] as String?,
 );
 
 Map<String, dynamic> _$SendMessageRequestDtoToJson(
@@ -245,6 +284,7 @@ Map<String, dynamic> _$SendMessageRequestDtoToJson(
   'clientGeneratedId': instance.clientGeneratedId,
   'attachmentIds': instance.attachmentIds,
   'replyToId': instance.replyToId,
+  'stickerId': ?instance.stickerId,
 };
 
 EditMessageRequestDto _$EditMessageRequestDtoFromJson(

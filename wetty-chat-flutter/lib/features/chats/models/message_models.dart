@@ -39,9 +39,31 @@ abstract class AttachmentItem with _$AttachmentItem {
 }
 
 @freezed
+abstract class StickerMedia with _$StickerMedia {
+  const StickerMedia._();
+
+  const factory StickerMedia({
+    required String id,
+    required String url,
+    required String contentType,
+    required int size,
+    int? width,
+    int? height,
+  }) = _StickerMedia;
+
+  bool get isVideo => contentType.startsWith('video/');
+}
+
+@freezed
 abstract class StickerSummary with _$StickerSummary {
   const factory StickerSummary({
+    String? id,
+    StickerMedia? media,
     String? emoji,
+    String? name,
+    String? description,
+    DateTime? createdAt,
+    bool? isFavorited,
   }) = _StickerSummary;
 }
 
@@ -66,10 +88,8 @@ abstract class ReactionSummary with _$ReactionSummary {
 
 @freezed
 abstract class MentionInfo with _$MentionInfo {
-  const factory MentionInfo({
-    required int uid,
-    String? username,
-  }) = _MentionInfo;
+  const factory MentionInfo({required int uid, String? username}) =
+      _MentionInfo;
 }
 
 @freezed
@@ -90,9 +110,7 @@ abstract class ReplyToMessage with _$ReplyToMessage {
 
 @freezed
 abstract class ThreadInfo with _$ThreadInfo {
-  const factory ThreadInfo({
-    required int replyCount,
-  }) = _ThreadInfo;
+  const factory ThreadInfo({required int replyCount}) = _ThreadInfo;
 }
 
 @freezed

@@ -60,10 +60,53 @@ class AttachmentItemDto {
 }
 
 @JsonSerializable(explicitToJson: true)
-class StickerSummaryDto {
-  const StickerSummaryDto({this.emoji});
+class StickerMediaDto {
+  const StickerMediaDto({
+    required this.id,
+    this.url = '',
+    this.contentType = 'image/webp',
+    this.size = 0,
+    this.width,
+    this.height,
+  });
 
+  @StringValueConverter()
+  final String id;
+  @JsonKey(defaultValue: '')
+  final String url;
+  @JsonKey(defaultValue: 'image/webp')
+  final String contentType;
+  @JsonKey(defaultValue: 0)
+  final int size;
+  final int? width;
+  final int? height;
+
+  factory StickerMediaDto.fromJson(Map<String, dynamic> json) =>
+      _$StickerMediaDtoFromJson(json);
+
+  Map<String, dynamic> toJson() => _$StickerMediaDtoToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
+class StickerSummaryDto {
+  const StickerSummaryDto({
+    this.id,
+    this.media,
+    this.emoji,
+    this.name,
+    this.description,
+    this.createdAt,
+    this.isFavorited,
+  });
+
+  final String? id;
+  final StickerMediaDto? media;
   final String? emoji;
+  final String? name;
+  final String? description;
+  @NullableDateTimeConverter()
+  final DateTime? createdAt;
+  final bool? isFavorited;
 
   factory StickerSummaryDto.fromJson(Map<String, dynamic> json) =>
       _$StickerSummaryDtoFromJson(json);
@@ -254,6 +297,7 @@ class SendMessageRequestDto {
     required this.clientGeneratedId,
     this.attachmentIds = const <String>[],
     this.replyToId,
+    this.stickerId,
   });
 
   final String message;
@@ -261,6 +305,8 @@ class SendMessageRequestDto {
   final String clientGeneratedId;
   final List<String> attachmentIds;
   final int? replyToId;
+  @JsonKey(includeIfNull: false)
+  final String? stickerId;
 
   factory SendMessageRequestDto.fromJson(Map<String, dynamic> json) =>
       _$SendMessageRequestDtoFromJson(json);

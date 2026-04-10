@@ -10,6 +10,7 @@ import '../video_popup_player.dart';
 import 'linkified_message_text.dart';
 import 'message_bubble_presentation.dart';
 import 'message_reactions.dart';
+import 'sticker_image_widget.dart';
 import 'message_thread_indicator.dart';
 import 'voice_message_bubble.dart';
 
@@ -381,30 +382,46 @@ class MessageBubbleContent extends StatelessWidget {
         border: Border(left: BorderSide(color: quoteBorderColor, width: 3)),
         borderRadius: BorderRadius.circular(6),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            replySender,
-            style: _bubbleStyle(
-              context,
-              fontWeight: FontWeight.w600,
-              fontSize: 11,
-              color: presentation.textColor.withAlpha(217),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  replySender,
+                  style: _bubbleStyle(
+                    context,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                    color: presentation.textColor.withAlpha(217),
+                  ),
+                ),
+                Text(
+                  formatReplyPreview(reply),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: _bubbleStyle(
+                    context,
+                    fontSize: 12,
+                    fontWeight: _bubbleFontWeight,
+                    color: presentation.textColor.withAlpha(179),
+                  ),
+                ),
+              ],
             ),
           ),
-          Text(
-            formatReplyPreview(reply),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: _bubbleStyle(
-              context,
-              fontSize: 12,
-              fontWeight: _bubbleFontWeight,
-              color: presentation.textColor.withAlpha(179),
+          if (reply.messageType == 'sticker' && reply.sticker?.media != null)
+            Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: StickerImage(
+                media: reply.sticker?.media,
+                emoji: reply.sticker?.emoji,
+                size: 28,
+              ),
             ),
-          ),
         ],
       ),
     );

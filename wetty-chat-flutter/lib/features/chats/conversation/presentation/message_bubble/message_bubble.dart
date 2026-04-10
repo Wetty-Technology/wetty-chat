@@ -5,6 +5,7 @@ import '../../../../../app/theme/style_config.dart';
 import '../../../models/message_models.dart';
 import 'message_bubble_content.dart';
 import 'message_bubble_presentation.dart';
+import 'sticker_message_bubble.dart';
 
 class MessageBubble extends StatelessWidget {
   const MessageBubble({
@@ -34,6 +35,29 @@ class MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (message.messageType == 'sticker') {
+      return _buildStickerBubble();
+    }
+    return _buildStandardBubble(context);
+  }
+
+  Widget _buildStickerBubble() {
+    return IntrinsicWidth(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: presentation.maxBubbleWidth),
+        child: StickerMessageBubble(
+          message: message,
+          presentation: presentation,
+          isMe: isMe,
+          onTapReply: onTapReply,
+          onOpenThread: onOpenThread,
+          onToggleReaction: onToggleReaction,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStandardBubble(BuildContext context) {
     const bubbleRadius = Radius.circular(18);
     const tailRadius = Radius.circular(4);
     final borderRadius = BorderRadius.only(

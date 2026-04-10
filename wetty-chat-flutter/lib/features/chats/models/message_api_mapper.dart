@@ -20,8 +20,27 @@ extension AttachmentItemDtoMapper on AttachmentItemDto {
   );
 }
 
+extension StickerMediaDtoMapper on StickerMediaDto {
+  StickerMedia toDomain() => StickerMedia(
+    id: id,
+    url: url,
+    contentType: contentType,
+    size: size,
+    width: width,
+    height: height,
+  );
+}
+
 extension StickerSummaryDtoMapper on StickerSummaryDto {
-  StickerSummary toDomain() => StickerSummary(emoji: emoji);
+  StickerSummary toDomain() => StickerSummary(
+    id: id,
+    media: media?.toDomain(),
+    emoji: emoji,
+    name: name,
+    description: description,
+    createdAt: createdAt,
+    isFavorited: isFavorited,
+  );
 }
 
 extension ReactionReactorDtoMapper on ReactionReactorDto {
