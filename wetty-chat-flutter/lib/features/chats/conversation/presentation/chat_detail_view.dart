@@ -53,6 +53,16 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
       name: 'ChatDetailView',
     );
     WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      unawaited(
+        ref
+            .read(conversationTimelineViewModelProvider(_timelineArgs).notifier)
+            .refreshEntryOnOpenIfNeeded(),
+      );
+    });
   }
 
   @override

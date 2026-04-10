@@ -221,8 +221,7 @@ class _Subtitle extends StatelessWidget {
                   ),
                 ),
         ),
-        if (unreadCount > 0)
-          _UnreadBadge(count: unreadCount, isMuted: isMuted),
+        if (unreadCount > 0) _UnreadBadge(count: unreadCount, isMuted: isMuted),
       ],
     );
   }

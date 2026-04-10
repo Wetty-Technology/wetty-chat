@@ -182,14 +182,108 @@ void main() {
       notifier.consumeLocatePlan();
       expect(container.read(provider).value?.locatePlan, isNull);
     });
+
+    test('warm latest launch restores cache then refreshes on open', () async {
+      final service = _FakeMessageApiService(_buildMessages());
+      final container = _createContainer(service: service);
+      addTearDown(container.dispose);
+      final provider = conversationTimelineViewModelProvider(_args());
+      final sub = container.listen(provider, (_, _) {}, fireImmediately: true);
+      addTearDown(sub.close);
+
+      await container.read(provider.future);
+      expect(service.latestFetchCount, 1);
+
+      service.appendMessage(151);
+      container.invalidate(provider);
+
+      final restored = await container.read(provider.future);
+      expect(restored.windowStableKeys.last, 'server:150');
+      expect(service.latestFetchCount, 1);
+
+      await container.read(provider.notifier).refreshEntryOnOpenIfNeeded();
+      final refreshed = container.read(provider).value;
+
+      expect(refreshed, isNotNull);
+      expect(service.latestFetchCount, 2);
+      expect(refreshed!.windowStableKeys.last, 'server:151');
+      expect(refreshed.windowMode, ConversationWindowMode.liveLatest);
+    });
+
+    test(
+      'warm anchored launch restores cache then refreshes on open',
+      () async {
+        final service = _FakeMessageApiService(_buildMessages());
+        final container = _createContainer(service: service);
+        addTearDown(container.dispose);
+        final latestProvider = conversationTimelineViewModelProvider(_args());
+        final anchoredProvider = conversationTimelineViewModelProvider((
+          scope: const ConversationScope.chat(chatId: '1'),
+          launchRequest: const LaunchRequest.message(messageId: 149),
+        ));
+
+        await container.read(latestProvider.future);
+        expect(service.latestFetchCount, 1);
+
+        service.appendMessage(151);
+
+        final restored = await container.read(anchoredProvider.future);
+        expect(restored.anchorMessageId, 149);
+        expect(restored.windowStableKeys.last, 'server:150');
+        expect(service.aroundFetchCount, 0);
+
+        await container
+            .read(anchoredProvider.notifier)
+            .refreshEntryOnOpenIfNeeded();
+        final refreshed = container.read(anchoredProvider).value;
+
+        expect(refreshed, isNotNull);
+        expect(service.aroundFetchCount, 1);
+        expect(refreshed!.anchorMessageId, 149);
+        expect(refreshed.windowMode, ConversationWindowMode.anchoredTarget);
+        expect(refreshed.windowStableKeys.last, 'server:151');
+        expect(refreshed.canLoadNewer, isFalse);
+      },
+    );
+
+    test(
+      'entry refresh does not clobber mode changes before it completes',
+      () async {
+        final service = _FakeMessageApiService(_buildMessages());
+        final container = _createContainer(service: service);
+        addTearDown(container.dispose);
+        final provider = conversationTimelineViewModelProvider(_args());
+        final sub = container.listen(
+          provider,
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(sub.close);
+
+        await container.read(provider.future);
+        service.appendMessage(151);
+        container.invalidate(provider);
+        await container.read(provider.future);
+
+        final notifier = container.read(provider.notifier);
+        await notifier.jumpToMessage(120);
+        await notifier.refreshEntryOnOpenIfNeeded();
+        final state = container.read(provider).value;
+
+        expect(state, isNotNull);
+        expect(state!.windowMode, ConversationWindowMode.anchoredTarget);
+        expect(state.anchorMessageId, 120);
+        expect(service.latestFetchCount, 2);
+      },
+    );
   });
 }
 
-ProviderContainer _createContainer() {
+ProviderContainer _createContainer({_FakeMessageApiService? service}) {
   return ProviderContainer(
     overrides: [
       messageApiServiceProvider.overrideWithValue(
-        _FakeMessageApiService(_buildMessages()),
+        service ?? _FakeMessageApiService(_buildMessages()),
       ),
       wsEventsProvider.overrideWith((ref) => const Stream<ApiWsEvent>.empty()),
     ],
@@ -220,6 +314,21 @@ class _FakeMessageApiService extends MessageApiService {
   _FakeMessageApiService(this._messages) : super(Dio(), 1);
 
   final List<MessageItemDto> _messages;
+  int latestFetchCount = 0;
+  int aroundFetchCount = 0;
+
+  void appendMessage(int id) {
+    _messages.add(
+      MessageItemDto(
+        id: id,
+        message: 'Message $id',
+        sender: const SenderDto(uid: 7, name: 'Tester'),
+        chatId: 1,
+        createdAt: DateTime.utc(2026, 1, 1).add(Duration(minutes: id)),
+        clientGeneratedId: 'cg-$id',
+      ),
+    );
+  }
 
   @override
   Future<ListMessagesResponseDto> fetchConversationMessages(
@@ -229,6 +338,11 @@ class _FakeMessageApiService extends MessageApiService {
     int? after,
     int? around,
   }) async {
+    if (around != null) {
+      aroundFetchCount += 1;
+    } else if (before == null && after == null) {
+      latestFetchCount += 1;
+    }
     if (around != null) {
       final index = _messages.indexWhere((message) => message.id == around);
       if (index < 0) {

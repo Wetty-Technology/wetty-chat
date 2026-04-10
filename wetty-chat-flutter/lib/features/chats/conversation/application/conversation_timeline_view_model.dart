@@ -144,15 +144,17 @@ class ConversationTimelineViewModel
   static const int _windowSize = ConversationRepository.defaultWindowSize;
   static const int _pageSize = ConversationRepository.pageSize;
 
-  late final ConversationRepository _repository;
+  late ConversationRepository _repository;
   Timer? _readSyncDebounceTimer;
   Timer? _highlightTimer;
   int? _currentReadId;
   int? _lastSyncedReadId;
   bool _isDisposed = false;
+  bool _hasPendingEntryRefresh = false;
 
   @override
   Future<ConversationTimelineState> build() async {
+    _isDisposed = false;
     developer.log(
       'build() called — scope=${arg.scope}, '
       'launchRequest=${arg.launchRequest}',
@@ -180,8 +182,21 @@ class ConversationTimelineViewModel
   Future<ConversationTimelineState> _loadInitial(
     LaunchRequest launchRequest,
   ) async {
+    _hasPendingEntryRefresh = false;
     switch (launchRequest) {
       case LatestLaunchRequest():
+        final cachedKeys = _repository.latestWindowStableKeys(
+          limit: _windowSize,
+        );
+        if (cachedKeys.isNotEmpty) {
+          _hasPendingEntryRefresh = true;
+          return _buildState(
+            windowStableKeys: cachedKeys,
+            windowMode: ConversationWindowMode.liveLatest,
+            viewportPlacement: ConversationViewportPlacement.liveEdge,
+            locatePlan: _latestLocatePlan(),
+          );
+        }
         final messages = await _repository.loadLatestWindow(limit: _windowSize);
         return _buildState(
           windowStableKeys: messages.map((item) => item.stableKey).toList(),
@@ -191,6 +206,24 @@ class ConversationTimelineViewModel
         );
       case UnreadLaunchRequest(:final unreadMessageId):
         final anchorId = unreadMessageId;
+        final cachedMessages = _repository.cachedWindowAroundMessage(
+          anchorId,
+          before: _windowSize ~/ 2,
+          after: _windowSize ~/ 2,
+        );
+        if (cachedMessages.isNotEmpty) {
+          _hasPendingEntryRefresh = true;
+          return _buildState(
+            windowStableKeys: cachedMessages
+                .map((item) => item.stableKey)
+                .toList(),
+            windowMode: ConversationWindowMode.anchoredTarget,
+            viewportPlacement: ConversationViewportPlacement.topPreferred,
+            anchorMessageId: anchorId,
+            unreadMarkerMessageId: anchorId,
+            locatePlan: _messageLocatePlan(anchorId),
+          );
+        }
         final messages = await _repository.loadAroundMessage(
           anchorId,
           before: _windowSize ~/ 2,
@@ -216,6 +249,28 @@ class ConversationTimelineViewModel
         );
       case MessageLaunchRequest(:final messageId, :final highlight):
         final anchorId = messageId;
+        final cachedMessages = _repository.cachedWindowAroundMessage(
+          anchorId,
+          before: _windowSize ~/ 2,
+          after: _windowSize ~/ 2,
+        );
+        if (cachedMessages.isNotEmpty) {
+          _hasPendingEntryRefresh = true;
+          final nextState = _buildState(
+            windowStableKeys: cachedMessages
+                .map((item) => item.stableKey)
+                .toList(),
+            windowMode: ConversationWindowMode.anchoredTarget,
+            viewportPlacement: ConversationViewportPlacement.topPreferred,
+            anchorMessageId: anchorId,
+            highlightedMessageId: highlight ? anchorId : null,
+            locatePlan: _messageLocatePlan(anchorId),
+          );
+          if (highlight) {
+            _scheduleHighlightClear();
+          }
+          return nextState;
+        }
         final messages = await _repository.loadAroundMessage(
           anchorId,
           before: _windowSize ~/ 2,
@@ -243,6 +298,120 @@ class ConversationTimelineViewModel
           _scheduleHighlightClear();
         }
         return nextState;
+    }
+  }
+
+  Future<void> refreshEntryOnOpenIfNeeded() async {
+    if (!_hasPendingEntryRefresh) {
+      return;
+    }
+    _hasPendingEntryRefresh = false;
+    switch (arg.launchRequest) {
+      case LatestLaunchRequest():
+        await _refreshLatestOnOpen();
+      case UnreadLaunchRequest(:final unreadMessageId):
+        await _refreshAnchorOnOpen(unreadMessageId);
+      case MessageLaunchRequest(:final messageId):
+        await _refreshAnchorOnOpen(messageId);
+    }
+  }
+
+  Future<void> _refreshLatestOnOpen() async {
+    try {
+      final latest = await _repository.refreshLatestWindow(limit: _windowSize);
+      final current = state.value;
+      if (current == null ||
+          current.windowMode != ConversationWindowMode.liveLatest) {
+        return;
+      }
+      _setStateIfActive(
+        AsyncData(
+          _buildState(
+            windowStableKeys: latest.map((item) => item.stableKey).toList(),
+            windowMode: ConversationWindowMode.liveLatest,
+            viewportPlacement: ConversationViewportPlacement.liveEdge,
+            highlightedMessageId: current.highlightedMessageId,
+            infoMessage: current.infoMessage,
+            shouldRefreshChats: current.shouldRefreshChats,
+            pendingLiveCount: current.pendingLiveCount,
+            locatePlan: current.locatePlan,
+          ).copyWith(
+            isLoadingOlder: current.isLoadingOlder,
+            isLoadingNewer: current.isLoadingNewer,
+          ),
+        ),
+      );
+    } catch (error, stackTrace) {
+      developer.log(
+        'refresh latest on open failed',
+        name: 'TimelineVM',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  Future<void> _refreshAnchorOnOpen(int anchorId) async {
+    try {
+      final messages = await _repository.refreshAroundMessage(
+        anchorId,
+        before: _windowSize ~/ 2,
+        after: _windowSize ~/ 2,
+      );
+      final current = state.value;
+      if (current == null ||
+          current.windowMode != ConversationWindowMode.anchoredTarget ||
+          current.anchorMessageId != anchorId) {
+        return;
+      }
+      if (messages.isEmpty) {
+        final latest = await _repository.refreshLatestWindow(
+          limit: _windowSize,
+        );
+        final fallbackState = _buildState(
+          windowStableKeys: latest.map((item) => item.stableKey).toList(),
+          windowMode: ConversationWindowMode.liveLatest,
+          viewportPlacement: ConversationViewportPlacement.liveEdge,
+          infoMessage: 'Message unavailable',
+          shouldRefreshChats: current.shouldRefreshChats,
+          locatePlan: current.locatePlan ?? _latestLocatePlan(),
+        );
+        _setStateIfActive(
+          AsyncData(
+            fallbackState.copyWith(
+              isLoadingOlder: current.isLoadingOlder,
+              isLoadingNewer: current.isLoadingNewer,
+            ),
+          ),
+        );
+        return;
+      }
+      _setStateIfActive(
+        AsyncData(
+          _buildState(
+            windowStableKeys: messages.map((item) => item.stableKey).toList(),
+            windowMode: ConversationWindowMode.anchoredTarget,
+            viewportPlacement: ConversationViewportPlacement.topPreferred,
+            anchorMessageId: anchorId,
+            unreadMarkerMessageId: current.unreadMarkerMessageId,
+            highlightedMessageId: current.highlightedMessageId,
+            infoMessage: current.infoMessage,
+            shouldRefreshChats: current.shouldRefreshChats,
+            pendingLiveCount: current.pendingLiveCount,
+            locatePlan: current.locatePlan,
+          ).copyWith(
+            isLoadingOlder: current.isLoadingOlder,
+            isLoadingNewer: current.isLoadingNewer,
+          ),
+        ),
+      );
+    } catch (error, stackTrace) {
+      developer.log(
+        'refresh anchor on open failed',
+        name: 'TimelineVM',
+        error: error,
+        stackTrace: stackTrace,
+      );
     }
   }
 

@@ -187,6 +187,41 @@ class ConversationRepository {
   List<String> latestWindowStableKeys({int limit = defaultWindowSize}) =>
       _latestWindowStableKeys(limit);
 
+  List<ConversationMessage> cachedWindowAroundMessage(
+    int messageId, {
+    int before = defaultWindowSize ~/ 2,
+    int after = defaultWindowSize ~/ 2,
+  }) {
+    final keys = _windowKeysAroundServerMessage(
+      messageId,
+      before: before,
+      after: after,
+    );
+    return _messagesForWindow(keys);
+  }
+
+  Future<List<ConversationMessage>> refreshAroundMessage(
+    int messageId, {
+    int before = defaultWindowSize ~/ 2,
+    int after = defaultWindowSize ~/ 2,
+  }) async {
+    final response = await _service.fetchConversationMessages(
+      scope,
+      around: messageId,
+      max: before + after + 1,
+    );
+    if (response.messages.isEmpty) {
+      return const <ConversationMessage>[];
+    }
+    _mergeDtos(response.messages);
+    final keys = _windowKeysAroundServerMessage(
+      messageId,
+      before: before,
+      after: after,
+    );
+    return _messagesForWindow(keys);
+  }
+
   /// Trim a window to [maxEntries] entries centered around [anchorKey],
   /// biased toward the [olderBias] direction. Returns null if the anchor is
   /// not found in [stableKeys].

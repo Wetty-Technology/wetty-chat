@@ -57,6 +57,16 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
       name: 'ThreadDetailView',
     );
     WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      unawaited(
+        ref
+            .read(conversationTimelineViewModelProvider(_timelineArgs).notifier)
+            .refreshEntryOnOpenIfNeeded(),
+      );
+    });
   }
 
   @override
