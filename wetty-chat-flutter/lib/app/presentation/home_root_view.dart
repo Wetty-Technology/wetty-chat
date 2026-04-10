@@ -1,30 +1,36 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/notifications/unread_badge_provider.dart';
 import '../theme/style_config.dart';
 
 /// Shell widget for the [StatefulShellRoute.indexedStack].
 /// Renders the active branch content with a custom bottom navigation bar.
-class HomeShell extends StatelessWidget {
+class HomeShell extends ConsumerWidget {
   const HomeShell({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
 
-  static const _tabs = [
-    _HomeTabData(icon: CupertinoIcons.chat_bubble_2_fill, label: 'Chats'),
-    _HomeTabData(icon: CupertinoIcons.gear_alt_fill, label: 'Settings'),
-  ];
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.appColors;
+    final unreadState = ref.watch(unreadBadgeProvider);
+    final tabs = [
+      _HomeTabData(
+        icon: CupertinoIcons.chat_bubble_2_fill,
+        label: 'Chats',
+        badgeCount: unreadState.combinedUnreadTotal,
+      ),
+      const _HomeTabData(icon: CupertinoIcons.gear_alt_fill, label: 'Settings'),
+    ];
     return DecoratedBox(
       decoration: BoxDecoration(color: colors.backgroundPrimary),
       child: Column(
         children: [
           Expanded(child: navigationShell),
           _BottomNavBar(
-            items: _tabs,
+            items: tabs,
             selectedIndex: navigationShell.currentIndex,
             onTap: (index) => navigationShell.goBranch(
               index,
@@ -105,7 +111,18 @@ class _BottomNavItem extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(data.icon, size: 24, color: color),
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(data.icon, size: 24, color: color),
+                  if (data.badgeCount > 0)
+                    Positioned(
+                      top: -4,
+                      right: -10,
+                      child: _TabBadge(count: data.badgeCount),
+                    ),
+                ],
+              ),
               const SizedBox(height: 3),
               Text(
                 data.label,
@@ -124,8 +141,41 @@ class _BottomNavItem extends StatelessWidget {
 }
 
 class _HomeTabData {
-  const _HomeTabData({required this.icon, required this.label});
+  const _HomeTabData({
+    required this.icon,
+    required this.label,
+    this.badgeCount = 0,
+  });
 
   final IconData icon;
   final String label;
+  final int badgeCount;
+}
+
+class _TabBadge extends StatelessWidget {
+  const _TabBadge({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = count > 99 ? '99+' : '$count';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemRed,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      constraints: const BoxConstraints(minWidth: 16),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: appOnDarkTextStyle(
+          context,
+          fontSize: AppFontSizes.unreadBadge,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
 }

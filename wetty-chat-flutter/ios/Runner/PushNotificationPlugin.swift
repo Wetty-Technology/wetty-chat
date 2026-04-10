@@ -160,9 +160,8 @@ class PushNotificationPlugin: NSObject, FlutterPlugin, UNUserNotificationCenterD
         DispatchQueue.main.async {
             if #available(iOS 16.0, *) {
                 UNUserNotificationCenter.current().setBadgeCount(count)
-            } else {
-                UIApplication.shared.applicationIconBadgeNumber = count
             }
+            UIApplication.shared.applicationIconBadgeNumber = count
         }
     }
 

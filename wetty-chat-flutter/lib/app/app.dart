@@ -6,6 +6,7 @@ import '../core/network/api_config.dart';
 import '../core/notifications/apns_channel.dart';
 import '../core/notifications/notification_tap_handler.dart';
 import '../core/notifications/push_notification_provider.dart';
+import '../core/notifications/unread_badge_provider.dart';
 import '../core/session/dev_session_store.dart';
 import '../core/settings/app_settings_store.dart';
 import 'routing/app_router.dart';
@@ -41,6 +42,7 @@ class _WettyChatAppState extends ConsumerState<WettyChatApp>
     if (state == AppLifecycleState.resumed) {
       // Retry push subscription if a previous attempt failed.
       ref.read(pushNotificationProvider.notifier).ensureSubscribed();
+      ref.read(unreadBadgeProvider.notifier).refresh();
     }
   }
 
@@ -50,7 +52,12 @@ class _WettyChatAppState extends ConsumerState<WettyChatApp>
 
     final apns = ref.read(apnsChannelProvider);
     final router = ref.read(appRouterProvider);
-    _tapHandler = NotificationTapHandler(apns, router);
+    _tapHandler = NotificationTapHandler(
+      apns,
+      router,
+      onNotificationHandled: () =>
+          ref.read(unreadBadgeProvider.notifier).refresh(),
+    );
     _tapHandler!.handleLaunchNotification();
   }
 
@@ -60,6 +67,7 @@ class _WettyChatAppState extends ConsumerState<WettyChatApp>
     final locale = settings.language.toLocale();
     final router = ref.watch(appRouterProvider);
     final session = ref.watch(authSessionProvider);
+    ref.watch(unreadBadgeProvider);
 
     // Keep ApiSession bridge in sync for deep presentation-layer code.
     ApiSession.updateSession(

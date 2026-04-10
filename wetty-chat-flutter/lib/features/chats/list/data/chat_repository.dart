@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/websocket_api_models.dart';
 import '../../../../core/network/websocket_service.dart';
+import '../../../../core/notifications/unread_badge_provider.dart';
 import '../../../../core/session/dev_session_store.dart';
 import '../../models/chat_api_mapper.dart';
 import '../../models/chat_models.dart';
@@ -90,6 +91,7 @@ class ChatListNotifier extends Notifier<ChatListState> {
       return;
     }
 
+    final previous = state.chats[index];
     final updated = state.chats[index].copyWith(
       name: name,
       mutedUntil: mutedUntil,
@@ -101,15 +103,29 @@ class ChatListNotifier extends Notifier<ChatListState> {
       nextCursor: state.nextCursor,
       hasMore: state.hasMore,
     );
+    _applyBadgeDelta(
+      previousUnreadCount: previous.unreadCount,
+      previousMutedUntil: previous.mutedUntil,
+      nextUnreadCount: updated.unreadCount,
+      nextMutedUntil: updated.mutedUntil,
+    );
   }
 
   void removeChat(String chatId) {
+    final existing = state.chats.where((chat) => chat.id == chatId).firstOrNull;
     final chats = state.chats.where((c) => c.id != chatId).toList();
     state = (
       chats: chats,
       nextCursor: state.nextCursor,
       hasMore: state.hasMore,
     );
+    if (existing != null) {
+      _applyBadgeDelta(
+        previousUnreadCount: existing.unreadCount,
+        previousMutedUntil: existing.mutedUntil,
+        nextUnreadCount: 0,
+      );
+    }
   }
 
   void updateChatMutedUntil({
@@ -118,12 +134,20 @@ class ChatListNotifier extends Notifier<ChatListState> {
   }) {
     final index = state.chats.indexWhere((chat) => chat.id == chatId);
     if (index < 0) return;
+    final previous = state.chats[index];
     final chats = [...state.chats];
-    chats[index] = state.chats[index].copyWith(mutedUntil: mutedUntil);
+    final updated = state.chats[index].copyWith(mutedUntil: mutedUntil);
+    chats[index] = updated;
     state = (
       chats: chats,
       nextCursor: state.nextCursor,
       hasMore: state.hasMore,
+    );
+    _applyBadgeDelta(
+      previousUnreadCount: previous.unreadCount,
+      previousMutedUntil: previous.mutedUntil,
+      nextUnreadCount: updated.unreadCount,
+      nextMutedUntil: updated.mutedUntil,
     );
   }
 
@@ -148,6 +172,12 @@ class ChatListNotifier extends Notifier<ChatListState> {
       nextCursor: state.nextCursor,
       hasMore: state.hasMore,
     );
+    _applyBadgeDelta(
+      previousUnreadCount: current.unreadCount,
+      previousMutedUntil: current.mutedUntil,
+      nextUnreadCount: nextUnreadCount,
+      nextMutedUntil: current.mutedUntil,
+    );
   }
 
   void recordOutgoingMessage(ConversationMessage message) {
@@ -162,6 +192,8 @@ class ChatListNotifier extends Notifier<ChatListState> {
     final updated = previous.copyWith(
       lastMessage: _toMessageItem(message),
       lastMessageAt: message.createdAt,
+      unreadCount: 0,
+      lastReadMessageId: message.serverMessageId?.toString(),
     );
     final chats = [...state.chats]
       ..removeAt(index)
@@ -171,6 +203,13 @@ class ChatListNotifier extends Notifier<ChatListState> {
       nextCursor: state.nextCursor,
       hasMore: state.hasMore,
     );
+    _applyBadgeDelta(
+      previousUnreadCount: previous.unreadCount,
+      previousMutedUntil: previous.mutedUntil,
+      nextUnreadCount: updated.unreadCount,
+      nextMutedUntil: updated.mutedUntil,
+    );
+    ref.read(unreadBadgeProvider.notifier).scheduleReconcile();
   }
 
   Future<void> markChatReadViaSwipe({required String chatId}) async {
@@ -195,11 +234,18 @@ class ChatListNotifier extends Notifier<ChatListState> {
       nextCursor: state.nextCursor,
       hasMore: state.hasMore,
     );
+    _applyBadgeDelta(
+      previousUnreadCount: originalUnreadCount,
+      previousMutedUntil: current.mutedUntil,
+      nextUnreadCount: 0,
+      nextMutedUntil: current.mutedUntil,
+    );
 
     try {
       await ref
           .read(messageApiServiceProvider)
           .markMessagesAsRead(chatId, lastMessageId);
+      ref.read(unreadBadgeProvider.notifier).scheduleReconcile();
     } catch (e) {
       debugPrint('markChatReadViaSwipe failed: $e');
       // Revert on failure.
@@ -214,6 +260,12 @@ class ChatListNotifier extends Notifier<ChatListState> {
           chats: revertChats,
           nextCursor: state.nextCursor,
           hasMore: state.hasMore,
+        );
+        _applyBadgeDelta(
+          previousUnreadCount: 0,
+          previousMutedUntil: current.mutedUntil,
+          nextUnreadCount: originalUnreadCount,
+          nextMutedUntil: current.mutedUntil,
         );
       }
     }
@@ -235,24 +287,39 @@ class ChatListNotifier extends Notifier<ChatListState> {
       nextCursor: state.nextCursor,
       hasMore: state.hasMore,
     );
+    _applyBadgeDelta(
+      previousUnreadCount: originalUnreadCount,
+      previousMutedUntil: current.mutedUntil,
+      nextUnreadCount: 1,
+      nextMutedUntil: current.mutedUntil,
+    );
 
     try {
-      final response =
-          await ref.read(chatApiServiceProvider).markChatAsUnread(chatId);
+      final response = await ref
+          .read(chatApiServiceProvider)
+          .markChatAsUnread(chatId);
       // Update from server response.
       final successIndex = state.chats.indexWhere((chat) => chat.id == chatId);
       if (successIndex >= 0) {
         final successChats = [...state.chats];
-        successChats[successIndex] = state.chats[successIndex].copyWith(
+        final updated = state.chats[successIndex].copyWith(
           unreadCount: response.unreadCount,
           lastReadMessageId: response.lastReadMessageId,
         );
+        successChats[successIndex] = updated;
         state = (
           chats: successChats,
           nextCursor: state.nextCursor,
           hasMore: state.hasMore,
         );
+        _applyBadgeDelta(
+          previousUnreadCount: 1,
+          previousMutedUntil: current.mutedUntil,
+          nextUnreadCount: updated.unreadCount,
+          nextMutedUntil: current.mutedUntil,
+        );
       }
+      ref.read(unreadBadgeProvider.notifier).scheduleReconcile();
     } catch (e) {
       debugPrint('markChatUnread failed: $e');
       // Revert on failure.
@@ -267,6 +334,12 @@ class ChatListNotifier extends Notifier<ChatListState> {
           chats: revertChats,
           nextCursor: state.nextCursor,
           hasMore: state.hasMore,
+        );
+        _applyBadgeDelta(
+          previousUnreadCount: 1,
+          previousMutedUntil: current.mutedUntil,
+          nextUnreadCount: originalUnreadCount,
+          nextMutedUntil: current.mutedUntil,
         );
       }
     }
@@ -312,6 +385,14 @@ class ChatListNotifier extends Notifier<ChatListState> {
         nextCursor: state.nextCursor,
         hasMore: state.hasMore,
       );
+      if (senderUid != currentUserId) {
+        _applyBadgeDelta(
+          previousUnreadCount: previous.unreadCount,
+          previousMutedUntil: previous.mutedUntil,
+          nextUnreadCount: updated.unreadCount,
+          nextMutedUntil: updated.mutedUntil,
+        );
+      }
       return;
     }
 
@@ -361,6 +442,25 @@ class ChatListNotifier extends Notifier<ChatListState> {
       mentions: message.mentions,
       threadInfo: message.threadInfo,
     );
+  }
+
+  void _applyBadgeDelta({
+    required int previousUnreadCount,
+    DateTime? previousMutedUntil,
+    required int nextUnreadCount,
+    DateTime? nextMutedUntil,
+  }) {
+    final previousContribution = chatBadgeContribution(
+      unreadCount: previousUnreadCount,
+      mutedUntil: previousMutedUntil,
+    );
+    final nextContribution = chatBadgeContribution(
+      unreadCount: nextUnreadCount,
+      mutedUntil: nextMutedUntil,
+    );
+    ref
+        .read(unreadBadgeProvider.notifier)
+        .applyChatUnreadDelta(nextContribution - previousContribution);
   }
 }
 
