@@ -31,11 +31,17 @@ abstract class AttachmentItem with _$AttachmentItem {
     required String fileName,
     int? width,
     int? height,
+    int? durationMs,
+    List<int>? waveformSamples,
   }) = _AttachmentItem;
 
   bool get isImage => kind.startsWith('image/');
   bool get isVideo => kind.startsWith('video/');
   bool get isAudio => kind.startsWith('audio/');
+  bool get hasWaveform =>
+      waveformSamples != null && waveformSamples!.isNotEmpty;
+  Duration? get duration =>
+      durationMs == null ? null : Duration(milliseconds: durationMs!);
 }
 
 @freezed

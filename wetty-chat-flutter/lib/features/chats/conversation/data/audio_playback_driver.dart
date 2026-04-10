@@ -26,6 +26,7 @@ abstract class AudioPlaybackDriver {
   AudioPlaybackStatus get currentStatus;
 
   Future<Duration?> setSourceUrl(String url);
+  Future<Duration?> setSourceFilePath(String path);
   Future<void> play();
   Future<void> pause();
   Future<void> seek(Duration position);
@@ -40,6 +41,7 @@ class JustAudioPlaybackDriver implements AudioPlaybackDriver {
       _player.playerStateStream.listen((_) => _emitStatus()),
       _player.playbackEventStream.listen((_) => _emitStatus()),
       _player.durationStream.listen((_) => _emitStatus()),
+      _player.positionStream.listen((_) => _emitStatus()),
     ];
     _emitStatus();
   }
@@ -58,6 +60,13 @@ class JustAudioPlaybackDriver implements AudioPlaybackDriver {
   @override
   Future<Duration?> setSourceUrl(String url) async {
     final duration = await _player.setUrl(url);
+    _emitStatus();
+    return duration;
+  }
+
+  @override
+  Future<Duration?> setSourceFilePath(String path) async {
+    final duration = await _player.setFilePath(path);
     _emitStatus();
     return duration;
   }

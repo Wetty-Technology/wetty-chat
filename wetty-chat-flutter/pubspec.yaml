@@ -31,6 +31,8 @@ dependencies:
   just_audio: ^0.10.5
   freezed_annotation: ^3.1.0
   flutter_slidable: ^4.0.3
+  just_waveform: ^0.0.7
+  ffmpeg_kit_audio_flutter: ^1.1.0
 
 dev_dependencies:
   build_runner: ^2.8.0

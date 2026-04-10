@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/message_models.dart';
 import '../data/audio_playback_driver.dart';
+import '../data/audio_source_resolver_service.dart';
 
 enum VoiceMessagePlaybackPhase {
   idle,
@@ -71,11 +72,13 @@ class VoiceMessagePlaybackState {
 class VoiceMessagePlaybackController
     extends Notifier<VoiceMessagePlaybackState> {
   late final AudioPlaybackDriver _driver;
+  late final AudioSourceResolverService _audioSourceResolverService;
   StreamSubscription<AudioPlaybackStatus>? _statusSubscription;
 
   @override
   VoiceMessagePlaybackState build() {
     _driver = ref.watch(audioPlaybackDriverProvider);
+    _audioSourceResolverService = ref.watch(audioSourceResolverServiceProvider);
     _statusSubscription = _driver.statusStream.listen(_handleStatus);
     ref.onDispose(() {
       unawaited(_statusSubscription?.cancel());
@@ -132,18 +135,58 @@ class VoiceMessagePlaybackController
     }
   }
 
+  Future<void> playFromPosition(
+    AttachmentItem attachment,
+    Duration position,
+  ) async {
+    if (attachment.url.isEmpty) {
+      return;
+    }
+
+    if (state.activeAttachmentId != attachment.id) {
+      state = state.copyWith(
+        activeAttachmentId: attachment.id,
+        phase: VoiceMessagePlaybackPhase.loading,
+        position: Duration.zero,
+        bufferedPosition: Duration.zero,
+        duration: attachment.duration ?? state.cachedDurations[attachment.id],
+        errorMessage: null,
+      );
+
+      try {
+        final duration = await _setSourceForAttachment(attachment);
+        final effectiveDuration = duration ?? attachment.duration;
+        if (effectiveDuration != null) {
+          _cacheDuration(attachment.id, effectiveDuration);
+        }
+        final target = effectiveDuration == null
+            ? position
+            : _clampDuration(position, Duration.zero, effectiveDuration);
+        await _driver.seek(target);
+        await _driver.play();
+        state = state.copyWith(position: target, errorMessage: null);
+      } catch (error) {
+        _setPlaybackError(error);
+      }
+      return;
+    }
+
+    await seekToAttachment(attachment, position);
+    await _resumeCurrent();
+  }
+
   Future<void> _activateAttachment(AttachmentItem attachment) async {
     state = state.copyWith(
       activeAttachmentId: attachment.id,
       phase: VoiceMessagePlaybackPhase.loading,
       position: Duration.zero,
       bufferedPosition: Duration.zero,
-      duration: state.cachedDurations[attachment.id],
+      duration: attachment.duration ?? state.cachedDurations[attachment.id],
       errorMessage: null,
     );
 
     try {
-      final duration = await _driver.setSourceUrl(attachment.url);
+      final duration = await _setSourceForAttachment(attachment);
       if (duration != null) {
         _cacheDuration(attachment.id, duration);
       }
@@ -167,6 +210,20 @@ class VoiceMessagePlaybackController
     } catch (error) {
       _setPlaybackError(error);
     }
+  }
+
+  Future<Duration?> _setSourceForAttachment(AttachmentItem attachment) async {
+    final source = await _audioSourceResolverService.resolvePlaybackSource(
+      attachment,
+    );
+    if (source == null) {
+      throw StateError('Unable to resolve playable audio source.');
+    }
+
+    if (source.isFile) {
+      return _driver.setSourceFilePath(source.filePath!);
+    }
+    return _driver.setSourceUrl(source.url!);
   }
 
   void _handleStatus(AudioPlaybackStatus status) {

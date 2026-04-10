@@ -2,16 +2,18 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:chahua/features/chats/conversation/application/voice_message_playback_controller.dart';
 import 'package:chahua/features/chats/conversation/data/audio_playback_driver.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
+import 'package:chahua/core/providers/shared_preferences_provider.dart';
 
 void main() {
   group('VoiceMessagePlaybackController', () {
     test('first tap loads and starts playback', () async {
       final driver = FakeAudioPlaybackDriver();
-      final container = _createContainer(driver);
+      final container = await _createContainer(driver);
       addTearDown(container.dispose);
 
       final notifier = container.read(
@@ -31,7 +33,7 @@ void main() {
 
     test('tapping the active message toggles play and pause', () async {
       final driver = FakeAudioPlaybackDriver();
-      final container = _createContainer(driver);
+      final container = await _createContainer(driver);
       addTearDown(container.dispose);
       final attachment = _attachment(
         id: 'a1',
@@ -61,7 +63,7 @@ void main() {
 
     test('switching attachments activates the new message', () async {
       final driver = FakeAudioPlaybackDriver();
-      final container = _createContainer(driver);
+      final container = await _createContainer(driver);
       addTearDown(container.dispose);
       final notifier = container.read(
         voiceMessagePlaybackControllerProvider.notifier,
@@ -85,7 +87,7 @@ void main() {
 
     test('seek updates the active position', () async {
       final driver = FakeAudioPlaybackDriver();
-      final container = _createContainer(driver);
+      final container = await _createContainer(driver);
       addTearDown(container.dispose);
       final notifier = container.read(
         voiceMessagePlaybackControllerProvider.notifier,
@@ -107,7 +109,7 @@ void main() {
 
     test('driver errors move state into error', () async {
       final driver = FakeAudioPlaybackDriver()..throwOnSetUrl = true;
-      final container = _createContainer(driver);
+      final container = await _createContainer(driver);
       addTearDown(container.dispose);
 
       final notifier = container.read(
@@ -124,9 +126,16 @@ void main() {
   });
 }
 
-ProviderContainer _createContainer(FakeAudioPlaybackDriver driver) {
+Future<ProviderContainer> _createContainer(
+  FakeAudioPlaybackDriver driver,
+) async {
+  SharedPreferences.setMockInitialValues(const <String, Object>{});
+  final preferences = await SharedPreferences.getInstance();
   return ProviderContainer(
-    overrides: [audioPlaybackDriverProvider.overrideWithValue(driver)],
+    overrides: [
+      audioPlaybackDriverProvider.overrideWithValue(driver),
+      sharedPreferencesProvider.overrideWithValue(preferences),
+    ],
   );
 }
 
@@ -178,6 +187,11 @@ class FakeAudioPlaybackDriver implements AudioPlaybackDriver {
     );
     _controller.add(_status);
     return _status.duration;
+  }
+
+  @override
+  Future<Duration?> setSourceFilePath(String path) async {
+    return setSourceUrl(path);
   }
 
   @override

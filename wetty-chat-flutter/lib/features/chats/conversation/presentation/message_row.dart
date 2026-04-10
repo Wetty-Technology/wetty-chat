@@ -12,6 +12,7 @@ import '../domain/conversation_message.dart';
 import 'message_avatar.dart';
 import 'message_bubble/message_bubble.dart';
 import 'message_bubble/message_bubble_presentation.dart';
+import 'message_bubble/voice_message_bubble.dart';
 import 'video_popup_player.dart';
 
 class MessageLongPressDetails {
@@ -113,6 +114,11 @@ class _MessageRowState extends State<MessageRow>
       widget.onReply != null &&
       !widget.message.isDeleted &&
       _replyableMessageTypes.contains(widget.message.messageType);
+
+  bool get _isPureAudioMessage =>
+      widget.message.messageType == 'audio' &&
+      widget.message.attachments.length == 1 &&
+      widget.message.attachments.first.isAudio;
 
   void _handleLongPress() {
     final context = _bubbleKey.currentContext;
@@ -245,18 +251,26 @@ class _MessageRowState extends State<MessageRow>
     final avatarColumnWidth =
         MessageBubblePresentation.avatarSlotWidth +
         MessageBubblePresentation.avatarGap;
-    final bubble = MessageBubble(
-      key: _bubbleKey,
-      message: widget.message,
-      presentation: presentation,
-      chatMessageFontSize: widget.chatMessageFontSize,
-      isMe: _isMe,
-      showSenderName: widget.showSenderName,
-      onTapReply: widget.onTapReply,
-      onOpenThread: widget.onOpenThread,
-      onOpenAttachment: _openAttachment,
-      onToggleReaction: widget.onToggleReaction,
-    );
+    final bubble = _isPureAudioMessage
+        ? KeyedSubtree(
+            key: _bubbleKey,
+            child: VoiceMessageBubble(
+              attachment: widget.message.attachments.first,
+              isMe: _isMe,
+            ),
+          )
+        : MessageBubble(
+            key: _bubbleKey,
+            message: widget.message,
+            presentation: presentation,
+            chatMessageFontSize: widget.chatMessageFontSize,
+            isMe: _isMe,
+            showSenderName: widget.showSenderName,
+            onTapReply: widget.onTapReply,
+            onOpenThread: widget.onOpenThread,
+            onOpenAttachment: _openAttachment,
+            onToggleReaction: widget.onToggleReaction,
+          );
     final avatar = _buildAvatar(context, presentation.senderName);
     final trailingAvatarColumn = SizedBox(
       width: avatarColumnWidth,

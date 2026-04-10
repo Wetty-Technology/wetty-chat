@@ -295,9 +295,7 @@ class MessageBubbleContent extends StatelessWidget {
     AttachmentItem attachment, {
     required double maxAttachmentWidth,
   }) {
-    if (attachment.isAudio &&
-        message.messageType == 'audio' &&
-        attachment.url.isNotEmpty) {
+    if (attachment.isAudio && message.messageType == 'audio') {
       return VoiceMessageBubble(attachment: attachment, isMe: isMe);
     }
     if (attachment.isVideo && attachment.url.isNotEmpty) {

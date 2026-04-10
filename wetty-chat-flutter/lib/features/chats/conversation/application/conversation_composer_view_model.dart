@@ -13,6 +13,7 @@ import '../../models/message_models.dart';
 import '../data/attachment_picker_service.dart';
 import '../data/attachment_service.dart';
 import '../data/audio_recorder_service.dart';
+import '../data/audio_waveform_cache_service.dart';
 import '../data/conversation_repository.dart';
 import '../domain/conversation_message.dart';
 import '../domain/conversation_scope.dart';
@@ -56,6 +57,7 @@ class ComposerAudioDraft {
     required this.sizeBytes,
     required this.duration,
     required this.phase,
+    this.waveformSamples = const <int>[],
     this.progress = 0,
   });
 
@@ -65,6 +67,7 @@ class ComposerAudioDraft {
   final int sizeBytes;
   final Duration duration;
   final ComposerAudioDraftPhase phase;
+  final List<int> waveformSamples;
   final double progress;
 
   bool get isUploading => phase == ComposerAudioDraftPhase.uploading;
@@ -80,6 +83,7 @@ class ComposerAudioDraft {
     int? sizeBytes,
     Duration? duration,
     ComposerAudioDraftPhase? phase,
+    List<int>? waveformSamples,
     double? progress,
   }) {
     return ComposerAudioDraft(
@@ -89,6 +93,7 @@ class ComposerAudioDraft {
       sizeBytes: sizeBytes ?? this.sizeBytes,
       duration: duration ?? this.duration,
       phase: phase ?? this.phase,
+      waveformSamples: waveformSamples ?? this.waveformSamples,
       progress: progress ?? this.progress,
     );
   }
@@ -100,6 +105,8 @@ class ComposerAudioDraft {
         kind: mimeType,
         size: sizeBytes,
         fileName: fileName,
+        durationMs: duration.inMilliseconds,
+        waveformSamples: waveformSamples,
       );
 }
 
@@ -297,6 +304,7 @@ class ConversationComposerViewModel
   late final AttachmentService _attachmentService;
   late final AttachmentPickerService _pickerService;
   late final AudioRecorderService _audioRecorderService;
+  late final AudioWaveformCacheService _audioWaveformCacheService;
   late final ConversationScope _scope;
   Timer? _audioDurationTimer;
   DateTime? _audioRecordingStartedAt;
@@ -310,6 +318,7 @@ class ConversationComposerViewModel
     _attachmentService = ref.read(attachmentServiceProvider);
     _pickerService = ref.read(attachmentPickerServiceProvider);
     _audioRecorderService = ref.read(audioRecorderServiceProvider);
+    _audioWaveformCacheService = ref.read(audioWaveformCacheServiceProvider);
     ref.onDispose(() {
       _audioDurationTimer?.cancel();
       unawaited(_audioRecorderService.dispose());
@@ -732,6 +741,13 @@ class ConversationComposerViewModel
           sizeBytes: recorded.sizeBytes,
           duration: recorded.duration,
           phase: ComposerAudioDraftPhase.recorded,
+          waveformSamples:
+              (await _audioWaveformCacheService.primeFromLocalRecording(
+                attachmentId: recorded.fileName,
+                audioFilePath: recorded.path,
+                duration: recorded.duration,
+              ))?.samples ??
+              const <int>[],
         ),
       );
     } on ComposerAudioException {
