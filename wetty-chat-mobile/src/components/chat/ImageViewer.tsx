@@ -673,7 +673,7 @@ export function ImageViewer({ images, initialIndex = 0, onClose }: ImageViewerPr
                 onContextMenu={(e) => {
                   e.stopPropagation();
                 }}
-                onLoad={(event) => {
+                onLoadedMetadata={(event) => {
                   const nextSize = {
                     width: event.currentTarget.videoWidth,
                     height: event.currentTarget.videoHeight,
