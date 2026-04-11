@@ -17,14 +17,15 @@ const getSupportedVoiceMimeType = () => {
     return '';
   }
 
-  const candidates = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/webm', 'audio/ogg;codecs=opus'];
+  const candidates = ['audio/ogg;codecs=opus', 'audio/mp4', 'audio/mpeg'];
   return candidates.find((candidate) => MediaRecorder.isTypeSupported(candidate)) ?? '';
 };
 
 const getVoiceFileExtension = (mimeType: string) => {
-  if (mimeType.includes('mp4')) return 'm4a';
   if (mimeType.includes('ogg')) return 'ogg';
-  return 'webm';
+  if (mimeType.includes('mp4')) return 'm4a';
+  if (mimeType.includes('mpeg')) return 'mp3';
+  return 'ogg';
 };
 
 interface UseVoiceRecorderArgs {
@@ -238,7 +239,7 @@ export function useVoiceRecorder({
           return;
         }
 
-        const blobType = recorder.mimeType || mimeType || 'audio/webm';
+        const blobType = recorder.mimeType || mimeType || 'audio/ogg';
         const file = new File(
           [new Blob(recordedChunks, { type: blobType })],
           `voice-${Date.now()}.${getVoiceFileExtension(blobType)}`,
