@@ -84,7 +84,7 @@ Future<void> _pumpMeasurementApp({
 
 ConversationMessage _buildMessage({required bool isMe}) {
   return ConversationMessage(
-    scope: const ConversationScope.chat('chat-1'),
+    scope: const ConversationScope.chat(chatId: 'chat-1'),
     serverMessageId: isMe ? 42 : 7,
     localMessageId: null,
     clientGeneratedId: 'client-id',

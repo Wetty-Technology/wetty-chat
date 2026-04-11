@@ -96,24 +96,6 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline> {
     '🎉',
   ];
 
-  ConversationMessage? _messageAtEntryIndex(
-    List<TimelineEntry> entries,
-    int index,
-  ) {
-    if (index < 0 || index >= entries.length) {
-      return null;
-    }
-    return switch (entries[index]) {
-      TimelineMessageEntry(:final message) => message,
-      _ => null,
-    };
-  }
-
-  bool _hasSameSenderNeighbor(
-    ConversationMessage message,
-    ConversationMessage? neighbor,
-  ) => neighbor != null && neighbor.sender.uid == message.sender.uid;
-
   @override
   void initState() {
     super.initState();

@@ -280,7 +280,7 @@ as int,
 /// @nodoc
 mixin _$AttachmentItem {
 
- String get id; String get url; String get kind; int get size; String get fileName; int? get width; int? get height;
+ String get id; String get url; String get kind; int get size; String get fileName; int? get width; int? get height; int? get durationMs; List<int>? get waveformSamples;
 /// Create a copy of AttachmentItem
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -291,16 +291,16 @@ $AttachmentItemCopyWith<AttachmentItem> get copyWith => _$AttachmentItemCopyWith
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is AttachmentItem&&(identical(other.id, id) || other.id == id)&&(identical(other.url, url) || other.url == url)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.size, size) || other.size == size)&&(identical(other.fileName, fileName) || other.fileName == fileName)&&(identical(other.width, width) || other.width == width)&&(identical(other.height, height) || other.height == height));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AttachmentItem&&(identical(other.id, id) || other.id == id)&&(identical(other.url, url) || other.url == url)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.size, size) || other.size == size)&&(identical(other.fileName, fileName) || other.fileName == fileName)&&(identical(other.width, width) || other.width == width)&&(identical(other.height, height) || other.height == height)&&(identical(other.durationMs, durationMs) || other.durationMs == durationMs)&&const DeepCollectionEquality().equals(other.waveformSamples, waveformSamples));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,url,kind,size,fileName,width,height);
+int get hashCode => Object.hash(runtimeType,id,url,kind,size,fileName,width,height,durationMs,const DeepCollectionEquality().hash(waveformSamples));
 
 @override
 String toString() {
-  return 'AttachmentItem(id: $id, url: $url, kind: $kind, size: $size, fileName: $fileName, width: $width, height: $height)';
+  return 'AttachmentItem(id: $id, url: $url, kind: $kind, size: $size, fileName: $fileName, width: $width, height: $height, durationMs: $durationMs, waveformSamples: $waveformSamples)';
 }
 
 
@@ -311,7 +311,7 @@ abstract mixin class $AttachmentItemCopyWith<$Res>  {
   factory $AttachmentItemCopyWith(AttachmentItem value, $Res Function(AttachmentItem) _then) = _$AttachmentItemCopyWithImpl;
 @useResult
 $Res call({
- String id, String url, String kind, int size, String fileName, int? width, int? height
+ String id, String url, String kind, int size, String fileName, int? width, int? height, int? durationMs, List<int>? waveformSamples
 });
 
 
@@ -328,7 +328,7 @@ class _$AttachmentItemCopyWithImpl<$Res>
 
 /// Create a copy of AttachmentItem
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? url = null,Object? kind = null,Object? size = null,Object? fileName = null,Object? width = freezed,Object? height = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? url = null,Object? kind = null,Object? size = null,Object? fileName = null,Object? width = freezed,Object? height = freezed,Object? durationMs = freezed,Object? waveformSamples = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,url: null == url ? _self.url : url // ignore: cast_nullable_to_non_nullable
@@ -337,7 +337,9 @@ as String,size: null == size ? _self.size : size // ignore: cast_nullable_to_non
 as int,fileName: null == fileName ? _self.fileName : fileName // ignore: cast_nullable_to_non_nullable
 as String,width: freezed == width ? _self.width : width // ignore: cast_nullable_to_non_nullable
 as int?,height: freezed == height ? _self.height : height // ignore: cast_nullable_to_non_nullable
-as int?,
+as int?,durationMs: freezed == durationMs ? _self.durationMs : durationMs // ignore: cast_nullable_to_non_nullable
+as int?,waveformSamples: freezed == waveformSamples ? _self.waveformSamples : waveformSamples // ignore: cast_nullable_to_non_nullable
+as List<int>?,
   ));
 }
 
@@ -422,10 +424,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String url,  String kind,  int size,  String fileName,  int? width,  int? height)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String url,  String kind,  int size,  String fileName,  int? width,  int? height,  int? durationMs,  List<int>? waveformSamples)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _AttachmentItem() when $default != null:
-return $default(_that.id,_that.url,_that.kind,_that.size,_that.fileName,_that.width,_that.height);case _:
+return $default(_that.id,_that.url,_that.kind,_that.size,_that.fileName,_that.width,_that.height,_that.durationMs,_that.waveformSamples);case _:
   return orElse();
 
 }
@@ -443,10 +445,10 @@ return $default(_that.id,_that.url,_that.kind,_that.size,_that.fileName,_that.wi
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String url,  String kind,  int size,  String fileName,  int? width,  int? height)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String url,  String kind,  int size,  String fileName,  int? width,  int? height,  int? durationMs,  List<int>? waveformSamples)  $default,) {final _that = this;
 switch (_that) {
 case _AttachmentItem():
-return $default(_that.id,_that.url,_that.kind,_that.size,_that.fileName,_that.width,_that.height);case _:
+return $default(_that.id,_that.url,_that.kind,_that.size,_that.fileName,_that.width,_that.height,_that.durationMs,_that.waveformSamples);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -463,10 +465,10 @@ return $default(_that.id,_that.url,_that.kind,_that.size,_that.fileName,_that.wi
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String url,  String kind,  int size,  String fileName,  int? width,  int? height)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String url,  String kind,  int size,  String fileName,  int? width,  int? height,  int? durationMs,  List<int>? waveformSamples)?  $default,) {final _that = this;
 switch (_that) {
 case _AttachmentItem() when $default != null:
-return $default(_that.id,_that.url,_that.kind,_that.size,_that.fileName,_that.width,_that.height);case _:
+return $default(_that.id,_that.url,_that.kind,_that.size,_that.fileName,_that.width,_that.height,_that.durationMs,_that.waveformSamples);case _:
   return null;
 
 }
@@ -478,7 +480,7 @@ return $default(_that.id,_that.url,_that.kind,_that.size,_that.fileName,_that.wi
 
 
 class _AttachmentItem extends AttachmentItem {
-  const _AttachmentItem({required this.id, required this.url, required this.kind, required this.size, required this.fileName, this.width, this.height}): super._();
+  const _AttachmentItem({required this.id, required this.url, required this.kind, required this.size, required this.fileName, this.width, this.height, this.durationMs, final  List<int>? waveformSamples}): _waveformSamples = waveformSamples,super._();
   
 
 @override final  String id;
@@ -488,6 +490,16 @@ class _AttachmentItem extends AttachmentItem {
 @override final  String fileName;
 @override final  int? width;
 @override final  int? height;
+@override final  int? durationMs;
+ final  List<int>? _waveformSamples;
+@override List<int>? get waveformSamples {
+  final value = _waveformSamples;
+  if (value == null) return null;
+  if (_waveformSamples is EqualUnmodifiableListView) return _waveformSamples;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(value);
+}
+
 
 /// Create a copy of AttachmentItem
 /// with the given fields replaced by the non-null parameter values.
@@ -499,16 +511,16 @@ _$AttachmentItemCopyWith<_AttachmentItem> get copyWith => __$AttachmentItemCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AttachmentItem&&(identical(other.id, id) || other.id == id)&&(identical(other.url, url) || other.url == url)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.size, size) || other.size == size)&&(identical(other.fileName, fileName) || other.fileName == fileName)&&(identical(other.width, width) || other.width == width)&&(identical(other.height, height) || other.height == height));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AttachmentItem&&(identical(other.id, id) || other.id == id)&&(identical(other.url, url) || other.url == url)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.size, size) || other.size == size)&&(identical(other.fileName, fileName) || other.fileName == fileName)&&(identical(other.width, width) || other.width == width)&&(identical(other.height, height) || other.height == height)&&(identical(other.durationMs, durationMs) || other.durationMs == durationMs)&&const DeepCollectionEquality().equals(other._waveformSamples, _waveformSamples));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,url,kind,size,fileName,width,height);
+int get hashCode => Object.hash(runtimeType,id,url,kind,size,fileName,width,height,durationMs,const DeepCollectionEquality().hash(_waveformSamples));
 
 @override
 String toString() {
-  return 'AttachmentItem(id: $id, url: $url, kind: $kind, size: $size, fileName: $fileName, width: $width, height: $height)';
+  return 'AttachmentItem(id: $id, url: $url, kind: $kind, size: $size, fileName: $fileName, width: $width, height: $height, durationMs: $durationMs, waveformSamples: $waveformSamples)';
 }
 
 
@@ -519,7 +531,7 @@ abstract mixin class _$AttachmentItemCopyWith<$Res> implements $AttachmentItemCo
   factory _$AttachmentItemCopyWith(_AttachmentItem value, $Res Function(_AttachmentItem) _then) = __$AttachmentItemCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String url, String kind, int size, String fileName, int? width, int? height
+ String id, String url, String kind, int size, String fileName, int? width, int? height, int? durationMs, List<int>? waveformSamples
 });
 
 
@@ -536,7 +548,7 @@ class __$AttachmentItemCopyWithImpl<$Res>
 
 /// Create a copy of AttachmentItem
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? url = null,Object? kind = null,Object? size = null,Object? fileName = null,Object? width = freezed,Object? height = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? url = null,Object? kind = null,Object? size = null,Object? fileName = null,Object? width = freezed,Object? height = freezed,Object? durationMs = freezed,Object? waveformSamples = freezed,}) {
   return _then(_AttachmentItem(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,url: null == url ? _self.url : url // ignore: cast_nullable_to_non_nullable
@@ -545,7 +557,9 @@ as String,size: null == size ? _self.size : size // ignore: cast_nullable_to_non
 as int,fileName: null == fileName ? _self.fileName : fileName // ignore: cast_nullable_to_non_nullable
 as String,width: freezed == width ? _self.width : width // ignore: cast_nullable_to_non_nullable
 as int?,height: freezed == height ? _self.height : height // ignore: cast_nullable_to_non_nullable
-as int?,
+as int?,durationMs: freezed == durationMs ? _self.durationMs : durationMs // ignore: cast_nullable_to_non_nullable
+as int?,waveformSamples: freezed == waveformSamples ? _self._waveformSamples : waveformSamples // ignore: cast_nullable_to_non_nullable
+as List<int>?,
   ));
 }
 
