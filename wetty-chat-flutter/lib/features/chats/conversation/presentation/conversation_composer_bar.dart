@@ -257,20 +257,19 @@ class _ConversationComposerBarState
     final dy = currentPosition.dy - origin.dy;
     final leftProgress = -dx;
     final upProgress = -dy;
-    final crossedLeft = leftProgress >= _audioGestureThreshold;
-    final crossedTop = upProgress >= _audioGestureThreshold;
+    final axis = _resolveAudioDragAxis(dx, dy);
 
-    if (!crossedLeft && !crossedTop) {
-      return ComposerAudioSnapPosition.origin;
-    }
-    if (crossedLeft && crossedTop) {
-      return leftProgress >= upProgress
-          ? ComposerAudioSnapPosition.left
-          : ComposerAudioSnapPosition.top;
-    }
-    return crossedLeft
-        ? ComposerAudioSnapPosition.left
-        : ComposerAudioSnapPosition.top;
+    return switch (axis) {
+      ComposerAudioDragAxis.horizontal =>
+        leftProgress >= _audioGestureThreshold
+            ? ComposerAudioSnapPosition.left
+            : ComposerAudioSnapPosition.origin,
+      ComposerAudioDragAxis.vertical =>
+        upProgress >= _audioGestureThreshold
+            ? ComposerAudioSnapPosition.top
+            : ComposerAudioSnapPosition.origin,
+      ComposerAudioDragAxis.undecided => ComposerAudioSnapPosition.origin,
+    };
   }
 
   Future<void> _handleAudioPointerDown(PointerDownEvent event) async {
@@ -321,9 +320,29 @@ class _ConversationComposerBarState
       return Offset.zero;
     }
     final maxOffset = _composerActionButtonSize + _audioGestureTargetGap;
-    final dx = (currentPosition.dx - origin.dx).clamp(-maxOffset, 0.0);
-    final dy = (currentPosition.dy - origin.dy).clamp(-maxOffset, 0.0);
-    return Offset(dx, dy);
+    final dx = currentPosition.dx - origin.dx;
+    final dy = currentPosition.dy - origin.dy;
+    final nextAxis = _resolveAudioDragAxis(dx, dy);
+
+    return switch (nextAxis) {
+      ComposerAudioDragAxis.horizontal => Offset(dx.clamp(-maxOffset, 0.0), 0),
+      ComposerAudioDragAxis.vertical => Offset(0, dy.clamp(-maxOffset, 0.0)),
+      ComposerAudioDragAxis.undecided => Offset.zero,
+    };
+  }
+
+  ComposerAudioDragAxis _resolveAudioDragAxis(double dx, double dy) {
+    final leftProgress = -dx;
+    final upProgress = -dy;
+    final crossedLeft = leftProgress >= _audioGestureThreshold;
+    final crossedTop = upProgress >= _audioGestureThreshold;
+
+    if (!crossedLeft && !crossedTop) {
+      return ComposerAudioDragAxis.undecided;
+    }
+    return leftProgress >= upProgress
+        ? ComposerAudioDragAxis.horizontal
+        : ComposerAudioDragAxis.vertical;
   }
 
   Future<void> _finalizeAudioGesture(ComposerAudioSnapPosition position) async {

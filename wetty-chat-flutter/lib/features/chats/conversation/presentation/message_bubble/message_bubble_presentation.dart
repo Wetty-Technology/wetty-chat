@@ -55,7 +55,7 @@ class MessageBubblePresentation {
       metaColor: isMe ? colors.chatSentMeta : colors.chatReceivedMeta,
       linkColor: isMe ? colors.chatLinkOnSent : colors.chatLinkOnReceived,
       timeSpacerWidth:
-          _measureMetaWidth(context, message, timeStr, isMe: isMe) + 8,
+          measureMetaWidth(context, message, timeStr, isMe: isMe) + 8,
       minBubbleContentHeight: chatMessageFontSize * 1.28,
     );
   }
@@ -72,7 +72,7 @@ class MessageBubblePresentation {
 
   // Measure the width of the metadata text so the message body
   // reserves space for the timestamp row in the bottom-right corner.
-  static double _measureMetaWidth(
+  static double measureMetaWidth(
     BuildContext context,
     ConversationMessage message,
     String timeStr, {

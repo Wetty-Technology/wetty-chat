@@ -29,10 +29,9 @@ class AudioWaveformSnapshot {
     if (durationMs is! int || samples is! List) {
       return null;
     }
-    final normalizedSamples = samples
-        .whereType<num>()
-        .map((sample) => sample.toInt().clamp(0, 255))
-        .toList(growable: false);
+    final normalizedSamples = AudioWaveformCacheService.normalizeSampleCount(
+      samples.whereType<num>().map((sample) => sample.toInt()).toList(),
+    );
     if (normalizedSamples.isEmpty) {
       return null;
     }
@@ -49,10 +48,8 @@ class AudioWaveformCacheService {
     this._audioSourceResolverService,
   );
 
-  static const String _cachePrefix = 'voice_waveform:';
-  static const int _minimumBars = 24;
-  static const int _maximumBars = 72;
-  static const int _barsPerSecond = 4;
+  static const String _cachePrefix = 'voice_waveform:v2:';
+  static const int targetBarCount = 35;
 
   final SharedPreferences _preferences;
   final AudioSourceResolverService _audioSourceResolverService;
@@ -111,7 +108,10 @@ class AudioWaveformCacheService {
     if (duration == null || samples == null || samples.isEmpty) {
       return null;
     }
-    return AudioWaveformSnapshot(duration: duration, samples: samples);
+    return AudioWaveformSnapshot(
+      duration: duration,
+      samples: normalizeSampleCount(samples),
+    );
   }
 
   AudioWaveformSnapshot? _restore(String cacheKey) {
@@ -190,10 +190,7 @@ class AudioWaveformCacheService {
       }
 
       final resolvedDuration = duration ?? waveform.duration;
-      final samples = _compressWaveform(
-        waveform: waveform,
-        duration: resolvedDuration,
-      );
+      final samples = _compressWaveform(waveform: waveform);
       if (samples.isEmpty) {
         return null;
       }
@@ -209,34 +206,53 @@ class AudioWaveformCacheService {
     }
   }
 
-  List<int> _compressWaveform({
-    required Waveform waveform,
-    required Duration duration,
-  }) {
-    final targetBarCount = _targetBarCount(duration);
+  List<int> _compressWaveform({required Waveform waveform}) {
     final maxAmplitude = waveform.flags == 0 ? 32767.0 : 127.0;
 
-    return List<int>.generate(targetBarCount, (index) {
-      final start = (index * waveform.length / targetBarCount).floor();
-      final end = math.max(
-        start + 1,
-        ((index + 1) * waveform.length / targetBarCount).ceil(),
-      );
+    return normalizeSampleCount(
+      List<int>.generate(targetBarCount, (index) {
+        final start = (index * waveform.length / targetBarCount).floor();
+        final end = math.max(
+          start + 1,
+          ((index + 1) * waveform.length / targetBarCount).ceil(),
+        );
 
-      var peak = 0;
-      for (var pixelIndex = start; pixelIndex < end; pixelIndex++) {
-        final minSample = waveform.getPixelMin(pixelIndex).abs();
-        final maxSample = waveform.getPixelMax(pixelIndex).abs();
-        peak = math.max(peak, math.max(minSample, maxSample));
-      }
+        var peak = 0;
+        for (var pixelIndex = start; pixelIndex < end; pixelIndex++) {
+          final minSample = waveform.getPixelMin(pixelIndex).abs();
+          final maxSample = waveform.getPixelMax(pixelIndex).abs();
+          peak = math.max(peak, math.max(minSample, maxSample));
+        }
 
-      return ((peak / maxAmplitude) * 255).round().clamp(0, 255);
-    });
+        return ((peak / maxAmplitude) * 255).round().clamp(0, 255);
+      }),
+    );
   }
 
-  int _targetBarCount(Duration duration) {
-    final target = duration.inSeconds * _barsPerSecond;
-    return target.clamp(_minimumBars, _maximumBars);
+  static List<int> normalizeSampleCount(List<int> samples) {
+    final cleaned = samples
+        .map((sample) => sample.clamp(0, 255))
+        .cast<int>()
+        .toList(growable: false);
+    if (cleaned.isEmpty) {
+      return const <int>[];
+    }
+    if (cleaned.length == targetBarCount) {
+      return cleaned;
+    }
+
+    return List<int>.generate(targetBarCount, (index) {
+      final start = (index * cleaned.length / targetBarCount).floor();
+      final end = math.max(
+        start + 1,
+        ((index + 1) * cleaned.length / targetBarCount).ceil(),
+      );
+      var peak = 0;
+      for (var sampleIndex = start; sampleIndex < end; sampleIndex++) {
+        peak = math.max(peak, cleaned[sampleIndex]);
+      }
+      return peak;
+    }, growable: false);
   }
 
   String _cacheKeyForAttachment(AttachmentItem attachment) {

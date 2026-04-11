@@ -8,6 +8,7 @@ import '../../../models/message_preview_formatter.dart';
 import '../message_attachment_previews.dart';
 import '../video_popup_player.dart';
 import 'linkified_message_text.dart';
+import 'message_bubble_meta.dart';
 import 'message_bubble_presentation.dart';
 import 'message_reactions.dart';
 import 'message_thread_indicator.dart';
@@ -222,46 +223,11 @@ class MessageBubbleContent extends StatelessWidget {
 
   // Meta widget contains is message edited label and time label
   Widget _buildMetaWidget(BuildContext context) {
-    final showDeliveryStatus = isMe && !message.isFailed;
-    final isConfirmed = message.serverMessageId != null;
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        if (message.isEdited)
-          Padding(
-            padding: const EdgeInsets.only(right: 3),
-            child: Text(
-              'edited', // TODO: localize
-              style: _bubbleStyle(
-                context,
-                color: presentation.metaColor,
-                fontSize: AppFontSizes.bubbleMeta,
-                fontWeight: _bubbleFontWeight,
-              ),
-            ),
-          ),
-        Text(
-          presentation.timeStr,
-          style: _bubbleStyle(
-            context,
-            color: presentation.metaColor,
-            fontSize: AppFontSizes.bubbleMeta,
-            fontWeight: _bubbleFontWeight,
-          ),
-        ),
-        if (showDeliveryStatus) ...[
-          const SizedBox(width: MessageBubblePresentation.statusIconGap),
-          Icon(
-            isConfirmed
-                ? CupertinoIcons.checkmark_alt_circle_fill
-                : CupertinoIcons.checkmark_alt_circle,
-            size: MessageBubblePresentation.statusIconSize,
-            color: presentation.metaColor,
-          ),
-        ],
-      ],
+    return MessageBubbleMeta(
+      message: message,
+      presentation: presentation,
+      isMe: isMe,
+      fontWeight: _bubbleFontWeight,
     );
   }
 
@@ -296,7 +262,12 @@ class MessageBubbleContent extends StatelessWidget {
     required double maxAttachmentWidth,
   }) {
     if (attachment.isAudio && message.messageType == 'audio') {
-      return VoiceMessageBubble(attachment: attachment, isMe: isMe);
+      return VoiceMessageBubble(
+        attachment: attachment,
+        isMe: isMe,
+        message: message,
+        presentation: presentation,
+      );
     }
     if (attachment.isVideo && attachment.url.isNotEmpty) {
       return VideoAttachmentPreview(

@@ -257,6 +257,8 @@ class _MessageRowState extends State<MessageRow>
             child: VoiceMessageBubble(
               attachment: widget.message.attachments.first,
               isMe: _isMe,
+              message: widget.message,
+              presentation: presentation,
             ),
           )
         : MessageBubble(

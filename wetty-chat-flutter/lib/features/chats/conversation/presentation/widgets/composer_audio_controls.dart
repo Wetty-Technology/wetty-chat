@@ -7,6 +7,8 @@ import '../../application/conversation_composer_view_model.dart';
 
 enum ComposerAudioSnapPosition { origin, left, top }
 
+enum ComposerAudioDragAxis { undecided, horizontal, vertical }
+
 class ComposerAudioControls extends StatelessWidget {
   const ComposerAudioControls({
     super.key,
