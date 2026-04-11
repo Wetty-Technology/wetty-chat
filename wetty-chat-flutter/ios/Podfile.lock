@@ -47,6 +47,8 @@ PODS:
   - just_waveform (0.0.1):
     - Flutter
     - FlutterMacOS
+  - libogg (1.3.5)
+  - libopus/float (1.1)
   - record_ios (1.2.0):
     - Flutter
   - SDWebImage (5.21.7):
@@ -61,6 +63,11 @@ PODS:
   - SwiftyGif (5.4.5)
   - url_launcher_ios (0.0.1):
     - Flutter
+  - voice_message (0.0.1):
+    - Flutter
+    - FlutterMacOS
+    - libogg (~> 1.3)
+    - libopus/float
 
 DEPENDENCIES:
   - audio_session (from `.symlinks/plugins/audio_session/ios`)
@@ -73,11 +80,14 @@ DEPENDENCIES:
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
   - sqflite_darwin (from `.symlinks/plugins/sqflite_darwin/darwin`)
   - url_launcher_ios (from `.symlinks/plugins/url_launcher_ios/ios`)
+  - voice_message (from `.symlinks/plugins/voice_message/darwin`)
 
 SPEC REPOS:
   trunk:
     - DKImagePickerController
     - DKPhotoGallery
+    - libogg
+    - libopus
     - SDWebImage
     - SwiftyGif
 
@@ -102,6 +112,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/sqflite_darwin/darwin"
   url_launcher_ios:
     :path: ".symlinks/plugins/url_launcher_ios/ios"
+  voice_message:
+    :path: ".symlinks/plugins/voice_message/darwin"
 
 SPEC CHECKSUMS:
   audio_session: 9bb7f6c970f21241b19f5a3658097ae459681ba0
@@ -112,12 +124,15 @@ SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   just_audio: 4e391f57b79cad2b0674030a00453ca5ce817eed
   just_waveform: be2cb6dec86096cb972bf8b73c893fe16bf1cff4
+  libogg: a355eccc76b1ec82b20f97a9f9d78a3683d28371
+  libopus: ad5f060dcb8f30f139777244d70f9111f1c80863
   record_ios: 412daca2350b228e698fffcd08f1f94ceb1e3844
   SDWebImage: e9fc87c1aab89a8ab1bbd74eba378c6f53be8abf
   shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb
   sqflite_darwin: 20b2a3a3b70e43edae938624ce550a3cbf66a3d0
   SwiftyGif: 706c60cf65fa2bc5ee0313beece843c8eb8194d4
   url_launcher_ios: 7a95fa5b60cc718a708b8f2966718e93db0cef1b
+  voice_message: 4c3f0b23354e380d76a86fe4da6a901449346c0a
 
 PODFILE CHECKSUM: 3c63482e143d1b91d2d2560aee9fb04ecc74ac7e
 

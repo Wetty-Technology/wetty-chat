@@ -1250,6 +1250,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "15.0.2"
+  voice_message:
+    dependency: "direct main"
+    description:
+      path: "packages/voice_message"
+      relative: true
+    source: path
+    version: "0.0.1"
   watcher:
     dependency: transitive
     description:

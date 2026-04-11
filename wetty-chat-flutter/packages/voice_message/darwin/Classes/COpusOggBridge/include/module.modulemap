@@ -1,0 +1,4 @@
+module COpusOggBridge [system] {
+  header "opus_header.h"
+  export *
+}

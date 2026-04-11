@@ -31,6 +31,8 @@ dependencies:
   freezed_annotation: ^3.1.0
   just_waveform: ^0.0.7
   ffmpeg_kit_flutter_new_audio: ^2.0.0
+  voice_message:
+    path: packages/voice_message
   flutter_swipe_action_cell: ^3.1.6
 
 dev_dependencies:
