@@ -16,7 +16,6 @@ dependencies:
   cupertino_icons: ^1.0.8
   file_picker: 11.0.2
   flutter_svg: ^2.2.0
-  http: ^1.6.0
   json_annotation: ^4.11.0
   mime: ^2.0.0
   url_launcher: ^6.2.0
@@ -30,7 +29,6 @@ dependencies:
   record: ^6.1.1
   just_audio: ^0.10.5
   freezed_annotation: ^3.1.0
-  flutter_slidable: ^4.0.3
   just_waveform: ^0.0.7
   ffmpeg_kit_audio_flutter: ^1.1.0
   flutter_swipe_action_cell: ^3.1.6
