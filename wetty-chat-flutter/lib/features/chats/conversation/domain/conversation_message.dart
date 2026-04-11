@@ -30,7 +30,8 @@ abstract class ConversationMessage with _$ConversationMessage {
     @Default([]) List<ReactionSummary> reactions,
     @Default([]) List<MentionInfo> mentions,
     ThreadInfo? threadInfo,
-    @Default(ConversationDeliveryState.sent) ConversationDeliveryState deliveryState,
+    @Default(ConversationDeliveryState.sent)
+    ConversationDeliveryState deliveryState,
   }) = _ConversationMessage;
 
   String get stableKey => serverMessageId != null

@@ -45,8 +45,7 @@ class GroupMembersViewState {
 
 const Object _sentinel = Object();
 
-class GroupMembersViewModel
-    extends AsyncNotifier<GroupMembersViewState> {
+class GroupMembersViewModel extends AsyncNotifier<GroupMembersViewState> {
   final String arg;
 
   GroupMembersViewModel(this.arg);

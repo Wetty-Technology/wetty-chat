@@ -18,10 +18,14 @@ class ConversationComposerBar extends ConsumerStatefulWidget {
     super.key,
     required this.scope,
     this.onMessageSent,
+    this.onToggleStickerPicker,
+    this.isStickerPickerOpen = false,
   });
 
   final ConversationScope scope;
   final Future<void> Function()? onMessageSent;
+  final VoidCallback? onToggleStickerPicker;
+  final bool isStickerPickerOpen;
 
   @override
   ConsumerState<ConversationComposerBar> createState() =>
@@ -153,10 +157,20 @@ class _ConversationComposerBarState
     }
   }
 
+  void _toggleStickerPicker() {
+    if (_isAttachmentPanelOpen) {
+      _closeAttachmentMenu();
+    }
+    widget.onToggleStickerPicker?.call();
+  }
+
   void _toggleAttachmentPanel() {
     if (_isAttachmentPanelOpen) {
       _closeAttachmentMenu();
       return;
+    }
+    if (widget.isStickerPickerOpen) {
+      widget.onToggleStickerPicker?.call();
     }
     _openAttachmentMenu();
   }
@@ -459,59 +473,89 @@ class _ConversationComposerBarState
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            ComposerInputArea(
-                              composer: composer,
-                              textController: _textController,
-                              inputScrollController: _inputScrollController,
-                              snapPosition: _audioSnapPosition,
-                              fieldMinHeight: _composerFieldMinHeight,
-                              onClearMode: () {
-                                ref
-                                    .read(
-                                      conversationComposerViewModelProvider(
-                                        widget.scope,
-                                      ).notifier,
-                                    )
-                                    .clearMode();
-                              },
-                              onRemoveAttachment: (localId) {
-                                ref
-                                    .read(
-                                      conversationComposerViewModelProvider(
-                                        widget.scope,
-                                      ).notifier,
-                                    )
-                                    .removeAttachment(localId);
-                              },
-                              onRetryAttachment: (localId) {
-                                return ref
-                                    .read(
-                                      conversationComposerViewModelProvider(
-                                        widget.scope,
-                                      ).notifier,
-                                    )
-                                    .retryAttachment(localId);
-                              },
-                              onDeleteAudioDraft: () {
-                                return ref
-                                    .read(
-                                      conversationComposerViewModelProvider(
-                                        widget.scope,
-                                      ).notifier,
-                                    )
-                                    .cancelAudioRecording();
-                              },
-                              onDraftChanged: (value) {
-                                unawaited(
-                                  ref
-                                      .read(
-                                        conversationComposerViewModelProvider(
-                                          widget.scope,
-                                        ).notifier,
-                                      )
-                                      .updateDraft(value),
-                                );
-                              },
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Expanded(
+                                  child: ComposerInputArea(
+                                    composer: composer,
+                                    textController: _textController,
+                                    inputScrollController:
+                                        _inputScrollController,
+                                    snapPosition: _audioSnapPosition,
+                                    fieldMinHeight: _composerFieldMinHeight,
+                                    onTextFieldTap: widget.isStickerPickerOpen
+                                        ? () => widget.onToggleStickerPicker
+                                              ?.call()
+                                        : null,
+                                    onClearMode: () {
+                                      ref
+                                          .read(
+                                            conversationComposerViewModelProvider(
+                                              widget.scope,
+                                            ).notifier,
+                                          )
+                                          .clearMode();
+                                    },
+                                    onRemoveAttachment: (localId) {
+                                      ref
+                                          .read(
+                                            conversationComposerViewModelProvider(
+                                              widget.scope,
+                                            ).notifier,
+                                          )
+                                          .removeAttachment(localId);
+                                    },
+                                    onRetryAttachment: (localId) {
+                                      return ref
+                                          .read(
+                                            conversationComposerViewModelProvider(
+                                              widget.scope,
+                                            ).notifier,
+                                          )
+                                          .retryAttachment(localId);
+                                    },
+                                    onDeleteAudioDraft: () {
+                                      return ref
+                                          .read(
+                                            conversationComposerViewModelProvider(
+                                              widget.scope,
+                                            ).notifier,
+                                          )
+                                          .cancelAudioRecording();
+                                    },
+                                    onDraftChanged: (value) {
+                                      unawaited(
+                                        ref
+                                            .read(
+                                              conversationComposerViewModelProvider(
+                                                widget.scope,
+                                              ).notifier,
+                                            )
+                                            .updateDraft(value),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: 32,
+                                  height: 36,
+                                  child: CupertinoButton(
+                                    padding: const EdgeInsets.only(right: 4),
+                                    minimumSize: const Size(32, 36),
+                                    onPressed: _toggleStickerPicker,
+                                    child: Icon(
+                                      CupertinoIcons.smiley,
+                                      color: widget.isStickerPickerOpen
+                                          ? CupertinoColors.activeBlue
+                                                .resolveFrom(context)
+                                          : CupertinoColors.systemGrey
+                                                .resolveFrom(context),
+                                      size: 24,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),

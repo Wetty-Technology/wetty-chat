@@ -61,6 +61,11 @@ sealed class ApiWsEvent {
         return ReactionUpdatedWsEvent.fromJson(json);
       case 'threadUpdate':
         return ThreadUpdatedWsEvent.fromJson(json);
+      case 'stickerPackOrderUpdated':
+        final payload = StickerPackOrderUpdatePayloadDto.fromJson(
+          json['payload'] as Map<String, dynamic>,
+        );
+        return StickerPackOrderUpdatedWsEvent(payload: payload);
       default:
         return null;
     }
@@ -190,4 +195,42 @@ class ThreadUpdatedWsEvent extends ApiWsEvent {
       _$ThreadUpdatedWsEventFromJson(json);
 
   Map<String, dynamic> toJson() => _$ThreadUpdatedWsEventToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
+class StickerPackOrderItemDto {
+  const StickerPackOrderItemDto({
+    required this.stickerPackId,
+    required this.lastUsedOn,
+  });
+
+  final String stickerPackId;
+
+  /// Unix timestamp in milliseconds.
+  final int lastUsedOn;
+
+  factory StickerPackOrderItemDto.fromJson(Map<String, dynamic> json) =>
+      _$StickerPackOrderItemDtoFromJson(json);
+
+  Map<String, dynamic> toJson() => _$StickerPackOrderItemDtoToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
+class StickerPackOrderUpdatePayloadDto {
+  const StickerPackOrderUpdatePayloadDto({required this.order});
+
+  final List<StickerPackOrderItemDto> order;
+
+  factory StickerPackOrderUpdatePayloadDto.fromJson(
+    Map<String, dynamic> json,
+  ) => _$StickerPackOrderUpdatePayloadDtoFromJson(json);
+
+  Map<String, dynamic> toJson() =>
+      _$StickerPackOrderUpdatePayloadDtoToJson(this);
+}
+
+class StickerPackOrderUpdatedWsEvent extends ApiWsEvent {
+  const StickerPackOrderUpdatedWsEvent({required this.payload});
+
+  final StickerPackOrderUpdatePayloadDto payload;
 }

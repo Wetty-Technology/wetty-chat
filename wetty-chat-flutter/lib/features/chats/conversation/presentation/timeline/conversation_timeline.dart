@@ -33,6 +33,7 @@ class ConversationTimeline extends ConsumerStatefulWidget {
     required this.scope,
     required this.timelineArgs,
     this.onOpenThread,
+    this.onTapSticker,
     this.onMessageVisible,
     this.controller,
     this.logTag = 'ConversationTimeline',
@@ -44,6 +45,9 @@ class ConversationTimeline extends ConsumerStatefulWidget {
   /// Called when the user taps a thread indicator. Chat provides this to
   /// navigate to the thread detail page; thread view leaves it null.
   final void Function(ConversationMessage message)? onOpenThread;
+
+  /// Called when the user taps a sticker bubble to preview sticker details.
+  final void Function(ConversationMessage message)? onTapSticker;
 
   /// Extra callback invoked for every visible message during scroll.
   /// Thread uses this to track the max-seen message ID for mark-as-read.
@@ -603,6 +607,9 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline> {
                   conversationComposerViewModelProvider(widget.scope).notifier,
                 )
                 .beginReply(message),
+            onTapSticker: widget.onTapSticker != null
+                ? () => widget.onTapSticker!(message)
+                : null,
             onTapReply: message.replyToMessage != null
                 ? () => _jumpToMessage(message.replyToMessage!.id)
                 : null,

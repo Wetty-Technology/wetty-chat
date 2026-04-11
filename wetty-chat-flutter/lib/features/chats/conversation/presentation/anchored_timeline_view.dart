@@ -127,8 +127,7 @@ class _AnchoredTimelineViewState extends State<AnchoredTimelineView> {
     final newerDist = position.maxScrollExtent - position.pixels;
 
     // Near older edge: scroll offset near minScrollExtent (negative = up).
-    if (widget.onNearOlderEdge != null &&
-        olderDist < _edgeThresholdPixels) {
+    if (widget.onNearOlderEdge != null && olderDist < _edgeThresholdPixels) {
       developer.log(
         '_onScroll: NEAR OLDER EDGE '
         'pixels=${position.pixels.toStringAsFixed(1)}, '
@@ -142,8 +141,7 @@ class _AnchoredTimelineViewState extends State<AnchoredTimelineView> {
     }
 
     // Near newer edge: scroll offset near maxScrollExtent (positive = down).
-    if (widget.onNearNewerEdge != null &&
-        newerDist < _edgeThresholdPixels) {
+    if (widget.onNearNewerEdge != null && newerDist < _edgeThresholdPixels) {
       widget.onNearNewerEdge!();
     }
   }

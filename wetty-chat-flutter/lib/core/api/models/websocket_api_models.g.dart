@@ -139,3 +139,29 @@ Map<String, dynamic> _$ThreadUpdatedWsEventToJson(
   'type': instance.type,
   'payload': instance.payload.toJson(),
 };
+
+StickerPackOrderItemDto _$StickerPackOrderItemDtoFromJson(
+  Map<String, dynamic> json,
+) => StickerPackOrderItemDto(
+  stickerPackId: json['stickerPackId'] as String,
+  lastUsedOn: (json['lastUsedOn'] as num).toInt(),
+);
+
+Map<String, dynamic> _$StickerPackOrderItemDtoToJson(
+  StickerPackOrderItemDto instance,
+) => <String, dynamic>{
+  'stickerPackId': instance.stickerPackId,
+  'lastUsedOn': instance.lastUsedOn,
+};
+
+StickerPackOrderUpdatePayloadDto _$StickerPackOrderUpdatePayloadDtoFromJson(
+  Map<String, dynamic> json,
+) => StickerPackOrderUpdatePayloadDto(
+  order: (json['order'] as List<dynamic>)
+      .map((e) => StickerPackOrderItemDto.fromJson(e as Map<String, dynamic>))
+      .toList(),
+);
+
+Map<String, dynamic> _$StickerPackOrderUpdatePayloadDtoToJson(
+  StickerPackOrderUpdatePayloadDto instance,
+) => <String, dynamic>{'order': instance.order.map((e) => e.toJson()).toList()};

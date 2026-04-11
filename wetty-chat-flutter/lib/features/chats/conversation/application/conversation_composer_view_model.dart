@@ -486,6 +486,47 @@ class ConversationComposerViewModel
     }
   }
 
+  Future<void> sendSticker(StickerSummary sticker) async {
+    final stickerId = sticker.id;
+    if (stickerId == null) return;
+    final currentUserId = ref.read(authSessionProvider).currentUserId;
+    final clientGeneratedId =
+        '${DateTime.now().microsecondsSinceEpoch}-$currentUserId-${_scope.storageKey}';
+    final mode = state.mode;
+    final replyToId = mode is ComposerReplying
+        ? mode.message.serverMessageId
+        : null;
+
+    _repository.insertOptimisticSend(
+      sender: Sender(uid: currentUserId, name: 'You'),
+      text: '',
+      messageType: 'sticker',
+      attachments: const [],
+      clientGeneratedId: clientGeneratedId,
+      replyToId: replyToId,
+      sticker: sticker,
+    );
+
+    if (mode is ComposerReplying) {
+      state = state.copyWith(mode: const ComposerIdle());
+    }
+
+    try {
+      final sentMessage = await _repository.commitSend(
+        clientGeneratedId: clientGeneratedId,
+        text: '',
+        messageType: 'sticker',
+        attachmentIds: const [],
+        replyToId: replyToId,
+        stickerId: stickerId,
+      );
+      _syncListStateAfterSend(sentMessage);
+    } catch (_) {
+      _repository.markSendFailed(clientGeneratedId);
+      rethrow;
+    }
+  }
+
   /// Draft attachments move through queued -> uploading -> uploaded/failed.
   /// `localId` stays stable across retries until the backend returns an
   /// `attachmentId`, which is what gets included in the final message send.

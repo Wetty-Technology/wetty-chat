@@ -47,6 +47,14 @@ class SettingsPage extends ConsumerWidget {
                   .setShowAllTab(!settings.showAllTab);
             },
           ),
+          SettingsItemData(
+            title: 'Sticker Packs',
+            icon: CupertinoIcons.smiley,
+            iconColor: const Color(0xFFFF6482),
+            titleFontSize: AppFontSizes.body,
+            titleFontWeight: FontWeight.w500,
+            onTap: () => context.push(AppRoutes.stickerPacks),
+          ),
         ],
       ),
       SettingsSectionData(

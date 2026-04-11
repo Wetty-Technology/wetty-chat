@@ -228,10 +228,10 @@ class VoiceMessagePlaybackController
 }
 
 final voiceMessagePlaybackControllerProvider =
-    NotifierProvider<
-      VoiceMessagePlaybackController,
-      VoiceMessagePlaybackState
-    >(VoiceMessagePlaybackController.new, isAutoDispose: true);
+    NotifierProvider<VoiceMessagePlaybackController, VoiceMessagePlaybackState>(
+      VoiceMessagePlaybackController.new,
+      isAutoDispose: true,
+    );
 
 Duration _clampDuration(Duration value, Duration min, Duration max) {
   if (value < min) {

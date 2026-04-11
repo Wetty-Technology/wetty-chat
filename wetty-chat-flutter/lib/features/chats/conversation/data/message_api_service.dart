@@ -86,6 +86,7 @@ class MessageApiService {
     String? threadId,
     List<String> attachmentIds = const <String>[],
     String? clientGeneratedId,
+    String? stickerId,
   }) async {
     final path = threadId == null
         ? '/chats/$chatId/messages'
@@ -96,6 +97,7 @@ class MessageApiService {
       clientGeneratedId: clientGeneratedId ?? nextClientGeneratedId(),
       attachmentIds: attachmentIds,
       replyToId: replyToId,
+      stickerId: stickerId,
     );
 
     final response = await _dio.post<Map<String, dynamic>>(
@@ -112,6 +114,7 @@ class MessageApiService {
     int? replyToId,
     List<String> attachmentIds = const <String>[],
     required String clientGeneratedId,
+    String? stickerId,
   }) async {
     final body = SendMessageRequestDto(
       message: text,
@@ -119,6 +122,7 @@ class MessageApiService {
       clientGeneratedId: clientGeneratedId,
       attachmentIds: attachmentIds,
       replyToId: replyToId,
+      stickerId: stickerId,
     );
     final response = await _dio.post<Map<String, dynamic>>(
       _sendPath(scope),

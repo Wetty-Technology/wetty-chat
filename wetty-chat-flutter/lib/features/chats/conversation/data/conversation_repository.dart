@@ -356,6 +356,7 @@ class ConversationRepository {
     required List<AttachmentItem> attachments,
     required String clientGeneratedId,
     int? replyToId,
+    StickerSummary? sticker,
   }) {
     final localMessage = ConversationMessage(
       scope: scope,
@@ -364,7 +365,7 @@ class ConversationRepository {
       sender: sender,
       message: text,
       messageType: messageType,
-      sticker: null,
+      sticker: sticker,
       createdAt: DateTime.now().toUtc(),
       isEdited: false,
       isDeleted: false,
@@ -387,6 +388,7 @@ class ConversationRepository {
     required String messageType,
     required List<String> attachmentIds,
     int? replyToId,
+    String? stickerId,
   }) async {
     final response = await _service.sendConversationMessage(
       scope,
@@ -395,6 +397,7 @@ class ConversationRepository {
       replyToId: replyToId,
       attachmentIds: attachmentIds,
       clientGeneratedId: clientGeneratedId,
+      stickerId: stickerId,
     );
     return _mergeMessage(
       response.toConversation(scope),

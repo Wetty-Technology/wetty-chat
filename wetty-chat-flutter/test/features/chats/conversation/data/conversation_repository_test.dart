@@ -252,6 +252,7 @@ class _FakeMessageApiService extends MessageApiService {
     int? replyToId,
     List<String> attachmentIds = const <String>[],
     required String clientGeneratedId,
+    String? stickerId,
   }) async {
     lastSendText = text;
     lastSendMessageType = messageType;

@@ -10,7 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// device token updates and notification tap events from Swift.
 class ApnsChannel {
   ApnsChannel()
-      : _channel = const MethodChannel('app.chahua.chat/push_notifications') {
+    : _channel = const MethodChannel('app.chahua.chat/push_notifications') {
     _channel.setMethodCallHandler(_handleNativeCall);
   }
 
@@ -84,8 +84,10 @@ class ApnsChannel {
       case 'onDeviceTokenReceived':
         final args = Map<String, dynamic>.from(call.arguments as Map);
         final token = args['deviceToken'] as String;
-        developer.log('Received APNs device token: ${token.substring(0, 8)}...',
-            name: 'ApnsChannel');
+        developer.log(
+          'Received APNs device token: ${token.substring(0, 8)}...',
+          name: 'ApnsChannel',
+        );
         _deviceTokenController.add(token);
       case 'onDeviceTokenError':
         final args = Map<String, dynamic>.from(call.arguments as Map);
@@ -94,8 +96,10 @@ class ApnsChannel {
         _deviceTokenErrorController.add(error);
       case 'onNotificationTapped':
         final payload = Map<String, dynamic>.from(call.arguments as Map);
-        developer.log('Notification tapped: chatId=${payload['chatId']}',
-            name: 'ApnsChannel');
+        developer.log(
+          'Notification tapped: chatId=${payload['chatId']}',
+          name: 'ApnsChannel',
+        );
         _notificationTapController.add(payload);
     }
   }

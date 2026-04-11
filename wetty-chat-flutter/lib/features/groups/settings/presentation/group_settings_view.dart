@@ -245,7 +245,8 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
   }
 
   Widget _buildActionButtons(BuildContext context, ChatMetadata metadata) {
-    final isMuted = metadata.mutedUntil != null &&
+    final isMuted =
+        metadata.mutedUntil != null &&
         metadata.mutedUntil!.isAfter(DateTime.now());
 
     return Row(
@@ -253,12 +254,8 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
       children: [
         _buildActionButton(
           context,
-          icon: isMuted
-              ? CupertinoIcons.bell_slash_fill
-              : CupertinoIcons.bell,
-          label: isMuted
-              ? _formatMutedLabel(metadata.mutedUntil!)
-              : 'Mute',
+          icon: isMuted ? CupertinoIcons.bell_slash_fill : CupertinoIcons.bell,
+          label: isMuted ? _formatMutedLabel(metadata.mutedUntil!) : 'Mute',
           onTap: isMuted ? _unmuteChat : _showMuteActionSheet,
         ),
         const SizedBox(width: 12),

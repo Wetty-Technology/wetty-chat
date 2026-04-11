@@ -20,6 +20,8 @@ import '../../features/settings/presentation/language_settings_view.dart';
 import '../../features/settings/presentation/notification_settings_view.dart';
 import '../../features/settings/presentation/profile_settings_view.dart';
 import '../../features/settings/presentation/settings_view.dart';
+import '../../features/stickers/presentation/sticker_pack_detail_page.dart';
+import '../../features/stickers/presentation/sticker_pack_list_page.dart';
 import '../presentation/home_root_view.dart';
 import 'route_names.dart';
 
@@ -165,6 +167,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     path: 'notifications',
                     pageBuilder: (context, state) =>
                         const CupertinoPage(child: NotificationSettingsPage()),
+                  ),
+                  GoRoute(
+                    path: 'sticker-packs',
+                    pageBuilder: (context, state) =>
+                        const CupertinoPage(child: StickerPackListPage()),
+                    routes: [
+                      GoRoute(
+                        path: ':packId',
+                        pageBuilder: (context, state) {
+                          final packId = state.pathParameters['packId']!;
+                          return CupertinoPage(
+                            child: StickerPackDetailPage(packId: packId),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),

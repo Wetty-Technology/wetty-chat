@@ -42,7 +42,10 @@ class StickerMessageBubble extends StatelessWidget {
       if (message.replyToMessage != null)
         GestureDetector(
           onTap: onTapReply,
-          child: _buildReplyQuote(context, message.replyToMessage!),
+          child: _StickerReplyQuote(
+            reply: message.replyToMessage!,
+            presentation: presentation,
+          ),
         ),
       _buildStickerContent(context),
     ];
@@ -98,13 +101,49 @@ class StickerMessageBubble extends StatelessWidget {
               size: _stickerSize,
             ),
           ),
-          Positioned(right: 4, bottom: 4, child: _buildTimestampChip(context)),
+          Positioned(
+            right: 4,
+            bottom: 4,
+            child: _StickerTimestampChip(
+              message: message,
+              presentation: presentation,
+              isMe: isMe,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildTimestampChip(BuildContext context) {
+  Widget _buildDeletedSticker(BuildContext context) {
+    return Text(
+      '[Deleted]',
+      style: appBubbleTextStyle(
+        context,
+        color: presentation.metaColor,
+        fontSize: AppFontSizes.bubbleText,
+        fontStyle: FontStyle.italic,
+        fontWeight: _bubbleFontWeight,
+      ),
+    );
+  }
+}
+
+class _StickerTimestampChip extends StatelessWidget {
+  const _StickerTimestampChip({
+    required this.message,
+    required this.presentation,
+    required this.isMe,
+  });
+
+  final ConversationMessage message;
+  final MessageBubblePresentation presentation;
+  final bool isMe;
+
+  static const FontWeight _bubbleFontWeight = FontWeight.w400;
+
+  @override
+  Widget build(BuildContext context) {
     final showDeliveryStatus = isMe && !message.isFailed;
     final isConfirmed = message.serverMessageId != null;
 
@@ -146,8 +185,18 @@ class StickerMessageBubble extends StatelessWidget {
       fontWeight: _bubbleFontWeight,
     );
   }
+}
 
-  Widget _buildReplyQuote(BuildContext context, ReplyToMessage reply) {
+class _StickerReplyQuote extends StatelessWidget {
+  const _StickerReplyQuote({required this.reply, required this.presentation});
+
+  final ReplyToMessage reply;
+  final MessageBubblePresentation presentation;
+
+  static const FontWeight _bubbleFontWeight = FontWeight.w400;
+
+  @override
+  Widget build(BuildContext context) {
     final replySender = reply.sender.name ?? 'User ${reply.sender.uid}';
     final quoteBackground = CupertinoColors.black.withAlpha(20);
     final quoteBorder = CupertinoColors.systemGrey;
@@ -185,19 +234,6 @@ class StickerMessageBubble extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildDeletedSticker(BuildContext context) {
-    return Text(
-      '[Deleted]',
-      style: appBubbleTextStyle(
-        context,
-        color: presentation.metaColor,
-        fontSize: AppFontSizes.bubbleText,
-        fontStyle: FontStyle.italic,
-        fontWeight: _bubbleFontWeight,
       ),
     );
   }

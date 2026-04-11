@@ -15,6 +15,7 @@ class MessageBubble extends StatelessWidget {
     required this.chatMessageFontSize,
     required this.isMe,
     required this.showSenderName,
+    this.onTapSticker,
     this.onTapReply,
     this.onOpenThread,
     this.onOpenAttachment,
@@ -26,6 +27,7 @@ class MessageBubble extends StatelessWidget {
   final double chatMessageFontSize;
   final bool isMe;
   final bool showSenderName;
+  final VoidCallback? onTapSticker;
   final VoidCallback? onTapReply;
   final VoidCallback? onOpenThread;
   final ValueChanged<AttachmentItem>? onOpenAttachment;
@@ -49,6 +51,7 @@ class MessageBubble extends StatelessWidget {
           message: message,
           presentation: presentation,
           isMe: isMe,
+          onTapSticker: onTapSticker,
           onTapReply: onTapReply,
           onOpenThread: onOpenThread,
           onToggleReaction: onToggleReaction,

@@ -34,6 +34,7 @@ You are an expert Flutter and Dart developer. Your goal is to build beautiful, p
 * **Effective Dart:** Follow official guidelines.
 * **Async/Await:** Use `Future`, `async`, `await` for operations. Use `Stream` for events.
 * **Null Safety:** Write sound null-safe code. Avoid `!` operator unless guaranteed.
+* **Null-Aware Elements (Dart 3.8+):** Use `?` in collection literals to conditionally include elements based on nullability. In lists/sets: `[?nullableItem]`. In maps, place `?` on the **value** side to omit the entry when the value is null: `{'key': ?nullableValue}`. Do NOT put `?` on a non-nullable key (`?'key': value` is wrong if the key is a literal).
 * **Pattern Matching:** Use switch expressions and pattern matching.
 * **Records:** Use records for multiple return values.
 * **Exception Handling:** Use custom exceptions for specific situations.

@@ -23,9 +23,7 @@ class NotificationSettingsPage extends ConsumerWidget {
           children: [
             CupertinoListSection.insetGrouped(
               header: const Text('PUSH NOTIFICATIONS'),
-              children: [
-                _buildPermissionTile(context, ref, pushState),
-              ],
+              children: [_buildPermissionTile(context, ref, pushState)],
             ),
             if (pushState.isAuthorized)
               CupertinoListSection.insetGrouped(
@@ -73,9 +71,14 @@ class NotificationSettingsPage extends ConsumerWidget {
                   ),
                 ],
               ),
-            if (pushState.isAuthorized && !pushState.isSubscribed && !pushState.isLoading)
+            if (pushState.isAuthorized &&
+                !pushState.isSubscribed &&
+                !pushState.isLoading)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 8,
+                ),
                 child: CupertinoButton.filled(
                   onPressed: () {
                     ref

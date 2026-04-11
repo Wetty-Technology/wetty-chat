@@ -71,10 +71,9 @@ class GroupMetadataViewModel extends AsyncNotifier<ChatMetadata> {
       state = AsyncData(current.copyWith(mutedUntil: mutedUntil));
     }
     // Sync to chat list
-    ref.read(chatListStateProvider.notifier).updateChatMutedUntil(
-      chatId: arg,
-      mutedUntil: mutedUntil,
-    );
+    ref
+        .read(chatListStateProvider.notifier)
+        .updateChatMutedUntil(chatId: arg, mutedUntil: mutedUntil);
   }
 
   Future<void> unmuteChat() async {
@@ -86,10 +85,9 @@ class GroupMetadataViewModel extends AsyncNotifier<ChatMetadata> {
       state = AsyncData(current.copyWith(mutedUntil: null));
     }
     // Sync to chat list (clear mute)
-    ref.read(chatListStateProvider.notifier).updateChatMutedUntil(
-      chatId: arg,
-      mutedUntil: null,
-    );
+    ref
+        .read(chatListStateProvider.notifier)
+        .updateChatMutedUntil(chatId: arg, mutedUntil: null);
   }
 }
 

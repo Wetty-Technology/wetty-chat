@@ -14,6 +14,7 @@ import '../../threads/data/thread_repository.dart';
 import '../../threads/data/thread_subscription_provider.dart';
 import 'conversation_composer_bar.dart';
 import 'timeline/conversation_timeline.dart';
+import '../../../../features/stickers/presentation/sticker_preview_modal.dart';
 
 class ThreadDetailPage extends ConsumerStatefulWidget {
   const ThreadDetailPage({
@@ -227,6 +228,12 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
                       controller: _timelineController,
                       logTag: 'ThreadDetailView',
                       onMessageVisible: _onMessageVisible,
+                      onTapSticker: (message) {
+                        final stickerId = message.sticker?.id;
+                        if (stickerId != null) {
+                          showStickerPreviewModal(context, stickerId);
+                        }
+                      },
                     ),
                   ),
                 ),

@@ -28,7 +28,7 @@ class StickerImage extends StatelessWidget {
       return _buildEmojiFallback();
     }
     if (stickerMedia.isVideo) {
-      return _buildVideoPlaceholder(stickerMedia);
+      return _VideoStickerPlaceholder(emoji: emoji, size: size);
     }
     return _buildImage(stickerMedia);
   }
@@ -48,9 +48,39 @@ class StickerImage extends StatelessWidget {
     );
   }
 
-  /// Placeholder for video stickers while video playback is disabled.
-  /// This method is the swap-point for a real video player later.
-  Widget _buildVideoPlaceholder(StickerMedia stickerMedia) {
+  Widget _buildLoadingPlaceholder() {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: const Center(child: CupertinoActivityIndicator(radius: 10)),
+    );
+  }
+
+  Widget _buildEmojiFallback() {
+    final emojiText = emoji?.trim();
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Center(
+        child: Text(
+          emojiText != null && emojiText.isNotEmpty ? emojiText : '🏷️',
+          style: TextStyle(fontSize: size * 0.5),
+        ),
+      ),
+    );
+  }
+}
+
+/// Placeholder for video stickers while video playback is disabled.
+/// This widget is the swap-point for a real video player later.
+class _VideoStickerPlaceholder extends StatelessWidget {
+  const _VideoStickerPlaceholder({this.emoji, required this.size});
+
+  final String? emoji;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
     final emojiText = emoji?.trim();
     return SizedBox(
       width: size,
@@ -106,28 +136,6 @@ class StickerImage extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLoadingPlaceholder() {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: const Center(child: CupertinoActivityIndicator(radius: 10)),
-    );
-  }
-
-  Widget _buildEmojiFallback() {
-    final emojiText = emoji?.trim();
-    return SizedBox(
-      width: size,
-      height: size,
-      child: Center(
-        child: Text(
-          emojiText != null && emojiText.isNotEmpty ? emojiText : '🏷️',
-          style: TextStyle(fontSize: size * 0.5),
         ),
       ),
     );

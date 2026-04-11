@@ -4,8 +4,7 @@ import 'thread_api_service.dart';
 
 typedef ThreadSubscriptionArgs = ({String chatId, int threadRootId});
 
-class ThreadSubscriptionNotifier
-    extends AsyncNotifier<bool> {
+class ThreadSubscriptionNotifier extends AsyncNotifier<bool> {
   final ThreadSubscriptionArgs arg;
 
   ThreadSubscriptionNotifier(this.arg);
@@ -38,8 +37,9 @@ class ThreadSubscriptionNotifier
   }
 }
 
-final threadSubscriptionProvider = AsyncNotifierProvider.family<
-  ThreadSubscriptionNotifier,
-  bool,
-  ThreadSubscriptionArgs
->(ThreadSubscriptionNotifier.new, isAutoDispose: true);
+final threadSubscriptionProvider =
+    AsyncNotifierProvider.family<
+      ThreadSubscriptionNotifier,
+      bool,
+      ThreadSubscriptionArgs
+    >(ThreadSubscriptionNotifier.new, isAutoDispose: true);

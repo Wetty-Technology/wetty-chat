@@ -24,6 +24,7 @@ class ComposerInputArea extends StatelessWidget {
     required this.onRemoveAttachment,
     required this.onRetryAttachment,
     required this.onDeleteAudioDraft,
+    this.onTextFieldTap,
   });
 
   final ConversationComposerState composer;
@@ -36,6 +37,7 @@ class ComposerInputArea extends StatelessWidget {
   final ValueChanged<String> onRemoveAttachment;
   final Future<void> Function(String localId) onRetryAttachment;
   final Future<void> Function() onDeleteAudioDraft;
+  final VoidCallback? onTextFieldTap;
 
   bool get _isRecordingPhase {
     final draft = composer.audioDraft;
@@ -93,6 +95,7 @@ class ComposerInputArea extends StatelessWidget {
                     controller: textController,
                     scrollController: inputScrollController,
                     onChanged: onDraftChanged,
+                    onTap: onTextFieldTap,
                     placeholder: l10n.message,
                     maxLines: 5,
                     minLines: 1,

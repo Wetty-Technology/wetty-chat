@@ -46,8 +46,7 @@ class PushNotificationState {
   }) {
     return PushNotificationState(
       permissionStatus: permissionStatus ?? this.permissionStatus,
-      deviceToken:
-          clearDeviceToken ? null : (deviceToken ?? this.deviceToken),
+      deviceToken: clearDeviceToken ? null : (deviceToken ?? this.deviceToken),
       apnsEnvironment: apnsEnvironment ?? this.apnsEnvironment,
       isSubscribed: isSubscribed ?? this.isSubscribed,
       isLoading: isLoading ?? this.isLoading,
@@ -87,9 +86,7 @@ class PushNotificationNotifier extends Notifier<PushNotificationState> {
       Future.microtask(_initialize);
     }
 
-    return PushNotificationState(
-      deviceToken: savedToken,
-    );
+    return PushNotificationState(deviceToken: savedToken);
   }
 
   /// Runs after build() — refreshes permission and auto-subscribes if possible.
@@ -110,8 +107,10 @@ class PushNotificationNotifier extends Notifier<PushNotificationState> {
       final status = await _apns.getPermissionStatus();
       state = state.copyWith(permissionStatus: status);
     } catch (e) {
-      developer.log('Failed to get permission status: $e',
-          name: 'PushNotification');
+      developer.log(
+        'Failed to get permission status: $e',
+        name: 'PushNotification',
+      );
     }
   }
 
@@ -186,8 +185,10 @@ class PushNotificationNotifier extends Notifier<PushNotificationState> {
   }
 
   void _onTokenError(String error) {
-    developer.log('Token registration failed: $error',
-        name: 'PushNotification');
+    developer.log(
+      'Token registration failed: $error',
+      name: 'PushNotification',
+    );
     state = state.copyWith(
       isLoading: false,
       lastError: 'APNs registration failed: $error',
@@ -215,8 +216,7 @@ class PushNotificationNotifier extends Notifier<PushNotificationState> {
       final env = await _resolveEnvironment();
       await _api.subscribe(deviceToken: token, environment: env);
       state = state.copyWith(isSubscribed: true, isLoading: false);
-      developer.log('Subscribed to push (env=$env)',
-          name: 'PushNotification');
+      developer.log('Subscribed to push (env=$env)', name: 'PushNotification');
     } catch (e) {
       developer.log('Failed to subscribe: $e', name: 'PushNotification');
       state = state.copyWith(
@@ -247,6 +247,5 @@ class PushNotificationNotifier extends Notifier<PushNotificationState> {
 
 final pushNotificationProvider =
     NotifierProvider<PushNotificationNotifier, PushNotificationState>(
-  PushNotificationNotifier.new,
-);
-
+      PushNotificationNotifier.new,
+    );
