@@ -16,6 +16,7 @@ class ComposerInputArea extends StatelessWidget {
     super.key,
     required this.composer,
     required this.textController,
+    required this.focusNode,
     required this.inputScrollController,
     required this.snapPosition,
     required this.fieldMinHeight,
@@ -29,6 +30,7 @@ class ComposerInputArea extends StatelessWidget {
 
   final ConversationComposerState composer;
   final TextEditingController textController;
+  final FocusNode focusNode;
   final ScrollController inputScrollController;
   final ComposerAudioSnapPosition snapPosition;
   final double fieldMinHeight;
@@ -93,6 +95,7 @@ class ComposerInputArea extends StatelessWidget {
                   controller: inputScrollController,
                   child: CupertinoTextField(
                     controller: textController,
+                    focusNode: focusNode,
                     scrollController: inputScrollController,
                     onChanged: onDraftChanged,
                     onTap: onTextFieldTap,

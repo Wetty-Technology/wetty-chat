@@ -50,7 +50,7 @@ String formatMessagePreview({
 
   final text = message?.trim();
   if (text != null && text.isNotEmpty) {
-    return _renderMentionsAsText(text, mentions);
+    return renderMentionsAsText(text, mentions);
   }
 
   if (_containsAttachmentKind(attachments, 'audio/') ||
@@ -79,7 +79,7 @@ bool _containsAttachmentKind(List<AttachmentItem> attachments, String prefix) {
   return attachments.any((attachment) => attachment.kind.startsWith(prefix));
 }
 
-String _renderMentionsAsText(String text, List<MentionInfo> mentions) {
+String renderMentionsAsText(String text, List<MentionInfo> mentions) {
   if (mentions.isEmpty) {
     return text;
   }

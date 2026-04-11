@@ -234,6 +234,13 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
                           showStickerPreviewModal(context, stickerId);
                         }
                       },
+                      onTapMention: (uid, mention) {
+                        developer.log(
+                          'TODO: open profile sheet for thread mention '
+                          'uid=$uid username=${mention?.username}',
+                          name: 'ThreadDetailView',
+                        );
+                      },
                     ),
                   ),
                 ),

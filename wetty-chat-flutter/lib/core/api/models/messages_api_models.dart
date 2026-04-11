@@ -151,12 +151,43 @@ class ReactionSummaryDto {
 }
 
 @JsonSerializable(explicitToJson: true)
+class UserGroupInfoDto {
+  const UserGroupInfoDto({
+    required this.groupId,
+    this.name,
+    this.chatGroupColor,
+    this.chatGroupColorDark,
+  });
+
+  @FlexibleIntConverter()
+  final int groupId;
+  final String? name;
+  final String? chatGroupColor;
+  final String? chatGroupColorDark;
+
+  factory UserGroupInfoDto.fromJson(Map<String, dynamic> json) =>
+      _$UserGroupInfoDtoFromJson(json);
+
+  Map<String, dynamic> toJson() => _$UserGroupInfoDtoToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
 class MentionInfoDto {
-  const MentionInfoDto({required this.uid, this.username});
+  const MentionInfoDto({
+    required this.uid,
+    this.username,
+    this.avatarUrl,
+    this.gender = 0,
+    this.userGroup,
+  });
 
   @FlexibleIntConverter()
   final int uid;
   final String? username;
+  final String? avatarUrl;
+  @JsonKey(defaultValue: 0)
+  final int gender;
+  final UserGroupInfoDto? userGroup;
 
   factory MentionInfoDto.fromJson(Map<String, dynamic> json) =>
       _$MentionInfoDtoFromJson(json);

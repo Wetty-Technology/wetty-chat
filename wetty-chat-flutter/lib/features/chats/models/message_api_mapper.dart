@@ -57,8 +57,23 @@ extension ReactionSummaryDtoMapper on ReactionSummaryDto {
   );
 }
 
+extension UserGroupInfoDtoMapper on UserGroupInfoDto {
+  UserGroupInfo toDomain() => UserGroupInfo(
+    groupId: groupId,
+    name: name,
+    chatGroupColor: chatGroupColor,
+    chatGroupColorDark: chatGroupColorDark,
+  );
+}
+
 extension MentionInfoDtoMapper on MentionInfoDto {
-  MentionInfo toDomain() => MentionInfo(uid: uid, username: username);
+  MentionInfo toDomain() => MentionInfo(
+    uid: uid,
+    username: username,
+    avatarUrl: avatarUrl,
+    gender: gender,
+    userGroup: userGroup?.toDomain(),
+  );
 }
 
 extension ReplyToMessageDtoMapper on ReplyToMessageDto {

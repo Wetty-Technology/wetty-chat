@@ -87,9 +87,24 @@ abstract class ReactionSummary with _$ReactionSummary {
 }
 
 @freezed
+abstract class UserGroupInfo with _$UserGroupInfo {
+  const factory UserGroupInfo({
+    required int groupId,
+    String? name,
+    String? chatGroupColor,
+    String? chatGroupColorDark,
+  }) = _UserGroupInfo;
+}
+
+@freezed
 abstract class MentionInfo with _$MentionInfo {
-  const factory MentionInfo({required int uid, String? username}) =
-      _MentionInfo;
+  const factory MentionInfo({
+    required int uid,
+    String? username,
+    String? avatarUrl,
+    @Default(0) int gender,
+    UserGroupInfo? userGroup,
+  }) = _MentionInfo;
 }
 
 @freezed

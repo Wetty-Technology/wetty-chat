@@ -118,16 +118,42 @@ Map<String, dynamic> _$ReactionSummaryDtoToJson(ReactionSummaryDto instance) =>
       'reactors': instance.reactors?.map((e) => e.toJson()).toList(),
     };
 
+UserGroupInfoDto _$UserGroupInfoDtoFromJson(Map<String, dynamic> json) =>
+    UserGroupInfoDto(
+      groupId: const FlexibleIntConverter().fromJson(json['groupId']),
+      name: json['name'] as String?,
+      chatGroupColor: json['chatGroupColor'] as String?,
+      chatGroupColorDark: json['chatGroupColorDark'] as String?,
+    );
+
+Map<String, dynamic> _$UserGroupInfoDtoToJson(UserGroupInfoDto instance) =>
+    <String, dynamic>{
+      'groupId': const FlexibleIntConverter().toJson(instance.groupId),
+      'name': instance.name,
+      'chatGroupColor': instance.chatGroupColor,
+      'chatGroupColorDark': instance.chatGroupColorDark,
+    };
+
 MentionInfoDto _$MentionInfoDtoFromJson(Map<String, dynamic> json) =>
     MentionInfoDto(
       uid: const FlexibleIntConverter().fromJson(json['uid']),
       username: json['username'] as String?,
+      avatarUrl: json['avatarUrl'] as String?,
+      gender: (json['gender'] as num?)?.toInt() ?? 0,
+      userGroup: json['userGroup'] == null
+          ? null
+          : UserGroupInfoDto.fromJson(
+              json['userGroup'] as Map<String, dynamic>,
+            ),
     );
 
 Map<String, dynamic> _$MentionInfoDtoToJson(MentionInfoDto instance) =>
     <String, dynamic>{
       'uid': const FlexibleIntConverter().toJson(instance.uid),
       'username': instance.username,
+      'avatarUrl': instance.avatarUrl,
+      'gender': instance.gender,
+      'userGroup': instance.userGroup?.toJson(),
     };
 
 ReplyToMessageDto _$ReplyToMessageDtoFromJson(Map<String, dynamic> json) =>

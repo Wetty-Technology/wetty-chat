@@ -259,6 +259,13 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
                           showStickerPreviewModal(context, stickerId);
                         }
                       },
+                      onTapMention: (uid, mention) {
+                        developer.log(
+                          'TODO: open profile sheet for mention '
+                          'uid=$uid username=${mention?.username}',
+                          name: 'ChatDetailView',
+                        );
+                      },
                     ),
                   ),
                 ),

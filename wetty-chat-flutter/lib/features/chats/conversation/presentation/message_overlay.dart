@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 
 import '../../../../app/theme/style_config.dart';
+import '../../../../core/network/api_config.dart';
 import 'message_bubble/message_bubble.dart';
 import 'message_bubble/message_bubble_presentation.dart';
 import 'message_overlay_preview.dart';
@@ -443,6 +444,7 @@ class MessageOverlay extends StatelessWidget {
             chatMessageFontSize: chatMessageFontSize,
             isMe: details.isMe,
             showSenderName: !details.isMe,
+            currentUserId: ApiSession.currentUserId,
           ),
         ),
       ),

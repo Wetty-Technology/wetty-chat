@@ -15,11 +15,13 @@ class MessageBubble extends StatelessWidget {
     required this.chatMessageFontSize,
     required this.isMe,
     required this.showSenderName,
+    required this.currentUserId,
     this.onTapSticker,
     this.onTapReply,
     this.onOpenThread,
     this.onOpenAttachment,
     this.onToggleReaction,
+    this.onTapMention,
   });
 
   final ConversationMessage message;
@@ -27,11 +29,13 @@ class MessageBubble extends StatelessWidget {
   final double chatMessageFontSize;
   final bool isMe;
   final bool showSenderName;
+  final int? currentUserId;
   final VoidCallback? onTapSticker;
   final VoidCallback? onTapReply;
   final VoidCallback? onOpenThread;
   final ValueChanged<AttachmentItem>? onOpenAttachment;
   final ValueChanged<String>? onToggleReaction;
+  final void Function(int uid, MentionInfo? mention)? onTapMention;
 
   static const FontWeight _bubbleFontWeight = FontWeight.w400;
 
@@ -93,10 +97,12 @@ class MessageBubble extends StatelessWidget {
               chatMessageFontSize: chatMessageFontSize,
               isMe: isMe,
               showSenderName: showSenderName,
+              currentUserId: currentUserId,
               onTapReply: onTapReply,
               onOpenThread: onOpenThread,
               onOpenAttachment: onOpenAttachment,
               onToggleReaction: onToggleReaction,
+              onTapMention: onTapMention,
             ),
           ),
         ),

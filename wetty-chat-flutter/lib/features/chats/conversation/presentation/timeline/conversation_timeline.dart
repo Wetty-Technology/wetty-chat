@@ -12,6 +12,7 @@ import '../../domain/conversation_message.dart';
 import '../../domain/conversation_scope.dart';
 import '../../domain/timeline_entry.dart';
 import '../../domain/viewport_placement.dart';
+import '../../../models/message_models.dart';
 import '../anchored_timeline_view.dart';
 import '../message_overlay.dart';
 import '../message_row.dart';
@@ -35,6 +36,7 @@ class ConversationTimeline extends ConsumerStatefulWidget {
     required this.timelineArgs,
     this.onOpenThread,
     this.onTapSticker,
+    this.onTapMention,
     this.onMessageVisible,
     this.controller,
     this.logTag = 'ConversationTimeline',
@@ -49,6 +51,9 @@ class ConversationTimeline extends ConsumerStatefulWidget {
 
   /// Called when the user taps a sticker bubble to preview sticker details.
   final void Function(ConversationMessage message)? onTapSticker;
+
+  /// Called when the user taps a rendered message mention.
+  final void Function(int uid, MentionInfo? mention)? onTapMention;
 
   /// Extra callback invoked for every visible message during scroll.
   /// Thread uses this to track the max-seen message ID for mark-as-read.
@@ -681,6 +686,7 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline> {
                     onToggleReaction: message.messageType == 'sticker'
                         ? null
                         : (emoji) => unawaited(_toggleReaction(message, emoji)),
+                    onTapMention: widget.onTapMention,
                     showSenderName: showSenderName,
                     showAvatar: showAvatar,
                   ),

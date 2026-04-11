@@ -5,13 +5,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/style_config.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../../shared/presentation/app_divider.dart';
+import '../../../groups/members/data/group_member_models.dart';
+import '../../../groups/members/data/group_member_repository.dart';
 import '../application/conversation_composer_view_model.dart';
 import '../data/attachment_picker_service.dart';
 import '../domain/conversation_scope.dart';
 import 'widgets/composer_attachment_menu.dart';
 import 'widgets/composer_audio_controls.dart';
 import 'widgets/composer_input_area.dart';
+import 'widgets/composer_mention_autocomplete.dart';
+import 'widgets/composer_mentions.dart';
 
 class ConversationComposerBar extends ConsumerStatefulWidget {
   const ConversationComposerBar({
@@ -39,8 +42,11 @@ class _ConversationComposerBarState
   static const double _composerActionSlotWidth = 48;
   static const double _composerFieldMinHeight = 36;
   static const double _audioGestureTargetGap = 18;
+  static const int _mentionLimit = 8;
+  static const Duration _mentionDebounceDuration = Duration(milliseconds: 250);
   final ScrollController _inputScrollController = ScrollController();
   final TextEditingController _textController = TextEditingController();
+  final FocusNode _inputFocusNode = FocusNode();
   final LayerLink _attachmentMenuLink = LayerLink();
 
   ProviderSubscription<ConversationComposerState>? _composerSubscription;
@@ -51,6 +57,14 @@ class _ConversationComposerBarState
   ComposerAudioSnapPosition _audioSnapPosition =
       ComposerAudioSnapPosition.origin;
   Offset _audioDragOffset = Offset.zero;
+  Timer? _mentionDebounceTimer;
+  int _mentionLookupVersion = 0;
+  int _mentionSelectionRevision = 0;
+  int? _mentionTriggerStart;
+  bool _mentionLoading = false;
+  String _mentionQuery = '';
+  List<GroupMember> _mentionResults = const <GroupMember>[];
+  List<ComposerMentionEntry> _mentionEntries = const <ComposerMentionEntry>[];
 
   void _resetAudioGestureState() {
     _activeAudioPointerId = null;
@@ -59,16 +73,246 @@ class _ConversationComposerBarState
     _audioDragOffset = Offset.zero;
   }
 
+  bool get _showMentionAutocomplete =>
+      _inputFocusNode.hasFocus &&
+      (_mentionLoading || _mentionResults.isNotEmpty);
+
+  void _clearMentionState({
+    bool clearEntries = false,
+    bool clearQuery = true,
+    bool closeSuggestions = true,
+  }) {
+    _mentionDebounceTimer?.cancel();
+    _mentionDebounceTimer = null;
+    _mentionLookupVersion += 1;
+    if (closeSuggestions) {
+      _mentionResults = const <GroupMember>[];
+      _mentionLoading = false;
+      _mentionTriggerStart = null;
+    }
+    if (clearQuery) {
+      _mentionQuery = '';
+    }
+    if (clearEntries) {
+      _mentionEntries = const <ComposerMentionEntry>[];
+    }
+  }
+
+  void _handleInputFocusChanged() {
+    if (_inputFocusNode.hasFocus) {
+      _refreshMentionSuggestions();
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _clearMentionState(closeSuggestions: true, clearQuery: true);
+    });
+  }
+
+  void _handleTextControllerChanged() {
+    if (!mounted) {
+      return;
+    }
+
+    final retainedEntries = retainValidMentionEntries(
+      _textController.text,
+      _mentionEntries,
+    );
+    final changed = retainedEntries.length != _mentionEntries.length;
+
+    if (changed) {
+      setState(() {
+        _mentionEntries = retainedEntries;
+      });
+    }
+
+    _refreshMentionSuggestions();
+  }
+
+  void _refreshMentionSuggestions() {
+    final selection = _textController.selection;
+    if (!_inputFocusNode.hasFocus ||
+        !selection.isValid ||
+        !selection.isCollapsed) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _clearMentionState(closeSuggestions: true, clearQuery: true);
+      });
+      return;
+    }
+
+    final trigger = detectMentionTrigger(
+      _textController.text,
+      selection.extentOffset,
+    );
+    if (trigger == null) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _clearMentionState(closeSuggestions: true, clearQuery: true);
+      });
+      return;
+    }
+
+    final queryChanged =
+        trigger.query != _mentionQuery ||
+        trigger.triggerStart != _mentionTriggerStart;
+    if (!queryChanged) {
+      return;
+    }
+
+    setState(() {
+      _mentionQuery = trigger.query;
+      _mentionTriggerStart = trigger.triggerStart;
+      _mentionResults = const <GroupMember>[];
+      _mentionLoading = true;
+    });
+    _mentionDebounceTimer?.cancel();
+    _mentionDebounceTimer = Timer(
+      _mentionDebounceDuration,
+      () => unawaited(_loadMentionSuggestions(trigger.query)),
+    );
+  }
+
+  Future<void> _loadMentionSuggestions(String query) async {
+    final lookupVersion = ++_mentionLookupVersion;
+    try {
+      final page = await ref
+          .read(groupMemberRepositoryProvider)
+          .fetchMembers(
+            widget.scope.chatId,
+            limit: _mentionLimit,
+            query: query,
+            searchMode: GroupMemberSearchMode.autocomplete,
+          );
+      if (!mounted ||
+          lookupVersion != _mentionLookupVersion ||
+          query != _mentionQuery) {
+        return;
+      }
+      setState(() {
+        _mentionResults = page.members;
+        _mentionLoading = false;
+      });
+    } catch (_) {
+      if (!mounted ||
+          lookupVersion != _mentionLookupVersion ||
+          query != _mentionQuery) {
+        return;
+      }
+      setState(() {
+        _mentionResults = const <GroupMember>[];
+        _mentionLoading = false;
+      });
+    }
+  }
+
+  Future<void> _selectMention(GroupMember member) async {
+    final triggerStart = _mentionTriggerStart;
+    final selection = _textController.selection;
+    if (triggerStart == null || !selection.isValid || !selection.isCollapsed) {
+      return;
+    }
+
+    final username = member.username?.trim().isNotEmpty == true
+        ? member.username!.trim()
+        : 'User ${member.uid}';
+    final displayMention = '@$username';
+    final before = _textController.text.substring(0, triggerStart);
+    final after = _textController.text.substring(selection.extentOffset);
+    final inserted = '$displayMention ';
+    final nextText = '$before$inserted$after';
+    final nextCursorOffset = triggerStart + inserted.length;
+
+    _mentionSelectionRevision += 1;
+    final selectionRevision = _mentionSelectionRevision;
+    _textController.value = TextEditingValue(
+      text: nextText,
+      selection: TextSelection.collapsed(offset: nextCursorOffset),
+    );
+    _inputFocusNode.requestFocus();
+
+    final nextEntry = ComposerMentionEntry(
+      uid: member.uid,
+      username: username,
+      start: triggerStart,
+      end: triggerStart + displayMention.length,
+    );
+
+    if (!mounted || selectionRevision != _mentionSelectionRevision) {
+      return;
+    }
+
+    setState(() {
+      _mentionEntries = retainValidMentionEntries(nextText, [
+        ..._mentionEntries,
+        nextEntry,
+      ]);
+      _clearMentionState(closeSuggestions: true, clearQuery: true);
+    });
+
+    await ref
+        .read(conversationComposerViewModelProvider(widget.scope).notifier)
+        .updateDraft(nextText);
+  }
+
+  String _wireFormatText(String text) {
+    final trimmed = text.trim();
+    return convertComposerMentionsToWireFormat(trimmed, _mentionEntries);
+  }
+
+  Future<void> _hydrateEditingMentions(ConversationComposerState next) async {
+    final mode = next.mode;
+    if (mode is! ComposerEditing) {
+      return;
+    }
+
+    final hydrated = hydrateComposerMentions(
+      mode.message.message ?? '',
+      mode.message.mentions,
+    );
+    _textController.value = TextEditingValue(
+      text: hydrated.text,
+      selection: TextSelection.collapsed(offset: hydrated.text.length),
+    );
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _mentionEntries = hydrated.entries;
+      _clearMentionState(closeSuggestions: true, clearQuery: true);
+    });
+    await ref
+        .read(conversationComposerViewModelProvider(widget.scope).notifier)
+        .updateDraft(hydrated.text);
+  }
+
   @override
   void initState() {
     super.initState();
+    _textController.addListener(_handleTextControllerChanged);
+    _inputFocusNode.addListener(_handleInputFocusChanged);
     _composerSubscription = ref.listenManual<ConversationComposerState>(
       conversationComposerViewModelProvider(widget.scope),
-      (_, next) {
+      (previous, next) {
         _syncControllerText(next.draft);
         if (_isAttachmentPanelOpen &&
             (next.isEditing || next.isAtAttachmentLimit)) {
           _closeAttachmentMenu();
+        }
+        if (next.mode is ComposerEditing && previous?.mode != next.mode) {
+          unawaited(_hydrateEditingMentions(next));
+          return;
+        }
+        if (next.draft.isEmpty && previous?.draft.isNotEmpty == true) {
+          setState(() {
+            _clearMentionState(clearEntries: true);
+          });
         }
       },
       fireImmediately: true,
@@ -78,9 +322,13 @@ class _ConversationComposerBarState
   @override
   void dispose() {
     _closeAttachmentMenu(updateState: false);
+    _mentionDebounceTimer?.cancel();
     _composerSubscription?.close();
+    _textController.removeListener(_handleTextControllerChanged);
+    _inputFocusNode.removeListener(_handleInputFocusChanged);
     _inputScrollController.dispose();
     _textController.dispose();
+    _inputFocusNode.dispose();
     super.dispose();
   }
 
@@ -110,9 +358,14 @@ class _ConversationComposerBarState
       return;
     }
     try {
-      await composerNotifier.send(text: _textController.text);
+      await composerNotifier.send(text: _wireFormatText(_textController.text));
       _closeAttachmentMenu();
       _textController.clear();
+      if (mounted) {
+        setState(() {
+          _clearMentionState(clearEntries: true);
+        });
+      }
       await widget.onMessageSent?.call();
     } catch (error) {
       if (mounted) {
@@ -424,164 +677,176 @@ class _ConversationComposerBarState
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const AppDivider(),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Opacity(
-                  opacity: selectionLocked ? 0.45 : 1,
-                  child: CompositedTransformTarget(
-                    link: _attachmentMenuLink,
-                    child: SizedBox(
-                      width: 36,
-                      height: 36,
-                      child: CupertinoButton(
-                        padding: EdgeInsets.zero,
-                        minimumSize: const Size(36, 36),
-                        onPressed: canAttach ? _toggleAttachmentPanel : null,
-                        child: Icon(
-                          CupertinoIcons.add_circled,
-                          color: canAttach
-                              ? CupertinoColors.activeBlue.resolveFrom(context)
-                              : CupertinoColors.systemGrey2.resolveFrom(
-                                  context,
-                                ),
-                          size: 28,
+          if (_showMentionAutocomplete)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+              child: ComposerMentionAutocomplete(
+                results: _mentionResults,
+                loading: _mentionLoading,
+                onSelect: (member) {
+                  unawaited(_selectMention(member));
+                },
+              ),
+            ),
+          Container(
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: colors.inputBorder)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Opacity(
+                    opacity: selectionLocked ? 0.45 : 1,
+                    child: CompositedTransformTarget(
+                      link: _attachmentMenuLink,
+                      child: SizedBox(
+                        width: 36,
+                        height: 36,
+                        child: CupertinoButton(
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(36, 36),
+                          onPressed: canAttach ? _toggleAttachmentPanel : null,
+                          child: Icon(
+                            CupertinoIcons.add_circled,
+                            color: canAttach
+                                ? CupertinoColors.activeBlue.resolveFrom(
+                                    context,
+                                  )
+                                : CupertinoColors.systemGrey2.resolveFrom(
+                                    context,
+                                  ),
+                            size: 28,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                if (composer.hasPendingAttachmentUploads)
-                  const Padding(
-                    padding: EdgeInsets.only(left: 4, bottom: 2),
-                    child: CupertinoActivityIndicator(radius: 8),
-                  ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: colors.inputBorder),
+                  if (composer.hasPendingAttachmentUploads)
+                    const Padding(
+                      padding: EdgeInsets.only(left: 4, bottom: 2),
+                      child: CupertinoActivityIndicator(radius: 8),
                     ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(19),
-                      child: ColoredBox(
-                        color: colors.backgroundSecondary,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Expanded(
-                                  child: ComposerInputArea(
-                                    composer: composer,
-                                    textController: _textController,
-                                    inputScrollController:
-                                        _inputScrollController,
-                                    snapPosition: _audioSnapPosition,
-                                    fieldMinHeight: _composerFieldMinHeight,
-                                    onTextFieldTap: widget.isStickerPickerOpen
-                                        ? () => widget.onToggleStickerPicker
-                                              ?.call()
-                                        : null,
-                                    onClearMode: () {
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: colors.inputBorder),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(19),
+                        child: ColoredBox(
+                          color: colors.backgroundSecondary,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Expanded(
+                                child: ComposerInputArea(
+                                  composer: composer,
+                                  textController: _textController,
+                                  focusNode: _inputFocusNode,
+                                  inputScrollController: _inputScrollController,
+                                  snapPosition: _audioSnapPosition,
+                                  fieldMinHeight: _composerFieldMinHeight,
+                                  onTextFieldTap: widget.isStickerPickerOpen
+                                      ? () =>
+                                            widget.onToggleStickerPicker?.call()
+                                      : null,
+                                  onClearMode: () {
+                                    ref
+                                        .read(
+                                          conversationComposerViewModelProvider(
+                                            widget.scope,
+                                          ).notifier,
+                                        )
+                                        .clearMode();
+                                  },
+                                  onRemoveAttachment: (localId) {
+                                    ref
+                                        .read(
+                                          conversationComposerViewModelProvider(
+                                            widget.scope,
+                                          ).notifier,
+                                        )
+                                        .removeAttachment(localId);
+                                  },
+                                  onRetryAttachment: (localId) {
+                                    return ref
+                                        .read(
+                                          conversationComposerViewModelProvider(
+                                            widget.scope,
+                                          ).notifier,
+                                        )
+                                        .retryAttachment(localId);
+                                  },
+                                  onDeleteAudioDraft: () {
+                                    return ref
+                                        .read(
+                                          conversationComposerViewModelProvider(
+                                            widget.scope,
+                                          ).notifier,
+                                        )
+                                        .cancelAudioRecording();
+                                  },
+                                  onDraftChanged: (value) {
+                                    unawaited(
                                       ref
                                           .read(
                                             conversationComposerViewModelProvider(
                                               widget.scope,
                                             ).notifier,
                                           )
-                                          .clearMode();
-                                    },
-                                    onRemoveAttachment: (localId) {
-                                      ref
-                                          .read(
-                                            conversationComposerViewModelProvider(
-                                              widget.scope,
-                                            ).notifier,
-                                          )
-                                          .removeAttachment(localId);
-                                    },
-                                    onRetryAttachment: (localId) {
-                                      return ref
-                                          .read(
-                                            conversationComposerViewModelProvider(
-                                              widget.scope,
-                                            ).notifier,
-                                          )
-                                          .retryAttachment(localId);
-                                    },
-                                    onDeleteAudioDraft: () {
-                                      return ref
-                                          .read(
-                                            conversationComposerViewModelProvider(
-                                              widget.scope,
-                                            ).notifier,
-                                          )
-                                          .cancelAudioRecording();
-                                    },
-                                    onDraftChanged: (value) {
-                                      unawaited(
-                                        ref
-                                            .read(
-                                              conversationComposerViewModelProvider(
-                                                widget.scope,
-                                              ).notifier,
-                                            )
-                                            .updateDraft(value),
-                                      );
-                                    },
+                                          .updateDraft(value),
+                                    );
+                                  },
+                                ),
+                              ),
+                              SizedBox(
+                                width: 32,
+                                height: 36,
+                                child: CupertinoButton(
+                                  padding: const EdgeInsets.only(right: 4),
+                                  minimumSize: const Size(32, 36),
+                                  onPressed: _toggleStickerPicker,
+                                  child: Icon(
+                                    CupertinoIcons.smiley,
+                                    color: widget.isStickerPickerOpen
+                                        ? CupertinoColors.activeBlue
+                                              .resolveFrom(context)
+                                        : CupertinoColors.systemGrey
+                                              .resolveFrom(context),
+                                    size: 24,
                                   ),
                                 ),
-                                SizedBox(
-                                  width: 32,
-                                  height: 36,
-                                  child: CupertinoButton(
-                                    padding: const EdgeInsets.only(right: 4),
-                                    minimumSize: const Size(32, 36),
-                                    onPressed: _toggleStickerPicker,
-                                    child: Icon(
-                                      CupertinoIcons.smiley,
-                                      color: widget.isStickerPickerOpen
-                                          ? CupertinoColors.activeBlue
-                                                .resolveFrom(context)
-                                          : CupertinoColors.systemGrey
-                                                .resolveFrom(context),
-                                      size: 24,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 4),
-                ComposerAudioControls(
-                  showAudioRecordButton: showAudioRecordButton,
-                  showAudioTargets: showAudioTargets,
-                  isSavedDraftPhase: isSavedDraftPhase,
-                  snapPosition: _audioSnapPosition,
-                  dragOffset: _audioDragOffset,
-                  composer: composer,
-                  buttonSize: _composerActionButtonSize,
-                  slotWidth: _composerActionSlotWidth,
-                  onSendRecordedAudio:
-                      showAudioRecordButton || isSavedDraftPhase
-                      ? _sendRecordedAudio
-                      : _sendMessage,
-                  onAudioPointerDown: _handleAudioPointerDown,
-                  onAudioPointerMove: _handleAudioPointerMove,
-                  onAudioPointerFinish: _handleAudioPointerFinish,
-                ),
-              ],
+                  const SizedBox(width: 4),
+                  ComposerAudioControls(
+                    showAudioRecordButton: showAudioRecordButton,
+                    showAudioTargets: showAudioTargets,
+                    isSavedDraftPhase: isSavedDraftPhase,
+                    snapPosition: _audioSnapPosition,
+                    dragOffset: _audioDragOffset,
+                    composer: composer,
+                    buttonSize: _composerActionButtonSize,
+                    slotWidth: _composerActionSlotWidth,
+                    onSendRecordedAudio:
+                        showAudioRecordButton || isSavedDraftPhase
+                        ? _sendRecordedAudio
+                        : _sendMessage,
+                    onAudioPointerDown: _handleAudioPointerDown,
+                    onAudioPointerMove: _handleAudioPointerMove,
+                    onAudioPointerFinish: _handleAudioPointerFinish,
+                  ),
+                ],
+              ),
             ),
           ),
         ],
