@@ -2,13 +2,13 @@ import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 
-import 'package:ffmpeg_kit_flutter_new_audio/ffmpeg_kit.dart';
-import 'package:ffmpeg_kit_flutter_new_audio/return_code.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
+import 'package:voice_message/voice_message.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../core/network/dio_client.dart';
 import '../../../../core/providers/shared_preferences_provider.dart';
 import '../../models/message_models.dart';
 
@@ -41,11 +41,12 @@ class AudioPlaybackSource {
 }
 
 class AudioSourceResolverService {
-  AudioSourceResolverService(this._preferences);
+  AudioSourceResolverService(this._dio, this._preferences);
 
   static const String _preparedFilePrefix = 'prepared_audio_file:';
   static const String _downloadedFilePrefix = 'downloaded_audio_file:';
 
+  final Dio _dio;
   final SharedPreferences _preferences;
   final Map<String, Future<String?>> _preparedInFlight =
       <String, Future<String?>>{};
@@ -86,6 +87,9 @@ class AudioSourceResolverService {
   }
 
   bool _requiresTranscode(AttachmentItem attachment) {
+    if (!Platform.isIOS && !Platform.isMacOS) {
+      return false;
+    }
     if (!attachment.isAudio || attachment.url.isEmpty) {
       return false;
     }
@@ -165,14 +169,14 @@ class AudioSourceResolverService {
       return outputFile.path;
     }
 
-    final command =
-        "-y -i ${_quoteArgument(originalPath)} -vn -c:a aac -b:a 128k ${_quoteArgument(outputFile.path)}";
     try {
-      final session = await FFmpegKit.execute(command);
-      final returnCode = await session.getReturnCode();
-      if (!ReturnCode.isSuccess(returnCode) || !await outputFile.exists()) {
+      await VoiceMessage.convertOggToM4a(
+        srcPath: originalPath,
+        destPath: outputFile.path,
+      );
+      if (!await outputFile.exists()) {
         log(
-          'Audio transcode failed for ${attachment.id} (${attachment.kind}) with return code $returnCode',
+          'Audio transcode produced no output for ${attachment.id} (${attachment.kind})',
           name: 'AudioSourceResolverService',
         );
         return null;
@@ -204,15 +208,7 @@ class AudioSourceResolverService {
     final file = File('${directory.path}/$cacheKey$extension');
 
     try {
-      final response = await http.get(Uri.parse(attachment.url));
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        log(
-          'Audio download failed for ${attachment.id} with status ${response.statusCode}',
-          name: 'AudioSourceResolverService',
-        );
-        return null;
-      }
-      await file.writeAsBytes(response.bodyBytes, flush: true);
+      await _dio.download(attachment.url, file.path);
       _preferences.setString('$_downloadedFilePrefix$cacheKey', file.path);
       return file.path;
     } catch (error, stackTrace) {
@@ -294,14 +290,13 @@ class AudioSourceResolverService {
     return hash;
   }
 
-  String _quoteArgument(String value) {
-    final escaped = value.replaceAll("'", "'\\''");
-    return "'$escaped'";
-  }
 }
 
 final audioSourceResolverServiceProvider = Provider<AudioSourceResolverService>(
   (ref) {
-    return AudioSourceResolverService(ref.watch(sharedPreferencesProvider));
+    return AudioSourceResolverService(
+      ref.watch(dioProvider),
+      ref.watch(sharedPreferencesProvider),
+    );
   },
 );

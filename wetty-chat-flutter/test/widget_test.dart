@@ -1,12 +1,9 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:http/http.dart' as http;
-import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:chahua/app/app.dart';
-import 'package:chahua/core/providers/http_client_provider.dart';
 import 'package:chahua/core/providers/shared_preferences_provider.dart';
 
 void main() {
@@ -20,9 +17,6 @@ void main() {
       ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
-          httpClientProvider.overrideWithValue(
-            MockClient((request) async => http.Response('unauthorized', 401)),
-          ),
         ],
         child: const WettyChatApp(),
       ),
