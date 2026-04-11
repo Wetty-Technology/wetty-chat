@@ -38,6 +38,7 @@ abstract class ConversationMessage with _$ConversationMessage {
       ? 'server:$serverMessageId'
       : 'local:$localMessageId';
 
+  bool get isSystem => messageType == 'system';
   bool get isLocalOnly => serverMessageId == null;
   bool get isPending => deliveryState == ConversationDeliveryState.sending;
   bool get isFailed => deliveryState == ConversationDeliveryState.failed;

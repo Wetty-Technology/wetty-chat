@@ -15,6 +15,7 @@ import '../../domain/viewport_placement.dart';
 import '../anchored_timeline_view.dart';
 import '../message_overlay.dart';
 import '../message_row.dart';
+import '../system_message_row.dart';
 import 'date_separator.dart';
 import 'gap_label.dart';
 import 'jump_to_latest_fab.dart';
@@ -469,6 +470,52 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline> {
   // Build
   // ---------------------------------------------------------------------------
 
+  bool _shouldShowSenderName(List<TimelineEntry> entries, int index) {
+    final entry = entries[index];
+    if (entry is! TimelineMessageEntry) {
+      return false;
+    }
+    final message = entry.message;
+    if (message.isSystem) {
+      return false;
+    }
+    if (index == 0) {
+      return true;
+    }
+    final previousEntry = entries[index - 1];
+    if (previousEntry is! TimelineMessageEntry) {
+      return true;
+    }
+    final previousMessage = previousEntry.message;
+    if (previousMessage.isSystem) {
+      return true;
+    }
+    return previousMessage.sender.uid != message.sender.uid;
+  }
+
+  bool _shouldShowAvatar(List<TimelineEntry> entries, int index) {
+    final entry = entries[index];
+    if (entry is! TimelineMessageEntry) {
+      return false;
+    }
+    final message = entry.message;
+    if (message.isSystem) {
+      return false;
+    }
+    if (index == entries.length - 1) {
+      return true;
+    }
+    final nextEntry = entries[index + 1];
+    if (nextEntry is! TimelineMessageEntry) {
+      return true;
+    }
+    final nextMessage = nextEntry.message;
+    if (nextMessage.isSystem) {
+      return true;
+    }
+    return nextMessage.sender.uid != message.sender.uid;
+  }
+
   @override
   Widget build(BuildContext context) {
     final timelineAsync = ref.watch(
@@ -612,54 +659,49 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline> {
       topPadding: 8,
       bottomPadding: _timelineEndPadding,
       entryBuilder: (context, entry, index) {
+        final showSenderName = _shouldShowSenderName(viewState.entries, index);
+        final showAvatar = _shouldShowAvatar(viewState.entries, index);
+
         return switch (entry) {
-          TimelineMessageEntry(:final message) => () {
-            final previousMessage = _messageAtEntryIndex(
-              viewState.entries,
-              index - 1,
-            );
-            final nextMessage = _messageAtEntryIndex(
-              viewState.entries,
-              index + 1,
-            );
-            final isFirstInRun = !_hasSameSenderNeighbor(
-              message,
-              previousMessage,
-            );
-            final isLastInRun = !_hasSameSenderNeighbor(message, nextMessage);
-            return MessageRow(
-              key: _messageRowKey(message.stableKey),
-              message: message,
-              chatMessageFontSize: chatMessageFontSize,
-              isHighlighted:
-                  viewState.highlightedMessageId == message.serverMessageId,
-              onLongPress: _openMessageOverlay,
-              onReply: () => ref
-                  .read(
-                    conversationComposerViewModelProvider(
-                      widget.scope,
-                    ).notifier,
+          TimelineMessageEntry(:final message) =>
+            message.isSystem
+                ? SystemMessageRow(
+                    key: _messageRowKey(message.stableKey),
+                    message: message,
                   )
-                  .beginReply(message),
-              onTapSticker: widget.onTapSticker != null
-                  ? () => widget.onTapSticker!(message)
-                  : null,
-              onTapReply: message.replyToMessage != null
-                  ? () => _jumpToMessage(message.replyToMessage!.id)
-                  : null,
-              onOpenThread:
-                  widget.onOpenThread != null &&
-                      message.threadInfo != null &&
-                      message.threadInfo!.replyCount > 0
-                  ? () => widget.onOpenThread!(message)
-                  : null,
-              onToggleReaction: message.messageType == 'sticker'
-                  ? null
-                  : (emoji) => unawaited(_toggleReaction(message, emoji)),
-              showSenderName: isFirstInRun,
-              showAvatar: isLastInRun,
-            );
-          }(),
+                : MessageRow(
+                    key: _messageRowKey(message.stableKey),
+                    message: message,
+                    chatMessageFontSize: chatMessageFontSize,
+                    isHighlighted:
+                        viewState.highlightedMessageId ==
+                        message.serverMessageId,
+                    onLongPress: _openMessageOverlay,
+                    onReply: () => ref
+                        .read(
+                          conversationComposerViewModelProvider(
+                            widget.scope,
+                          ).notifier,
+                        )
+                        .beginReply(message),
+                    onTapSticker: widget.onTapSticker != null
+                        ? () => widget.onTapSticker!(message)
+                        : null,
+                    onTapReply: message.replyToMessage != null
+                        ? () => _jumpToMessage(message.replyToMessage!.id)
+                        : null,
+                    onOpenThread:
+                        widget.onOpenThread != null &&
+                            message.threadInfo != null &&
+                            message.threadInfo!.replyCount > 0
+                        ? () => widget.onOpenThread!(message)
+                        : null,
+                    onToggleReaction: message.messageType == 'sticker'
+                        ? null
+                        : (emoji) => unawaited(_toggleReaction(message, emoji)),
+                    showSenderName: showSenderName,
+                    showAvatar: showAvatar,
+                  ),
           TimelineDateSeparatorEntry(:final day) => DateSeparator(day: day),
           TimelineUnreadMarkerEntry() => const UnreadDivider(),
           TimelineHistoryGapOlderEntry() => const GapLabel(

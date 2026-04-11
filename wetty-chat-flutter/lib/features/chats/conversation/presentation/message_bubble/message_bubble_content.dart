@@ -102,12 +102,10 @@ class MessageBubbleContent extends StatelessWidget {
       );
     }
 
-    if (hasAttachments || message.messageType != 'system') {
-      if (contentChildren.isNotEmpty) {
-        contentChildren.add(const SizedBox(height: 4));
-      }
-      contentChildren.add(_buildMessageBody(context));
+    if (contentChildren.isNotEmpty) {
+      contentChildren.add(const SizedBox(height: 4));
     }
+    contentChildren.add(_buildMessageBody(context));
 
     final threadInfo = message.threadInfo;
     if (threadInfo != null &&
