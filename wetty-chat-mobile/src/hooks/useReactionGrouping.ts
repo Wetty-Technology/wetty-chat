@@ -9,8 +9,6 @@ export interface ReactionGroup {
 
 export interface GroupedUser extends ReactionReactor {
   emojis: string[];
-  // Store an index for original time-based sorting if no timestamp is present,
-  // smaller index = earlier.
   firstReactIndex: number;
 }
 
@@ -29,15 +27,22 @@ export function useReactionGrouping(groups: ReactionGroup[]): ReactionGroupingRe
   return useMemo(() => {
     if (!groups || groups.length === 0) return { categories: [] };
 
-    const sortedGroups = [...groups].sort((a, b) => {
-      if (b.reactors.length !== a.reactors.length) {
-        return b.reactors.length - a.reactors.length;
-      }
-      return a.emoji.localeCompare(b.emoji);
+    const groupsWithIndex = groups.map((g, originalIndex) => ({ g, originalIndex }));
+
+    groupsWithIndex.sort((a, b) => {
+      const countDiff = b.g.reactors.length - a.g.reactors.length;
+      if (countDiff !== 0) return countDiff;
+      return a.originalIndex - b.originalIndex;
     });
 
-    const topGroups = sortedGroups.slice(0, MAX_REACTION_HEAD_TABS);
-    const moreGroups = sortedGroups.slice(MAX_REACTION_HEAD_TABS);
+    const topGroupsUnsorted = groupsWithIndex.slice(0, MAX_REACTION_HEAD_TABS).map((item) => item.g);
+    const moreGroups = groupsWithIndex.slice(MAX_REACTION_HEAD_TABS).map((item) => item.g);
+
+    const topGroups = topGroupsUnsorted.sort((a, b) => {
+      const countDiff = b.reactors.length - a.reactors.length;
+      if (countDiff !== 0) return countDiff;
+      return a.emoji < b.emoji ? -1 : a.emoji > b.emoji ? 1 : 0;
+    });
 
     const categories: ReactionCategory[] = [];
 
@@ -46,14 +51,19 @@ export function useReactionGrouping(groups: ReactionGroup[]): ReactionGroupingRe
 
     groups.forEach((g) => {
       g.reactors.forEach((r) => {
+        const index = r.sortIndex ?? globalIndex++;
         if (!allUsersMap.has(r.uid)) {
           allUsersMap.set(r.uid, {
             ...r,
             emojis: [g.emoji],
-            firstReactIndex: globalIndex++,
+            firstReactIndex: index,
           });
         } else {
-          allUsersMap.get(r.uid)!.emojis.push(g.emoji);
+          const existing = allUsersMap.get(r.uid)!;
+          existing.emojis.push(g.emoji);
+          if (index < existing.firstReactIndex) {
+            existing.firstReactIndex = index;
+          }
         }
       });
     });
@@ -71,7 +81,7 @@ export function useReactionGrouping(groups: ReactionGroup[]): ReactionGroupingRe
       const users: GroupedUser[] = g.reactors.map((r, i) => ({
         ...r,
         emojis: [g.emoji],
-        firstReactIndex: i,
+        firstReactIndex: r.sortIndex ?? i,
       }));
 
       categories.push({
@@ -90,7 +100,7 @@ export function useReactionGrouping(groups: ReactionGroup[]): ReactionGroupingRe
           moreUsers.push({
             ...r,
             emojis: [g.emoji],
-            firstReactIndex: i,
+            firstReactIndex: r.sortIndex ?? i,
           });
         });
       });

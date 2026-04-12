@@ -21,6 +21,7 @@ import {
   unfavoriteSticker,
 } from '@/api/stickers';
 import { useAddSticker } from '@/hooks/useAddSticker';
+import { getOverlayPortalTarget } from '@/utils/dom';
 import { STICKER_AUTO_SORT_LIMIT } from '@/constants/emojiAndStickers';
 import type { AppDispatch } from '@/store/index';
 import {
@@ -360,7 +361,7 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
               </button>
             </div>
           </>,
-          document.body,
+          getOverlayPortalTarget(),
         )}
     </div>
   );

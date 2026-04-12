@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { IonIcon } from '@ionic/react';
+import { IonIcon, useIonToast } from '@ionic/react';
 import { addOutline } from 'ionicons/icons';
 import EmojiPicker, { EmojiStyle, Theme, type EmojiClickData } from 'emoji-picker-react';
 import type { Attachment } from '@/api/messages';
@@ -8,6 +8,9 @@ import type { PreviewMessage } from '@/utils/messagePreview';
 import { ChatBubbleBase } from './messages/ChatBubbleBase';
 import { StickerBubble } from './messages/StickerBubble';
 import styles from './MessageOverlay.module.scss';
+import { MAX_DISTINCT_REACTIONS_PER_MESSAGE } from '@/constants/emojiAndStickers';
+import { getOverlayPortalTarget } from '@/utils/dom';
+import { t } from '@lingui/core/macro';
 
 export interface MessageOverlayAction {
   key: string;
@@ -35,6 +38,7 @@ interface MessageOverlayBaseProps {
   reactions?: {
     emojis: string[];
     onReact: (emoji: string) => void;
+    currentMessageReactions?: string[];
   };
   onClose: () => void;
 }
@@ -73,6 +77,7 @@ export function MessageOverlay(props: MessageOverlayProps) {
   const isSticker = props.messageType === 'sticker';
   const contentRef = useRef<HTMLDivElement>(null);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const [presentToast] = useIonToast();
 
   const handleEmojiClick = useCallback(
     (emojiData: EmojiClickData) => {
@@ -320,33 +325,56 @@ export function MessageOverlay(props: MessageOverlayProps) {
         style={{ top: sourceRect.top, left: sourceRect.left, visibility: 'hidden' }}
       >
         {/* Reaction bar — hidden for stickers */}
-        {!isSticker && reactions && (
-          <div className={styles.reactionBar} data-reaction-bar="true">
-            {reactions.emojis.map((emoji) => (
-              <button
-                key={emoji}
-                type="button"
-                className={styles.reactionBtn}
-                onClick={() => {
-                  reactions.onReact(emoji);
-                  onClose();
-                }}
-              >
-                {emoji}
-              </button>
-            ))}
-            <button
-              type="button"
-              className={styles.reactionBtn}
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsEmojiPickerOpen(!isEmojiPickerOpen);
-              }}
-            >
-              <IonIcon icon={addOutline} style={{ color: 'var(--ion-text-color)' }} />
-            </button>
-          </div>
-        )}
+        {!isSticker &&
+          reactions &&
+          (() => {
+            const currentReactionsCount = reactions.currentMessageReactions?.length ?? 0;
+            const isLimitReached = currentReactionsCount >= MAX_DISTINCT_REACTIONS_PER_MESSAGE;
+
+            return (
+              <div className={styles.reactionBar} data-reaction-bar="true">
+                {reactions.emojis.map((emoji) => {
+                  const hasThisReaction = reactions.currentMessageReactions?.includes(emoji) ?? false;
+                  const disabled = isLimitReached && !hasThisReaction;
+
+                  return (
+                    <button
+                      key={emoji}
+                      type="button"
+                      className={styles.reactionBtn}
+                      onClick={() => {
+                        if (disabled) {
+                          presentToast({
+                            message: t`Cannot add more than ${MAX_DISTINCT_REACTIONS_PER_MESSAGE} different reactions`,
+                            duration: 3000,
+                            position: 'bottom',
+                            cssClass: 'toast-center',
+                          });
+                          return;
+                        }
+                        reactions.onReact(emoji);
+                        onClose();
+                      }}
+                    >
+                      {emoji}
+                    </button>
+                  );
+                })}
+                {!isLimitReached && (
+                  <button
+                    type="button"
+                    className={styles.reactionBtn}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsEmojiPickerOpen(!isEmojiPickerOpen);
+                    }}
+                  >
+                    <IonIcon icon={addOutline} style={{ color: 'var(--ion-text-color)' }} />
+                  </button>
+                )}
+              </div>
+            );
+          })()}
 
         {/* Bubble clone */}
         {bubbleClone}
@@ -403,5 +431,5 @@ export function MessageOverlay(props: MessageOverlayProps) {
     </div>
   );
 
-  return createPortal(overlay, document.body);
+  return createPortal(overlay, getOverlayPortalTarget());
 }

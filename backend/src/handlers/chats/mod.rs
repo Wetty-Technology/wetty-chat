@@ -148,6 +148,8 @@ pub struct ReactionReactor {
     pub uid: i32,
     pub name: Option<String>,
     pub avatar_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sort_index: Option<i32>,
 }
 
 #[derive(Debug, Serialize, Clone, utoipa::ToSchema)]
@@ -868,6 +870,7 @@ pub async fn attach_metadata(
                         uid,
                         name: reactor_names.get(&uid).cloned().flatten(),
                         avatar_url: reactor_avatars.get(&uid).cloned().flatten(),
+                        sort_index: None,
                     })
                     .collect()
             });

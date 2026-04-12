@@ -1,10 +1,10 @@
 import { IonButton, IonChip, IonContent, IonIcon, IonLabel, IonModal } from '@ionic/react';
 import { close, openOutline } from 'ionicons/icons';
 import { t } from '@lingui/core/macro';
+import { useState } from 'react';
 import type { Sender } from '@/api/messages';
 import { useIsDarkMode, useIsDesktop } from '@/hooks/platformHooks';
 import { UserAvatar } from '@/components/UserAvatar';
-import { FeatureGate } from '../FeatureGate';
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/store';
 
@@ -16,13 +16,25 @@ interface UserProfileModalProps {
 export function UserProfileModal({ sender, onDismiss }: UserProfileModalProps) {
   const isDesktop = useIsDesktop();
   const isDarkMode = useIsDarkMode();
-  const displayName = sender?.name ?? (sender ? `User ${sender.uid}` : '');
-  const groupName = sender?.userGroup?.name?.trim() || null;
+
+  const [prevSender, setPrevSender] = useState<Sender | null>(sender);
+  const [localSender, setLocalSender] = useState<Sender | null>(sender);
+
+  if (sender !== prevSender) {
+    setPrevSender(sender);
+    if (sender) {
+      setLocalSender(sender);
+    }
+  }
+
+  const displaySender = sender || localSender;
+  const displayName = displaySender?.name ?? (displaySender ? `User ${displaySender.uid}` : '');
+  const groupName = displaySender?.userGroup?.name?.trim() || null;
   const groupNameColor = isDarkMode
-    ? sender?.userGroup?.chatGroupColorDark || sender?.userGroup?.chatGroupColor || undefined
-    : sender?.userGroup?.chatGroupColor || undefined;
+    ? displaySender?.userGroup?.chatGroupColorDark || displaySender?.userGroup?.chatGroupColor || undefined
+    : displaySender?.userGroup?.chatGroupColor || undefined;
   const currentUserId = useSelector((state: RootState) => state.user.uid);
-  const isOwn = sender?.uid === currentUserId;
+  const isOwn = displaySender?.uid === currentUserId;
 
   return (
     <IonModal
@@ -38,7 +50,7 @@ export function UserProfileModal({ sender, onDismiss }: UserProfileModalProps) {
             position: 'absolute',
             top: 12,
             right: 12,
-            background: 'var(--ion-color-light)',
+            background: 'rgba(128, 128, 128, 0.2)',
             border: 'none',
             borderRadius: '50%',
             width: 32,
@@ -47,14 +59,22 @@ export function UserProfileModal({ sender, onDismiss }: UserProfileModalProps) {
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            zIndex: 1,
+            zIndex: 10,
+            transition: 'transform 0.2s',
           }}
+          onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
+          onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
         >
-          <IonIcon icon={close} style={{ fontSize: 20 }} />
+          <IonIcon icon={close} style={{ fontSize: 20, color: 'var(--ion-text-color)' }} />
         </button>
-        {sender && (
-          <div style={{ textAlign: 'center', paddingTop: 24 }}>
-            <UserAvatar name={displayName} avatarUrl={sender.avatarUrl} size={80} style={{ display: 'inline-flex' }} />
+        {displaySender && (
+          <div style={{ textAlign: 'center', paddingTop: 44 }}>
+            <UserAvatar
+              name={displayName}
+              avatarUrl={displaySender.avatarUrl}
+              size={80}
+              style={{ display: 'inline-flex' }}
+            />
             <h2>{displayName}</h2>
             {groupName && (
               <div
@@ -74,7 +94,7 @@ export function UserProfileModal({ sender, onDismiss }: UserProfileModalProps) {
             )}
             <IonButton
               fill="outline"
-              href={'https://www.shireyishunjian.com/main/home.php?mod=space&uid=' + sender.uid}
+              href={'https://www.shireyishunjian.com/main/home.php?mod=space&uid=' + displaySender.uid}
               target="_blank"
               size="small"
             >
@@ -103,9 +123,6 @@ export function UserProfileModal({ sender, onDismiss }: UserProfileModalProps) {
                 </IonButton>
               </>
             )}
-            <FeatureGate>
-              <p style={{ color: 'var(--ion-color-medium)' }}>UID: {sender.uid}</p>
-            </FeatureGate>
           </div>
         )}
       </IonContent>

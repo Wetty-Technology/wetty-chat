@@ -47,6 +47,7 @@ export interface ReactionReactor {
   uid: number;
   name: string | null;
   avatarUrl?: string;
+  sortIndex?: number;
 }
 
 export interface ReactionSummary {

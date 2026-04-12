@@ -5,6 +5,7 @@ import { t } from '@lingui/core/macro';
 import { chevronBack, chevronForward, close, contractOutline, download, expandOutline } from 'ionicons/icons';
 import { useIsDesktop } from '@/hooks/platformHooks';
 import { appHistory } from '@/utils/navigationHistory';
+import { getOverlayPortalTarget } from '@/utils/dom';
 import styles from './ImageViewer.module.scss';
 
 const MAX_SCALE = 5;
@@ -723,6 +724,6 @@ export function ImageViewer({ images, initialIndex = 0, onClose }: ImageViewerPr
         )}
       </div>
     </div>,
-    document.body,
+    getOverlayPortalTarget(),
   );
 }

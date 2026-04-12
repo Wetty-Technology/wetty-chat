@@ -42,7 +42,22 @@ textarea {
   flex-direction: column;
 }
 
+// Global Toast Styling to ensure high priority and dynamic width
+ion-toast {
+  z-index: 100000 !important; // Absolute highest priority over other Ionic overlays
+  --width: fit-content;
+  --max-width: calc(100vw - 32px); // Prevent overflowing screen width on long messages
+
+  &::part(message) {
+    text-align: center;
+    width: auto;
+  }
+
+  &::part(button) {
+    flex-shrink: 0;
+  }
+}
+
 .toast-center::part(message) {
   text-align: center;
-  width: 100%;
 }

@@ -1720,7 +1720,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
             onRequestEditLastMessage={requestEditLastOwnMessage}
           />
         </IonFooter>
-        <UserProfileModal key={profileSender?.uid} sender={profileSender} onDismiss={() => setProfileSender(null)} />
+        <UserProfileModal sender={profileSender} onDismiss={() => setProfileSender(null)} />
         <ReactionDetailsModal
           chatId={chatId}
           messageId={reactionDetail?.messageId ?? null}
@@ -1757,6 +1757,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
               actions: overlayActions,
               reactions: {
                 emojis: QUICK_REACTION_EMOJIS,
+                currentMessageReactions: msg.reactions?.map((r) => r.emoji) ?? [],
                 onReact: (emoji: string) => {
                   handleReactionToggle(msg, emoji, !!msg.reactions?.some((r) => r.emoji === emoji && r.reactedByMe));
                 },

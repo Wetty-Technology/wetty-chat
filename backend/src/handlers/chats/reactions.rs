@@ -89,6 +89,7 @@ fn broadcast_reaction_update(
                         uid,
                         name: names.get(&uid).cloned().flatten(),
                         avatar_url: avatars.get(&uid).cloned().flatten(),
+                        sort_index: None,
                     })
                     .collect()
             });
@@ -177,23 +178,25 @@ async fn get_reaction_details(
         std::collections::HashMap::new();
     let mut all_uids = std::collections::HashSet::new();
 
-    for (emoji, uid) in &raw {
+    for (idx, (emoji, uid)) in raw.iter().enumerate() {
         all_uids.insert(*uid);
-        if let Some(&idx) = emoji_index.get(emoji) {
-            groups[idx].reactors.push(ReactionReactor {
+        if let Some(&gi) = emoji_index.get(emoji) {
+            groups[gi].reactors.push(ReactionReactor {
                 uid: *uid,
                 name: None,
                 avatar_url: None,
+                sort_index: Some(idx as i32),
             });
         } else {
-            let idx = groups.len();
-            emoji_index.insert(emoji.clone(), idx);
+            let gi = groups.len();
+            emoji_index.insert(emoji.clone(), gi);
             groups.push(ReactionDetailGroup {
                 emoji: emoji.clone(),
                 reactors: vec![ReactionReactor {
                     uid: *uid,
                     name: None,
                     avatar_url: None,
+                    sort_index: Some(idx as i32),
                 }],
             });
         }

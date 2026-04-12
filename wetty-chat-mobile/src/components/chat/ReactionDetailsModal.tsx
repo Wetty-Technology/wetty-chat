@@ -78,14 +78,15 @@ export function ReactionDetailsModal({
   const renderLayout = () => {
     if (isDesktop) {
       return (
-        <div style={{ display: 'flex', height: '100%' }}>
+        <div style={{ display: 'flex', height: '100%', paddingTop: isDesktop ? 0 : 44 }}>
           {/* Left Column: Navigation */}
           <div
             style={{
+              paddingTop: isDesktop ? 44 : undefined,
               minWidth: '100px',
               maxWidth: '200px',
               width: 'max-content',
-              borderRight: '1px solid var(--ion-color-step-150, #edeec0)',
+              borderRight: '1px solid rgba(128, 128, 128, 0.2)',
               overflowY: 'auto',
               padding: '16px 8px',
             }}
@@ -118,7 +119,9 @@ export function ReactionDetailsModal({
           </div>
 
           {/* Right Column: Content */}
-          <div style={{ flex: 1, padding: 16, overflowY: 'auto', position: 'relative' }}>
+          <div
+            style={{ flex: 1, padding: 16, paddingTop: isDesktop ? 60 : 16, overflowY: 'auto', position: 'relative' }}
+          >
             {loading ? (
               <p style={{ textAlign: 'center', opacity: 0.6 }}>{t`Loading...`}</p>
             ) : activeCategory ? (
@@ -130,7 +133,7 @@ export function ReactionDetailsModal({
     }
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingTop: 44 }}>
         {/* Top: Scrollable Tabs */}
         <div
           style={{
@@ -138,7 +141,7 @@ export function ReactionDetailsModal({
             overflowX: 'auto',
             padding: '16px',
             gap: 12,
-            borderBottom: '1px solid var(--ion-color-step-150, #edeec0)',
+            borderBottom: '1px solid rgba(128, 128, 128, 0.2)',
             WebkitOverflowScrolling: 'touch',
             scrollbarWidth: 'none',
           }}
@@ -199,7 +202,7 @@ export function ReactionDetailsModal({
             position: 'absolute',
             top: 12,
             right: 12,
-            background: 'var(--ion-color-step-100, #f4f5f8)',
+            background: 'rgba(128, 128, 128, 0.2)',
             border: 'none',
             borderRadius: '50%',
             width: 32,
@@ -209,12 +212,15 @@ export function ReactionDetailsModal({
             justifyContent: 'center',
             cursor: 'pointer',
             zIndex: 10,
+            transition: 'transform 0.2s',
           }}
+          onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
+          onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
         >
-          <IonIcon icon={close} style={{ fontSize: 20 }} />
+          <IonIcon icon={close} style={{ fontSize: 20, color: 'var(--ion-text-color)' }} />
         </button>
 
-        {renderLayout()}
+        <div style={{ height: '100%', boxSizing: 'border-box' }}>{renderLayout()}</div>
       </IonContent>
     </IonModal>
   );
