@@ -15,8 +15,10 @@ abstract final class AppRoutes {
   static const devSession = '/settings/dev-session';
   static const notifications = '/settings/notifications';
   static const cache = '/settings/cache';
+  static const stickerPackDetailRoot = '/sticker-packs';
+  static String stickerPackDetail(String packId) => '/sticker-packs/$packId';
   static const stickerPacks = '/settings/sticker-packs';
-  static String stickerPackDetail(String packId) =>
+  static String settingsStickerPackDetail(String packId) =>
       '/settings/sticker-packs/$packId';
   static const attachmentViewer = '/attachment-viewer';
 }

@@ -20,10 +20,20 @@ class StickerGridItem extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           color: colors.surfaceMuted,
         ),
-        child: StickerImage(
-          media: sticker.media,
-          emoji: sticker.emoji,
-          size: 78,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final imageSize = (constraints.maxWidth - 10).clamp(
+              0.0,
+              double.infinity,
+            );
+            return Center(
+              child: StickerImage(
+                media: sticker.media,
+                emoji: sticker.emoji,
+                size: imageSize,
+              ),
+            );
+          },
         ),
       ),
     );

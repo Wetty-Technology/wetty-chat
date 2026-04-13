@@ -6,6 +6,7 @@ import '../../chats/conversation/presentation/message_bubble/sticker_image_widge
 import '../../chats/models/message_models.dart';
 import '../application/sticker_picker_view_model.dart';
 import 'sticker_pack_tab_bar.dart';
+import 'widgets/sticker_grid_layout.dart';
 
 /// Panel that displays a sticker picker grid with a pack tab bar.
 ///
@@ -75,28 +76,35 @@ class _StickerPickerPanelState extends ConsumerState<StickerPickerPanel> {
       );
     }
 
-    return GridView.builder(
-      padding: const EdgeInsets.all(8),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        mainAxisSpacing: 4,
-        crossAxisSpacing: 4,
-      ),
-      itemCount: stickers.length,
-      itemBuilder: (context, index) {
-        final sticker = stickers[index];
-        return _StickerGridCell(
-          sticker: sticker,
-          onTap: () {
-            final packId = pickerState.selectedPackId;
-            if (packId != null) {
-              ref
-                  .read(stickerPickerViewModelProvider.notifier)
-                  .recordStickerUsage(packId);
-            }
-            widget.onStickerSelected(sticker);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final layout = StickerGridLayout.fromWidth(
+          constraints.maxWidth,
+          horizontalPadding: 8,
+          crossAxisSpacing: 4,
+        );
+
+        return GridView.builder(
+          padding: const EdgeInsets.all(8),
+          gridDelegate: layout.buildDelegate(mainAxisSpacing: 4),
+          itemCount: stickers.length,
+          itemBuilder: (context, index) {
+            final sticker = stickers[index];
+            return _StickerGridCell(
+              key: ValueKey('picker-sticker-${sticker.id ?? index}'),
+              sticker: sticker,
+              onTap: () {
+                final packId = pickerState.selectedPackId;
+                if (packId != null) {
+                  ref
+                      .read(stickerPickerViewModelProvider.notifier)
+                      .recordStickerUsage(packId);
+                }
+                widget.onStickerSelected(sticker);
+              },
+              onToggleFavorite: () => _onToggleFavorite(sticker),
+            );
           },
-          onToggleFavorite: () => _onToggleFavorite(sticker),
         );
       },
     );
@@ -120,6 +128,7 @@ class _StickerPickerPanelState extends ConsumerState<StickerPickerPanel> {
 
 class _StickerGridCell extends StatelessWidget {
   const _StickerGridCell({
+    super.key,
     required this.sticker,
     required this.onTap,
     required this.onToggleFavorite,
@@ -149,10 +158,20 @@ class _StickerGridCell extends StatelessWidget {
       ],
       child: GestureDetector(
         onTap: onTap,
-        child: StickerImage(
-          media: sticker.media,
-          emoji: sticker.emoji,
-          size: 80,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final imageSize = (constraints.maxWidth - 8).clamp(
+              0.0,
+              double.infinity,
+            );
+            return Center(
+              child: StickerImage(
+                media: sticker.media,
+                emoji: sticker.emoji,
+                size: imageSize,
+              ),
+            );
+          },
         ),
       ),
     );

@@ -57,12 +57,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.bootstrap,
         pageBuilder: (context, state) =>
-            const CupertinoPage(child: AuthBootstrapPage()),
+            CupertinoPage(key: state.pageKey, child: const AuthBootstrapPage()),
       ),
       GoRoute(
         path: AppRoutes.login,
         pageBuilder: (context, state) =>
-            const CupertinoPage(child: AuthLoginPage()),
+            CupertinoPage(key: state.pageKey, child: const AuthLoginPage()),
       ),
       // Full-screen routes outside the shell (no bottom nav, swipe-back enabled).
       GoRoute(
@@ -70,6 +70,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) {
           final request = state.extra! as AttachmentViewerRequest;
           return CustomTransitionPage<void>(
+            key: state.pageKey,
             transitionDuration: const Duration(milliseconds: 200),
             reverseTransitionDuration: const Duration(milliseconds: 180),
             transitionsBuilder:
@@ -83,7 +84,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/chats/new',
         pageBuilder: (context, state) =>
-            const CupertinoPage(child: NewChatPage()),
+            CupertinoPage(key: state.pageKey, child: const NewChatPage()),
+      ),
+      GoRoute(
+        path: '${AppRoutes.stickerPackDetailRoot}/:packId',
+        pageBuilder: (context, state) {
+          final packId = state.pathParameters['packId']!;
+          return CupertinoPage(
+            key: state.pageKey,
+            child: StickerPackDetailPage(packId: packId),
+          );
+        },
       ),
       GoRoute(
         path: '/chats/:chatId',
@@ -91,6 +102,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final chatId = state.pathParameters['chatId']!;
           final extra = state.extra as Map<String, dynamic>?;
           return CupertinoPage(
+            key: state.pageKey,
             child: ChatDetailPage(
               chatId: chatId,
               launchRequest:
@@ -104,14 +116,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: 'members',
             pageBuilder: (context, state) {
               final chatId = state.pathParameters['chatId']!;
-              return CupertinoPage(child: GroupMembersPage(chatId: chatId));
+              return CupertinoPage(
+                key: state.pageKey,
+                child: GroupMembersPage(chatId: chatId),
+              );
             },
           ),
           GoRoute(
             path: 'settings',
             pageBuilder: (context, state) {
               final chatId = state.pathParameters['chatId']!;
-              return CupertinoPage(child: GroupSettingsPage(chatId: chatId));
+              return CupertinoPage(
+                key: state.pageKey,
+                child: GroupSettingsPage(chatId: chatId),
+              );
             },
           ),
           GoRoute(
@@ -121,6 +139,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               final threadId = state.pathParameters['threadId']!;
               final extra = state.extra as Map<String, dynamic>?;
               return CupertinoPage(
+                key: state.pageKey,
                 child: ThreadDetailPage(
                   chatId: chatId,
                   threadRootId: threadId,
@@ -144,7 +163,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/chats',
                 pageBuilder: (context, state) =>
-                    const CupertinoPage(child: ChatPage()),
+                    CupertinoPage(key: state.pageKey, child: const ChatPage()),
               ),
             ],
           ),
@@ -154,49 +173,66 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/settings',
-                pageBuilder: (context, state) =>
-                    const CupertinoPage(child: SettingsPage()),
+                pageBuilder: (context, state) => CupertinoPage(
+                  key: state.pageKey,
+                  child: const SettingsPage(),
+                ),
                 routes: [
                   GoRoute(
                     path: 'language',
-                    pageBuilder: (context, state) =>
-                        const CupertinoPage(child: LanguageSettingsPage()),
+                    pageBuilder: (context, state) => CupertinoPage(
+                      key: state.pageKey,
+                      child: const LanguageSettingsPage(),
+                    ),
                   ),
                   GoRoute(
                     path: 'font-size',
-                    pageBuilder: (context, state) =>
-                        const CupertinoPage(child: FontSizeSettingsPage()),
+                    pageBuilder: (context, state) => CupertinoPage(
+                      key: state.pageKey,
+                      child: const FontSizeSettingsPage(),
+                    ),
                   ),
                   GoRoute(
                     path: 'profile',
-                    pageBuilder: (context, state) =>
-                        const CupertinoPage(child: ProfileSettingsPage()),
+                    pageBuilder: (context, state) => CupertinoPage(
+                      key: state.pageKey,
+                      child: const ProfileSettingsPage(),
+                    ),
                   ),
                   GoRoute(
                     path: 'dev-session',
-                    pageBuilder: (context, state) =>
-                        const CupertinoPage(child: DevSessionSettingsPage()),
+                    pageBuilder: (context, state) => CupertinoPage(
+                      key: state.pageKey,
+                      child: const DevSessionSettingsPage(),
+                    ),
                   ),
                   GoRoute(
                     path: 'notifications',
-                    pageBuilder: (context, state) =>
-                        const CupertinoPage(child: NotificationSettingsPage()),
+                    pageBuilder: (context, state) => CupertinoPage(
+                      key: state.pageKey,
+                      child: const NotificationSettingsPage(),
+                    ),
                   ),
                   GoRoute(
                     path: 'cache',
-                    pageBuilder: (context, state) =>
-                        const CupertinoPage(child: CacheSettingsPage()),
+                    pageBuilder: (context, state) => CupertinoPage(
+                      key: state.pageKey,
+                      child: const CacheSettingsPage(),
+                    ),
                   ),
                   GoRoute(
                     path: 'sticker-packs',
-                    pageBuilder: (context, state) =>
-                        const CupertinoPage(child: StickerPackListPage()),
+                    pageBuilder: (context, state) => CupertinoPage(
+                      key: state.pageKey,
+                      child: const StickerPackListPage(),
+                    ),
                     routes: [
                       GoRoute(
                         path: ':packId',
                         pageBuilder: (context, state) {
                           final packId = state.pathParameters['packId']!;
                           return CupertinoPage(
+                            key: state.pageKey,
                             child: StickerPackDetailPage(packId: packId),
                           );
                         },

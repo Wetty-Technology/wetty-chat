@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../app/routing/route_names.dart';
 import '../../../app/theme/style_config.dart';
 import '../../chats/conversation/presentation/message_bubble/sticker_image_widget.dart';
 import '../../chats/models/message_models.dart';
@@ -10,11 +12,24 @@ import 'widgets/preview_header.dart';
 import 'widgets/preview_sticker_grid.dart';
 
 /// Shows a Cupertino-style bottom sheet previewing a sticker and its pack.
-void showStickerPreviewModal(BuildContext context, String stickerId) {
-  showCupertinoModalPopup<void>(
+Future<void> showStickerPreviewModal(
+  BuildContext context,
+  String stickerId,
+) async {
+  final selectedPackId = await showCupertinoModalPopup<String>(
     context: context,
     builder: (context) => _StickerPreviewSheet(stickerId: stickerId),
   );
+
+  if (!context.mounted || selectedPackId == null) {
+    return;
+  }
+
+  debugPrint(
+    '[stickers] preview manage navigating to pack detail: '
+    'stickerId=$stickerId packId=$selectedPackId',
+  );
+  context.push(AppRoutes.stickerPackDetail(selectedPackId));
 }
 
 class _StickerPreviewSheet extends ConsumerStatefulWidget {
@@ -122,6 +137,7 @@ class _StickerPreviewSheetState extends ConsumerState<_StickerPreviewSheet> {
             state: state,
             stickerId: widget.stickerId,
             onToggleSubscription: _onToggleSubscription,
+            onManagePack: _onManagePack,
           ),
         ],
       ),
@@ -174,5 +190,13 @@ class _StickerPreviewSheetState extends ConsumerState<_StickerPreviewSheet> {
     ref
         .read(stickerDetailViewModelProvider(widget.stickerId).notifier)
         .toggleSubscription();
+  }
+
+  void _onManagePack(String packId) {
+    debugPrint(
+      '[stickers] preview manage requested: '
+      'stickerId=${widget.stickerId} packId=$packId',
+    );
+    Navigator.of(context, rootNavigator: true).pop(packId);
   }
 }

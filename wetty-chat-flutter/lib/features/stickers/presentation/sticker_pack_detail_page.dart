@@ -10,6 +10,7 @@ import '../../../core/session/dev_session_store.dart';
 import '../application/sticker_pack_detail_view_model.dart';
 import 'add_sticker_modal.dart';
 import 'widgets/add_sticker_cell.dart';
+import 'widgets/sticker_grid_layout.dart';
 import 'widgets/sticker_grid_item.dart';
 
 class StickerPackDetailPage extends ConsumerStatefulWidget {
@@ -204,26 +205,37 @@ class _StickerPackDetailPageState extends ConsumerState<StickerPackDetailPage> {
                     ),
                   ),
                 Expanded(
-                  child: GridView.builder(
-                    padding: const EdgeInsets.all(8),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 4,
-                          mainAxisSpacing: 8,
-                          crossAxisSpacing: 8,
-                        ),
-                    itemCount: gridItemCount,
-                    itemBuilder: (context, index) {
-                      if (isOwner && index == 0) {
-                        return AddStickerCell(onTap: _pickAndAddSticker);
-                      }
-                      final stickerIndex = isOwner ? index - 1 : index;
-                      final sticker = stickers[stickerIndex];
-                      return StickerGridItem(
-                        sticker: sticker,
-                        onTap: isOwner && sticker.id != null
-                            ? () => _confirmRemoveSticker(sticker.id!)
-                            : null,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final layout = StickerGridLayout.fromWidth(
+                        constraints.maxWidth,
+                        horizontalPadding: 8,
+                        crossAxisSpacing: 8,
+                      );
+
+                      return GridView.builder(
+                        padding: const EdgeInsets.all(8),
+                        gridDelegate: layout.buildDelegate(mainAxisSpacing: 8),
+                        itemCount: gridItemCount,
+                        itemBuilder: (context, index) {
+                          if (isOwner && index == 0) {
+                            return AddStickerCell(
+                              key: const Key('add-sticker-cell'),
+                              onTap: _pickAndAddSticker,
+                            );
+                          }
+                          final stickerIndex = isOwner ? index - 1 : index;
+                          final sticker = stickers[stickerIndex];
+                          return StickerGridItem(
+                            key: ValueKey(
+                              'pack-sticker-${sticker.id ?? stickerIndex}',
+                            ),
+                            sticker: sticker,
+                            onTap: isOwner && sticker.id != null
+                                ? () => _confirmRemoveSticker(sticker.id!)
+                                : null,
+                          );
+                        },
                       );
                     },
                   ),

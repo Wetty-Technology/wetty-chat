@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/routing/route_names.dart';
 import '../../../app/theme/style_config.dart';
 import '../../../core/session/dev_session_store.dart';
 import '../../chats/conversation/presentation/message_bubble/sticker_image_widget.dart';
@@ -54,7 +55,7 @@ class _StickerPackListPageState extends ConsumerState<StickerPackListPage> {
                   .read(stickerPackListViewModelProvider.notifier)
                   .createPack(name);
               if (pack != null && mounted) {
-                context.push('/settings/sticker-packs/${pack.id}');
+                context.push(AppRoutes.settingsStickerPackDetail(pack.id));
               }
             },
             child: const Text('Create'),
@@ -103,7 +104,9 @@ class _StickerPackListPageState extends ConsumerState<StickerPackListPage> {
                         pack: pack,
                         isOwned: pack.ownerUid == currentUserId,
                         onTap: () {
-                          context.push('/settings/sticker-packs/${pack.id}');
+                          context.push(
+                            AppRoutes.settingsStickerPackDetail(pack.id),
+                          );
                         },
                       );
                     }, childCount: state.packs.length),

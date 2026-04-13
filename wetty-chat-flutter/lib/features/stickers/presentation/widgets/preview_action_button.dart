@@ -1,8 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../../app/routing/route_names.dart';
 import '../../../../core/session/dev_session_store.dart';
 import '../../application/sticker_detail_view_model.dart';
 
@@ -12,11 +10,13 @@ class PreviewActionButton extends ConsumerWidget {
     required this.state,
     required this.stickerId,
     required this.onToggleSubscription,
+    required this.onManagePack,
   });
 
   final StickerDetailState state;
   final String stickerId;
   final VoidCallback onToggleSubscription;
+  final ValueChanged<String> onManagePack;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -32,10 +32,7 @@ class PreviewActionButton extends ConsumerWidget {
         width: double.infinity,
         child: isOwner
             ? CupertinoButton.filled(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  context.push(AppRoutes.stickerPackDetail(pack.id));
-                },
+                onPressed: () => onManagePack(pack.id),
                 child: const Text('Manage'),
               )
             : state.isSubscribed
