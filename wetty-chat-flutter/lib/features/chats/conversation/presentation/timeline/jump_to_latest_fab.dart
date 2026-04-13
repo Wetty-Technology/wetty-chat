@@ -7,13 +7,16 @@ bool shouldShowJumpToLatestFab({
   required ConversationTimelineState state,
   required bool isAtLiveEdge,
 }) {
+  if (isAtLiveEdge) {
+    return false;
+  }
   if (state.pendingLiveCount > 0) {
     return true;
   }
   if (state.canLoadNewer) {
     return true;
   }
-  return !isAtLiveEdge;
+  return true;
 }
 
 class JumpToLatestFab extends StatelessWidget {

@@ -275,7 +275,7 @@ void main() {
     );
 
     test(
-      'realtime message while out of live edge does not emit bottom settlement',
+      'realtime message while out of live edge appends into latest-backed window without settling bottom',
       () async {
         final container = _createContainer();
         addTearDown(container.dispose);
@@ -314,9 +314,156 @@ void main() {
 
         expect(state, isNotNull);
         expect(state!.pendingLiveCount, 1);
+        expect(state.windowStableKeys.last, 'server:151');
         expect(state.viewportCommand, isNull);
       },
     );
+
+    test(
+      'realtime message deep in history does not append into the current historical window',
+      () async {
+        final container = _createContainer();
+        addTearDown(container.dispose);
+        final provider = conversationTimelineViewModelProvider(_args());
+
+        await container.read(provider.future);
+        final notifier = container.read(provider.notifier);
+
+        await notifier.jumpToMessage(10);
+        final transactionId = container
+            .read(provider)
+            .value!
+            .viewportCommand!
+            .transactionId;
+        notifier.consumeViewportCommand(transactionId);
+        notifier.onViewportLiveEdgeChanged(false);
+
+        container
+            .read(conversationRealtimeRegistryProvider)
+            .dispatch(
+              MessageCreatedWsEvent(
+                payload: MessageItemDto(
+                  id: 151,
+                  message: 'Message 151',
+                  sender: const SenderDto(uid: 7, name: 'Tester'),
+                  chatId: 1,
+                  createdAt: DateTime.utc(
+                    2026,
+                    1,
+                    1,
+                  ).add(const Duration(minutes: 151)),
+                  clientGeneratedId: 'cg-151',
+                ),
+              ),
+            );
+
+        final state = container.read(provider).value;
+
+        expect(state, isNotNull);
+        expect(state!.pendingLiveCount, 1);
+        expect(state.windowStableKeys, isNot(contains('server:151')));
+      },
+    );
+
+    test(
+      'realtime delete removes an unseen created message from pending count',
+      () async {
+        final container = _createContainer();
+        addTearDown(container.dispose);
+        final provider = conversationTimelineViewModelProvider(_args());
+
+        await container.read(provider.future);
+        final notifier = container.read(provider.notifier);
+        final initialTransactionId = container
+            .read(provider)
+            .value!
+            .viewportCommand!
+            .transactionId;
+        notifier.consumeViewportCommand(initialTransactionId);
+        notifier.onViewportLiveEdgeChanged(false);
+
+        final registry = container.read(conversationRealtimeRegistryProvider);
+        registry.dispatch(
+          MessageCreatedWsEvent(
+            payload: MessageItemDto(
+              id: 151,
+              message: 'Message 151',
+              sender: const SenderDto(uid: 7, name: 'Tester'),
+              chatId: 1,
+              createdAt: DateTime.utc(
+                2026,
+                1,
+                1,
+              ).add(const Duration(minutes: 151)),
+              clientGeneratedId: 'cg-151',
+            ),
+          ),
+        );
+        registry.dispatch(
+          MessageDeletedWsEvent(
+            payload: MessageItemDto(
+              id: 151,
+              message: 'Message 151',
+              sender: const SenderDto(uid: 7, name: 'Tester'),
+              chatId: 1,
+              createdAt: DateTime.utc(
+                2026,
+                1,
+                1,
+              ).add(const Duration(minutes: 151)),
+              clientGeneratedId: 'cg-151',
+              isDeleted: true,
+            ),
+          ),
+        );
+
+        final state = container.read(provider).value;
+
+        expect(state, isNotNull);
+        expect(state!.pendingLiveCount, 0);
+      },
+    );
+
+    test('re-entering live edge clears pending live count', () async {
+      final container = _createContainer();
+      addTearDown(container.dispose);
+      final provider = conversationTimelineViewModelProvider(_args());
+
+      await container.read(provider.future);
+      final notifier = container.read(provider.notifier);
+      final initialTransactionId = container
+          .read(provider)
+          .value!
+          .viewportCommand!
+          .transactionId;
+      notifier.consumeViewportCommand(initialTransactionId);
+      notifier.onViewportLiveEdgeChanged(false);
+
+      container
+          .read(conversationRealtimeRegistryProvider)
+          .dispatch(
+            MessageCreatedWsEvent(
+              payload: MessageItemDto(
+                id: 151,
+                message: 'Message 151',
+                sender: const SenderDto(uid: 7, name: 'Tester'),
+                chatId: 1,
+                createdAt: DateTime.utc(
+                  2026,
+                  1,
+                  1,
+                ).add(const Duration(minutes: 151)),
+                clientGeneratedId: 'cg-151',
+              ),
+            ),
+          );
+
+      notifier.onViewportLiveEdgeChanged(true);
+      final state = container.read(provider).value;
+
+      expect(state, isNotNull);
+      expect(state!.pendingLiveCount, 0);
+    });
 
     test('consumeViewportCommand clears command from state', () async {
       final container = _createContainer();

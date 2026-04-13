@@ -233,6 +233,7 @@ class ConversationTimelineViewModel
   bool _isDisposed = false;
   bool _hasPendingEntryRefresh = false;
   bool _isViewportAtLiveEdge = false;
+  final Set<int> _pendingLiveMessageIds = <int>{};
   int _nextViewportTransactionId = 1;
 
   @override
@@ -268,6 +269,7 @@ class ConversationTimelineViewModel
     switch (launchRequest) {
       case LatestLaunchRequest():
         _isViewportAtLiveEdge = true;
+        _pendingLiveMessageIds.clear();
         final cachedKeys = _repository.latestWindowStableKeys(
           limit: _windowSize,
         );
@@ -289,6 +291,7 @@ class ConversationTimelineViewModel
         );
       case UnreadLaunchRequest(:final unreadMessageId):
         _isViewportAtLiveEdge = false;
+        _pendingLiveMessageIds.clear();
         final anchorId = unreadMessageId;
         final cachedMessages = _repository.cachedWindowAroundMessage(
           anchorId,
@@ -333,6 +336,7 @@ class ConversationTimelineViewModel
         );
       case MessageLaunchRequest(:final messageId, :final highlight):
         _isViewportAtLiveEdge = false;
+        _pendingLiveMessageIds.clear();
         final anchorId = messageId;
         final cachedMessages = _repository.cachedWindowAroundMessage(
           anchorId,
@@ -615,8 +619,10 @@ class ConversationTimelineViewModel
         windowMode: ConversationWindowMode.liveLatest,
         viewportPlacement: ConversationViewportPlacement.liveEdge,
         shouldRefreshChats: true,
+        pendingLiveCount: 0,
         viewportCommand: _settleAtBottomAfterMutationCommand(),
       );
+      _pendingLiveMessageIds.clear();
       _setStateIfActive(
         AsyncData(
           nextState.copyWith(
@@ -628,15 +634,20 @@ class ConversationTimelineViewModel
       return;
     }
 
+    final pendingLiveCount = _applyPendingLiveMutation(event);
+    final nextWindowStableKeys =
+        event is MessageCreatedWsEvent && !current.canLoadNewer
+        ? _repository.appendVisibleTail(current.windowStableKeys)
+        : current.windowStableKeys;
     final nextState = _buildState(
-      windowStableKeys: current.windowStableKeys,
+      windowStableKeys: nextWindowStableKeys,
       windowMode: current.windowMode,
       viewportPlacement: current.viewportPlacement,
       anchorMessageId: current.anchorMessageId,
       unreadMarkerMessageId: current.unreadMarkerMessageId,
       highlightedMessageId: current.highlightedMessageId,
       shouldRefreshChats: true,
-      pendingLiveCount: current.pendingLiveCount + 1,
+      pendingLiveCount: pendingLiveCount,
       viewportCommand: current.viewportCommand,
     );
     _setStateIfActive(
@@ -821,6 +832,9 @@ class ConversationTimelineViewModel
       }
 
       final reachedLiveEdge = !_repository.hasNewerOutsideWindow(nextWindow);
+      if (reachedLiveEdge) {
+        _pendingLiveMessageIds.clear();
+      }
       _setStateIfActive(
         AsyncData(
           _buildState(
@@ -864,6 +878,7 @@ class ConversationTimelineViewModel
       return;
     }
     _isViewportAtLiveEdge = true;
+    _pendingLiveMessageIds.clear();
     if (!_repository.hasNewerOutsideWindow(current.windowStableKeys)) {
       _setStateIfActive(
         AsyncData(
@@ -872,6 +887,7 @@ class ConversationTimelineViewModel
             windowMode: ConversationWindowMode.liveLatest,
             viewportPlacement: ConversationViewportPlacement.liveEdge,
             shouldRefreshChats: current.shouldRefreshChats,
+            pendingLiveCount: 0,
             viewportCommand: _showLatestCommand(),
           ),
         ),
@@ -885,6 +901,7 @@ class ConversationTimelineViewModel
           windowStableKeys: latest.map((item) => item.stableKey).toList(),
           windowMode: ConversationWindowMode.liveLatest,
           viewportPlacement: ConversationViewportPlacement.liveEdge,
+          pendingLiveCount: 0,
           viewportCommand: _showLatestCommand(),
         ),
       ),
@@ -1072,6 +1089,38 @@ class ConversationTimelineViewModel
 
   void onViewportLiveEdgeChanged(bool isAtLiveEdge) {
     _isViewportAtLiveEdge = isAtLiveEdge;
+    if (!isAtLiveEdge) {
+      return;
+    }
+    final current = state.value;
+    if (current == null || current.pendingLiveCount == 0) {
+      return;
+    }
+    _pendingLiveMessageIds.clear();
+    _setStateIfActive(
+      AsyncData(
+        current.copyWith(
+          pendingLiveCount: 0,
+          viewportCommand: current.viewportCommand,
+        ),
+      ),
+    );
+  }
+
+  int _applyPendingLiveMutation(ApiWsEvent event) {
+    switch (event) {
+      case MessageCreatedWsEvent(:final payload):
+        _pendingLiveMessageIds.add(payload.id);
+      case MessageDeletedWsEvent(:final payload):
+        _pendingLiveMessageIds.remove(payload.id);
+      case MessageUpdatedWsEvent():
+      case ReactionUpdatedWsEvent():
+      case ThreadUpdatedWsEvent():
+      case StickerPackOrderUpdatedWsEvent():
+      case PongWsEvent():
+        break;
+    }
+    return _pendingLiveMessageIds.length;
   }
 
   void _scheduleHighlightClear() {

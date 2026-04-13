@@ -24,7 +24,7 @@ void main() {
       );
     });
 
-    test('shows FAB when newer pages can still be loaded', () {
+    test('shows FAB when newer pages can still be loaded away from live edge', () {
       final state = ConversationTimelineState(
         entries: const <TimelineEntry>[],
         windowStableKeys: const <String>[],
@@ -36,27 +36,30 @@ void main() {
       );
 
       expect(
-        shouldShowJumpToLatestFab(state: state, isAtLiveEdge: true),
+        shouldShowJumpToLatestFab(state: state, isAtLiveEdge: false),
         isTrue,
       );
     });
 
-    test('shows FAB when pending live items exist even at live edge', () {
-      final state = ConversationTimelineState(
-        entries: const <TimelineEntry>[],
-        windowStableKeys: const <String>[],
-        windowMode: ConversationWindowMode.liveLatest,
-        viewportPlacement: ConversationViewportPlacement.liveEdge,
-        canLoadOlder: true,
-        canLoadNewer: false,
-        anchorEntryIndex: 0,
-        pendingLiveCount: 3,
-      );
+    test(
+      'hides FAB when pending count exists but viewport is at live edge',
+      () {
+        final state = ConversationTimelineState(
+          entries: const <TimelineEntry>[],
+          windowStableKeys: const <String>[],
+          windowMode: ConversationWindowMode.liveLatest,
+          viewportPlacement: ConversationViewportPlacement.liveEdge,
+          canLoadOlder: true,
+          canLoadNewer: false,
+          anchorEntryIndex: 0,
+          pendingLiveCount: 3,
+        );
 
-      expect(
-        shouldShowJumpToLatestFab(state: state, isAtLiveEdge: true),
-        isTrue,
-      );
-    });
+        expect(
+          shouldShowJumpToLatestFab(state: state, isAtLiveEdge: true),
+          isFalse,
+        );
+      },
+    );
   });
 }

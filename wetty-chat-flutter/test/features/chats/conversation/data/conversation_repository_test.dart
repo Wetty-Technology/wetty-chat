@@ -152,6 +152,38 @@ void main() {
     );
 
     test(
+      'websocket delete hides an off-screen deleted non-anchor message when projecting an old window',
+      () async {
+        final service = _FakeMessageApiService(
+          messages: [_message(id: 1), _message(id: 2), _message(id: 3)],
+        );
+        final repository = ConversationRepository(
+          scope: const ConversationScope.chat(chatId: '1'),
+          service: service,
+          store: MessageDomainStore(),
+        );
+
+        await repository.loadLatestWindow();
+        final oldWindow = repository.latestWindowStableKeys();
+
+        final handled = repository.applyRealtimeEvent(
+          MessageDeletedWsEvent(
+            payload: _message(id: 2, isDeleted: true, message: 'Deleted'),
+          ),
+        );
+
+        expect(handled, isTrue);
+        expect(
+          repository
+              .messagesForWindow(oldWindow)
+              .map((message) => message.serverMessageId)
+              .toList(),
+          [1, 3],
+        );
+      },
+    );
+
+    test(
       'refresh keeps deleted thread anchors visible in chat scope',
       () async {
         final service = _FakeMessageApiService(

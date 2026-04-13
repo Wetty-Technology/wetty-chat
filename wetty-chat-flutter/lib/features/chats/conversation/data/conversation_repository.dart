@@ -317,6 +317,27 @@ class ConversationRepository {
     pageSize: pageSize,
   );
 
+  List<String> appendVisibleTail(List<String> currentWindow) {
+    if (currentWindow.isEmpty) {
+      return currentWindow;
+    }
+    final newestStableKey = currentWindow.last;
+    final visibleKeys = _store.selectVisibleStableKeys(scope);
+    final newestIndex = visibleKeys.indexOf(newestStableKey);
+    if (newestIndex < 0 || newestIndex >= visibleKeys.length - 1) {
+      return currentWindow;
+    }
+    final nextWindow = <String>[
+      ...currentWindow,
+      ...visibleKeys.sublist(newestIndex + 1),
+    ];
+    return _store
+        .selectVisibleWindow(scope)
+        .map((message) => message.stableKey)
+        .where(nextWindow.contains)
+        .toList(growable: false);
+  }
+
   int? findWindowIndex(List<String> windowStableKeys, int messageId) {
     final stableKey = _store.stableKeyForServerId(messageId);
     if (stableKey == null) {
@@ -865,6 +886,12 @@ class ConversationRepository {
     return stableKeys
         .map((stableKey) => _store.messageForStableKey(stableKey))
         .whereType<ConversationMessage>()
+        .where(
+          (message) => _store.isVisibleInWindow(
+            scope: scope,
+            stableKey: message.stableKey,
+          ),
+        )
         .toList(growable: false);
   }
 
