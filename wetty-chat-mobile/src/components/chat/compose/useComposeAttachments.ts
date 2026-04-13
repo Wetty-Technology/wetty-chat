@@ -2,10 +2,10 @@ import type React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { t } from '@lingui/core/macro';
 import type { Attachment } from '@/api/messages';
-import type { UploadPreviewItem } from '../UploadPreview';
+import type { UploadPreviewItem } from '@/components/chat/compose/UploadPreview';
 import type { ComposeUploadInput, ComposeUploadResult, DraftUploadRecord } from './types';
 
-import { MAX_ATTACHMENTS_PER_MESSAGE } from '../messages/media/mediaConstants';
+import { MAX_ATTACHMENTS_PER_MESSAGE } from '@/constants/media';
 
 const isAbortError = (error: unknown) => error instanceof DOMException && error.name === 'AbortError';
 

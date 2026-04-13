@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import type { Attachment } from '@/api/messages';
 import { SingleMediaAttachment } from './SingleMediaAttachment';
-import { getSingleMediaBounds, MEDIA_CONSTANTS, MAX_ATTACHMENT_PREVIEWS } from './mediaConstants';
+import { getSingleMediaBounds, MEDIA_CONSTANTS, MAX_ATTACHMENT_PREVIEWS } from '@/constants/media';
 import styles from './JustifiedMediaGallery.module.scss';
 import type { ReactNode, CSSProperties } from 'react';
 

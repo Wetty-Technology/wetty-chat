@@ -13,7 +13,7 @@ import { t } from '@lingui/core/macro';
 import { useSelector } from 'react-redux';
 import styles from './ChatBubble.module.scss';
 import type { Attachment, MentionInfo, ReactionSummary, UserGroupInfo } from '@/api/messages';
-import { ImageViewer } from '@/components/chat/ImageViewer';
+import { ImageViewer } from '@/components/chat/messages/media/ImageViewer';
 import { formatMessagePreview, type PreviewMessage, getNotificationPreviewLabels } from '@/utils/messagePreview';
 import { selectChatFontSizeStyle, selectEffectiveLocale } from '@/store/settingsSlice';
 import { UserAvatar } from '@/components/UserAvatar';

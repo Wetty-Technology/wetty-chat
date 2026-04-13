@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useLayoutEffect, useRef } from 'react';
-import styles from '../ChatVirtualScroll.module.scss';
+import styles from './ChatVirtualScroll.module.scss';
 
 interface MeasuredRowProps {
   rowKey: string;

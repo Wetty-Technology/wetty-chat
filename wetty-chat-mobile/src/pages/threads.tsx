@@ -25,7 +25,7 @@ import {
 import { selectEffectiveLocale } from '@/store/settingsSlice';
 import { TitleWithConnectionStatus } from '@/components/TitleWithConnectionStatus';
 import { BackButton } from '@/components/BackButton';
-import { ThreadListRow } from '@/components/chat/ThreadListRow';
+import { ThreadListRow } from '@/components/chat/lists/ThreadListRow';
 import styles from './threads.module.scss';
 
 export interface ThreadsListInnerProps {

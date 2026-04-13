@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { MessageResponse } from '@/api/messages';
-import type { ChatRow } from './virtualScroll/types';
+import type { ChatRow } from './types';
 
 function formatDateKey(iso: string): string {
   const date = new Date(iso);

@@ -1,5 +1,5 @@
 import { type ReactNode, type CSSProperties } from 'react';
-import { MEDIA_CONSTANTS, getSingleMediaBounds } from './mediaConstants';
+import { MEDIA_CONSTANTS, getSingleMediaBounds } from '@/constants/media';
 import type { Attachment } from '@/api/messages';
 
 interface SingleMediaAttachmentProps {

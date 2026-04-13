@@ -1,6 +1,6 @@
 import type { GroupedUser } from '@/hooks/useReactionGrouping';
 import type { Sender } from '@/api/messages';
-import { ReactionUserItem } from './ReactionUserItem';
+import { ReactionUserItem } from '@/components/chat/reactions/ReactionUserItem';
 
 interface ReactionUserGridProps {
   users: GroupedUser[];

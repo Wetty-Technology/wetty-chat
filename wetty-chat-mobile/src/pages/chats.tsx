@@ -2,7 +2,7 @@ import { IonButtons, IonHeader, IonPage, IonToolbar } from '@ionic/react';
 import { Trans } from '@lingui/react/macro';
 import { useHistory } from 'react-router-dom';
 import { addCircleOutline } from 'ionicons/icons';
-import { ChatList } from '@/components/chat/ChatList';
+import { ChatList } from '@/components/chat/lists/ChatList';
 import { HeaderActionMenu } from '@/components/HeaderActionMenu';
 import { TitleWithConnectionStatus } from '@/components/TitleWithConnectionStatus';
 import { useFeatureGate } from '@/hooks/useFeatureGate';

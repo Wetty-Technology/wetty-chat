@@ -3,7 +3,7 @@ import { matchPath, useHistory, useLocation } from 'react-router-dom';
 import { Trans } from '@lingui/react/macro';
 import { IonButton, IonButtons, IonHeader, IonIcon, IonModal, IonTitle, IonToolbar } from '@ionic/react';
 import { addCircleOutline, settings } from 'ionicons/icons';
-import { ChatList } from '@/components/chat/ChatList';
+import { ChatList } from '@/components/chat/lists/ChatList';
 import ChatThreadCore from '@/pages/chat-thread/chat-thread';
 import ChatSettingsCore from '@/pages/chat-thread/chat-settings';
 import ChatMembersCore from '@/pages/chat-thread/chat-members';

@@ -70,9 +70,9 @@ import {
 import { messageAdded, messageConfirmed, messagePatched, reactionsUpdated } from '@/store/messageEvents';
 import type { RootState } from '@/store/index';
 import store from '@/store/index';
-import { ChatVirtualScroll } from '@/components/chat/ChatVirtualScroll';
+import { ChatVirtualScroll } from '@/components/chat/virtualScroll/ChatVirtualScroll';
 import type { ChatRow, VirtualScrollAnchor, VirtualScrollHandle } from '@/components/chat/virtualScroll/types';
-import { useChatRows } from '@/components/chat/useChatRows';
+import { useChatRows } from '@/components/chat/virtualScroll/useChatRows';
 import {
   type ComposeSendPayload,
   type MessageComposeBarHandle,
@@ -80,13 +80,13 @@ import {
   type ComposeUploadInput,
   type EditingMessage,
   MessageComposeBar,
-} from '@/components/chat/MessageComposeBar';
+} from '@/components/chat/compose/MessageComposeBar';
 import './chat-thread.scss';
 import { t } from '@lingui/core/macro';
-import { UserProfileModal } from '@/components/chat/UserProfileModal';
-import { MessageOverlay, type MessageOverlayAction } from '@/components/chat/MessageOverlay';
-import { ReactionDetailsModal } from '@/components/chat/ReactionDetailsModal';
-import { StickerPreviewModal } from '@/components/chat/StickerPreviewModal';
+import { UserProfileModal } from '@/components/chat/profiles/UserProfileModal';
+import { MessageOverlay, type MessageOverlayAction } from '@/components/chat/messages/MessageOverlay';
+import { ReactionDetailsModal } from '@/components/chat/reactions/ReactionDetailsModal';
+import { StickerPreviewModal } from '@/components/chat/compose/StickerPreviewModal';
 import { getGroupInfo } from '@/api/group';
 import { BackButton } from '@/components/BackButton';
 import type { BackAction } from '@/types/back-action';
@@ -115,8 +115,8 @@ import {
 } from '@/store/threadsSlice';
 import { listPins, createPin, deletePin } from '@/api/pins';
 import { setPins, selectPinsForChat, selectPinsLoaded } from '@/store/pinsSlice';
-import { PinBanner } from '@/components/chat/PinBanner';
-import { PinListModal } from '@/components/chat/PinListModal';
+import { PinBanner } from '@/components/chat/pins/PinBanner';
+import { PinListModal } from '@/components/chat/pins/PinListModal';
 import { selectPinnedReactions, selectRecentReactions, addRecentReaction } from '@/store/settingsSlice';
 import { MAX_REACTIONS_PER_USER_PER_MESSAGE } from '@/constants/emojiAndStickers';
 

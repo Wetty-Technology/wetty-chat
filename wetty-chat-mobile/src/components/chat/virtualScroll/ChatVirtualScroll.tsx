@@ -8,10 +8,10 @@ import {
   getChatBaseFont,
   getChatBubbleMaxWidth,
 } from '@/utils/chatTextMeasure';
-import { HeightCache } from './virtualScroll/heightCache';
-import { MeasuredRow } from './virtualScroll/MeasuredRow';
-import { FenwickTree } from './virtualScroll/fenwick';
-import { useStagingBatch } from './virtualScroll/useStagingBatch';
+import { HeightCache } from './heightCache';
+import { MeasuredRow } from './MeasuredRow';
+import { FenwickTree } from './fenwick';
+import { useStagingBatch } from './useStagingBatch';
 import type {
   BatchDirection,
   ChatRow,
@@ -22,7 +22,7 @@ import type {
   PendingBatch,
   Phase,
   ScrollToBottomOptions,
-} from './virtualScroll/types';
+} from './types';
 import {
   AT_BOTTOM_THRESHOLD_PX,
   BOOTSTRAP_BOTTOM_SEED,
@@ -35,7 +35,7 @@ import {
   STAGING_BATCH_SIZE,
   WINDOW_CAP,
   WINDOW_OVERSCAN,
-} from './virtualScroll/types';
+} from './types';
 import styles from './ChatVirtualScroll.module.scss';
 import { Trans } from '@lingui/react/macro';
 

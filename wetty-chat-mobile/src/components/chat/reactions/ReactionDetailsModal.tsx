@@ -5,7 +5,7 @@ import { t } from '@lingui/core/macro';
 import { getReactionDetails, type ReactionReactor, type Sender } from '@/api/messages';
 import { useIsDesktop } from '@/hooks/platformHooks';
 import { useReactionGrouping } from '@/hooks/useReactionGrouping';
-import { ReactionUserGrid } from './ReactionUserGrid';
+import { ReactionUserGrid } from '@/components/chat/reactions/ReactionUserGrid';
 
 interface ReactionGroup {
   emoji: string;

@@ -26,7 +26,7 @@ import type { RootState } from '@/store/index';
 import { getGroupInfo, leaveGroup, requestGroupAvatarUploadUrl, updateGroupInfo, type GroupRole } from '@/api/group';
 import { uploadFileToS3 } from '@/api/upload';
 import { BackButton } from '@/components/BackButton';
-import { GroupProfile } from '@/components/chat/GroupProfile';
+import { GroupProfile } from '@/components/chat/profiles/GroupProfile';
 import { ChatRoleGate } from '@/components/chat/permissions/ChatRoleGate';
 import { ChatMuteSettingItem } from '@/components/chat/settings/ChatMuteSettingItem';
 import type { BackAction } from '@/types/back-action';

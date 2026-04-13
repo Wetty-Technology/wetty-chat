@@ -1,6 +1,6 @@
 import type { Attachment, MentionInfo } from '@/api/messages';
 import type { StickerSummary } from '@/api/stickers';
-import type { ImageUploadDraft } from '../UploadPreview';
+import type { ImageUploadDraft } from '@/components/chat/compose/UploadPreview';
 
 export interface ReplyTo {
   messageId: string;

@@ -2,25 +2,19 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffec
 import { IonButton, IonIcon } from '@ionic/react';
 import { t } from '@lingui/core/macro';
 import { addCircleOutline, send } from 'ionicons/icons';
-import { AudioRecordButton } from './compose/AudioRecordButton';
-import { StickerPicker } from './compose/StickerPicker';
-import styles from './compose/MessageComposeBar.module.scss';
-import { UploadPreview } from './UploadPreview';
-import { ComposeContextBanner } from './compose/ComposeContextBanner';
-import { ComposeInput } from './compose/ComposeInput';
-import { VoiceRecorderPanel } from './compose/VoiceRecorderPanel';
-import { useComposeAttachments } from './compose/useComposeAttachments';
-import { useVoiceRecorder } from './compose/useVoiceRecorder';
-import { useMentionAutocomplete } from './compose/useMentionAutocomplete';
-import { MentionAutocomplete } from './compose/MentionAutocomplete';
+import { AudioRecordButton } from './AudioRecordButton';
+import { StickerPicker } from './StickerPicker';
+import styles from './MessageComposeBar.module.scss';
+import { UploadPreview } from '@/components/chat/compose/UploadPreview';
+import { ComposeContextBanner } from './ComposeContextBanner';
+import { ComposeInput } from './ComposeInput';
+import { VoiceRecorderPanel } from './VoiceRecorderPanel';
+import { useComposeAttachments } from './useComposeAttachments';
+import { useVoiceRecorder } from './useVoiceRecorder';
+import { useMentionAutocomplete } from './useMentionAutocomplete';
+import { MentionAutocomplete } from './MentionAutocomplete';
 import type { StickerSummary } from '@/api/stickers';
-import type {
-  ComposeSendPayload,
-  ComposeUploadInput,
-  ComposeUploadResult,
-  EditingMessage,
-  ReplyTo,
-} from './compose/types';
+import type { ComposeSendPayload, ComposeUploadInput, ComposeUploadResult, EditingMessage, ReplyTo } from './types';
 export type {
   ComposeSendAudioPayload,
   ComposeSendPayload,
@@ -30,7 +24,7 @@ export type {
   ComposeUploadResult,
   EditingMessage,
   ReplyTo,
-} from './compose/types';
+} from './types';
 
 interface MessageComposeBarProps {
   chatId?: string | number;
