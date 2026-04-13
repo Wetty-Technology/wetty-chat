@@ -6,6 +6,7 @@ use chrono::Utc;
 use dashmap::DashSet;
 use diesel::prelude::*;
 use diesel::PgConnection;
+use tokio::sync::Semaphore;
 use tokio::task::JoinHandle;
 use uuid::Uuid;
 
@@ -24,6 +25,11 @@ fn inflight() -> &'static DashSet<i64> {
     INFLIGHT.get_or_init(DashSet::new)
 }
 
+fn processing_semaphore() -> &'static Semaphore {
+    static PROCESSING_SEMAPHORE: OnceLock<Semaphore> = OnceLock::new();
+    PROCESSING_SEMAPHORE.get_or_init(|| Semaphore::new(4))
+}
+
 pub fn start(state: AppState) -> JoinHandle<()> {
     tokio::spawn(async move { scan_and_enqueue(state.clone()).await })
 }
@@ -31,8 +37,13 @@ pub fn start(state: AppState) -> JoinHandle<()> {
 pub fn enqueue_message(state: AppState, message_id: i64) {
     if inflight().insert(message_id) {
         tokio::spawn(async move {
+            let _permit = processing_semaphore()
+                .acquire()
+                .await
+                .expect("audio transcode semaphore should not be closed");
+            tracing::debug!(message_id, "audio transcode processing started");
             if let Err(err) = process_message(state.clone(), message_id).await {
-                tracing::error!(message_id, ?err, "audio transcode processing failed");
+                tracing::warn!(message_id, ?err, "audio transcode processing failed");
             }
             inflight().remove(&message_id);
         });
@@ -105,7 +116,7 @@ async fn scan_and_enqueue(state: AppState) {
     };
 
     for message_id in pending_ids {
-        tracing::info!(
+        tracing::debug!(
             message_id,
             "audio transcode startup backlog: queued pending audio message"
         );
@@ -115,13 +126,17 @@ async fn scan_and_enqueue(state: AppState) {
 
 async fn process_message(state: AppState, message_id: i64) -> Result<(), AppError> {
     let started_at = std::time::Instant::now();
-    let conn = &mut state.db.get()?;
-    let message: Message = messages::table
-        .filter(messages::id.eq(message_id))
-        .select(Message::as_select())
-        .first(conn)
-        .optional()?
-        .ok_or(AppError::NotFound("Message not found"))?;
+    let (message, current_attachment) = {
+        let conn = &mut state.db.get()?;
+        let message: Message = messages::table
+            .filter(messages::id.eq(message_id))
+            .select(Message::as_select())
+            .first(conn)
+            .optional()?
+            .ok_or(AppError::NotFound("Message not found"))?;
+        let current_attachment = load_primary_attachment(conn, message.id)?;
+        (message, current_attachment)
+    };
 
     if message.deleted_at.is_some() || message.message_type != MessageType::Audio {
         return Ok(());
@@ -133,7 +148,6 @@ async fn process_message(state: AppState, message_id: i64) -> Result<(), AppErro
         return Ok(());
     }
 
-    let current_attachment = load_primary_attachment(conn, message.id)?;
     let was_published = message.is_published;
     if let Some(ref attachment) = current_attachment {
         state
@@ -164,59 +178,63 @@ async fn process_message(state: AppState, message_id: i64) -> Result<(), AppErro
         }
     };
 
-    let updated_message = conn.transaction::<_, AppError, _>(|conn| {
-        use crate::schema::attachments::dsl as a_dsl;
-        use crate::schema::messages::dsl as m_dsl;
+    let updated_message = {
+        let conn = &mut state.db.get()?;
+        conn.transaction::<_, AppError, _>(|conn| {
+            use crate::schema::attachments::dsl as a_dsl;
+            use crate::schema::messages::dsl as m_dsl;
 
-        if let AudioPublishOutcome::Done {
-            swap_attachment: Some(ref new_attachment),
-        } = outcome
-        {
-            let mut linked_attachment = new_attachment.clone();
-            linked_attachment.message_id = Some(message.id);
+            if let AudioPublishOutcome::Done {
+                swap_attachment: Some(ref new_attachment),
+            } = outcome
+            {
+                let mut linked_attachment = new_attachment.clone();
+                linked_attachment.message_id = Some(message.id);
 
-            diesel::update(attachments::table.filter(a_dsl::message_id.eq(message.id)))
-                .set(a_dsl::message_id.eq::<Option<i64>>(None))
-                .execute(conn)?;
+                diesel::update(attachments::table.filter(a_dsl::message_id.eq(message.id)))
+                    .set(a_dsl::message_id.eq::<Option<i64>>(None))
+                    .execute(conn)?;
 
-            diesel::insert_into(attachments::table)
-                .values(&linked_attachment)
-                .execute(conn)?;
-        }
-
-        let updated_message: Message =
-            diesel::update(messages::table.filter(m_dsl::id.eq(message.id)))
-                .set((
-                    m_dsl::is_published.eq(true),
-                    m_dsl::transcode_status.eq(match outcome {
-                        AudioPublishOutcome::Done { .. } => TranscodeStatus::Done,
-                        AudioPublishOutcome::Failed => TranscodeStatus::Failed,
-                    }),
-                ))
-                .returning(Message::as_returning())
-                .get_result(conn)?;
-
-        if !was_published && updated_message.reply_root_id.is_none() {
-            recalculate_group_last_message(conn, updated_message.chat_id)?;
-        }
-
-        if !was_published {
-            if let Some(reply_root_id) = updated_message.reply_root_id {
-                crate::services::threads::increment_thread_meta(
-                    conn,
-                    updated_message.chat_id,
-                    reply_root_id,
-                    updated_message.created_at,
-                )?;
-                diesel::update(messages::table.filter(m_dsl::id.eq(reply_root_id)))
-                    .set(m_dsl::has_thread.eq(true))
+                diesel::insert_into(attachments::table)
+                    .values(&linked_attachment)
                     .execute(conn)?;
             }
-        }
 
-        Ok(updated_message)
-    })?;
+            let updated_message: Message =
+                diesel::update(messages::table.filter(m_dsl::id.eq(message.id)))
+                    .set((
+                        m_dsl::is_published.eq(true),
+                        m_dsl::transcode_status.eq(match outcome {
+                            AudioPublishOutcome::Done { .. } => TranscodeStatus::Done,
+                            AudioPublishOutcome::Failed => TranscodeStatus::Failed,
+                        }),
+                    ))
+                    .returning(Message::as_returning())
+                    .get_result(conn)?;
 
+            if !was_published && updated_message.reply_root_id.is_none() {
+                recalculate_group_last_message(conn, updated_message.chat_id)?;
+            }
+
+            if !was_published {
+                if let Some(reply_root_id) = updated_message.reply_root_id {
+                    crate::services::threads::increment_thread_meta(
+                        conn,
+                        updated_message.chat_id,
+                        reply_root_id,
+                        updated_message.created_at,
+                    )?;
+                    diesel::update(messages::table.filter(m_dsl::id.eq(reply_root_id)))
+                        .set(m_dsl::has_thread.eq(true))
+                        .execute(conn)?;
+                }
+            }
+
+            Ok(updated_message)
+        })?
+    };
+
+    let conn = &mut state.db.get()?;
     let response = attach_metadata(conn, vec![updated_message], &state, message.sender_uid)
         .await
         .into_iter()
@@ -554,7 +572,7 @@ fn log_audio_transcode_job(
         | AudioPublishOutcome::Failed => input_size,
     };
 
-    tracing::trace!(
+    tracing::debug!(
         message_id = message.id,
         chat_id = message.chat_id,
         reply_root_id = message.reply_root_id,
