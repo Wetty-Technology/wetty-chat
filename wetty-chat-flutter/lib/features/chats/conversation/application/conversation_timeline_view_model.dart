@@ -837,7 +837,7 @@ class ConversationTimelineViewModel
             pendingLiveCount: reachedLiveEdge ? 0 : current.pendingLiveCount,
             shouldRefreshChats: current.shouldRefreshChats,
             viewportCommand: reachedLiveEdge
-                ? _showLatestCommand()
+                ? _settleAtBottomAfterMutationCommand()
                 : preserveAnchorStableKey != null && preserveAnchorDy != null
                 ? _preserveOnAppendCommand(
                     anchorStableKey: preserveAnchorStableKey,
