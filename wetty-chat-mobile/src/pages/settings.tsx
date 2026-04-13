@@ -23,6 +23,7 @@ import { Trans } from '@lingui/react/macro';
 import { FeatureGate } from '@/components/FeatureGate';
 import { CheckForUpdateItem } from '@/components/settings/CheckForUpdateItem';
 import { AppVersionItem } from '@/components/settings/AppVersionItem';
+import { SettingsProfileHero } from '@/components/settings/SettingsProfileHero';
 
 import { type PushNotificationErrorCode, usePushNotifications } from '@/hooks/usePushNotifications';
 import { t } from '@lingui/core/macro';
@@ -66,7 +67,12 @@ function getPushErrorMessage(code: PushNotificationErrorCode) {
 }
 
 export function SettingsCore({ backAction, onOpenGeneral, onOpenStickers }: SettingsCoreProps) {
-  const currentUid = useSelector((state: RootState) => state.user.uid);
+  const {
+    uid: currentUid,
+    username,
+    avatarUrl,
+    loading: currentUserLoading,
+  } = useSelector((state: RootState) => state.user);
   const [uidInput, setUidInput] = useState(() => String(currentUid || '1'));
   const [presentToast] = useIonToast();
   const history = useHistory();
@@ -131,6 +137,7 @@ export function SettingsCore({ backAction, onOpenGeneral, onOpenStickers }: Sett
         </IonToolbar>
       </IonHeader>
       <IonContent color="light" className="ion-no-padding">
+        <SettingsProfileHero uid={currentUid} username={username} avatarUrl={avatarUrl} loading={currentUserLoading} />
         <IonListHeader>
           <IonLabel>
             <Trans>General</Trans>
