@@ -21,10 +21,12 @@ class ThreadDetailPage extends ConsumerStatefulWidget {
     super.key,
     required this.chatId,
     required this.threadRootId,
+    this.launchRequest = const LaunchRequest.latest(),
   });
 
   final String chatId;
   final String threadRootId;
+  final LaunchRequest launchRequest;
 
   @override
   ConsumerState<ThreadDetailPage> createState() => _ThreadDetailPageState();
@@ -46,7 +48,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
   );
 
   ConversationTimelineArgs get _timelineArgs =>
-      (scope: scope, launchRequest: const LaunchRequest.latest());
+      (scope: scope, launchRequest: widget.launchRequest);
 
   @override
   void initState() {

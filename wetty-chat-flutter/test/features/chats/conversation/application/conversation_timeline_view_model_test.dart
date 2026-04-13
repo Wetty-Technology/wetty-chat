@@ -4,24 +4,29 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:chahua/core/api/models/chats_api_models.dart';
 import 'package:chahua/core/api/models/messages_api_models.dart';
+import 'package:chahua/core/api/models/websocket_api_models.dart';
 import 'package:chahua/features/chats/conversation/application/conversation_timeline_view_model.dart';
+import 'package:chahua/features/chats/conversation/application/conversation_realtime_registry.dart';
 import 'package:chahua/features/chats/conversation/data/message_api_service.dart';
 import 'package:chahua/features/chats/conversation/domain/conversation_scope.dart';
 import 'package:chahua/features/chats/conversation/domain/launch_request.dart';
 import 'package:chahua/features/chats/conversation/domain/viewport_placement.dart';
 
 void main() {
-  group('ConversationTimelineViewModel locate plans', () {
-    test('latest launch emits prepared live-edge locate', () async {
+  group('ConversationTimelineViewModel viewport commands', () {
+    test('latest launch emits prepared live-edge command', () async {
       final container = _createContainer();
       addTearDown(container.dispose);
       final provider = conversationTimelineViewModelProvider(_args());
 
       final state = await container.read(provider.future);
 
-      expect(state.locatePlan?.target, ConversationLocateTarget.latest);
       expect(
-        state.locatePlan?.placement,
+        state.viewportCommand?.type,
+        ConversationViewportCommandType.showLatest,
+      );
+      expect(
+        state.viewportCommand?.placement,
         ConversationViewportPlacement.liveEdge,
       );
       expect(state.viewportPlacement, ConversationViewportPlacement.liveEdge);
@@ -44,9 +49,12 @@ void main() {
         expect(state, isNotNull);
         expect(state!.windowStableKeys, initial.windowStableKeys);
         expect(state.anchorMessageId, 120);
-        expect(state.locatePlan?.target, ConversationLocateTarget.message);
         expect(
-          state.locatePlan?.placement,
+          state.viewportCommand?.type,
+          ConversationViewportCommandType.scrollToLoadedTarget,
+        );
+        expect(
+          state.viewportCommand?.placement,
           ConversationViewportPlacement.topPreferred,
         );
         expect(
@@ -71,7 +79,7 @@ void main() {
         expect(state.windowMode, ConversationWindowMode.anchoredTarget);
         expect(state.anchorMessageId, 150);
         expect(
-          state.locatePlan?.placement,
+          state.viewportCommand?.placement,
           ConversationViewportPlacement.topPreferred,
         );
         expect(
@@ -99,7 +107,10 @@ void main() {
         expect(state!.windowStableKeys, isNot(initial.windowStableKeys));
         expect(state.anchorMessageId, 10);
         expect(state.windowStableKeys, contains('server:10'));
-        expect(state.locatePlan?.target, ConversationLocateTarget.message);
+        expect(
+          state.viewportCommand?.type,
+          ConversationViewportCommandType.bootstrapTarget,
+        );
       },
     );
 
@@ -120,7 +131,10 @@ void main() {
         expect(state, isNotNull);
         expect(state!.windowMode, ConversationWindowMode.liveLatest);
         expect(state.anchorMessageId, isNull);
-        expect(state.locatePlan?.target, ConversationLocateTarget.latest);
+        expect(
+          state.viewportCommand?.type,
+          ConversationViewportCommandType.showLatest,
+        );
         expect(state.viewportPlacement, ConversationViewportPlacement.liveEdge);
       },
     );
@@ -142,7 +156,10 @@ void main() {
         expect(state, isNotNull);
         expect(state!.windowMode, ConversationWindowMode.liveLatest);
         expect(state.anchorMessageId, isNull);
-        expect(state.locatePlan?.target, ConversationLocateTarget.latest);
+        expect(
+          state.viewportCommand?.type,
+          ConversationViewportCommandType.showLatest,
+        );
         expect(state.windowStableKeys.first, 'server:51');
         expect(state.windowStableKeys.last, 'server:150');
         expect(state.viewportPlacement, ConversationViewportPlacement.liveEdge);
@@ -168,17 +185,155 @@ void main() {
       },
     );
 
-    test('consumeLocatePlan clears locatePlan from state', () async {
+    test(
+      'loadOlder emits preserve-on-prepend when anchor is provided',
+      () async {
+        final container = _createContainer();
+        addTearDown(container.dispose);
+        final provider = conversationTimelineViewModelProvider(_args());
+
+        await container.read(provider.future);
+        final notifier = container.read(provider.notifier);
+
+        await notifier.loadOlder(
+          preserveAnchorStableKey: 'server:120',
+          preserveAnchorDy: 24,
+          rebaseAnchorMessageId: 120,
+        );
+        final state = container.read(provider).value;
+
+        expect(state, isNotNull);
+        expect(
+          state!.viewportCommand?.type,
+          ConversationViewportCommandType.preserveOnPrepend,
+        );
+        expect(state.viewportCommand?.anchorStableKey, 'server:120');
+        expect(state.viewportCommand?.anchorDy, 24);
+      },
+    );
+
+    test(
+      'loaded jump while already browsing history keeps the existing pivot',
+      () async {
+        final container = _createContainer();
+        addTearDown(container.dispose);
+        final provider = conversationTimelineViewModelProvider(_args());
+
+        await container.read(provider.future);
+        final notifier = container.read(provider.notifier);
+
+        await notifier.jumpToMessage(120);
+        final firstJumpTransaction = container
+            .read(provider)
+            .value!
+            .viewportCommand!
+            .transactionId;
+        notifier.consumeViewportCommand(firstJumpTransaction);
+
+        await notifier.jumpToMessage(130);
+        final state = container.read(provider).value;
+
+        expect(state, isNotNull);
+        expect(state!.windowMode, ConversationWindowMode.historyBrowsing);
+        expect(state.anchorMessageId, 120);
+        expect(
+          state.viewportCommand?.type,
+          ConversationViewportCommandType.scrollToLoadedTarget,
+        );
+      },
+    );
+
+    test(
+      'viewport resize emits bottom-settle command only while at live latest',
+      () async {
+        final container = _createContainer();
+        addTearDown(container.dispose);
+        final provider = conversationTimelineViewModelProvider(_args());
+
+        await container.read(provider.future);
+        final notifier = container.read(provider.notifier);
+
+        notifier.onViewportResized();
+        final liveLatestState = container.read(provider).value;
+
+        expect(liveLatestState, isNotNull);
+        expect(
+          liveLatestState!.viewportCommand?.type,
+          ConversationViewportCommandType.settleAtBottomAfterViewportResize,
+        );
+
+        await notifier.jumpToMessage(120);
+        notifier.onViewportResized();
+        final historyState = container.read(provider).value;
+
+        expect(historyState, isNotNull);
+        expect(
+          historyState!.viewportCommand?.type,
+          ConversationViewportCommandType.scrollToLoadedTarget,
+        );
+      },
+    );
+
+    test(
+      'realtime message while out of live edge does not emit bottom settlement',
+      () async {
+        final container = _createContainer();
+        addTearDown(container.dispose);
+        final provider = conversationTimelineViewModelProvider(_args());
+
+        await container.read(provider.future);
+        final notifier = container.read(provider.notifier);
+        final initialTransactionId = container
+            .read(provider)
+            .value!
+            .viewportCommand!
+            .transactionId;
+        notifier.consumeViewportCommand(initialTransactionId);
+        notifier.onViewportLiveEdgeChanged(false);
+
+        container
+            .read(conversationRealtimeRegistryProvider)
+            .dispatch(
+              MessageCreatedWsEvent(
+                payload: MessageItemDto(
+                  id: 151,
+                  message: 'Message 151',
+                  sender: const SenderDto(uid: 7, name: 'Tester'),
+                  chatId: 1,
+                  createdAt: DateTime.utc(
+                    2026,
+                    1,
+                    1,
+                  ).add(const Duration(minutes: 151)),
+                  clientGeneratedId: 'cg-151',
+                ),
+              ),
+            );
+
+        final state = container.read(provider).value;
+
+        expect(state, isNotNull);
+        expect(state!.pendingLiveCount, 1);
+        expect(state.viewportCommand, isNull);
+      },
+    );
+
+    test('consumeViewportCommand clears command from state', () async {
       final container = _createContainer();
       addTearDown(container.dispose);
       final provider = conversationTimelineViewModelProvider(_args());
 
       await container.read(provider.future);
       final notifier = container.read(provider.notifier);
+      final transactionId = container
+          .read(provider)
+          .value!
+          .viewportCommand!
+          .transactionId;
 
-      expect(container.read(provider).value?.locatePlan, isNotNull);
-      notifier.consumeLocatePlan();
-      expect(container.read(provider).value?.locatePlan, isNull);
+      expect(container.read(provider).value?.viewportCommand, isNotNull);
+      notifier.consumeViewportCommand(transactionId);
+      expect(container.read(provider).value?.viewportCommand, isNull);
     });
 
     test('warm latest launch restores cache then refreshes on open', () async {
@@ -269,7 +424,7 @@ void main() {
         final state = container.read(provider).value;
 
         expect(state, isNotNull);
-        expect(state!.windowMode, ConversationWindowMode.anchoredTarget);
+        expect(state!.windowMode, ConversationWindowMode.historyBrowsing);
         expect(state.anchorMessageId, 120);
         expect(service.latestFetchCount, 2);
       },

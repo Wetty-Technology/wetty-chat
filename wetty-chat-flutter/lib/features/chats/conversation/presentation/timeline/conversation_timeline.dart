@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer' as developer;
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/session/dev_session_store.dart';
@@ -11,7 +12,6 @@ import '../../application/conversation_timeline_view_model.dart';
 import '../../domain/conversation_message.dart';
 import '../../domain/conversation_scope.dart';
 import '../../domain/timeline_entry.dart';
-import '../../domain/viewport_placement.dart';
 import '../../../models/message_models.dart';
 import '../anchored_timeline_view.dart';
 import '../message_overlay.dart';
@@ -69,8 +69,9 @@ class ConversationTimeline extends ConsumerStatefulWidget {
       _ConversationTimelineState();
 }
 
-class _ConversationTimelineState extends ConsumerState<ConversationTimeline> {
-  static const double _liveEdgeScrollThreshold = 50;
+class _ConversationTimelineState extends ConsumerState<ConversationTimeline>
+    with WidgetsBindingObserver {
+  static const double _liveEdgeTolerance = 0.5;
   static const double _timelineEndPadding = 12;
   static const Duration _overlayAnimationDuration = Duration(milliseconds: 150);
 
@@ -79,10 +80,13 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline> {
   final Map<String, GlobalKey> _messageRowKeys = <String, GlobalKey>{};
 
   bool _isAtLiveEdge = true;
+  bool _isBootstrapActive = false;
+  bool _isUserDragging = false;
   bool _isOverlayVisible = false;
   bool _isVisibleMessageReportScheduled = false;
   int _viewportGeneration = 0;
   Key _timelineViewportKey = const ValueKey<int>(0);
+  int? _activeViewportTransactionId;
   String? _lastVisibleMessageReportSignature;
   _ActiveMessageOverlay? _activeOverlay;
   Timer? _overlayDismissTimer;
@@ -104,6 +108,7 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline> {
       'identity=${identityHashCode(this)}',
       name: widget.logTag,
     );
+    WidgetsBinding.instance.addObserver(this);
     _timelineScrollController.addListener(_onTimelineScroll);
     widget.controller?._scrollToLatest = _scrollToLatest;
   }
@@ -123,11 +128,29 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline> {
       'dispose: identity=${identityHashCode(this)}',
       name: widget.logTag,
     );
+    WidgetsBinding.instance.removeObserver(this);
     widget.controller?._scrollToLatest = null;
     _timelineScrollController.removeListener(_onTimelineScroll);
     _timelineScrollController.dispose();
     _overlayDismissTimer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeMetrics() {
+    if (!_isAtLiveEdge) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      ref
+          .read(
+            conversationTimelineViewModelProvider(widget.timelineArgs).notifier,
+          )
+          .onViewportResized();
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -289,11 +312,13 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline> {
         .value;
     if (viewState == null) return;
 
-    final position = _timelineScrollController.position;
-    final isAtLiveEdge =
-        !viewState.canLoadNewer &&
-        (position.maxScrollExtent - position.pixels) < _liveEdgeScrollThreshold;
+    final isAtLiveEdge = _isAtExactLiveEdge(viewState);
     if (_isAtLiveEdge != isAtLiveEdge) {
+      ref
+          .read(
+            conversationTimelineViewModelProvider(widget.timelineArgs).notifier,
+          )
+          .onViewportLiveEdgeChanged(isAtLiveEdge);
       setState(() {
         _isAtLiveEdge = isAtLiveEdge;
       });
@@ -311,12 +336,17 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline> {
         viewState.isLoadingOlder) {
       return;
     }
+    final visibleAnchor = _captureTopVisibleAnchor(viewState);
     unawaited(
       ref
           .read(
             conversationTimelineViewModelProvider(widget.timelineArgs).notifier,
           )
-          .loadOlder(),
+          .loadOlder(
+            preserveAnchorStableKey: visibleAnchor?.stableKey,
+            preserveAnchorDy: visibleAnchor?.dy,
+            rebaseAnchorMessageId: visibleAnchor?.messageId,
+          ),
     );
   }
 
@@ -329,12 +359,17 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline> {
         viewState.isLoadingNewer) {
       return;
     }
+    final visibleAnchor = _captureTopVisibleAnchor(viewState);
     unawaited(
       ref
           .read(
             conversationTimelineViewModelProvider(widget.timelineArgs).notifier,
           )
-          .loadNewer(),
+          .loadNewer(
+            preserveAnchorStableKey: visibleAnchor?.stableKey,
+            preserveAnchorDy: visibleAnchor?.dy,
+            rebaseAnchorMessageId: visibleAnchor?.messageId,
+          ),
     );
   }
 
@@ -371,6 +406,54 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline> {
 
   GlobalKey _messageRowKey(String stableKey) =>
       _messageRowKeys.putIfAbsent(stableKey, GlobalKey.new);
+
+  bool _isAtExactLiveEdge(ConversationTimelineState viewState) {
+    if (!_timelineScrollController.hasClients || viewState.canLoadNewer) {
+      return false;
+    }
+    final position = _timelineScrollController.position;
+    return (position.maxScrollExtent - position.pixels).abs() <=
+        _liveEdgeTolerance;
+  }
+
+  _VisibleAnchor? _captureTopVisibleAnchor(
+    ConversationTimelineState viewState,
+  ) {
+    final viewportContext = _overlayViewportKey.currentContext;
+    final viewportRenderBox = viewportContext?.findRenderObject() as RenderBox?;
+    if (viewportRenderBox == null || !viewportRenderBox.attached) {
+      return null;
+    }
+    final viewportRect =
+        viewportRenderBox.localToGlobal(Offset.zero) & viewportRenderBox.size;
+
+    _VisibleAnchor? bestAnchor;
+    for (final entry in viewState.entries) {
+      if (entry is! TimelineMessageEntry) {
+        continue;
+      }
+      final rowContext =
+          _messageRowKeys[entry.message.stableKey]?.currentContext;
+      final rowRenderBox = rowContext?.findRenderObject() as RenderBox?;
+      if (rowRenderBox == null || !rowRenderBox.attached) {
+        continue;
+      }
+      final rowRect =
+          rowRenderBox.localToGlobal(Offset.zero) & rowRenderBox.size;
+      if (rowRect.intersect(viewportRect).isEmpty) {
+        continue;
+      }
+      final dy = rowRect.top - viewportRect.top;
+      if (bestAnchor == null || dy < bestAnchor.dy) {
+        bestAnchor = _VisibleAnchor(
+          stableKey: entry.message.stableKey,
+          messageId: entry.message.serverMessageId,
+          dy: dy,
+        );
+      }
+    }
+    return bestAnchor;
+  }
 
   void _scheduleVisibleMessageReport(ConversationTimelineState viewState) {
     if (_isVisibleMessageReportScheduled) {
@@ -435,6 +518,185 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline> {
 
   void _resetViewportSession(int sessionId) {
     _timelineViewportKey = ValueKey<int>(sessionId);
+  }
+
+  void _consumeViewportCommand(int transactionId) {
+    _activeViewportTransactionId = null;
+    ref
+        .read(
+          conversationTimelineViewModelProvider(widget.timelineArgs).notifier,
+        )
+        .consumeViewportCommand(transactionId);
+  }
+
+  Future<void> _applyViewportCommand(
+    ConversationTimelineState viewState,
+    ConversationViewportCommand command,
+  ) async {
+    if (_activeViewportTransactionId == command.transactionId) {
+      return;
+    }
+    if (_isUserDragging && !command.isBootstrap) {
+      return;
+    }
+    _activeViewportTransactionId = command.transactionId;
+    switch (command.type) {
+      case ConversationViewportCommandType.showLatest:
+      case ConversationViewportCommandType.bootstrapTarget:
+        _viewportGeneration += 1;
+        setState(() {
+          _isBootstrapActive = true;
+          _isAtLiveEdge =
+              command.type == ConversationViewportCommandType.showLatest &&
+              !viewState.canLoadNewer;
+          _resetViewportSession(_viewportGeneration);
+        });
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          await WidgetsBinding.instance.endOfFrame;
+          await WidgetsBinding.instance.endOfFrame;
+          if (!mounted) {
+            return;
+          }
+          if (command.type == ConversationViewportCommandType.showLatest) {
+            _jumpToBottomImmediate();
+          }
+          setState(() {
+            _isBootstrapActive = false;
+          });
+          _consumeViewportCommand(command.transactionId);
+        });
+        break;
+      case ConversationViewportCommandType.scrollToLoadedTarget:
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          if (!mounted) {
+            return;
+          }
+          await _scrollLoadedTargetIntoView(command.messageId);
+          if (!mounted) {
+            return;
+          }
+          _consumeViewportCommand(command.transactionId);
+        });
+        break;
+      case ConversationViewportCommandType.preserveOnPrepend:
+      case ConversationViewportCommandType.preserveOnAppend:
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) {
+            return;
+          }
+          _restorePreservedAnchor(
+            anchorStableKey: command.anchorStableKey,
+            desiredDy: command.anchorDy,
+          );
+          _consumeViewportCommand(command.transactionId);
+        });
+        break;
+      case ConversationViewportCommandType.settleAtBottomAfterMutation:
+      case ConversationViewportCommandType.settleAtBottomAfterViewportResize:
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted || _isUserDragging) {
+            return;
+          }
+          _jumpToBottomImmediate();
+          _consumeViewportCommand(command.transactionId);
+        });
+        break;
+    }
+  }
+
+  Future<void> _scrollLoadedTargetIntoView(int? messageId) async {
+    if (messageId == null) {
+      return;
+    }
+    final currentState = ref
+        .read(conversationTimelineViewModelProvider(widget.timelineArgs))
+        .value;
+    if (currentState == null) {
+      return;
+    }
+    TimelineMessageEntry? targetEntry;
+    for (final entry
+        in currentState.entries.whereType<TimelineMessageEntry>()) {
+      if (entry.message.serverMessageId == messageId) {
+        targetEntry = entry;
+        break;
+      }
+    }
+    final targetContext = targetEntry == null
+        ? null
+        : _messageRowKeys[targetEntry.message.stableKey]?.currentContext;
+    if (targetContext == null) {
+      return;
+    }
+    final viewportContext = _overlayViewportKey.currentContext;
+    final viewportRenderBox = viewportContext?.findRenderObject() as RenderBox?;
+    final rowRenderBox = targetContext.findRenderObject() as RenderBox?;
+    if (viewportRenderBox == null || !viewportRenderBox.attached) {
+      return;
+    }
+    if (rowRenderBox == null || !rowRenderBox.attached) {
+      return;
+    }
+    final viewportRect =
+        viewportRenderBox.localToGlobal(Offset.zero) & viewportRenderBox.size;
+    final rowRect = rowRenderBox.localToGlobal(Offset.zero) & rowRenderBox.size;
+    final travelDistance = (rowRect.top - viewportRect.top).abs();
+    final duration = travelDistance > viewportRect.height * 2
+        ? Duration.zero
+        : const Duration(milliseconds: 250);
+    await Scrollable.ensureVisible(
+      targetContext,
+      alignment: 0,
+      duration: duration,
+      curve: Curves.easeInOut,
+    );
+  }
+
+  void _restorePreservedAnchor({
+    required String? anchorStableKey,
+    required double? desiredDy,
+  }) {
+    if (anchorStableKey == null ||
+        desiredDy == null ||
+        !_timelineScrollController.hasClients) {
+      return;
+    }
+    final rowContext = _messageRowKeys[anchorStableKey]?.currentContext;
+    final viewportContext = _overlayViewportKey.currentContext;
+    final rowRenderBox = rowContext?.findRenderObject() as RenderBox?;
+    final viewportRenderBox = viewportContext?.findRenderObject() as RenderBox?;
+    if (rowRenderBox == null ||
+        !rowRenderBox.attached ||
+        viewportRenderBox == null ||
+        !viewportRenderBox.attached) {
+      return;
+    }
+    final viewportRect =
+        viewportRenderBox.localToGlobal(Offset.zero) & viewportRenderBox.size;
+    final rowRect = rowRenderBox.localToGlobal(Offset.zero) & rowRenderBox.size;
+    final currentDy = rowRect.top - viewportRect.top;
+    final delta = currentDy - desiredDy;
+    if (delta.abs() <= _liveEdgeTolerance) {
+      return;
+    }
+    final position = _timelineScrollController.position;
+    final targetOffset = (position.pixels + delta).clamp(
+      position.minScrollExtent,
+      position.maxScrollExtent,
+    );
+    _timelineScrollController.jumpTo(targetOffset);
+  }
+
+  void _jumpToBottomImmediate() {
+    if (!_timelineScrollController.hasClients) {
+      return;
+    }
+    final position = _timelineScrollController.position;
+    final bottom = position.maxScrollExtent;
+    if ((bottom - position.pixels).abs() <= _liveEdgeTolerance) {
+      return;
+    }
+    _timelineScrollController.jumpTo(bottom);
   }
 
   void _showErrorDialog(String message) {
@@ -511,9 +773,9 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline> {
     final settings = ref.watch(appSettingsProvider);
 
     timelineAsync.whenData((state) {
-      final locatePlan = state.locatePlan;
+      final viewportCommand = state.viewportCommand;
       developer.log(
-        'whenData: locatePlan=${locatePlan?.placement}, '
+        'whenData: viewportCommand=${viewportCommand?.type}, '
         'mode=${state.windowMode}, '
         'placement=${state.viewportPlacement}, '
         'anchorIdx=${state.anchorEntryIndex}/${state.entries.length}, '
@@ -522,30 +784,8 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline> {
         'generation=$_viewportGeneration',
         name: widget.logTag,
       );
-      if (locatePlan != null) {
-        _viewportGeneration += 1;
-        _isAtLiveEdge =
-            state.viewportPlacement == ConversationViewportPlacement.liveEdge &&
-            !state.canLoadNewer;
-        _resetViewportSession(_viewportGeneration);
-        developer.log(
-          'applied locatePlan: placement=${locatePlan.placement}, '
-          'resolvedPlacement=${state.viewportPlacement}, '
-          'isAtLiveEdge=$_isAtLiveEdge, '
-          'newKey=$_timelineViewportKey, '
-          'newGeneration=$_viewportGeneration',
-          name: widget.logTag,
-        );
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          ref
-              .read(
-                conversationTimelineViewModelProvider(
-                  widget.timelineArgs,
-                ).notifier,
-              )
-              .consumeLocatePlan();
-        });
+      if (viewportCommand != null) {
+        unawaited(_applyViewportCommand(state, viewportCommand));
       }
       if (state.infoMessage != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -562,60 +802,89 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline> {
       }
     });
 
-    return Stack(
-      key: _overlayViewportKey,
-      children: [
-        timelineAsync.when(
-          loading: () => const Center(child: CupertinoActivityIndicator()),
-          error: (error, _) => Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text('$error', textAlign: TextAlign.center),
-                  const SizedBox(height: 16),
-                  CupertinoButton.filled(
-                    onPressed: () => ref.invalidate(
-                      conversationTimelineViewModelProvider(
-                        widget.timelineArgs,
-                      ),
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (notification is ScrollStartNotification &&
+            notification.dragDetails != null) {
+          _isUserDragging = true;
+        } else if (notification is ScrollEndNotification) {
+          _isUserDragging = false;
+          if (mounted) {
+            setState(() {});
+          }
+        } else if (notification is UserScrollNotification &&
+            notification.direction == ScrollDirection.idle) {
+          _isUserDragging = false;
+          if (mounted) {
+            setState(() {});
+          }
+        }
+        return false;
+      },
+      child: Stack(
+        key: _overlayViewportKey,
+        children: [
+          IgnorePointer(
+            ignoring: _isBootstrapActive,
+            child: AnimatedOpacity(
+              opacity: _isBootstrapActive ? 0 : 1,
+              duration: const Duration(milliseconds: 80),
+              child: timelineAsync.when(
+                loading: () =>
+                    const Center(child: CupertinoActivityIndicator()),
+                error: (error, _) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('$error', textAlign: TextAlign.center),
+                        const SizedBox(height: 16),
+                        CupertinoButton.filled(
+                          onPressed: () => ref.invalidate(
+                            conversationTimelineViewModelProvider(
+                              widget.timelineArgs,
+                            ),
+                          ),
+                          child: const Text('Retry'),
+                        ),
+                      ],
                     ),
-                    child: const Text('Retry'),
                   ),
-                ],
+                ),
+                data: (viewState) =>
+                    _buildTimeline(viewState, settings.fontSize),
               ),
             ),
           ),
-          data: (viewState) => _buildTimeline(viewState, settings.fontSize),
-        ),
-        if (_activeOverlay case final overlay?)
-          MessageOverlay(
-            details: overlay.details,
-            visible: _isOverlayVisible,
-            chatMessageFontSize: settings.fontSize,
-            actions: _overlayActions(overlay.details.message),
-            quickReactionEmojis: _quickReactionEmojis,
-            onDismiss: _dismissMessageOverlay,
-            onToggleReaction: (emoji) {
-              _dismissMessageOverlay();
-              unawaited(_toggleReaction(overlay.details.message, emoji));
-            },
-          ),
-        if (timelineAsync.value case final viewState?
-            when shouldShowJumpToLatestFab(
-              state: viewState,
-              isAtLiveEdge: _isAtLiveEdge,
-            ))
-          Positioned(
-            right: 16,
-            bottom: 16,
-            child: JumpToLatestFab(
-              pendingLiveCount: viewState.pendingLiveCount,
-              onPressed: _scrollToLatest,
+          if (_activeOverlay case final overlay?)
+            MessageOverlay(
+              details: overlay.details,
+              visible: _isOverlayVisible,
+              chatMessageFontSize: settings.fontSize,
+              actions: _overlayActions(overlay.details.message),
+              quickReactionEmojis: _quickReactionEmojis,
+              onDismiss: _dismissMessageOverlay,
+              onToggleReaction: (emoji) {
+                _dismissMessageOverlay();
+                unawaited(_toggleReaction(overlay.details.message, emoji));
+              },
             ),
-          ),
-      ],
+          if (timelineAsync.value case final viewState?
+              when shouldShowJumpToLatestFab(
+                state: viewState,
+                isAtLiveEdge: _isAtLiveEdge,
+              ))
+            Positioned(
+              right: 16,
+              bottom: 16,
+              child: JumpToLatestFab(
+                pendingLiveCount: viewState.pendingLiveCount,
+                onPressed: _scrollToLatest,
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -730,4 +999,16 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline> {
 class _ActiveMessageOverlay {
   const _ActiveMessageOverlay(this.details);
   final MessageLongPressDetails details;
+}
+
+class _VisibleAnchor {
+  const _VisibleAnchor({
+    required this.stableKey,
+    required this.messageId,
+    required this.dy,
+  });
+
+  final String stableKey;
+  final int? messageId;
+  final double dy;
 }
