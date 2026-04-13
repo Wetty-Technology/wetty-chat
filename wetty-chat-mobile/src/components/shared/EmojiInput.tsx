@@ -9,12 +9,13 @@ import styles from './EmojiInput.module.scss';
 interface EmojiInputProps {
   value: string;
   onChange: (value: string) => void;
-  label: string;
+  label?: string;
   placeholder?: string;
   required?: boolean;
   invalid?: boolean;
   errorText?: string;
   maxEmojiCount?: number;
+  hideCounter?: boolean;
 }
 
 export function EmojiInput({
@@ -26,6 +27,7 @@ export function EmojiInput({
   invalid = false,
   errorText,
   maxEmojiCount = 4,
+  hideCounter = false,
 }: EmojiInputProps) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [triggerEvent, setTriggerEvent] = useState<Event | undefined>();
@@ -105,14 +107,13 @@ export function EmojiInput({
       <div className={styles.fieldRow}>
         <IonInput
           value={value}
-          label={`${label}${required ? ' *' : ''}`}
-          labelPlacement="stacked"
+          {...(label && { label: `${label}${required ? ' *' : ''}`, labelPlacement: 'stacked' })}
           placeholder={placeholder}
-          counter
+          counter={!hideCounter}
           maxlength={maxEmojiCount * 10}
-          counterFormatter={() => `${extractEmojiSequences(value).length} / ${maxEmojiCount}`}
+          counterFormatter={() => (hideCounter ? '' : `${extractEmojiSequences(value).length} / ${maxEmojiCount}`)}
           errorText={errorText ?? t`Please choose at least one emoji`}
-          className={`${styles.input}${invalid ? ' ion-invalid ion-touched' : ''}`}
+          className={`${styles.input}${invalid ? ' ion-invalid ion-touched' : ''} ${hideCounter ? styles.noCounter : ''}`}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
           onIonInput={handleIonInput}
@@ -121,7 +122,7 @@ export function EmojiInput({
           type="button"
           fill="clear"
           aria-label={t`Open emoji picker`}
-          className={styles.triggerButton}
+          className={hideCounter ? undefined : styles.triggerButton}
           onClick={handleOpenPicker}
         >
           <IonIcon slot="icon-only" icon={happyOutline} />

@@ -88,7 +88,11 @@ export function StickerPackDetailCore({ packId, backAction }: StickerPackDetailC
         <IonHeader>
           <IonToolbar>
             <IonButtons slot="start">
-              {backAction ? <BackButton action={backAction} /> : <IonBackButton defaultHref="/settings/stickers" />}
+              {backAction ? (
+                <BackButton action={backAction} />
+              ) : (
+                <IonBackButton text={t`Back`} defaultHref="/settings/stickers" />
+              )}
             </IonButtons>
             <IonTitle>
               <Trans>Pack</Trans>
@@ -190,7 +194,11 @@ export function StickerPackDetailCore({ packId, backAction }: StickerPackDetailC
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            {backAction ? <BackButton action={backAction} /> : <IonBackButton defaultHref="/settings/stickers" />}
+            {backAction ? (
+              <BackButton action={backAction} />
+            ) : (
+              <IonBackButton text={t`Back`} defaultHref="/settings/stickers" />
+            )}
           </IonButtons>
           <IonTitle>{pack.name}</IonTitle>
           {owned && (

@@ -1,3 +1,4 @@
+import { MAX_PINNED_REACTIONS } from '@/constants/emojiAndStickers';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   IonBackButton,
@@ -196,7 +197,7 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
             {backAction ? <BackButton action={backAction} /> : <IonBackButton text={t`Back`} defaultHref="/settings" />}
           </IonButtons>
           <IonTitle>
-            <Trans>Stickers</Trans>
+            <Trans>Emojis & Stickers</Trans>
           </IonTitle>
         </IonToolbar>
       </IonHeader>
@@ -204,7 +205,31 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
         <IonList inset>
           <IonItem lines="none">
             <IonLabel>
-              <Trans>Auto-sort packs by recent use</Trans>
+              <Trans>Pinned Reaction Emojis</Trans>
+              <span
+                style={{ marginLeft: 8, fontSize: '0.85em', color: 'var(--ion-color-medium)', fontWeight: 'normal' }}
+              >
+                ({pinnedReactions.length}/{MAX_PINNED_REACTIONS})
+              </span>
+            </IonLabel>
+            <div slot="end" style={{ flex: 1, maxWidth: '200px', display: 'flex', justifyContent: 'flex-end' }}>
+              <EmojiInput
+                value={pinnedReactions.join('')}
+                onChange={(val) => {
+                  const newReactions = extractEmojiSequences(val);
+                  dispatch(setPinnedReactions(newReactions));
+                }}
+                maxEmojiCount={MAX_PINNED_REACTIONS}
+                hideCounter={true}
+              />
+            </div>
+          </IonItem>
+        </IonList>
+
+        <IonList inset>
+          <IonItem lines="full">
+            <IonLabel>
+              <Trans>Auto-sort sticker packs</Trans>
             </IonLabel>
             <IonToggle
               slot="end"
@@ -214,28 +239,6 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
               }}
             />
           </IonItem>
-        </IonList>
-
-        <IonList inset>
-          <IonItem style={{ paddingBottom: '12px', paddingTop: '12px' }}>
-            <div style={{ width: '100%' }}>
-              <EmojiInput
-                label={t`Pinned Reactions`}
-                placeholder={t`Choose up to 5 emojis`}
-                value={pinnedReactions.join('')}
-                onChange={(val) => {
-                  const newReactions = extractEmojiSequences(val);
-                  dispatch(setPinnedReactions(newReactions));
-                }}
-                maxEmojiCount={5}
-              />
-              <p style={{ fontSize: '0.85rem', color: 'var(--ion-color-medium)', margin: '8px 0 0 0' }}>
-                <Trans>Choose up to 5 default pinned emojis for quick reactions</Trans>
-              </p>
-            </div>
-          </IonItem>
-        </IonList>
-        <IonList inset>
           <IonItem button detail={false} onClick={handleCreatePack}>
             <IonIcon aria-hidden="true" icon={addOutline} slot="start" color="primary" />
             <IonLabel color="primary">

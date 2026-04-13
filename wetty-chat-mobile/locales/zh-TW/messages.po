@@ -80,6 +80,7 @@ msgid "Alex"
 msgstr "風紀委員"
 
 #: src/components/chat/ChatListSegment.tsx
+#: src/components/chat/ReactionDetailsModal.tsx
 msgid "All"
 msgstr "全部"
 
@@ -113,6 +114,7 @@ msgid "Attach image"
 msgstr "附加圖片"
 
 #: src/components/chat/messages/ChatBubbleBase.tsx
+#: src/components/chat/messages/ChatBubbleBase.tsx
 msgid "Attachment"
 msgstr "附件"
 
@@ -129,11 +131,22 @@ msgstr "附件預覽列"
 msgid "Auto"
 msgstr "自動"
 
+#: src/pages/settings/stickers.tsx
+#~ msgid "Auto-sort packs by recent use"
+#~ msgstr "根據最近使用自動排序"
+
+#: src/pages/settings/stickers.tsx
+msgid "Auto-sort sticker packs"
+msgstr "按最近使用自動排序貼紙包"
+
 #: src/pages/chat-thread/chat-settings.tsx
 msgid "Avatar uploaded"
 msgstr "頭像已上傳"
 
 #: src/components/chat/settings/ShareInviteModal.tsx
+#: src/pages/settings/general.tsx
+#: src/pages/settings/sticker-pack-detail.tsx
+#: src/pages/settings/sticker-pack-detail.tsx
 #: src/pages/settings/stickers.tsx
 msgid "Back"
 msgstr "返回"
@@ -175,6 +188,10 @@ msgstr "取消編輯"
 msgid "Cancel reply"
 msgstr "取消回覆"
 
+#: src/components/chat/MessageOverlay.tsx
+msgid "Cannot add more than {MAX_DISTINCT_REACTIONS_PER_MESSAGE} different reactions"
+msgstr "每條訊息最多只能添加 {MAX_DISTINCT_REACTIONS_PER_MESSAGE} 種不同的表態"
+
 #: src/utils/chatDisplay.ts
 msgid "Chat {chatId}"
 msgstr "聊天 {chatId}"
@@ -204,6 +221,14 @@ msgstr "選擇一張新圖片以取代目前頭像。"
 #: src/components/chat/settings/ShareInviteModal.tsx
 msgid "Choose the member group first"
 msgstr "請先選擇成員群組"
+
+#: src/pages/settings/stickers.tsx
+#~ msgid "Choose up to 5 default pinned emojis for quick reactions"
+#~ msgstr "最多選擇 5 個默認置頂表情以用於快速表態"
+
+#: src/pages/settings/stickers.tsx
+#~ msgid "Choose up to 5 emojis"
+#~ msgstr ""
 
 #: src/components/chat/settings/ShareInviteModal.tsx
 #: src/pages/chat-thread/manage-invites.tsx
@@ -237,9 +262,6 @@ msgstr "繼續"
 msgid "Copy"
 msgstr "複製"
 
-msgid "Copy text"
-msgstr "複製文本"
-
 #: src/components/chat/settings/ShareInviteModal.tsx
 #: src/pages/chat-thread/manage-invites.tsx
 msgid "Copy code"
@@ -248,6 +270,10 @@ msgstr "複製代碼"
 #: src/pages/chat-thread/chat-thread.tsx
 msgid "Copy Link"
 msgstr "複製連結"
+
+#: src/pages/chat-thread/chat-thread.tsx
+msgid "Copy text"
+msgstr "複製文本"
 
 #: src/components/chat/settings/ShareInviteModal.tsx
 msgid "Copy the link below, or choose a group to send it to right now."
@@ -283,12 +309,6 @@ msgstr "建立邀請"
 msgid "Create New Pack"
 msgstr "建立新表情包"
 
-msgid "Owned"
-msgstr "我的"
-
-msgid "Auto-sort packs by recent use"
-msgstr "根據最近使用自動排序"
-
 #: src/components/chat/compose/StickerPicker.tsx
 msgid "Create new sticker pack"
 msgstr "建立新的表情包"
@@ -317,11 +337,11 @@ msgstr "刪除最近 24 小時的訊息"
 
 #: src/pages/settings/sticker-pack-detail.tsx
 msgid "Delete pack"
-msgstr "刪除表情包"
+msgstr "刪除貼紙包"
 
 #: src/pages/settings/sticker-pack-detail.tsx
 msgid "Delete Pack"
-msgstr "刪除表情包"
+msgstr "刪除貼紙包"
 
 #: src/components/chat/compose/VoiceRecorderPanel.tsx
 msgid "Delete recording"
@@ -392,6 +412,7 @@ msgid "Edit message"
 msgstr "編輯訊息"
 
 #: src/components/chat/messages/ChatBubbleBase.tsx
+#: src/components/chat/messages/ChatBubbleBase.tsx
 #: src/components/chat/messages/StickerBubble.tsx
 msgid "Edited"
 msgstr "已編輯"
@@ -399,6 +420,11 @@ msgstr "已編輯"
 #: src/components/chat/compose/AddStickerModal.tsx
 msgid "Emoji"
 msgstr "表情"
+
+#: src/pages/settings.tsx
+#: src/pages/settings/stickers.tsx
+msgid "Emojis & Stickers"
+msgstr "表情和貼紙"
 
 #: src/pages/join-chat.tsx
 msgid "Enter an invite code"
@@ -442,8 +468,7 @@ msgstr "到期時間"
 msgid "Failed to add member"
 msgstr "新增成員失敗"
 
-#: src/components/chat/compose/StickerPicker.tsx
-#: src/pages/settings/sticker-pack-detail.tsx
+#: src/hooks/useAddSticker.ts
 msgid "Failed to add sticker"
 msgstr "新增表情失敗"
 
@@ -467,7 +492,7 @@ msgstr "收回訊息失敗"
 
 #: src/pages/settings/sticker-pack-detail.tsx
 msgid "Failed to delete sticker pack"
-msgstr "刪除表情包失敗"
+msgstr "刪除貼紙包失敗"
 
 #: src/pages/chat-thread/chat-thread.tsx
 msgid "Failed to edit message"
@@ -532,6 +557,7 @@ msgid "Failed to mute"
 msgstr "靜音失敗"
 
 #: src/components/chat/messages/PermalinkInline.tsx
+#: src/components/chat/messages/PermalinkInline.tsx
 #: src/pages/permalink.tsx
 msgid "Failed to open link"
 msgstr "開啟連結失敗"
@@ -550,7 +576,7 @@ msgstr "移除成員失敗"
 
 #: src/pages/settings/sticker-pack-detail.tsx
 msgid "Failed to remove sticker"
-msgstr "移除表情失敗"
+msgstr "移除貼紙失敗"
 
 #: src/pages/chat-thread/manage-invites.tsx
 msgid "Failed to revoke invite"
@@ -613,8 +639,7 @@ msgstr "上傳頭像失敗"
 msgid "Favorites"
 msgstr "收藏"
 
-#: src/components/chat/compose/StickerPicker.tsx
-#: src/pages/settings/sticker-pack-detail.tsx
+#: src/hooks/useAddSticker.ts
 msgid "File is too large. Maximum sticker size is 10 MB."
 msgstr "檔案過大。貼圖檔案大小上限為 10 MB。"
 
@@ -765,6 +790,7 @@ msgid "Loading invite…"
 msgstr "正在載入邀請…"
 
 #: src/components/chat/ReactionDetailsModal.tsx
+#: src/components/chat/ReactionDetailsModal.tsx
 #: src/components/chat/StickerPreviewModal.tsx
 #: src/pages/chat-thread/chat-thread.tsx
 #: src/pages/settings/sticker-pack-detail.tsx
@@ -779,6 +805,10 @@ msgstr "正在載入..."
 #: src/pages/join-chat.tsx
 msgid "Loading…"
 msgstr "正在載入…"
+
+#: src/components/chat/StickerPreviewModal.tsx
+msgid "Manage"
+msgstr "管理"
 
 #: src/components/chat/settings/ShareInviteModal.tsx
 #: src/pages/chat-thread/manage-invites.tsx
@@ -833,6 +863,8 @@ msgid "Message cannot be empty"
 msgstr "訊息不能為空"
 
 #: src/components/chat/messages/PermalinkInline.tsx
+#: src/components/chat/messages/PermalinkInline.tsx
+#: src/pages/chat-thread/chat-thread.tsx
 #: src/pages/permalink.tsx
 msgid "Message not found"
 msgstr "找不到訊息"
@@ -846,6 +878,10 @@ msgstr "訊息字體大小"
 msgid "Microphone access was denied."
 msgstr "麥克風存取遭拒。"
 
+#: src/components/chat/ReactionDetailsModal.tsx
+msgid "More"
+msgstr ""
+
 #: src/components/chat/settings/ChatMuteSettingItem.tsx
 msgid "Mute"
 msgstr "靜音"
@@ -855,8 +891,8 @@ msgid "Mute notifications"
 msgstr "靜音通知"
 
 #: src/pages/settings/stickers.tsx
-msgid "My Packs"
-msgstr "我的表情包"
+#~ msgid "My Packs"
+#~ msgstr "我的表情包"
 
 #: src/components/chat/compose/AddStickerModal.tsx
 msgid "Name"
@@ -875,7 +911,7 @@ msgstr "新訊息"
 #: src/components/chat/compose/StickerPicker.tsx
 #: src/pages/settings/stickers.tsx
 msgid "New Sticker Pack"
-msgstr "新表情包"
+msgstr "新貼紙包"
 
 #: src/components/chat/ChatVirtualScroll.tsx
 msgid "Newer messages"
@@ -933,11 +969,11 @@ msgstr "未註冊 Service Worker"
 
 #: src/components/chat/compose/StickerPicker.tsx
 msgid "No stickers"
-msgstr "沒有表情"
+msgstr "沒有貼紙"
 
 #: src/pages/settings/stickers.tsx
-msgid "No subscribed packs"
-msgstr "沒有已訂閱的表情包"
+#~ msgid "No subscribed packs"
+#~ msgstr "沒有已訂閱的表情包"
 
 #: src/pages/threads.tsx
 msgid "No threads yet"
@@ -992,14 +1028,22 @@ msgstr "開啟討論串"
 msgid "Optional"
 msgstr "選填"
 
+#: src/pages/settings/stickers.tsx
+msgid "Owned"
+msgstr "我的"
+
 #: src/pages/settings/sticker-pack-detail.tsx
 msgid "Pack"
-msgstr "表情包"
+msgstr "貼紙包"
 
 #: src/components/chat/compose/StickerPicker.tsx
 #: src/pages/settings/stickers.tsx
 msgid "Pack name"
-msgstr "表情包名稱"
+msgstr "貼紙包名稱"
+
+#: src/pages/settings/stickers.tsx
+msgid "Packs below this line are not auto-sorted"
+msgstr "此行以下的貼紙包不會自動排序"
 
 #: src/pages/join-chat.tsx
 msgid "Paste code"
@@ -1029,6 +1073,10 @@ msgstr "已釘選的訊息"
 #: src/components/chat/PinListModal.tsx
 msgid "Pinned Messages"
 msgstr "已釘選的訊息"
+
+#: src/pages/settings/stickers.tsx
+msgid "Pinned Reaction Emojis"
+msgstr "置頂表態表情"
 
 #: src/pages/chat-thread/chat-settings.tsx
 msgid "Please choose an image file"
@@ -1154,7 +1202,7 @@ msgstr "移除成員"
 
 #: src/pages/settings/sticker-pack-detail.tsx
 msgid "Remove Sticker"
-msgstr "移除表情"
+msgstr "移除貼紙"
 
 #: src/pages/settings/sticker-pack-detail.tsx
 msgid "Remove this pack from your collection?"
@@ -1295,45 +1343,42 @@ msgstr "狀態"
 #: src/components/chat/compose/ComposeInput.tsx
 #: src/components/chat/messages/StickerBubble.tsx
 msgid "Sticker"
-msgstr "表情"
+msgstr "貼紙"
 
-#: src/components/chat/compose/StickerPicker.tsx
-#: src/pages/settings/sticker-pack-detail.tsx
+#: src/hooks/useAddSticker.ts
 msgid "Sticker added"
 msgstr "已新增表情"
 
 #: src/components/chat/compose/StickerPicker.tsx
 msgid "Sticker packs"
-msgstr "表情包"
+msgstr "貼紙包"
 
 #: src/components/chat/compose/AddStickerModal.tsx
 #: src/components/chat/StickerPreviewModal.tsx
 msgid "Sticker preview"
-msgstr "表情預覽"
+msgstr "貼紙預覽"
 
 #: src/components/chat/StickerPreviewModal.tsx
+#: src/pages/settings/stickers.tsx
 msgid "stickers"
-msgstr "個表情"
+msgstr "個貼紙"
 
 #: src/pages/settings.tsx
 #: src/pages/settings/stickers.tsx
-msgid "Stickers"
-msgstr "表情"
+#~ msgid "Stickers"
+#~ msgstr "貼紙"
 
 #: src/components/chat/StickerPreviewModal.tsx
 msgid "Subscribe"
 msgstr "訂閱"
-
-msgid "Manage"
-msgstr "管理"
 
 #: src/pages/settings.tsx
 msgid "Subscribed"
 msgstr "已訂閱"
 
 #: src/pages/settings/stickers.tsx
-msgid "Subscribed Packs"
-msgstr "已訂閱的表情包"
+#~ msgid "Subscribed Packs"
+#~ msgstr "已訂閱的表情包"
 
 #: src/pages/settings/sticker-pack-detail.tsx
 msgid "Tap a sticker to remove it from this pack."
@@ -1522,6 +1567,14 @@ msgstr "你已經是成員"
 #: src/components/invites/InvitePreviewCard.tsx
 msgid "You are already a member of this chat."
 msgstr "你已經是此聊天的成員。"
+
+#: src/pages/chat-thread/chat-thread.tsx
+msgid "You can only add up to {MAX_REACTIONS_PER_USER_PER_MESSAGE} reactions"
+msgstr "您最多只能添加 {MAX_REACTIONS_PER_USER_PER_MESSAGE} 個表態"
+
+#: src/components/chat/compose/useComposeAttachments.ts
+msgid "You can only upload up to {maxAttachments} media files at once."
+msgstr ""
 
 #: src/components/invites/InvitePreviewCard.tsx
 msgid "You’ve been invited"

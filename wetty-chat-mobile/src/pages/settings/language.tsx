@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import {
   IonBackButton,
   IonButtons,
@@ -52,7 +53,11 @@ export function LanguagePageCore({ backAction }: LanguageCoreProps) {
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            {backAction ? <BackButton action={backAction} /> : <IonBackButton defaultHref="/settings/general" />}
+            {backAction ? (
+              <BackButton action={backAction} />
+            ) : (
+              <IonBackButton text={t`Back`} defaultHref="/settings/general" />
+            )}
           </IonButtons>
           <IonTitle>
             <Trans>Language</Trans>

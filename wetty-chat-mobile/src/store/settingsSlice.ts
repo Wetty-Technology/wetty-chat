@@ -1,3 +1,4 @@
+import { MAX_PINNED_REACTIONS } from '@/constants/emojiAndStickers';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { createSlice, current } from '@reduxjs/toolkit';
 import type { RootState } from './index';
@@ -95,7 +96,7 @@ const settingsSlice = createSlice({
       persistSettings(state);
     },
     setPinnedReactions(state, action: PayloadAction<string[]>) {
-      state.pinnedReactions = action.payload.slice(0, 5);
+      state.pinnedReactions = action.payload.slice(0, MAX_PINNED_REACTIONS);
       persistSettings(state);
     },
     addRecentReaction(state, action: PayloadAction<string>) {

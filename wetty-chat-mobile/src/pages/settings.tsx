@@ -146,7 +146,7 @@ export function SettingsCore({ backAction, onOpenGeneral, onOpenStickers }: Sett
           <IonItem button detail={true} onClick={handleOpenStickers}>
             <IonIcon aria-hidden="true" icon={happyOutline} slot="start" color="medium" />
             <IonLabel>
-              <Trans>Stickers</Trans>
+              <Trans>Emojis & Stickers</Trans>
             </IonLabel>
           </IonItem>
         </IonList>

@@ -1,3 +1,4 @@
+import { MAX_PINNED_REACTIONS } from '@/constants/emojiAndStickers';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   IonButton,
@@ -205,7 +206,10 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   const pinnedReactions = useSelector(selectPinnedReactions);
   const recentReactions = useSelector(selectRecentReactions);
   const QUICK_REACTION_EMOJIS = useMemo(() => {
-    return [...pinnedReactions, ...recentReactions.filter((r) => !pinnedReactions.includes(r))].slice(0, 5);
+    return [...pinnedReactions, ...recentReactions.filter((r) => !pinnedReactions.includes(r))].slice(
+      0,
+      MAX_PINNED_REACTIONS,
+    );
   }, [pinnedReactions, recentReactions]);
   const chatName = threadId ? t`Thread` : (storedName ?? t`Loading...`);
 

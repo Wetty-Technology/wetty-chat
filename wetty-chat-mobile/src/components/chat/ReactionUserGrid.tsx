@@ -1,4 +1,3 @@
-import React from 'react';
 import type { GroupedUser } from '@/hooks/useReactionGrouping';
 import type { Sender } from '@/api/messages';
 import { ReactionUserItem } from './ReactionUserItem';

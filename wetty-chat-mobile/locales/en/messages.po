@@ -104,6 +104,7 @@ msgid "Alex"
 msgstr "Alex"
 
 #: src/components/chat/ChatListSegment.tsx
+#: src/components/chat/ReactionDetailsModal.tsx
 msgid "All"
 msgstr "All"
 
@@ -137,6 +138,7 @@ msgid "Attach image"
 msgstr "Attach image"
 
 #: src/components/chat/messages/ChatBubbleBase.tsx
+#: src/components/chat/messages/ChatBubbleBase.tsx
 msgid "Attachment"
 msgstr "Attachment"
 
@@ -153,11 +155,22 @@ msgstr "Attachment preview tray"
 msgid "Auto"
 msgstr "Auto"
 
+#: src/pages/settings/stickers.tsx
+#~ msgid "Auto-sort packs by recent use"
+#~ msgstr "Auto-sort packs by recent use"
+
+#: src/pages/settings/stickers.tsx
+msgid "Auto-sort sticker packs"
+msgstr "Auto-sort sticker packs"
+
 #: src/pages/chat-thread/chat-settings.tsx
 msgid "Avatar uploaded"
 msgstr "Avatar uploaded"
 
 #: src/components/chat/settings/ShareInviteModal.tsx
+#: src/pages/settings/general.tsx
+#: src/pages/settings/sticker-pack-detail.tsx
+#: src/pages/settings/sticker-pack-detail.tsx
 #: src/pages/settings/stickers.tsx
 msgid "Back"
 msgstr "Back"
@@ -199,6 +212,10 @@ msgstr "Cancel edit"
 msgid "Cancel reply"
 msgstr "Cancel reply"
 
+#: src/components/chat/MessageOverlay.tsx
+msgid "Cannot add more than {MAX_DISTINCT_REACTIONS_PER_MESSAGE} different reactions"
+msgstr "Cannot add more than {MAX_DISTINCT_REACTIONS_PER_MESSAGE} different reactions"
+
 #: src/utils/chatDisplay.ts
 msgid "Chat {chatId}"
 msgstr "Chat {chatId}"
@@ -232,6 +249,14 @@ msgstr "Choose a new image to replace the current avatar."
 #: src/components/chat/settings/ShareInviteModal.tsx
 msgid "Choose the member group first"
 msgstr "Choose the member group first"
+
+#: src/pages/settings/stickers.tsx
+#~ msgid "Choose up to 5 default pinned emojis for quick reactions"
+#~ msgstr "Choose up to 5 default pinned emojis for quick reactions"
+
+#: src/pages/settings/stickers.tsx
+#~ msgid "Choose up to 5 emojis"
+#~ msgstr "Choose up to 5 emojis"
 
 #: src/components/chat/ChatList.tsx
 #~ msgid "Click to view new replies"
@@ -273,9 +298,6 @@ msgstr "Continue"
 msgid "Copy"
 msgstr "Copy"
 
-msgid "Copy text"
-msgstr "Copy text"
-
 #: src/components/chat/settings/ShareInviteModal.tsx
 #: src/pages/chat-thread/manage-invites.tsx
 msgid "Copy code"
@@ -284,6 +306,10 @@ msgstr "Copy code"
 #: src/pages/chat-thread/chat-thread.tsx
 msgid "Copy Link"
 msgstr "Copy Link"
+
+#: src/pages/chat-thread/chat-thread.tsx
+msgid "Copy text"
+msgstr "Copy text"
 
 #: src/components/chat/settings/ShareInviteModal.tsx
 msgid "Copy the link below, or choose a group to send it to right now."
@@ -318,12 +344,6 @@ msgstr "Create Invite"
 #: src/pages/settings/stickers.tsx
 msgid "Create New Pack"
 msgstr "Create New Pack"
-
-msgid "Owned"
-msgstr "Owned"
-
-msgid "Auto-sort packs by recent use"
-msgstr "Auto-sort packs by recent use"
 
 #: src/components/chat/compose/StickerPicker.tsx
 msgid "Create new sticker pack"
@@ -428,6 +448,7 @@ msgid "Edit message"
 msgstr "Edit message"
 
 #: src/components/chat/messages/ChatBubbleBase.tsx
+#: src/components/chat/messages/ChatBubbleBase.tsx
 #: src/components/chat/messages/StickerBubble.tsx
 msgid "Edited"
 msgstr "Edited"
@@ -435,6 +456,11 @@ msgstr "Edited"
 #: src/components/chat/compose/AddStickerModal.tsx
 msgid "Emoji"
 msgstr "Emoji"
+
+#: src/pages/settings.tsx
+#: src/pages/settings/stickers.tsx
+msgid "Emojis & Stickers"
+msgstr "Emojis & Stickers"
 
 #: src/pages/join-chat.tsx
 msgid "Enter an invite code"
@@ -478,8 +504,7 @@ msgstr "Expires"
 msgid "Failed to add member"
 msgstr "Failed to add member"
 
-#: src/components/chat/compose/StickerPicker.tsx
-#: src/pages/settings/sticker-pack-detail.tsx
+#: src/hooks/useAddSticker.ts
 msgid "Failed to add sticker"
 msgstr "Failed to add sticker"
 
@@ -568,6 +593,7 @@ msgid "Failed to mute"
 msgstr "Failed to mute"
 
 #: src/components/chat/messages/PermalinkInline.tsx
+#: src/components/chat/messages/PermalinkInline.tsx
 #: src/pages/permalink.tsx
 msgid "Failed to open link"
 msgstr "Failed to open link"
@@ -649,8 +675,7 @@ msgstr "Failed to upload avatar"
 msgid "Favorites"
 msgstr "Favorites"
 
-#: src/components/chat/compose/StickerPicker.tsx
-#: src/pages/settings/sticker-pack-detail.tsx
+#: src/hooks/useAddSticker.ts
 msgid "File is too large. Maximum sticker size is 10 MB."
 msgstr "File is too large. Maximum sticker size is 10 MB."
 
@@ -806,6 +831,7 @@ msgid "Loading invite…"
 msgstr "Loading invite…"
 
 #: src/components/chat/ReactionDetailsModal.tsx
+#: src/components/chat/ReactionDetailsModal.tsx
 #: src/components/chat/StickerPreviewModal.tsx
 #: src/pages/chat-thread/chat-thread.tsx
 #: src/pages/settings/sticker-pack-detail.tsx
@@ -820,6 +846,10 @@ msgstr "Loading..."
 #: src/pages/join-chat.tsx
 msgid "Loading…"
 msgstr "Loading…"
+
+#: src/components/chat/StickerPreviewModal.tsx
+msgid "Manage"
+msgstr "Manage"
 
 #: src/components/chat/settings/ShareInviteModal.tsx
 #: src/pages/chat-thread/manage-invites.tsx
@@ -874,6 +904,8 @@ msgid "Message cannot be empty"
 msgstr "Message cannot be empty"
 
 #: src/components/chat/messages/PermalinkInline.tsx
+#: src/components/chat/messages/PermalinkInline.tsx
+#: src/pages/chat-thread/chat-thread.tsx
 #: src/pages/permalink.tsx
 msgid "Message not found"
 msgstr "Message not found"
@@ -886,6 +918,10 @@ msgstr "Messages Font Size"
 #: src/components/chat/compose/useVoiceRecorder.ts
 msgid "Microphone access was denied."
 msgstr "Microphone access was denied."
+
+#: src/components/chat/ReactionDetailsModal.tsx
+msgid "More"
+msgstr "More"
 
 #: src/components/chat/settings/ChatMuteSettingItem.tsx
 msgid "Mute"
@@ -904,8 +940,8 @@ msgstr "Mute notifications"
 #~ msgstr "Muted until {0}"
 
 #: src/pages/settings/stickers.tsx
-msgid "My Packs"
-msgstr "My Packs"
+#~ msgid "My Packs"
+#~ msgstr "My Packs"
 
 #: src/components/chat/compose/AddStickerModal.tsx
 msgid "Name"
@@ -989,8 +1025,8 @@ msgid "No stickers"
 msgstr "No stickers"
 
 #: src/pages/settings/stickers.tsx
-msgid "No subscribed packs"
-msgstr "No subscribed packs"
+#~ msgid "No subscribed packs"
+#~ msgstr "No subscribed packs"
 
 #: src/pages/threads.tsx
 msgid "No threads yet"
@@ -1045,6 +1081,10 @@ msgstr "Open thread"
 msgid "Optional"
 msgstr "Optional"
 
+#: src/pages/settings/stickers.tsx
+msgid "Owned"
+msgstr "Owned"
+
 #: src/pages/settings/sticker-pack-detail.tsx
 msgid "Pack"
 msgstr "Pack"
@@ -1053,6 +1093,10 @@ msgstr "Pack"
 #: src/pages/settings/stickers.tsx
 msgid "Pack name"
 msgstr "Pack name"
+
+#: src/pages/settings/stickers.tsx
+msgid "Packs below this line are not auto-sorted"
+msgstr "Packs below this line are not auto-sorted"
 
 #: src/pages/join-chat.tsx
 msgid "Paste code"
@@ -1082,6 +1126,10 @@ msgstr "Pinned message"
 #: src/components/chat/PinListModal.tsx
 msgid "Pinned Messages"
 msgstr "Pinned Messages"
+
+#: src/pages/settings/stickers.tsx
+msgid "Pinned Reaction Emojis"
+msgstr "Pinned Reactions"
 
 #: src/pages/chat-thread/chat-settings.tsx
 msgid "Please choose an image file"
@@ -1354,8 +1402,7 @@ msgstr "Status"
 msgid "Sticker"
 msgstr "Sticker"
 
-#: src/components/chat/compose/StickerPicker.tsx
-#: src/pages/settings/sticker-pack-detail.tsx
+#: src/hooks/useAddSticker.ts
 msgid "Sticker added"
 msgstr "Sticker added"
 
@@ -1369,28 +1416,26 @@ msgid "Sticker preview"
 msgstr "Sticker preview"
 
 #: src/components/chat/StickerPreviewModal.tsx
+#: src/pages/settings/stickers.tsx
 msgid "stickers"
 msgstr "stickers"
 
 #: src/pages/settings.tsx
 #: src/pages/settings/stickers.tsx
-msgid "Stickers"
-msgstr "Stickers"
+#~ msgid "Stickers"
+#~ msgstr "Stickers"
 
 #: src/components/chat/StickerPreviewModal.tsx
 msgid "Subscribe"
 msgstr "Subscribe"
-
-msgid "Manage"
-msgstr "Manage"
 
 #: src/pages/settings.tsx
 msgid "Subscribed"
 msgstr "Subscribed"
 
 #: src/pages/settings/stickers.tsx
-msgid "Subscribed Packs"
-msgstr "Subscribed Packs"
+#~ msgid "Subscribed Packs"
+#~ msgstr "Subscribed Packs"
 
 #: src/pages/settings/sticker-pack-detail.tsx
 msgid "Tap a sticker to remove it from this pack."
@@ -1587,6 +1632,14 @@ msgstr "You are already a member"
 #: src/components/invites/InvitePreviewCard.tsx
 msgid "You are already a member of this chat."
 msgstr "You are already a member of this chat."
+
+#: src/pages/chat-thread/chat-thread.tsx
+msgid "You can only add up to {MAX_REACTIONS_PER_USER_PER_MESSAGE} reactions"
+msgstr "You can only add up to {MAX_REACTIONS_PER_USER_PER_MESSAGE} reactions"
+
+#: src/components/chat/compose/useComposeAttachments.ts
+msgid "You can only upload up to {maxAttachments} media files at once."
+msgstr "You can only upload up to {maxAttachments} media files at once."
 
 #: src/components/invites/InvitePreviewCard.tsx
 #~ msgid "You can review the chat before joining. Nothing changes until you tap Join chat."

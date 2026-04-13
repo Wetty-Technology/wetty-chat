@@ -63,7 +63,7 @@ export function GeneralSettingsCore({ backAction, onOpenLanguage }: GeneralSetti
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            {backAction ? <BackButton action={backAction} /> : <IonBackButton defaultHref="/settings" />}
+            {backAction ? <BackButton action={backAction} /> : <IonBackButton text={t`Back`} defaultHref="/settings" />}
           </IonButtons>
           <IonTitle>
             <Trans>General</Trans>
