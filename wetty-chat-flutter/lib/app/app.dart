@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,6 +12,7 @@ import '../core/notifications/push_notification_provider.dart';
 import '../core/notifications/unread_badge_provider.dart';
 import '../core/session/dev_session_store.dart';
 import '../core/settings/app_settings_store.dart';
+import '../features/chats/application/chat_inbox_reconciler.dart';
 import 'routing/app_router.dart';
 import 'theme/style_config.dart';
 
@@ -43,7 +46,7 @@ class _WettyChatAppState extends ConsumerState<WettyChatApp>
     if (state == AppLifecycleState.resumed) {
       // Retry push subscription if a previous attempt failed.
       ref.read(pushNotificationProvider.notifier).ensureSubscribed();
-      ref.read(unreadBadgeProvider.notifier).refresh();
+      unawaited(ref.read(chatInboxReconcilerProvider).reconcile());
     }
   }
 
@@ -57,7 +60,7 @@ class _WettyChatAppState extends ConsumerState<WettyChatApp>
       apns,
       router,
       onNotificationHandled: () =>
-          ref.read(unreadBadgeProvider.notifier).refresh(),
+          ref.read(chatInboxReconcilerProvider).reconcile(),
     );
     _tapHandler!.handleLaunchNotification();
   }

@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../../app/routing/route_names.dart';
-import '../../../../../core/notifications/unread_badge_provider.dart';
 import '../../../chat_timestamp_formatter.dart';
+import '../../../application/chat_inbox_reconciler.dart';
 import '../../../conversation/application/conversation_draft_store.dart';
 import '../../../conversation/domain/conversation_scope.dart';
 import '../../../conversation/domain/launch_request.dart';
@@ -282,10 +282,7 @@ class _ChatListRowBuilder extends ConsumerWidget {
             extra: {'launchRequest': launchRequest},
           );
           if (shouldRefresh == true) {
-            await Future.wait([
-              ref.read(chatListViewModelProvider.notifier).refreshChats(),
-              ref.read(unreadBadgeProvider.notifier).refresh(),
-            ]);
+            await ref.read(chatInboxReconcilerProvider).reconcile();
           }
         },
       ),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/notifications/unread_badge_provider.dart';
 import '../../../../core/settings/app_settings_store.dart';
+import '../../application/chat_inbox_reconciler.dart';
 import '../../threads/application/thread_list_view_model.dart';
 import '../application/chat_list_view_model.dart';
 import 'chat_list_segment.dart';
@@ -39,12 +40,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   void initState() {
     super.initState();
     _scrollController = ScrollController()..addListener(_onScroll);
-    Future.microtask(() {
-      if (!mounted) {
-        return;
-      }
-      ref.read(unreadBadgeProvider.notifier).refresh();
-    });
   }
 
   @override
@@ -109,15 +104,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   Future<void> _refreshLists() async {
-    await Future.wait([
-      ref
-          .read(chatListViewModelProvider.notifier)
-          .refreshChats(userInitiated: true),
-      ref
-          .read(threadListViewModelProvider.notifier)
-          .refreshThreads(userInitiated: true),
-      ref.read(unreadBadgeProvider.notifier).refresh(),
-    ]);
+    await ref.read(chatInboxReconcilerProvider).reconcile(userInitiated: true);
   }
 
   @override
