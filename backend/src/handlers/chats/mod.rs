@@ -443,6 +443,16 @@ fn sticker_preview_text(emoji: Option<&str>) -> String {
     }
 }
 
+fn attachment_preview_text(kind: Option<&str>) -> &'static str {
+    match kind {
+        Some(kind) if kind.starts_with("image/") => "[Image]",
+        Some(kind) if kind.starts_with("video/") => "[Video]",
+        Some(kind) if kind.starts_with("audio/") => "[Voice message]",
+        Some(_) => "[Attachment]",
+        None => "[Attachment]",
+    }
+}
+
 struct PushPreviewBundle {
     message_preview: PushMessagePreview,
     body_preview: Option<String>,
@@ -509,6 +519,9 @@ fn build_push_preview_bundle(response: &MessageResponse) -> PushPreviewBundle {
             MessageType::Sticker => Some(sticker_preview_text(
                 response.sticker.as_ref().map(|s| s.emoji.as_str()),
             )),
+            MessageType::File => {
+                Some(attachment_preview_text(first_attachment_kind.as_deref()).to_string())
+            }
             _ => rendered_message.clone(),
         }
     };
@@ -1546,10 +1559,11 @@ pub fn router() -> OpenApiRouter<crate::AppState> {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_push_preview_bundle, extract_mention_uids, first_attachment_kind,
-        render_mentions_as_text, sticker_preview_text, MentionInfo, ReplyToMessage,
+        attachment_preview_text, build_push_preview_bundle, extract_mention_uids,
+        first_attachment_kind, render_mentions_as_text, sticker_preview_text, MentionInfo,
+        ReplyToMessage,
     };
-    use crate::models::{Attachment, MessageType, Sender};
+    use crate::models::{Attachment, AttachmentResponse, MessageType, Sender};
     use chrono::Utc;
     use serde_json::json;
     use std::collections::HashMap;
@@ -1558,6 +1572,21 @@ mod tests {
     fn sticker_preview_text_includes_emoji_when_available() {
         assert_eq!(sticker_preview_text(Some("🙂")), "[Sticker] 🙂");
         assert_eq!(sticker_preview_text(None), "[Sticker]");
+    }
+
+    #[test]
+    fn attachment_preview_text_uses_specific_labels() {
+        assert_eq!(attachment_preview_text(Some("image/png")), "[Image]");
+        assert_eq!(attachment_preview_text(Some("video/mp4")), "[Video]");
+        assert_eq!(
+            attachment_preview_text(Some("audio/webm")),
+            "[Voice message]"
+        );
+        assert_eq!(
+            attachment_preview_text(Some("application/pdf")),
+            "[Attachment]"
+        );
+        assert_eq!(attachment_preview_text(None), "[Attachment]");
     }
 
     #[test]
@@ -1630,6 +1659,54 @@ mod tests {
         assert_eq!(preview.body_preview, Some("sent an invite".to_string()));
         assert_eq!(preview.message_preview.message_type, MessageType::Invite);
         assert_eq!(preview.message_preview.message, None);
+    }
+
+    #[test]
+    fn build_push_preview_bundle_uses_attachment_label_for_file_messages() {
+        let response = super::MessageResponse {
+            id: 1,
+            message: Some("look at this".to_string()),
+            message_type: MessageType::File,
+            sticker: None,
+            reply_root_id: None,
+            client_generated_id: "cgid".to_string(),
+            sender: Sender {
+                uid: 7,
+                avatar_url: None,
+                name: Some("Alice".to_string()),
+                gender: 0,
+                user_group: None,
+            },
+            chat_id: 10,
+            created_at: Utc::now(),
+            is_edited: false,
+            is_deleted: false,
+            has_attachments: true,
+            thread_info: None,
+            reply_to_message: None,
+            attachments: vec![AttachmentResponse {
+                id: 1,
+                url: "https://example.com/image.png".to_string(),
+                kind: "image/png".to_string(),
+                size: 123,
+                file_name: "image.png".to_string(),
+                width: Some(100),
+                height: Some(100),
+            }],
+            reactions: Vec::new(),
+            mentions: Vec::new(),
+        };
+
+        let preview = build_push_preview_bundle(&response);
+        assert_eq!(preview.body_preview, Some("[Image]".to_string()));
+        assert_eq!(
+            preview.message_preview.message,
+            Some("look at this".to_string())
+        );
+        assert_eq!(
+            preview.message_preview.first_attachment_kind,
+            Some("image/png".to_string())
+        );
     }
 
     #[test]

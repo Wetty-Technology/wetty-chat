@@ -405,6 +405,38 @@ void main() {
       expect(accepted.serverMessageId, isNull);
       expect(accepted.deliveryState, ConversationDeliveryState.sent);
     });
+
+    test(
+      'accepting an optimistic send never downgrades a confirmed message',
+      () {
+        final store = MessageDomainStore();
+
+        store.applyOptimisticNormalMessageSend(
+          const MessageDomainDraftMessage(
+            scope: chatScope,
+            clientGeneratedId: 'optimistic-confirmed-1',
+            sender: sender,
+            message: 'hello',
+          ),
+        );
+
+        store.applySendConfirmed(
+          _serverMessage(
+            scope: chatScope,
+            id: 99,
+            chatId: 'chat-1',
+            clientGeneratedId: 'optimistic-confirmed-1',
+            sender: sender,
+            text: 'hello',
+          ),
+        );
+
+        final accepted = store.applySendAccepted('optimistic-confirmed-1');
+
+        expect(accepted.serverMessageId, 99);
+        expect(accepted.deliveryState, ConversationDeliveryState.confirmed);
+      },
+    );
   });
 }
 

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer' as developer;
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -51,11 +52,13 @@ class WebSocketService {
       // Listen for messages
       _channel!.stream.listen(
         (data) {
+          developer.log('$data', name: '[ws]');
           try {
             final msg = ApiWsEvent.fromJson(decodeJsonObject(data as String));
             if (msg == null || msg is PongWsEvent) return;
             _eventController.add(msg);
           } catch (_) {
+            developer.log('recv malformed payload', name: '[ws]');
             // Drop malformed websocket payloads.
           }
         },

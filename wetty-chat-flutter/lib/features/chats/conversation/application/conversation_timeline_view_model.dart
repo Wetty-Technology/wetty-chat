@@ -888,7 +888,7 @@ class ConversationTimelineViewModel
             viewportPlacement: ConversationViewportPlacement.liveEdge,
             shouldRefreshChats: current.shouldRefreshChats,
             pendingLiveCount: 0,
-            viewportCommand: _showLatestCommand(),
+            viewportCommand: _settleAtBottomAfterMutationCommand(),
           ),
         ),
       );

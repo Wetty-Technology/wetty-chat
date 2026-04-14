@@ -37,12 +37,16 @@ const APNS_BODY_LOC_KEY_WITH_PREVIEW: &str = "push.message.body";
 const APNS_BODY_LOC_KEY_NO_PREVIEW: &str = "push.message.body.generic";
 const APNS_CUSTOM_DATA_ROOT: &str = "wettyChat";
 const APNS_BODY_LOC_KEY_AUDIO: &str = "push.message.body.audio";
+const APNS_BODY_LOC_KEY_AUDIO_WITH_PREVIEW: &str = "push.message.body.audio.with_preview";
 const APNS_BODY_LOC_KEY_IMAGE: &str = "push.message.body.image";
+const APNS_BODY_LOC_KEY_IMAGE_WITH_PREVIEW: &str = "push.message.body.image.with_preview";
 const APNS_BODY_LOC_KEY_VIDEO: &str = "push.message.body.video";
+const APNS_BODY_LOC_KEY_VIDEO_WITH_PREVIEW: &str = "push.message.body.video.with_preview";
 const APNS_BODY_LOC_KEY_STICKER: &str = "push.message.body.sticker";
 const APNS_BODY_LOC_KEY_STICKER_EMOJI: &str = "push.message.body.sticker.emoji";
 const APNS_BODY_LOC_KEY_INVITE: &str = "push.message.body.invite";
 const APNS_BODY_LOC_KEY_ATTACHMENT: &str = "push.message.body.attachment";
+const APNS_BODY_LOC_KEY_ATTACHMENT_WITH_PREVIEW: &str = "push.message.body.attachment.with_preview";
 const APNS_BODY_LOC_KEY_DELETED: &str = "push.message.body.deleted";
 
 /// A push notification job enqueued when a new message is created.
@@ -796,15 +800,22 @@ fn build_apns_notification(job: &PushJob, unread_count: i64) -> ApnsNotification
             },
             MessageType::Invite => (APNS_BODY_LOC_KEY_INVITE, vec![job.sender_username.clone()]),
             _ => {
-                if let Some(ref msg) = preview.message {
+                if let Some(ref kind) = preview.first_attachment_kind {
+                    if let Some(ref msg) = preview.message {
+                        (
+                            attachment_kind_loc_key_with_preview(kind),
+                            vec![job.sender_username.clone(), truncate_preview(msg)],
+                        )
+                    } else {
+                        (
+                            attachment_kind_loc_key(kind),
+                            vec![job.sender_username.clone()],
+                        )
+                    }
+                } else if let Some(ref msg) = preview.message {
                     (
                         APNS_BODY_LOC_KEY_WITH_PREVIEW,
                         vec![job.sender_username.clone(), truncate_preview(msg)],
-                    )
-                } else if let Some(ref kind) = preview.first_attachment_kind {
-                    (
-                        attachment_kind_loc_key(kind),
-                        vec![job.sender_username.clone()],
                     )
                 } else {
                     (
@@ -849,6 +860,18 @@ fn attachment_kind_loc_key(kind: &str) -> &'static str {
         APNS_BODY_LOC_KEY_AUDIO
     } else {
         APNS_BODY_LOC_KEY_ATTACHMENT
+    }
+}
+
+fn attachment_kind_loc_key_with_preview(kind: &str) -> &'static str {
+    if kind.starts_with("image/") {
+        APNS_BODY_LOC_KEY_IMAGE_WITH_PREVIEW
+    } else if kind.starts_with("video/") {
+        APNS_BODY_LOC_KEY_VIDEO_WITH_PREVIEW
+    } else if kind.starts_with("audio/") {
+        APNS_BODY_LOC_KEY_AUDIO_WITH_PREVIEW
+    } else {
+        APNS_BODY_LOC_KEY_ATTACHMENT_WITH_PREVIEW
     }
 }
 
@@ -1142,6 +1165,34 @@ mod tests {
         let n = build_apns_notification(&job, 1);
         assert_eq!(n.body_loc_key, APNS_BODY_LOC_KEY_IMAGE);
         assert_eq!(n.body_loc_args, vec!["bob".to_string()]);
+    }
+
+    #[test]
+    fn build_apns_notification_prefers_attachment_key_over_caption_preview() {
+        let job = PushJob {
+            chat_id: 5,
+            sender_uid: 1,
+            sender_username: "bob".to_string(),
+            chat_name: "DMs".to_string(),
+            message_preview: PushMessagePreview {
+                message: Some("look at this".to_string()),
+                message_type: MessageType::File,
+                sticker: None,
+                first_attachment_kind: Some("image/jpeg".to_string()),
+                is_deleted: false,
+            },
+            body_preview: Some("[Image]".to_string()),
+            message_id: 54,
+            thread_root_id: None,
+            mentioned_uids: Vec::new(),
+        };
+
+        let n = build_apns_notification(&job, 0);
+        assert_eq!(n.body_loc_key, APNS_BODY_LOC_KEY_IMAGE_WITH_PREVIEW);
+        assert_eq!(
+            n.body_loc_args,
+            vec!["bob".to_string(), "look at this".to_string()]
+        );
     }
 
     #[test]

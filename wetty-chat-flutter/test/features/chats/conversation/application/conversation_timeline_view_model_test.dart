@@ -133,7 +133,7 @@ void main() {
         expect(state.anchorMessageId, isNull);
         expect(
           state.viewportCommand?.type,
-          ConversationViewportCommandType.showLatest,
+          ConversationViewportCommandType.settleAtBottomAfterMutation,
         );
         expect(state.viewportPlacement, ConversationViewportPlacement.liveEdge);
       },

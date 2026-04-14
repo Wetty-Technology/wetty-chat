@@ -1,0 +1,4 @@
+interface:
+  display_name: "Flutter Bug Triage"
+  short_description: "Triage bugs in the wetty-chat Flutter app"
+  default_prompt: "Use $flutter-bug-triage to investigate a bug in the wetty-chat Flutter application."

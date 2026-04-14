@@ -81,6 +81,53 @@ void main() {
         expect(accepted.deliveryState, ConversationDeliveryState.sent);
       },
     );
+
+    test(
+      'commitSend does not downgrade a message already confirmed by websocket',
+      () async {
+        final service = _FakeMessageApiService(messages: const []);
+        final store = MessageDomainStore();
+        final repository = ConversationRepository(
+          scope: const ConversationScope.chat(chatId: '1'),
+          service: service,
+          store: store,
+        );
+
+        repository.insertOptimisticSend(
+          sender: const Sender(uid: 7, name: 'Tester'),
+          text: 'hello',
+          messageType: 'text',
+          attachments: const [],
+          clientGeneratedId: 'pending-race-1',
+        );
+
+        final handled = repository.applyRealtimeEvent(
+          MessageCreatedWsEvent(
+            payload: _message(
+              id: 42,
+              message: 'hello',
+              clientGeneratedId: 'pending-race-1',
+            ),
+          ),
+        );
+
+        expect(handled, isTrue);
+        expect(
+          store.messageForServerId(42)?.deliveryState,
+          ConversationDeliveryState.confirmed,
+        );
+
+        final accepted = await repository.commitSend(
+          clientGeneratedId: 'pending-race-1',
+          text: 'hello',
+          messageType: 'text',
+          attachmentIds: const <String>[],
+        );
+
+        expect(accepted.serverMessageId, 42);
+        expect(accepted.deliveryState, ConversationDeliveryState.confirmed);
+      },
+    );
   });
 
   group('ConversationRepository refresh reconciliation', () {

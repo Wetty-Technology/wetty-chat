@@ -100,7 +100,10 @@ class MessageDomainStore {
       throw StateError('Message not found for stableKey: $stableKey');
     }
     final accepted = current.copyWith(
-      deliveryState: ConversationDeliveryState.sent,
+      deliveryState: _resolveDeliveryState(
+        previous: current.deliveryState,
+        incoming: ConversationDeliveryState.sent,
+      ),
     );
     _messagesByStableKey[stableKey] = accepted;
     return accepted;
@@ -945,8 +948,23 @@ class MessageDomainStore {
     return incoming.copyWith(
       localMessageId: previous?.localMessageId,
       threadInfo: resolvedThreadInfo,
-      deliveryState: incoming.deliveryState,
+      deliveryState: _resolveDeliveryState(
+        previous: previous?.deliveryState,
+        incoming: incoming.deliveryState,
+      ),
     );
+  }
+
+  ConversationDeliveryState _resolveDeliveryState({
+    ConversationDeliveryState? previous,
+    required ConversationDeliveryState incoming,
+  }) {
+    if (previous == ConversationDeliveryState.confirmed &&
+        (incoming == ConversationDeliveryState.sending ||
+            incoming == ConversationDeliveryState.sent)) {
+      return ConversationDeliveryState.confirmed;
+    }
+    return incoming;
   }
 
   void _upsertCanonical(ConversationMessage message) {

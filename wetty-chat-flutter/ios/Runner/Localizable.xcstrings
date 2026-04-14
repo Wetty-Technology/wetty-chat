@@ -15,6 +15,12 @@
             "state" : "translated",
             "value" : "%@"
           }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@"
+          }
         }
       }
     },
@@ -28,6 +34,12 @@
           }
         },
         "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@"
+          }
+        },
+        "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@: %2$@"
@@ -49,6 +61,35 @@
             "state" : "translated",
             "value" : "%@: [附件]"
           }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@: [附件]"
+          }
+        }
+      }
+    },
+    "push.message.body.attachment.with_preview" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: [Attachment] %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: [附件] %2$@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: [附件] %2$@"
+          }
         }
       }
     },
@@ -65,6 +106,35 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@: [语音消息]"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@: [語音訊息]"
+          }
+        }
+      }
+    },
+    "push.message.body.audio.with_preview" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: [Voice message] %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: [语音消息] %2$@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: [語音訊息] %2$@"
           }
         }
       }
@@ -83,6 +153,12 @@
             "state" : "translated",
             "value" : "%@: [已删除]"
           }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@: [已刪除]"
+          }
         }
       }
     },
@@ -99,6 +175,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ 发了一条消息"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 發了一則訊息"
           }
         }
       }
@@ -117,6 +199,35 @@
             "state" : "translated",
             "value" : "%@: [图片]"
           }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@: [圖片]"
+          }
+        }
+      }
+    },
+    "push.message.body.image.with_preview" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: [Image] %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: [图片] %2$@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: [圖片] %2$@"
+          }
         }
       }
     },
@@ -133,6 +244,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@: [邀请]"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@: [邀請]"
           }
         }
       }
@@ -151,6 +268,12 @@
             "state" : "translated",
             "value" : "%@: [表情]"
           }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@: [貼圖]"
+          }
         }
       }
     },
@@ -168,6 +291,12 @@
             "state" : "translated",
             "value" : "%1$@: [表情] %2$@"
           }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: [貼圖] %2$@"
+          }
         }
       }
     },
@@ -184,6 +313,35 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@: [视频]"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@: [影片]"
+          }
+        }
+      }
+    },
+    "push.message.body.video.with_preview" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: [Video] %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: [视频] %2$@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: [影片] %2$@"
           }
         }
       }
