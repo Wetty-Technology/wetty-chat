@@ -84,10 +84,13 @@ export interface ChatVirtualScrollProps {
   loadOlder: LoadController;
   loadNewer?: LoadController;
   header?: ReactNode;
+  topOverlay?: ReactNode;
   bottomPadding?: number;
   onAtBottomChange?: (atBottom: boolean) => void;
   onLastFullyVisibleMessageChange?: (messageId: string | null) => void;
   onFirstVisibleMessageChange?: (messageId: string | null) => void;
+  onScrollActivityChange?: (scrolling: boolean) => void;
+  onTopDateOffsetChange?: (offset: number) => void;
 }
 
 // ── Constants ──

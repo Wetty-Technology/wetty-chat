@@ -120,7 +120,12 @@ import { listPins, createPin, deletePin } from '@/api/pins';
 import { setPins, selectPinsForChat, selectPinsLoaded } from '@/store/pinsSlice';
 import { PinBanner } from '@/components/chat/pins/PinBanner';
 import { PinListModal } from '@/components/chat/pins/PinListModal';
-import { selectPinnedReactions, selectRecentReactions, addRecentReaction } from '@/store/settingsSlice';
+import {
+  selectEffectiveLocale,
+  selectPinnedReactions,
+  selectRecentReactions,
+  addRecentReaction,
+} from '@/store/settingsSlice';
 import { MAX_REACTIONS_PER_USER_PER_MESSAGE } from '@/constants/emojiAndStickers';
 
 function generateClientId(): string {
@@ -214,6 +219,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   const scrollToBottomUnreadCount = useSelector((state: RootState) =>
     threadId ? 0 : selectChatUnreadCount(state, chatId),
   );
+  const locale = useSelector(selectEffectiveLocale);
   const pinnedReactions = useSelector(selectPinnedReactions);
   const recentReactions = useSelector(selectRecentReactions);
   const QUICK_REACTION_EMOJIS = useMemo(() => {
@@ -255,26 +261,29 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   const messages = useSelector((state: RootState) => selectMessagesForChat(state, storeChatId));
   const messageLookup = useMemo(() => new Map(messages.map((message) => [message.id, message])), [messages]);
 
-  const formatDateSeparator = useCallback((iso: string) => {
-    if (!iso) return '';
-    const date = new Date(iso);
-    const now = new Date();
+  const formatDateSeparator = useCallback(
+    (iso: string) => {
+      if (!iso) return '';
+      const date = new Date(iso);
+      const now = new Date();
 
-    const isSameDay = (d1: Date, d2: Date) =>
-      d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
+      const isSameDay = (d1: Date, d2: Date) =>
+        d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
 
-    if (isSameDay(date, now)) return t`Today`;
+      if (isSameDay(date, now)) return t`Today`;
 
-    const yesterday = new Date(now);
-    yesterday.setDate(now.getDate() - 1);
-    if (isSameDay(date, yesterday)) return t`Yesterday`;
+      const yesterday = new Date(now);
+      yesterday.setDate(now.getDate() - 1);
+      if (isSameDay(date, yesterday)) return t`Yesterday`;
 
-    return date.toLocaleDateString(undefined, {
-      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
-      month: 'short',
-      day: 'numeric',
-    });
-  }, []);
+      return date.toLocaleDateString(locale, {
+        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+        month: 'short',
+        day: 'numeric',
+      });
+    },
+    [locale],
+  );
 
   const scrollApiRef = useRef<VirtualScrollHandle | null>(null);
   const composeBarRef = useRef<MessageComposeBarHandle | null>(null);
@@ -286,12 +295,19 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   const [pendingResumeMessageId, setPendingResumeMessageId] = useState<string | null>(initialResumeMessageId);
   const [lastFullyVisibleMessageId, setLastFullyVisibleMessageId] = useState<string | null>(null);
   const [firstVisibleMessageId, setFirstVisibleMessageId] = useState<string | null>(null);
+  const [messageListScrolling, setMessageListScrolling] = useState(false);
+  const [floatingDateOffset, setFloatingDateOffset] = useState(0);
 
   const topVisibleMessageDate = useMemo(() => {
     if (!firstVisibleMessageId) return null;
     const msg = messages.find((m) => m.id === firstVisibleMessageId);
     return msg?.createdAt ?? null;
   }, [firstVisibleMessageId, messages]);
+  const floatingDateLabel = useMemo(() => {
+    if (!messageListScrolling || !topVisibleMessageDate) return null;
+    return formatDateSeparator(topVisibleMessageDate);
+  }, [formatDateSeparator, messageListScrolling, topVisibleMessageDate]);
+  const floatingDateStyle = useMemo(() => ({ transform: `translateY(${floatingDateOffset}px)` }), [floatingDateOffset]);
 
   const chatRows = useChatRows(messages, formatDateSeparator);
 
@@ -1705,6 +1721,13 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
             rows={chatRows}
             renderRow={renderRow}
             initialAnchor={initialAnchor}
+            topOverlay={
+              floatingDateLabel ? (
+                <div className="chat-thread-floating-date" style={floatingDateStyle}>
+                  <span className="chat-thread-floating-date__label">{floatingDateLabel}</span>
+                </div>
+              ) : null
+            }
             loadOlder={{ hasMore: nextCursor != null, loading: loadingMore, onLoad: loadMore }}
             loadNewer={prevCursor != null ? { hasMore: true, loading: loadingNewer, onLoad: loadNewer } : undefined}
             scrollApiRef={scrollApiRef}
@@ -1712,6 +1735,8 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
             onAtBottomChange={setAtBottom}
             onLastFullyVisibleMessageChange={setLastFullyVisibleMessageId}
             onFirstVisibleMessageChange={setFirstVisibleMessageId}
+            onScrollActivityChange={setMessageListScrolling}
+            onTopDateOffsetChange={setFloatingDateOffset}
           />
           <IonFab
             vertical="bottom"

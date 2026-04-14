@@ -17,6 +17,28 @@
   flex-shrink: 0;
 }
 
+.chat-thread-floating-date {
+  position: sticky;
+  top: 12px;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  height: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  pointer-events: none;
+}
+
+.chat-thread-floating-date__label {
+  background-color: rgba(var(--ion-text-color-rgb, 0, 0, 0), 0.08);
+  color: var(--ion-color-medium, #555);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 12px;
+}
+
 /* Scroll-to-bottom FAB */
 .scroll-to-bottom-fab {
   opacity: 1;
