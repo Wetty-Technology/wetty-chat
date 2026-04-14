@@ -39,6 +39,9 @@ import {
 import styles from './ChatVirtualScroll.module.scss';
 import { Trans } from '@lingui/react/macro';
 
+const TOP_DATE_FLOATING_GAP_PX = 12;
+const USER_SCROLL_ACTIVITY_GRACE_MS = 1200;
+
 function arraysEqual(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((value, index) => value === b[index]);
 }
@@ -200,10 +203,13 @@ export function ChatVirtualScroll({
   loadOlder,
   loadNewer,
   header,
+  topOverlay,
   bottomPadding = 0,
   onAtBottomChange,
   onLastFullyVisibleMessageChange,
   onFirstVisibleMessageChange,
+  onScrollActivityChange,
+  onTopDateOffsetChange,
 }: ChatVirtualScrollProps) {
   const chatFontSizeStyle = useSelector(selectChatFontSizeStyle);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -213,6 +219,8 @@ export function ChatVirtualScroll({
   const treeRef = useRef(new FenwickTree(0));
   const treeKeysRef = useRef<string[]>([]);
   const mountedRef = useRef<MountedWindow | null>(null);
+  const scrollingRef = useRef(false);
+  const topDateOffsetRef = useRef(0);
 
   const lastFontSizeRef = useRef(chatFontSizeStyle);
   if (lastFontSizeRef.current !== chatFontSizeStyle) {
@@ -266,6 +274,7 @@ export function ChatVirtualScroll({
     to: number;
     behavior?: ScrollBehavior;
   } | null>(null);
+  const userScrollIntentUntilRef = useRef(0);
   const recentScrollPositionsRef = useRef<Array<{ top: number; at: number }>>([]);
   const lastJitterLogAtRef = useRef(0);
   const topLoadArmedRef = useRef(true);
@@ -292,6 +301,7 @@ export function ChatVirtualScroll({
   const [containerHeight, setContainerHeight] = useState(0);
   const [headerHeight, setHeaderHeight] = useState(0);
   const [highlightedRowKey, setHighlightedRowKey] = useState<string | null>(null);
+  const [hiddenDateRowKey, setHiddenDateRowKey] = useState<string | null>(null);
   const [renderTick, setRenderTick] = useState(0);
   const triggerRender = useCallback(() => setRenderTick((value) => value + 1), []);
 
@@ -467,9 +477,31 @@ export function ChatVirtualScroll({
     }
   }, [loadNewer?.hasMore, onAtBottomChange]);
 
+  const setScrollActivity = useCallback(
+    (scrolling: boolean) => {
+      if (scrollingRef.current === scrolling) return;
+      scrollingRef.current = scrolling;
+      onScrollActivityChange?.(scrolling);
+      if (!scrolling) {
+        setHiddenDateRowKey(null);
+        topDateOffsetRef.current = 0;
+        onTopDateOffsetChange?.(0);
+      }
+    },
+    [onScrollActivityChange, onTopDateOffsetChange],
+  );
+
+  const markUserScrollIntent = useCallback(() => {
+    userScrollIntentUntilRef.current = performance.now() + USER_SCROLL_ACTIVITY_GRACE_MS;
+  }, []);
+
   const updateLastFullyVisibleMessage = useCallback(() => {
     const container = containerRef.current;
     if (!container || container.clientHeight === 0 || phaseRef.current !== 'READY') {
+      if (topDateOffsetRef.current !== 0) {
+        topDateOffsetRef.current = 0;
+        onTopDateOffsetChange?.(0);
+      }
       if (lastFullyVisibleMessageIdRef.current !== null) {
         lastFullyVisibleMessageIdRef.current = null;
         onLastFullyVisibleMessageChange?.(null);
@@ -485,6 +517,7 @@ export function ChatVirtualScroll({
     const mounted = mountedRef.current;
     let nextMessageId: string | null = null;
     let firstMessageId: string | null = null;
+    let firstMessageIndex: number | null = null;
 
     if (mounted) {
       for (let index = mounted.end; index >= mounted.start; index -= 1) {
@@ -503,12 +536,49 @@ export function ChatVirtualScroll({
         if (partiallyVisible) {
           // Since we scan from bottom to top, the last one we see is the first visible from the top
           firstMessageId = row.messageId;
+          firstMessageIndex = index;
         }
 
         if (fullyVisible && nextMessageId === null) {
           nextMessageId = row.messageId;
         }
       }
+    }
+
+    let nextTopDateOffset = 0;
+    let nextHiddenDateRowKey: string | null = null;
+    if (scrollingRef.current && firstMessageIndex != null) {
+      for (let index = firstMessageIndex; index >= 0; index -= 1) {
+        const row = rows[index];
+        if (row?.type !== 'date') continue;
+        nextHiddenDateRowKey = row.key;
+        break;
+      }
+
+      for (let index = firstMessageIndex + 1; index < rows.length; index += 1) {
+        const row = rows[index];
+        if (row?.type !== 'date') continue;
+
+        const rowNode = rowRefsMap.current.get(row.key);
+        if (!rowNode) break;
+
+        const rowRect = rowNode.getBoundingClientRect();
+        if (rowRect.height <= 0) break;
+
+        const distanceFromTop = rowRect.top - containerRect.top;
+        const collisionThreshold = TOP_DATE_FLOATING_GAP_PX + rowRect.height;
+        if (distanceFromTop > 0 && distanceFromTop < collisionThreshold) {
+          nextTopDateOffset = Math.round(distanceFromTop - collisionThreshold);
+        }
+        break;
+      }
+    }
+
+    setHiddenDateRowKey((current) => (current === nextHiddenDateRowKey ? current : nextHiddenDateRowKey));
+
+    if (nextTopDateOffset !== topDateOffsetRef.current) {
+      topDateOffsetRef.current = nextTopDateOffset;
+      onTopDateOffsetChange?.(nextTopDateOffset);
     }
 
     if (nextMessageId !== lastFullyVisibleMessageIdRef.current) {
@@ -520,7 +590,7 @@ export function ChatVirtualScroll({
       firstVisibleMessageIdRef.current = firstMessageId;
       onFirstVisibleMessageChange?.(firstMessageId);
     }
-  }, [onLastFullyVisibleMessageChange, onFirstVisibleMessageChange, rows]);
+  }, [onLastFullyVisibleMessageChange, onFirstVisibleMessageChange, onTopDateOffsetChange, rows]);
 
   const scrollToBottomInternal = useCallback((behavior: ScrollBehavior = 'auto') => {
     const container = containerRef.current;
@@ -1178,6 +1248,7 @@ export function ChatVirtualScroll({
 
   const handleScrollIdle = useCallback(() => {
     maybeUpdateMountedForScroll();
+    setScrollActivity(false);
 
     const distances = scrollDistances();
     if (!distances) return;
@@ -1240,6 +1311,7 @@ export function ChatVirtualScroll({
     maybeUpdateMountedForScroll,
     pendingBatch,
     scrollDistances,
+    setScrollActivity,
     updateLastFullyVisibleMessage,
   ]);
 
@@ -1286,6 +1358,9 @@ export function ChatVirtualScroll({
       }
     }
 
+    const isUserInitiatedScroll = performance.now() <= userScrollIntentUntilRef.current;
+    setScrollActivity(isUserInitiatedScroll);
+
     if (scrollRafRef.current == null) {
       scrollRafRef.current = requestAnimationFrame(() => {
         scrollRafRef.current = null;
@@ -1313,6 +1388,7 @@ export function ChatVirtualScroll({
     maybeUpdateMountedForScroll,
     pendingBatch,
     scrollDistances,
+    setScrollActivity,
     updateAtBottom,
     updateLastFullyVisibleMessage,
   ]);
@@ -2172,12 +2248,13 @@ export function ChatVirtualScroll({
 
   useEffect(() => {
     return () => {
+      setScrollActivity(false);
       if (scrollIdleTimerRef.current) clearTimeout(scrollIdleTimerRef.current);
       if (scrollRafRef.current != null) cancelAnimationFrame(scrollRafRef.current);
       if (bottomSettleRafRef.current != null) cancelAnimationFrame(bottomSettleRafRef.current);
       if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
     };
-  }, []);
+  }, [setScrollActivity]);
 
   const adjustPrevKeysRef = useRef<string[]>([]);
   if (rowKeys !== adjustPrevKeysRef.current) {
@@ -2282,9 +2359,13 @@ export function ChatVirtualScroll({
       mountedRows.push(
         <MeasuredRow key={row.key} rowKey={row.key} onMeasure={handleMountedMeasure} registerRow={registerRow}>
           <div
-            className={
-              row.key === highlightedRowKey ? `${styles.rowContent} ${styles.rowContentHighlighted}` : styles.rowContent
-            }
+            className={[
+              styles.rowContent,
+              row.key === highlightedRowKey ? styles.rowContentHighlighted : null,
+              row.key === hiddenDateRowKey ? styles.dateRowContentHidden : null,
+            ]
+              .filter(Boolean)
+              .join(' ')}
           >
             {renderRow(row)}
           </div>
@@ -2322,7 +2403,18 @@ export function ChatVirtualScroll({
   const contentPaddingBottom = bottomPadding + (showBottomEdgeHint ? EDGE_HINT_HEIGHT : 0);
 
   return (
-    <div ref={containerRef} className={styles.container} onScroll={handleScroll}>
+    <div
+      ref={containerRef}
+      className={styles.container}
+      onScroll={handleScroll}
+      onWheel={markUserScrollIntent}
+      onTouchStart={markUserScrollIntent}
+      onTouchMove={markUserScrollIntent}
+      onPointerDown={markUserScrollIntent}
+      onPointerMove={markUserScrollIntent}
+      onKeyDown={markUserScrollIntent}
+    >
+      {topOverlay}
       <div
         className={styles.flowContent}
         style={{ paddingTop: contentPaddingTop, paddingBottom: contentPaddingBottom }}
