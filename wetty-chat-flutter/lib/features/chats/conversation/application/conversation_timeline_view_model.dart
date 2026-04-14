@@ -233,6 +233,7 @@ class ConversationTimelineViewModel
   bool _isDisposed = false;
   bool _hasPendingEntryRefresh = false;
   bool _isViewportAtLiveEdge = false;
+  bool _isResumeRefreshInFlight = false;
   final Set<int> _pendingLiveMessageIds = <int>{};
   int _nextViewportTransactionId = 1;
 
@@ -402,6 +403,30 @@ class ConversationTimelineViewModel
         await _refreshAnchorOnOpen(unreadMessageId);
       case MessageLaunchRequest(:final messageId):
         await _refreshAnchorOnOpen(messageId);
+    }
+  }
+
+  Future<void> refreshOnResume() async {
+    final current = state.value;
+    if (current == null || _isResumeRefreshInFlight) {
+      return;
+    }
+
+    _isResumeRefreshInFlight = true;
+    try {
+      switch (current.windowMode) {
+        case ConversationWindowMode.liveLatest:
+          await _refreshLatestOnOpen();
+        case ConversationWindowMode.anchoredTarget:
+          final anchorId = current.anchorMessageId;
+          if (anchorId != null) {
+            await _refreshAnchorOnOpen(anchorId);
+          }
+        case ConversationWindowMode.historyBrowsing:
+          break;
+      }
+    } finally {
+      _isResumeRefreshInFlight = false;
     }
   }
 

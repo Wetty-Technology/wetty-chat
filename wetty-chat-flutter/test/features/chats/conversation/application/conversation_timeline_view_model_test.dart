@@ -510,6 +510,26 @@ void main() {
       expect(refreshed.windowMode, ConversationWindowMode.liveLatest);
     });
 
+    test('resume refresh updates a live latest window', () async {
+      final service = _FakeMessageApiService(_buildMessages());
+      final container = _createContainer(service: service);
+      addTearDown(container.dispose);
+      final provider = conversationTimelineViewModelProvider(_args());
+
+      await container.read(provider.future);
+      expect(service.latestFetchCount, 1);
+
+      service.appendMessage(151);
+
+      await container.read(provider.notifier).refreshOnResume();
+      final refreshed = container.read(provider).value;
+
+      expect(refreshed, isNotNull);
+      expect(service.latestFetchCount, 2);
+      expect(refreshed!.windowMode, ConversationWindowMode.liveLatest);
+      expect(refreshed.windowStableKeys.last, 'server:151');
+    });
+
     test(
       'warm anchored launch restores cache then refreshes on open',
       () async {
@@ -545,6 +565,58 @@ void main() {
         expect(refreshed.canLoadNewer, isFalse);
       },
     );
+
+    test('resume refresh updates an anchored window', () async {
+      final service = _FakeMessageApiService(_buildMessages());
+      final container = _createContainer(service: service);
+      addTearDown(container.dispose);
+      final latestProvider = conversationTimelineViewModelProvider(_args());
+      final anchoredProvider = conversationTimelineViewModelProvider((
+        scope: const ConversationScope.chat(chatId: '1'),
+        launchRequest: const LaunchRequest.message(messageId: 149),
+      ));
+
+      await container.read(latestProvider.future);
+      final anchored = await container.read(anchoredProvider.future);
+
+      expect(anchored.anchorMessageId, 149);
+      expect(service.aroundFetchCount, 0);
+
+      service.appendMessage(151);
+
+      await container.read(anchoredProvider.notifier).refreshOnResume();
+      final refreshed = container.read(anchoredProvider).value;
+
+      expect(refreshed, isNotNull);
+      expect(service.aroundFetchCount, 1);
+      expect(refreshed!.windowMode, ConversationWindowMode.anchoredTarget);
+      expect(refreshed.anchorMessageId, 149);
+      expect(refreshed.windowStableKeys.last, 'server:151');
+    });
+
+    test('resume refresh does not disturb history browsing state', () async {
+      final service = _FakeMessageApiService(_buildMessages());
+      final container = _createContainer(service: service);
+      addTearDown(container.dispose);
+      final provider = conversationTimelineViewModelProvider(_args());
+
+      await container.read(provider.future);
+      final notifier = container.read(provider.notifier);
+
+      await notifier.jumpToMessage(120);
+      service.appendMessage(151);
+
+      await notifier.refreshOnResume();
+      final refreshed = container.read(provider).value;
+
+      expect(refreshed, isNotNull);
+      expect(service.latestFetchCount, 1);
+      expect(service.aroundFetchCount, 0);
+      expect(refreshed!.windowMode, ConversationWindowMode.historyBrowsing);
+      expect(refreshed.anchorMessageId, 120);
+      expect(refreshed.windowStableKeys, contains('server:120'));
+      expect(refreshed.windowStableKeys, isNot(contains('server:151')));
+    });
 
     test(
       'entry refresh does not clobber mode changes before it completes',

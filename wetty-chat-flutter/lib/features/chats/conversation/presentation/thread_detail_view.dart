@@ -88,7 +88,17 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.inactive ||
+    if (state == AppLifecycleState.resumed) {
+      try {
+        unawaited(
+          ref
+              .read(
+                conversationTimelineViewModelProvider(_timelineArgs).notifier,
+              )
+              .refreshOnResume(),
+        );
+      } catch (_) {}
+    } else if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
       try {

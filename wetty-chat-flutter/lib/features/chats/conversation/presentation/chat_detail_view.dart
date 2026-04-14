@@ -80,7 +80,17 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.inactive ||
+    if (state == AppLifecycleState.resumed) {
+      try {
+        unawaited(
+          ref
+              .read(
+                conversationTimelineViewModelProvider(_timelineArgs).notifier,
+              )
+              .refreshOnResume(),
+        );
+      } catch (_) {}
+    } else if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
       // Best-effort flush — provider may already be disposed if the
