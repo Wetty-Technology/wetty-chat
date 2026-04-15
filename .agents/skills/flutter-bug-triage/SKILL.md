@@ -97,6 +97,7 @@ push re-subscription or websocket reconnect to happen before opening the convers
 ### 5. Add focused diagnostics
 
 If the root cause is not obvious from reading code, add targeted logging at decision points.
+When in doubt, add log and ask the user to repro / prodvide log *DO NOT* make guesses when you are not 100% certain.
 
 Prefer `dart:developer` `log` over `print`. Keep logs filterable and specific:
 

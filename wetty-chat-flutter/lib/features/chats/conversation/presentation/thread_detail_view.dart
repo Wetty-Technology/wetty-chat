@@ -7,14 +7,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/style_config.dart';
 import '../../../groups/metadata/application/group_metadata_view_model.dart';
 import '../application/conversation_timeline_view_model.dart';
+import '../domain/conversation_message.dart';
 import '../domain/conversation_scope.dart';
 import '../domain/launch_request.dart';
 import '../../threads/data/thread_api_service.dart';
 import '../../threads/data/thread_repository.dart';
 import '../../threads/data/thread_subscription_provider.dart';
-import 'compose/conversation_composer_bar.dart';
-import 'timeline/conversation_timeline.dart';
-import '../../../../features/stickers/presentation/sticker_preview_modal.dart';
+import 'conversation_surface.dart';
 
 class ThreadDetailPage extends ConsumerStatefulWidget {
   const ThreadDetailPage({
@@ -35,9 +34,6 @@ class ThreadDetailPage extends ConsumerStatefulWidget {
 class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
     with WidgetsBindingObserver {
   static const Duration _markReadCooldown = Duration(milliseconds: 500);
-
-  final ConversationTimelineController _timelineController =
-      ConversationTimelineController();
 
   int? _maxSeenMessageId;
   Timer? _markReadTimer;
@@ -118,8 +114,8 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
   // Thread mark-as-read
   // ---------------------------------------------------------------------------
 
-  void _onMessageVisible(dynamic message) {
-    final id = message.serverMessageId as int?;
+  void _onLatestVisibleMessageChanged(ConversationMessage message) {
+    final id = message.serverMessageId;
     if (id != null && (_maxSeenMessageId == null || id > _maxSeenMessageId!)) {
       _maxSeenMessageId = id;
     }
@@ -145,10 +141,6 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
             messageId: messageId,
           );
     } catch (_) {}
-  }
-
-  Future<void> _handleMessageSent() async {
-    await _timelineController.scrollToLatest();
   }
 
   // ---------------------------------------------------------------------------
@@ -182,7 +174,6 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     final metadataAsync = ref.watch(
       groupMetadataViewModelProvider(widget.chatId),
     );
@@ -227,47 +218,18 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
         ),
         child: SafeArea(
           bottom: false,
-          child: GestureDetector(
-            onTap: () => FocusScope.of(context).unfocus(),
-            child: Column(
-              children: [
-                Expanded(
-                  child: Container(
-                    color: colors.chatBackground,
-                    child: ConversationTimeline(
-                      scope: scope,
-                      timelineArgs: _timelineArgs,
-                      controller: _timelineController,
-                      logTag: 'ThreadDetailView',
-                      onMessageVisible: _onMessageVisible,
-                      onTapSticker: (message) {
-                        final stickerId = message.sticker?.id;
-                        if (stickerId != null) {
-                          showStickerPreviewModal(context, stickerId);
-                        }
-                      },
-                      onTapMention: (uid, mention) {
-                        developer.log(
-                          'TODO: open profile sheet for thread mention '
-                          'uid=$uid username=${mention?.username}',
-                          name: 'ThreadDetailView',
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                ColoredBox(
-                  color: colors.backgroundSecondary,
-                  child: SafeArea(
-                    top: false,
-                    child: ConversationComposerBar(
-                      scope: scope,
-                      onMessageSent: _handleMessageSent,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          child: ConversationSurface(
+            scope: scope,
+            timelineArgs: _timelineArgs,
+            logTag: 'ThreadDetailView',
+            onLatestVisibleMessageChanged: _onLatestVisibleMessageChanged,
+            onTapMention: (uid, mention) {
+              developer.log(
+                'TODO: open profile sheet for thread mention '
+                'uid=$uid username=${mention?.username}',
+                name: 'ThreadDetailView',
+              );
+            },
           ),
         ),
       ),

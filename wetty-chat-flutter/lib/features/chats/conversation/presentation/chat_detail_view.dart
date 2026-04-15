@@ -9,15 +9,10 @@ import '../../../../app/routing/route_names.dart';
 import '../../../../app/theme/style_config.dart';
 import '../../../groups/metadata/application/group_metadata_view_model.dart';
 import '../../../groups/metadata/data/group_metadata_models.dart';
-import '../../models/message_models.dart';
-import '../application/conversation_composer_view_model.dart';
 import '../application/conversation_timeline_view_model.dart';
 import '../domain/conversation_scope.dart';
 import '../domain/launch_request.dart';
-import 'compose/conversation_composer_bar.dart';
-import 'timeline/conversation_timeline.dart';
-import '../../../../features/stickers/presentation/sticker_picker_panel.dart';
-import '../../../../features/stickers/presentation/sticker_preview_modal.dart';
+import 'conversation_surface.dart';
 
 class ChatDetailPage extends ConsumerStatefulWidget {
   const ChatDetailPage({
@@ -35,11 +30,7 @@ class ChatDetailPage extends ConsumerStatefulWidget {
 
 class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
     with WidgetsBindingObserver {
-  final ConversationTimelineController _timelineController =
-      ConversationTimelineController();
-
   bool _isPopping = false;
-  bool _isStickerPickerOpen = false;
 
   ConversationScope get scope => ConversationScope.chat(chatId: widget.chatId);
 
@@ -129,32 +120,6 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
     );
   }
 
-  Future<void> _handleMessageSent() async {
-    await _timelineController.scrollToLatest();
-  }
-
-  void _toggleStickerPicker() {
-    setState(() {
-      _isStickerPickerOpen = !_isStickerPickerOpen;
-      if (_isStickerPickerOpen) {
-        FocusScope.of(context).unfocus();
-      }
-    });
-  }
-
-  void _handleStickerSelected(StickerSummary sticker) {
-    if (sticker.id == null) return;
-    unawaited(
-      ref
-          .read(conversationComposerViewModelProvider(scope).notifier)
-          .sendSticker(sticker),
-    );
-    setState(() {
-      _isStickerPickerOpen = false;
-    });
-    unawaited(_handleMessageSent());
-  }
-
   String _resolveChatTitle(AsyncValue<ChatMetadata> metadataAsync) {
     final resolvedName = metadataAsync.value?.name;
     if (resolvedName != null && resolvedName.trim().isNotEmpty) {
@@ -204,7 +169,6 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     final metadataAsync = ref.watch(
       groupMetadataViewModelProvider(widget.chatId),
     );
@@ -229,69 +193,23 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
         ),
         child: SafeArea(
           bottom: false,
-          child: GestureDetector(
-            onTap: () => FocusScope.of(context).unfocus(),
-            child: Column(
-              children: [
-                Expanded(
-                  child: Container(
-                    color: colors.chatBackground,
-                    child: ConversationTimeline(
-                      scope: scope,
-                      timelineArgs: _timelineArgs,
-                      controller: _timelineController,
-                      logTag: 'ChatDetailView',
-                      onOpenThread: (message) => context.push(
-                        AppRoutes.nestedThreadDetail(
-                          widget.chatId,
-                          message.serverMessageId.toString(),
-                        ),
-                      ),
-                      onTapSticker: (message) {
-                        final stickerId = message.sticker?.id;
-                        if (stickerId != null) {
-                          showStickerPreviewModal(context, stickerId);
-                        }
-                      },
-                      onTapMention: (uid, mention) {
-                        developer.log(
-                          'TODO: open profile sheet for mention '
-                          'uid=$uid username=${mention?.username}',
-                          name: 'ChatDetailView',
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                ColoredBox(
-                  color: colors.backgroundSecondary,
-                  child: SafeArea(
-                    top: false,
-                    bottom: !_isStickerPickerOpen,
-                    child: ConversationComposerBar(
-                      scope: scope,
-                      onMessageSent: _handleMessageSent,
-                      onToggleStickerPicker: _toggleStickerPicker,
-                      isStickerPickerOpen: _isStickerPickerOpen,
-                    ),
-                  ),
-                ),
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 250),
-                  curve: Curves.easeInOut,
-                  child: _isStickerPickerOpen
-                      ? SafeArea(
-                          top: false,
-                          child: StickerPickerPanel(
-                            onStickerSelected: _handleStickerSelected,
-                            onClose: () =>
-                                setState(() => _isStickerPickerOpen = false),
-                          ),
-                        )
-                      : const SizedBox.shrink(),
-                ),
-              ],
+          child: ConversationSurface(
+            scope: scope,
+            timelineArgs: _timelineArgs,
+            logTag: 'ChatDetailView',
+            onOpenThread: (message) => context.push(
+              AppRoutes.nestedThreadDetail(
+                widget.chatId,
+                message.serverMessageId.toString(),
+              ),
             ),
+            onTapMention: (uid, mention) {
+              developer.log(
+                'TODO: open profile sheet for mention '
+                'uid=$uid username=${mention?.username}',
+                name: 'ChatDetailView',
+              );
+            },
           ),
         ),
       ),

@@ -37,7 +37,7 @@ class ConversationTimeline extends ConsumerStatefulWidget {
     this.onOpenThread,
     this.onTapSticker,
     this.onTapMention,
-    this.onMessageVisible,
+    this.onLatestVisibleMessageChanged,
     this.controller,
     this.logTag = 'ConversationTimeline',
   });
@@ -55,9 +55,10 @@ class ConversationTimeline extends ConsumerStatefulWidget {
   /// Called when the user taps a rendered message mention.
   final void Function(int uid, MentionInfo? mention)? onTapMention;
 
-  /// Extra callback invoked for every visible message during scroll.
+  /// Extra callback invoked when the latest visible message changes.
   /// Thread uses this to track the max-seen message ID for mark-as-read.
-  final void Function(ConversationMessage message)? onMessageVisible;
+  final void Function(ConversationMessage message)?
+  onLatestVisibleMessageChanged;
 
   /// Optional controller for the parent to trigger scrollToLatest.
   final ConversationTimelineController? controller;
@@ -87,7 +88,8 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline>
   int _viewportGeneration = 0;
   Key _timelineViewportKey = const ValueKey<int>(0);
   int? _activeViewportTransactionId;
-  String? _lastVisibleMessageReportSignature;
+  String? _lastVisibleMessageLayoutSignature;
+  String? _lastReportedVisibleMessageStableKey;
   _ActiveMessageOverlay? _activeOverlay;
   Timer? _overlayDismissTimer;
 
@@ -324,7 +326,7 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline>
       });
     }
 
-    _reportVisibleMessages(viewState);
+    _reportLatestVisibleMessage(viewState);
   }
 
   void _onNearOlderEdge() {
@@ -373,8 +375,7 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline>
     );
   }
 
-  /// Report visible messages for read-status tracking.
-  void _reportVisibleMessages(ConversationTimelineState viewState) {
+  void _reportLatestVisibleMessage(ConversationTimelineState viewState) {
     final viewportContext = _overlayViewportKey.currentContext;
     final viewportRenderBox = viewportContext?.findRenderObject() as RenderBox?;
     if (viewportRenderBox == null || !viewportRenderBox.attached) {
@@ -382,26 +383,32 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline>
     }
     final viewportRect =
         viewportRenderBox.localToGlobal(Offset.zero) & viewportRenderBox.size;
+    final latestVisibleMessage = latestVisibleMessageForViewport(
+      entries: viewState.entries,
+      viewportRect: viewportRect,
+      resolveMessageRect: (stableKey) {
+        final rowContext = _messageRowKeys[stableKey]?.currentContext;
+        final rowRenderBox = rowContext?.findRenderObject() as RenderBox?;
+        if (rowRenderBox == null || !rowRenderBox.attached) {
+          return null;
+        }
+        return rowRenderBox.localToGlobal(Offset.zero) & rowRenderBox.size;
+      },
+    );
+    if (latestVisibleMessage == null) {
+      _lastReportedVisibleMessageStableKey = null;
+      return;
+    }
+    if (_lastReportedVisibleMessageStableKey ==
+        latestVisibleMessage.stableKey) {
+      return;
+    }
+    _lastReportedVisibleMessageStableKey = latestVisibleMessage.stableKey;
     final notifier = ref.read(
       conversationTimelineViewModelProvider(widget.timelineArgs).notifier,
     );
-    for (final entry in viewState.entries) {
-      if (entry is TimelineMessageEntry) {
-        final rowContext =
-            _messageRowKeys[entry.message.stableKey]?.currentContext;
-        final rowRenderBox = rowContext?.findRenderObject() as RenderBox?;
-        if (rowRenderBox == null || !rowRenderBox.attached) {
-          continue;
-        }
-        final rowRect =
-            rowRenderBox.localToGlobal(Offset.zero) & rowRenderBox.size;
-        if (rowRect.intersect(viewportRect).isEmpty) {
-          continue;
-        }
-        notifier.onMessageVisible(entry.message);
-        widget.onMessageVisible?.call(entry.message);
-      }
-    }
+    notifier.onMessageVisible(latestVisibleMessage);
+    widget.onLatestVisibleMessageChanged?.call(latestVisibleMessage);
   }
 
   GlobalKey _messageRowKey(String stableKey) =>
@@ -455,7 +462,9 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline>
     return bestAnchor;
   }
 
-  void _scheduleVisibleMessageReport(ConversationTimelineState viewState) {
+  void _scheduleLatestVisibleMessageReport(
+    ConversationTimelineState viewState,
+  ) {
     if (_isVisibleMessageReportScheduled) {
       return;
     }
@@ -466,7 +475,7 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline>
         '|${viewState.viewportPlacement}'
         '|${viewState.windowStableKeys.firstOrNull ?? ''}'
         '|${viewState.windowStableKeys.lastOrNull ?? ''}';
-    if (_lastVisibleMessageReportSignature == signature) {
+    if (_lastVisibleMessageLayoutSignature == signature) {
       return;
     }
     _isVisibleMessageReportScheduled = true;
@@ -481,8 +490,8 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline>
       if (currentState == null) {
         return;
       }
-      _lastVisibleMessageReportSignature = signature;
-      _reportVisibleMessages(currentState);
+      _lastVisibleMessageLayoutSignature = signature;
+      _reportLatestVisibleMessage(currentState);
     });
   }
 
@@ -896,7 +905,7 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline>
       return const Center(child: Text('No messages yet'));
     }
     _pruneMessageRowKeys(viewState);
-    _scheduleVisibleMessageReport(viewState);
+    _scheduleLatestVisibleMessageReport(viewState);
     developer.log(
       '_buildTimeline: key=$_timelineViewportKey, '
       'placement=${viewState.viewportPlacement}, '
@@ -996,6 +1005,28 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline>
       }
     }
   }
+}
+
+typedef MessageRectResolver = Rect? Function(String stableKey);
+
+@visibleForTesting
+ConversationMessage? latestVisibleMessageForViewport({
+  required Iterable<TimelineEntry> entries,
+  required Rect viewportRect,
+  required MessageRectResolver resolveMessageRect,
+}) {
+  ConversationMessage? latestVisibleMessage;
+  for (final entry in entries) {
+    if (entry is! TimelineMessageEntry) {
+      continue;
+    }
+    final rowRect = resolveMessageRect(entry.message.stableKey);
+    if (rowRect == null || rowRect.intersect(viewportRect).isEmpty) {
+      continue;
+    }
+    latestVisibleMessage = entry.message;
+  }
+  return latestVisibleMessage;
 }
 
 class _ActiveMessageOverlay {
