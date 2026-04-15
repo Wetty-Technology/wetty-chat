@@ -92,7 +92,7 @@ class ComposerContentRow extends StatelessWidget {
                       focusNode: focusNode,
                       scrollController: inputScrollController,
                       onChanged: onDraftChanged,
-                      onSubmitted: (_) => unawaited(onSend()),
+                      onEditingComplete: () => unawaited(onSend()),
                       onTap: onTextFieldTap,
                       textInputAction: TextInputAction.send,
                       placeholder: l10n.message,
