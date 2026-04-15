@@ -290,16 +290,32 @@ class ConversationTimelineViewModel
           viewportPlacement: ConversationViewportPlacement.liveEdge,
           viewportCommand: _showLatestCommand(),
         );
-      case UnreadLaunchRequest(:final unreadMessageId):
+      case UnreadLaunchRequest(:final lastReadMessageId):
         _isViewportAtLiveEdge = false;
         _pendingLiveMessageIds.clear();
-        final anchorId = unreadMessageId;
-        final cachedMessages = _repository.cachedWindowAroundMessage(
+        final anchorId = await _repository.resolveUnreadAnchorMessageId(
+          lastReadMessageId,
+        );
+        if (anchorId == null) {
+          final latest = await _repository.loadLatestWindow(limit: _windowSize);
+          return _buildState(
+            windowStableKeys: latest.map((item) => item.stableKey).toList(),
+            windowMode: ConversationWindowMode.liveLatest,
+            viewportPlacement: ConversationViewportPlacement.liveEdge,
+            viewportCommand: _showLatestCommand(),
+          );
+        }
+        final hasCachedWindow = _repository.hasWindowAroundMessage(
           anchorId,
           before: _windowSize ~/ 2,
           after: _windowSize ~/ 2,
         );
-        if (cachedMessages.isNotEmpty) {
+        if (hasCachedWindow) {
+          final cachedMessages = _repository.cachedWindowAroundMessage(
+            anchorId,
+            before: _windowSize ~/ 2,
+            after: _windowSize ~/ 2,
+          );
           _hasPendingEntryRefresh = true;
           return _buildState(
             windowStableKeys: cachedMessages
@@ -396,13 +412,20 @@ class ConversationTimelineViewModel
       return;
     }
     _hasPendingEntryRefresh = false;
-    switch (arg.launchRequest) {
-      case LatestLaunchRequest():
+    final current = state.value;
+    if (current == null) {
+      return;
+    }
+    switch (current.windowMode) {
+      case ConversationWindowMode.liveLatest:
         await _refreshLatestOnOpen();
-      case UnreadLaunchRequest(:final unreadMessageId):
-        await _refreshAnchorOnOpen(unreadMessageId);
-      case MessageLaunchRequest(:final messageId):
-        await _refreshAnchorOnOpen(messageId);
+      case ConversationWindowMode.anchoredTarget:
+        final anchorId = current.anchorMessageId;
+        if (anchorId != null) {
+          await _refreshAnchorOnOpen(anchorId);
+        }
+      case ConversationWindowMode.historyBrowsing:
+        break;
     }
   }
 

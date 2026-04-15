@@ -71,6 +71,23 @@ class ConversationRepository {
     return _messagesForWindow(keys);
   }
 
+  Future<int?> resolveUnreadAnchorMessageId(int lastReadMessageId) async {
+    for (final message in _store.selectVisibleWindow(scope)) {
+      final serverMessageId = message.serverMessageId;
+      if (serverMessageId != null && serverMessageId > lastReadMessageId) {
+        return serverMessageId;
+      }
+    }
+
+    final response = await _service.fetchConversationMessages(
+      scope,
+      after: lastReadMessageId,
+      max: 1,
+    );
+    _reconcileDtos(response.messages);
+    return response.messages.firstOrNull?.id;
+  }
+
   Future<List<ConversationMessage>> loadAroundMessage(
     int messageId, {
     int before = defaultWindowSize ~/ 2,
@@ -222,6 +239,18 @@ class ConversationRepository {
       after: after,
     );
     return _messagesForWindow(keys);
+  }
+
+  bool hasWindowAroundMessage(
+    int messageId, {
+    int before = defaultWindowSize ~/ 2,
+    int after = defaultWindowSize ~/ 2,
+  }) {
+    return _hasWindowAroundServerMessage(
+      messageId,
+      before: before,
+      after: after,
+    );
   }
 
   Future<List<ConversationMessage>> refreshAroundMessage(

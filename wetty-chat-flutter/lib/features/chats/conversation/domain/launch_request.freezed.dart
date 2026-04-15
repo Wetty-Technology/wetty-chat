@@ -122,11 +122,11 @@ return message(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  latest,TResult Function( int unreadMessageId)?  unread,TResult Function( int messageId,  bool highlight)?  message,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  latest,TResult Function( int lastReadMessageId)?  unread,TResult Function( int messageId,  bool highlight)?  message,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case LatestLaunchRequest() when latest != null:
 return latest();case UnreadLaunchRequest() when unread != null:
-return unread(_that.unreadMessageId);case MessageLaunchRequest() when message != null:
+return unread(_that.lastReadMessageId);case MessageLaunchRequest() when message != null:
 return message(_that.messageId,_that.highlight);case _:
   return orElse();
 
@@ -145,11 +145,11 @@ return message(_that.messageId,_that.highlight);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  latest,required TResult Function( int unreadMessageId)  unread,required TResult Function( int messageId,  bool highlight)  message,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  latest,required TResult Function( int lastReadMessageId)  unread,required TResult Function( int messageId,  bool highlight)  message,}) {final _that = this;
 switch (_that) {
 case LatestLaunchRequest():
 return latest();case UnreadLaunchRequest():
-return unread(_that.unreadMessageId);case MessageLaunchRequest():
+return unread(_that.lastReadMessageId);case MessageLaunchRequest():
 return message(_that.messageId,_that.highlight);}
 }
 /// A variant of `when` that fallback to returning `null`
@@ -164,11 +164,11 @@ return message(_that.messageId,_that.highlight);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  latest,TResult? Function( int unreadMessageId)?  unread,TResult? Function( int messageId,  bool highlight)?  message,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  latest,TResult? Function( int lastReadMessageId)?  unread,TResult? Function( int messageId,  bool highlight)?  message,}) {final _that = this;
 switch (_that) {
 case LatestLaunchRequest() when latest != null:
 return latest();case UnreadLaunchRequest() when unread != null:
-return unread(_that.unreadMessageId);case MessageLaunchRequest() when message != null:
+return unread(_that.lastReadMessageId);case MessageLaunchRequest() when message != null:
 return message(_that.messageId,_that.highlight);case _:
   return null;
 
@@ -213,10 +213,10 @@ String toString() {
 
 
 class UnreadLaunchRequest extends LaunchRequest {
-  const UnreadLaunchRequest({required this.unreadMessageId}): super._();
+  const UnreadLaunchRequest({required this.lastReadMessageId}): super._();
   
 
- final  int unreadMessageId;
+ final  int lastReadMessageId;
 
 /// Create a copy of LaunchRequest
 /// with the given fields replaced by the non-null parameter values.
@@ -228,16 +228,16 @@ $UnreadLaunchRequestCopyWith<UnreadLaunchRequest> get copyWith => _$UnreadLaunch
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is UnreadLaunchRequest&&(identical(other.unreadMessageId, unreadMessageId) || other.unreadMessageId == unreadMessageId));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is UnreadLaunchRequest&&(identical(other.lastReadMessageId, lastReadMessageId) || other.lastReadMessageId == lastReadMessageId));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,unreadMessageId);
+int get hashCode => Object.hash(runtimeType,lastReadMessageId);
 
 @override
 String toString() {
-  return 'LaunchRequest.unread(unreadMessageId: $unreadMessageId)';
+  return 'LaunchRequest.unread(lastReadMessageId: $lastReadMessageId)';
 }
 
 
@@ -248,7 +248,7 @@ abstract mixin class $UnreadLaunchRequestCopyWith<$Res> implements $LaunchReques
   factory $UnreadLaunchRequestCopyWith(UnreadLaunchRequest value, $Res Function(UnreadLaunchRequest) _then) = _$UnreadLaunchRequestCopyWithImpl;
 @useResult
 $Res call({
- int unreadMessageId
+ int lastReadMessageId
 });
 
 
@@ -265,9 +265,9 @@ class _$UnreadLaunchRequestCopyWithImpl<$Res>
 
 /// Create a copy of LaunchRequest
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? unreadMessageId = null,}) {
+@pragma('vm:prefer-inline') $Res call({Object? lastReadMessageId = null,}) {
   return _then(UnreadLaunchRequest(
-unreadMessageId: null == unreadMessageId ? _self.unreadMessageId : unreadMessageId // ignore: cast_nullable_to_non_nullable
+lastReadMessageId: null == lastReadMessageId ? _self.lastReadMessageId : lastReadMessageId // ignore: cast_nullable_to_non_nullable
 as int,
   ));
 }

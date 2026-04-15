@@ -15,7 +15,6 @@ import '../../../threads/application/thread_list_view_model.dart';
 import '../../../threads/presentation/thread_list_row.dart';
 import '../../../threads/presentation/thread_list_view.dart';
 import '../../application/chat_list_view_model.dart';
-import '../../data/chat_launch_service.dart';
 import '../chat_list_segment.dart';
 import '../models/merged_list_item.dart';
 import 'chat_list_row.dart';
@@ -276,11 +275,9 @@ class _ChatListRowBuilder extends ConsumerWidget {
         draftText: draftText,
         isMuted: isMuted,
         onTap: () async {
-          final launchRequest = await _launchRequestForChat(ref, chat);
-          if (!context.mounted) return;
           final shouldRefresh = await context.push<bool>(
             AppRoutes.chatDetail(chat.id),
-            extra: {'launchRequest': launchRequest},
+            extra: {'launchRequest': _launchRequestForChat(chat)},
           );
           if (shouldRefresh == true) {
             await ref.read(chatInboxReconcilerProvider).reconcile();
@@ -290,11 +287,12 @@ class _ChatListRowBuilder extends ConsumerWidget {
     );
   }
 
-  static Future<LaunchRequest> _launchRequestForChat(
-    WidgetRef ref,
-    ChatListItem chat,
-  ) {
-    return ref.read(chatLaunchServiceProvider).resolveLaunchRequest(chat);
+  static LaunchRequest _launchRequestForChat(ChatListItem chat) {
+    final lastReadMessageId = int.tryParse(chat.lastReadMessageId ?? '');
+    if (chat.unreadCount <= 0 || lastReadMessageId == null) {
+      return const LaunchRequest.latest();
+    }
+    return LaunchRequest.unread(lastReadMessageId: lastReadMessageId);
   }
 
   static String _messagePreviewText(MessageItem? message) {

@@ -71,7 +71,7 @@ void main() {
         addTearDown(container.dispose);
         final provider = conversationTimelineViewModelProvider((
           scope: const ConversationScope.chat(chatId: '1'),
-          launchRequest: const LaunchRequest.unread(unreadMessageId: 150),
+          launchRequest: const LaunchRequest.unread(lastReadMessageId: 149),
         ));
 
         final state = await container.read(provider.future);
@@ -645,7 +645,7 @@ void main() {
         expect(state, isNotNull);
         expect(state!.windowMode, ConversationWindowMode.historyBrowsing);
         expect(state.anchorMessageId, 120);
-        expect(service.latestFetchCount, 2);
+        expect(service.latestFetchCount, 1);
       },
     );
   });

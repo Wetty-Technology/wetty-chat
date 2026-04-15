@@ -8,7 +8,7 @@ sealed class LaunchRequest with _$LaunchRequest {
 
   const factory LaunchRequest.latest() = LatestLaunchRequest;
 
-  const factory LaunchRequest.unread({required int unreadMessageId}) =
+  const factory LaunchRequest.unread({required int lastReadMessageId}) =
       UnreadLaunchRequest;
 
   const factory LaunchRequest.message({
