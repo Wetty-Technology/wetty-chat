@@ -7,6 +7,7 @@ import 'package:chahua/core/api/models/messages_api_models.dart';
 import 'package:chahua/core/api/models/websocket_api_models.dart';
 import 'package:chahua/features/chats/conversation/application/conversation_timeline_view_model.dart';
 import 'package:chahua/features/chats/conversation/application/conversation_realtime_registry.dart';
+import 'package:chahua/features/chats/conversation/data/conversation_repository.dart';
 import 'package:chahua/features/chats/conversation/data/message_api_service.dart';
 import 'package:chahua/features/chats/conversation/domain/conversation_scope.dart';
 import 'package:chahua/features/chats/conversation/domain/launch_request.dart';
@@ -291,24 +292,24 @@ void main() {
         notifier.consumeViewportCommand(initialTransactionId);
         notifier.onViewportLiveEdgeChanged(false);
 
+        final event = MessageCreatedWsEvent(
+          payload: MessageItemDto(
+            id: 151,
+            message: 'Message 151',
+            sender: const SenderDto(uid: 7, name: 'Tester'),
+            chatId: 1,
+            createdAt: DateTime.utc(
+              2026,
+              1,
+              1,
+            ).add(const Duration(minutes: 151)),
+            clientGeneratedId: 'cg-151',
+          ),
+        );
         container
-            .read(conversationRealtimeRegistryProvider)
-            .dispatch(
-              MessageCreatedWsEvent(
-                payload: MessageItemDto(
-                  id: 151,
-                  message: 'Message 151',
-                  sender: const SenderDto(uid: 7, name: 'Tester'),
-                  chatId: 1,
-                  createdAt: DateTime.utc(
-                    2026,
-                    1,
-                    1,
-                  ).add(const Duration(minutes: 151)),
-                  clientGeneratedId: 'cg-151',
-                ),
-              ),
-            );
+            .read(conversationRepositoryProvider(const ConversationScope.chat(chatId: '1')))
+            .applyRealtimeEvent(event);
+        container.read(conversationRealtimeRegistryProvider).dispatch(event);
 
         final state = container.read(provider).value;
 
@@ -423,6 +424,49 @@ void main() {
         expect(state!.pendingLiveCount, 0);
       },
     );
+
+    test('realtime event for another chat is ignored by the active timeline', () async {
+      final container = _createContainer();
+      addTearDown(container.dispose);
+      final provider = conversationTimelineViewModelProvider(_args());
+
+      await container.read(provider.future);
+      final notifier = container.read(provider.notifier);
+      final initialTransactionId = container
+          .read(provider)
+          .value!
+          .viewportCommand!
+          .transactionId;
+      notifier.consumeViewportCommand(initialTransactionId);
+      notifier.onViewportLiveEdgeChanged(false);
+
+      final before = container.read(provider).value!;
+
+      container
+          .read(conversationRealtimeRegistryProvider)
+          .dispatch(
+            MessageCreatedWsEvent(
+              payload: MessageItemDto(
+                id: 151,
+                message: 'Other chat message',
+                sender: const SenderDto(uid: 7, name: 'Tester'),
+                chatId: 2,
+                createdAt: DateTime.utc(
+                  2026,
+                  1,
+                  1,
+                ).add(const Duration(minutes: 151)),
+                clientGeneratedId: 'cg-151',
+              ),
+            ),
+          );
+
+      final after = container.read(provider).value!;
+
+      expect(after.pendingLiveCount, before.pendingLiveCount);
+      expect(after.windowStableKeys, before.windowStableKeys);
+      expect(after.viewportCommand, before.viewportCommand);
+    });
 
     test('re-entering live edge clears pending live count', () async {
       final container = _createContainer();

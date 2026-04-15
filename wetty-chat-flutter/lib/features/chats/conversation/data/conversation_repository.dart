@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/messages_api_models.dart';
 import '../../../../core/api/models/websocket_api_models.dart';
+import '../application/conversation_cache_revision_registry.dart';
 import '../../message_domain/domain/message_domain.dart';
 import '../../models/message_api_mapper.dart';
 import '../../models/message_models.dart';
@@ -39,9 +40,18 @@ class ConversationRepository {
   final MessageApiService _service;
   final MessageDomainStore _store;
   final Map<String, ConversationMessage> _optimisticSnapshots = {};
+  Ref? _ref;
 
   bool _hasReachedOldest = false;
   bool _hasReachedNewest = false;
+
+  void attachRef(Ref ref) {
+    _ref = ref;
+  }
+
+  void _bumpRevision() {
+    _ref?.read(conversationCacheRevisionProvider(scope).notifier).bump();
+  }
 
   Future<List<ConversationMessage>> loadLatestWindow({
     int limit = defaultWindowSize,
@@ -54,6 +64,7 @@ class ConversationRepository {
     _hasReachedNewest = true;
     _hasReachedOldest = response.messages.length < limit;
     final keys = _store.latestVisibleStableKeys(scope, limit: limit);
+    _bumpRevision();
     return _messagesForWindow(keys);
   }
 
@@ -68,6 +79,7 @@ class ConversationRepository {
     _hasReachedNewest = true;
     _hasReachedOldest = response.messages.length < limit;
     final keys = _store.latestVisibleStableKeys(scope, limit: limit);
+    _bumpRevision();
     return _messagesForWindow(keys);
   }
 
@@ -85,6 +97,7 @@ class ConversationRepository {
       max: 1,
     );
     _reconcileDtos(response.messages);
+    _bumpRevision();
     return response.messages.firstOrNull?.id;
   }
 
@@ -137,6 +150,7 @@ class ConversationRepository {
       '(first=${keys.firstOrNull}, last=${keys.lastOrNull})',
       name: 'ConvRepo',
     );
+    _bumpRevision();
     return _messagesForWindow(keys);
   }
 
@@ -168,6 +182,7 @@ class ConversationRepository {
     if (response.messages.length < pageSize) {
       _hasReachedOldest = true;
     }
+    _bumpRevision();
     return response.messages
         .map((dto) => _messageForServerId(dto.id))
         .whereType<ConversationMessage>()
@@ -202,6 +217,7 @@ class ConversationRepository {
     if (response.messages.length < pageSize) {
       _hasReachedNewest = true;
     }
+    _bumpRevision();
     return response.messages
         .map((dto) => _messageForServerId(dto.id))
         .whereType<ConversationMessage>()
@@ -271,6 +287,7 @@ class ConversationRepository {
     );
     _reconcileDtos(response.messages);
     if (response.messages.isEmpty) {
+      _bumpRevision();
       return const <ConversationMessage>[];
     }
     final keys = _store.visibleStableKeysAroundServerMessage(
@@ -279,6 +296,7 @@ class ConversationRepository {
       before: before,
       after: after,
     );
+    _bumpRevision();
     return _messagesForWindow(keys);
   }
 
@@ -404,6 +422,7 @@ class ConversationRepository {
     final updatedReactions = _toggleReactionLocal(message, emoji);
     final optimistic = message.copyWith(reactions: updatedReactions);
     _store.upsertCanonicalMessage(optimistic);
+    _bumpRevision();
 
     try {
       final currentlyReacted = message.reactions.any(
@@ -419,6 +438,7 @@ class ConversationRepository {
     } catch (_) {
       _store.upsertCanonicalMessage(snapshot);
       _optimisticSnapshots.remove(stableKey);
+      _bumpRevision();
       rethrow;
     }
   }
@@ -445,6 +465,7 @@ class ConversationRepository {
     final localMessage = scope.isThread
         ? _store.applyOptimisticThreadReplySend(draft)
         : _store.applyOptimisticNormalMessageSend(draft);
+    _bumpRevision();
     return localMessage;
   }
 
@@ -465,15 +486,20 @@ class ConversationRepository {
       clientGeneratedId: clientGeneratedId,
       stickerId: stickerId,
     );
-    return _store.applySendAccepted(clientGeneratedId);
+    final message = _store.applySendAccepted(clientGeneratedId);
+    _bumpRevision();
+    return message;
   }
 
   void markSendFailed(String clientGeneratedId) {
     _store.applySendFailed(clientGeneratedId);
+    _bumpRevision();
   }
 
   ConversationMessage restartFailedSend(ConversationMessage message) {
-    return _store.retryFailedSend(message);
+    final restarted = _store.retryFailedSend(message);
+    _bumpRevision();
+    return restarted;
   }
 
   Future<ConversationMessage> retryFailedSend(
@@ -491,6 +517,7 @@ class ConversationRepository {
 
   void discardFailedMessage(ConversationMessage message) {
     _removeStableKey(message.stableKey);
+    _bumpRevision();
   }
 
   ConversationMessage? beginOptimisticEdit(int messageId, String newText) {
@@ -509,6 +536,7 @@ class ConversationRepository {
       deliveryState: ConversationDeliveryState.sending,
     );
     _store.upsertCanonicalMessage(updating);
+    _bumpRevision();
     return updating;
   }
 
@@ -529,24 +557,31 @@ class ConversationRepository {
     final snapshot = _optimisticSnapshots.remove(stableKey);
     if (snapshot != null) {
       _store.upsertCanonicalMessage(snapshot);
+      _bumpRevision();
     }
   }
 
   ConversationMessage? beginOptimisticDelete(int messageId) {
-    return _store.applyOptimisticDelete(messageId);
+    final message = _store.applyOptimisticDelete(messageId);
+    if (message != null) {
+      _bumpRevision();
+    }
+    return message;
   }
 
   Future<void> commitDelete(int messageId) async {
     await _service.deleteMessage(scope.chatId, messageId);
     _store.applyDeleteConfirmed(messageId);
+    _bumpRevision();
   }
 
   void rollbackDelete(int messageId) {
     _store.rollbackOptimisticDelete(messageId);
+    _bumpRevision();
   }
 
   bool applyRealtimeEvent(ApiWsEvent event) {
-    return switch (event) {
+    final applied = switch (event) {
       MessageCreatedWsEvent(:final payload) => _applyMessageEvent(
         payload,
         deleted: false,
@@ -562,6 +597,44 @@ class ConversationRepository {
       ReactionUpdatedWsEvent(:final payload) => _applyReactionEvent(payload),
       _ => false,
     };
+    if (applied) {
+      _bumpRevision();
+    }
+    return applied;
+  }
+
+  bool applyThreadSummaryUpdate({
+    required int threadRootId,
+    required int replyCount,
+    required DateTime lastReplyAt,
+  }) {
+    if (scope.threadRootId != threadRootId.toString()) {
+      return false;
+    }
+    _store.applyThreadAnchorSummaryUpdated(
+      chatId: scope.chatId,
+      threadAnchorId: threadRootId,
+      summary: MessageThreadAnchorState(
+        replyCount: replyCount,
+        lastReplyAt: lastReplyAt,
+      ),
+    );
+    _bumpRevision();
+    return true;
+  }
+
+  bool matchesRealtimeEvent(ApiWsEvent event) {
+    return switch (event) {
+      MessageCreatedWsEvent(:final payload) => _matchesMessagePayload(payload),
+      MessageUpdatedWsEvent(:final payload) => _matchesMessagePayload(payload),
+      MessageDeletedWsEvent(:final payload) => _matchesMessagePayload(payload),
+      ReactionUpdatedWsEvent(:final payload) => _matchesReactionPayload(payload),
+      ThreadUpdatedWsEvent(:final payload) =>
+        scope.threadRootId == payload.threadRootId.toString() &&
+        scope.chatId == payload.chatId.toString(),
+      StickerPackOrderUpdatedWsEvent() => false,
+      PongWsEvent() => false,
+    };
   }
 
   List<ConversationMessage> messagesForWindow(List<String> stableKeys) =>
@@ -571,15 +644,7 @@ class ConversationRepository {
       _messageForServerId(messageId);
 
   bool _applyMessageEvent(MessageItemDto payload, {required bool deleted}) {
-    if (payload.chatId.toString() != scope.chatId) {
-      return false;
-    }
-    if (scope.threadRootId != null &&
-        payload.id.toString() != scope.threadRootId &&
-        payload.replyRootId?.toString() != scope.threadRootId) {
-      return false;
-    }
-    if (scope.threadRootId == null && payload.replyRootId != null) {
+    if (!_matchesMessagePayload(payload)) {
       return false;
     }
 
@@ -644,6 +709,7 @@ class ConversationRepository {
       ),
     );
     _optimisticSnapshots.remove(stableKey);
+    _bumpRevision();
     return true;
   }
 
@@ -655,6 +721,37 @@ class ConversationRepository {
     final messageId = message.serverMessageId?.toString();
     final replyRootId = message.replyRootId?.toString();
     return messageId == threadRootId || replyRootId == threadRootId;
+  }
+
+  bool _matchesMessagePayload(MessageItemDto payload) {
+    if (payload.chatId.toString() != scope.chatId) {
+      return false;
+    }
+    if (scope.threadRootId != null &&
+        payload.id.toString() != scope.threadRootId &&
+        payload.replyRootId?.toString() != scope.threadRootId) {
+      return false;
+    }
+    if (scope.threadRootId == null && payload.replyRootId != null) {
+      return false;
+    }
+    return true;
+  }
+
+  bool _matchesReactionPayload(ReactionUpdatePayloadDto payload) {
+    if (payload.chatId.toString() != scope.chatId) {
+      return false;
+    }
+    if (scope.threadRootId == null) {
+      return true;
+    }
+
+    final stableKey = _store.stableKeyForServerId(payload.messageId);
+    if (stableKey == null) {
+      return false;
+    }
+    final message = _store.messageForStableKey(stableKey);
+    return message != null && _messageBelongsToScope(message);
   }
 
   bool _isStickerMessage(ConversationMessage message) =>
@@ -965,9 +1062,11 @@ enum _ConversationRealtimeEventType { created, updated, deleted }
 
 final conversationRepositoryProvider =
     Provider.family<ConversationRepository, ConversationScope>((ref, scope) {
-      return ConversationRepository(
+      final repository = ConversationRepository(
         scope: scope,
         service: ref.read(messageApiServiceProvider),
         store: ref.read(messageDomainStoreProvider),
       );
+      repository.attachRef(ref);
+      return repository;
     });

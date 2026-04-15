@@ -1,8 +1,10 @@
 import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:chahua/core/api/models/messages_api_models.dart';
 import 'package:chahua/core/api/models/websocket_api_models.dart';
+import 'package:chahua/features/chats/conversation/application/conversation_cache_revision_registry.dart';
 import 'package:chahua/features/chats/conversation/data/conversation_repository.dart';
 import 'package:chahua/features/chats/conversation/data/message_api_service.dart';
 import 'package:chahua/features/chats/conversation/domain/conversation_message.dart';
@@ -436,6 +438,36 @@ void main() {
         );
       },
     );
+
+    test('provider-backed repository bumps scope revision for realtime events', () async {
+      final service = _FakeMessageApiService(
+        messages: [
+          _message(id: 10, message: 'Root one'),
+          _message(id: 11, message: 'Root two'),
+        ],
+      );
+      final container = ProviderContainer(
+        overrides: [
+          messageApiServiceProvider.overrideWithValue(service),
+        ],
+      );
+      addTearDown(container.dispose);
+      const scope = ConversationScope.chat(chatId: '1');
+      final repository = container.read(conversationRepositoryProvider(scope));
+
+      await repository.loadLatestWindow();
+      final before = container.read(conversationCacheRevisionProvider(scope));
+
+      final handled = repository.applyRealtimeEvent(
+        MessageCreatedWsEvent(
+          payload: _message(id: 12, message: 'Root three'),
+        ),
+      );
+
+      final after = container.read(conversationCacheRevisionProvider(scope));
+      expect(handled, isTrue);
+      expect(after, greaterThan(before));
+    });
   });
 
   group('ConversationRepository reactions', () {

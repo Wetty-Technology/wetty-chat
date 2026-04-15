@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/api/models/websocket_api_models.dart';
 import '../../list/data/chat_repository.dart';
 import 'conversation_local_mutation_registry.dart';
+import 'conversation_cache_revision_registry.dart';
 import 'conversation_realtime_registry.dart';
 import '../data/conversation_repository.dart';
 import '../domain/conversation_message.dart';
@@ -241,6 +242,9 @@ class ConversationTimelineViewModel
   @override
   Future<ConversationTimelineState> build() async {
     _isDisposed = false;
+    ref.listen<int>(conversationCacheRevisionProvider(arg.scope), (previous, next) {
+      _rebuildCurrentState();
+    });
     developer.log(
       'build() called — scope=${arg.scope}, '
       'launchRequest=${arg.launchRequest}',
@@ -419,11 +423,11 @@ class ConversationTimelineViewModel
     if (!_hasPendingEntryRefresh) {
       return;
     }
-    _hasPendingEntryRefresh = false;
     final current = state.value;
     if (current == null) {
       return;
     }
+    _hasPendingEntryRefresh = false;
     switch (current.windowMode) {
       case ConversationWindowMode.liveLatest:
         await _refreshLatestOnOpen();
@@ -661,40 +665,22 @@ class ConversationTimelineViewModel
   }
 
   void _handleRealtimeEvent(ApiWsEvent event) {
-    if (!_repository.applyRealtimeEvent(event) || !state.hasValue) {
+    if (!state.hasValue || !_repository.matchesRealtimeEvent(event)) {
       return;
     }
 
     final current = state.requireValue;
-    if (_isViewportAtLiveEdge && !current.canLoadNewer) {
-      final latestWindow = _repository.latestWindowStableKeys(
-        limit: _windowSize,
-      );
-      final nextState = _buildState(
-        windowStableKeys: latestWindow,
-        windowMode: ConversationWindowMode.liveLatest,
-        viewportPlacement: ConversationViewportPlacement.liveEdge,
-        shouldRefreshChats: true,
-        pendingLiveCount: 0,
-        viewportCommand: _settleAtBottomAfterMutationCommand(),
-      );
-      _pendingLiveMessageIds.clear();
-      _setStateIfActive(
-        AsyncData(
-          nextState.copyWith(
-            isLoadingOlder: current.isLoadingOlder,
-            isLoadingNewer: current.isLoadingNewer,
-          ),
-        ),
-      );
-      return;
-    }
-
     final pendingLiveCount = _applyPendingLiveMutation(event);
-    final nextWindowStableKeys =
-        event is MessageCreatedWsEvent && !current.canLoadNewer
-        ? _repository.appendVisibleTail(current.windowStableKeys)
+    final nextWindowStableKeys = current.windowMode ==
+            ConversationWindowMode.liveLatest
+        ? _repository.latestWindowStableKeys(limit: _windowSize)
         : current.windowStableKeys;
+    final nextViewportCommand =
+        _isViewportAtLiveEdge &&
+            event is MessageCreatedWsEvent &&
+            !current.canLoadNewer
+        ? _settleAtBottomAfterMutationCommand()
+        : current.viewportCommand;
     final nextState = _buildState(
       windowStableKeys: nextWindowStableKeys,
       windowMode: current.windowMode,
@@ -704,8 +690,11 @@ class ConversationTimelineViewModel
       highlightedMessageId: current.highlightedMessageId,
       shouldRefreshChats: true,
       pendingLiveCount: pendingLiveCount,
-      viewportCommand: current.viewportCommand,
+      viewportCommand: nextViewportCommand,
     );
+    if (_isViewportAtLiveEdge && !current.canLoadNewer) {
+      _pendingLiveMessageIds.clear();
+    }
     _setStateIfActive(
       AsyncData(
         nextState.copyWith(

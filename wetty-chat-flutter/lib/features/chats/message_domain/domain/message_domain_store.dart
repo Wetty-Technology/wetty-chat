@@ -683,6 +683,41 @@ class MessageDomainStore {
     return _stableKeyByServerId.containsKey(messageId);
   }
 
+  bool hasCachedWindowForScope(ConversationScope scope) {
+    return (_windowMemberships[scope.storageKey] ?? const <String>[]).isNotEmpty;
+  }
+
+  bool hasCachedThreadWindow({
+    required String chatId,
+    required int threadRootId,
+  }) {
+    return hasCachedWindowForScope(
+      ConversationScope.thread(
+        chatId: chatId,
+        threadRootId: threadRootId.toString(),
+      ),
+    );
+  }
+
+  List<ConversationScope> cachedScopesForMessageId(int messageId) {
+    final stableKey = _stableKeyByServerId[messageId];
+    if (stableKey == null) {
+      return const <ConversationScope>[];
+    }
+
+    final scopes = <ConversationScope>[];
+    for (final entry in _windowMemberships.entries) {
+      if (!entry.value.contains(stableKey)) {
+        continue;
+      }
+      final scope = _scopeFromStorageKey(entry.key);
+      if (scope != null) {
+        scopes.add(scope);
+      }
+    }
+    return scopes;
+  }
+
   void upsertCanonicalMessage(ConversationMessage message) {
     _upsertCanonical(message);
   }
@@ -823,6 +858,22 @@ class MessageDomainStore {
       }
     }
     return false;
+  }
+
+  ConversationScope? _scopeFromStorageKey(String storageKey) {
+    const threadMarker = '::thread::';
+    if (!storageKey.contains(threadMarker)) {
+      return ConversationScope.chat(chatId: storageKey);
+    }
+
+    final parts = storageKey.split(threadMarker);
+    if (parts.length != 2) {
+      return null;
+    }
+    return ConversationScope.thread(
+      chatId: parts.first,
+      threadRootId: parts.last,
+    );
   }
 
   String? _threadAnchorStableKey(ConversationScope scope) {
