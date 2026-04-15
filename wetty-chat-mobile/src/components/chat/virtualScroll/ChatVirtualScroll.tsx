@@ -38,9 +38,10 @@ import {
 } from './types';
 import styles from './ChatVirtualScroll.module.scss';
 import { Trans } from '@lingui/react/macro';
+import { useNativeScrollActivity } from '@/hooks/useNativeScrollActivity';
+import { USER_SCROLL_ACTIVITY_GRACE_MS } from '@/constants/ui';
 
 const TOP_DATE_FLOATING_GAP_PX = 12;
-const USER_SCROLL_ACTIVITY_GRACE_MS = 1200;
 
 function arraysEqual(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((value, index) => value === b[index]);
@@ -274,7 +275,6 @@ export function ChatVirtualScroll({
     to: number;
     behavior?: ScrollBehavior;
   } | null>(null);
-  const userScrollIntentUntilRef = useRef(0);
   const recentScrollPositionsRef = useRef<Array<{ top: number; at: number }>>([]);
   const lastJitterLogAtRef = useRef(0);
   const topLoadArmedRef = useRef(true);
@@ -490,10 +490,15 @@ export function ChatVirtualScroll({
     },
     [onScrollActivityChange, onTopDateOffsetChange],
   );
+  const { active: nativeScrollActive, markIntent } = useNativeScrollActivity(
+    containerRef,
+    USER_SCROLL_ACTIVITY_GRACE_MS,
+    SCROLL_IDLE_MS,
+  );
 
-  const markUserScrollIntent = useCallback(() => {
-    userScrollIntentUntilRef.current = performance.now() + USER_SCROLL_ACTIVITY_GRACE_MS;
-  }, []);
+  useEffect(() => {
+    setScrollActivity(nativeScrollActive);
+  }, [nativeScrollActive, setScrollActivity]);
 
   const updateLastFullyVisibleMessage = useCallback(() => {
     const container = containerRef.current;
@@ -1317,8 +1322,8 @@ export function ChatVirtualScroll({
 
   const handleScroll = useCallback(() => {
     const container = containerRef.current;
+    const now = performance.now();
     if (container) {
-      const now = performance.now();
       const recent = recentScrollPositionsRef.current;
       recent.push({ top: roundScrollValue(container.scrollTop), at: now });
       while (recent.length > 8) recent.shift();
@@ -1358,8 +1363,7 @@ export function ChatVirtualScroll({
       }
     }
 
-    const isUserInitiatedScroll = performance.now() <= userScrollIntentUntilRef.current;
-    setScrollActivity(isUserInitiatedScroll);
+    // scroll activity (user vs programmatic) is handled by useNativeScrollActivity
 
     if (scrollRafRef.current == null) {
       scrollRafRef.current = requestAnimationFrame(() => {
@@ -1388,7 +1392,6 @@ export function ChatVirtualScroll({
     maybeUpdateMountedForScroll,
     pendingBatch,
     scrollDistances,
-    setScrollActivity,
     updateAtBottom,
     updateLastFullyVisibleMessage,
   ]);
@@ -2407,12 +2410,10 @@ export function ChatVirtualScroll({
       ref={containerRef}
       className={styles.container}
       onScroll={handleScroll}
-      onWheel={markUserScrollIntent}
-      onTouchStart={markUserScrollIntent}
-      onTouchMove={markUserScrollIntent}
-      onPointerDown={markUserScrollIntent}
-      onPointerMove={markUserScrollIntent}
-      onKeyDown={markUserScrollIntent}
+      onWheel={markIntent}
+      onTouchStart={markIntent}
+      onTouchMove={markIntent}
+      onPointerDown={markIntent}
     >
       {topOverlay}
       <div

@@ -1,5 +1,6 @@
 import { MAX_PINNED_REACTIONS } from '@/constants/emojiAndStickers';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useFloatingDateVisibility } from '@/hooks/useFloatingDate';
 import {
   IonButton,
   IonButtons,
@@ -303,10 +304,17 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
     const msg = messages.find((m) => m.id === firstVisibleMessageId);
     return msg?.createdAt ?? null;
   }, [firstVisibleMessageId, messages]);
+  const { visible: floatingDateVisible, fading: floatingDateFading } = useFloatingDateVisibility(
+    !!topVisibleMessageDate,
+    messageListScrolling,
+  );
+
   const floatingDateLabel = useMemo(() => {
-    if (!messageListScrolling || !topVisibleMessageDate) return null;
-    return formatDateSeparator(topVisibleMessageDate);
-  }, [formatDateSeparator, messageListScrolling, topVisibleMessageDate]);
+    if (!topVisibleMessageDate) return null;
+    if (messageListScrolling || floatingDateVisible || floatingDateFading)
+      return formatDateSeparator(topVisibleMessageDate);
+    return null;
+  }, [formatDateSeparator, messageListScrolling, topVisibleMessageDate, floatingDateVisible, floatingDateFading]);
   const floatingDateStyle = useMemo(() => ({ transform: `translateY(${floatingDateOffset}px)` }), [floatingDateOffset]);
 
   const chatRows = useChatRows(messages, formatDateSeparator);
@@ -1723,7 +1731,10 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
             initialAnchor={initialAnchor}
             topOverlay={
               floatingDateLabel ? (
-                <div className="chat-thread-floating-date" style={floatingDateStyle}>
+                <div
+                  className={`chat-thread-floating-date ${floatingDateFading ? 'chat-thread-floating-date--fading' : ''}`}
+                  style={floatingDateStyle}
+                >
                   <span className="chat-thread-floating-date__label">{floatingDateLabel}</span>
                 </div>
               ) : null

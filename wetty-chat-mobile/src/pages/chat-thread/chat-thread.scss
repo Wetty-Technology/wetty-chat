@@ -37,6 +37,15 @@
   font-weight: 500;
   padding: 4px 12px;
   border-radius: 12px;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+  opacity: 1;
+}
+
+.chat-thread-floating-date--fading .chat-thread-floating-date__label {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 
 /* Scroll-to-bottom FAB */
