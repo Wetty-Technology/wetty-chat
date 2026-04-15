@@ -13,6 +13,15 @@ pub struct PresignedUpload {
     pub upload_headers: BTreeMap<String, String>,
 }
 
+fn collect_presigned_headers(
+    presigned_request: &aws_sdk_s3::presigning::PresignedRequest,
+) -> BTreeMap<String, String> {
+    presigned_request
+        .headers()
+        .map(|(name, value)| (name.to_string(), value.to_string()))
+        .collect()
+}
+
 pub fn build_public_object_url(state: &AppState, storage_key: &str) -> String {
     let base_url = state
         .s3_base_url
@@ -64,14 +73,7 @@ pub async fn presign_public_upload(
 
     Ok(PresignedUpload {
         upload_url: presigned_request.uri().to_string(),
-        upload_headers: BTreeMap::from([
-            (
-                "Cache-Control".to_string(),
-                PUBLIC_MEDIA_CACHE_CONTROL.to_string(),
-            ),
-            ("Content-Type".to_string(), content_type.to_string()),
-            ("x-amz-acl".to_string(), "public-read".to_string()),
-        ]),
+        upload_headers: collect_presigned_headers(&presigned_request),
     })
 }
 
