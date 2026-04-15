@@ -134,10 +134,8 @@
   --padding-top: 0;
   --padding-bottom: 0;
   --border-radius: 50%;
-  width: 36px;
-  height: 36px;
-  font-size: 18px;
-  margin: 0 6px;
+  font-size: 17px;
+  margin: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -155,7 +153,7 @@
 }
 
 .sendBtn ion-icon {
-  font-size: 22px;
+  font-size: 18px;
   color: var(--ion-color-primary-contrast, #fff);
 }
 
