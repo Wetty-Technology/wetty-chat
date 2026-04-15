@@ -72,10 +72,16 @@
   text-align: center;
 }
 
-.messages-scroll-container {
-  height: 100%;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+.sticky-date-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  padding: 8px 0 0;
 }
 
 .message-item-wrapper {

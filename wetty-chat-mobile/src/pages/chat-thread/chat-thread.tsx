@@ -100,6 +100,7 @@ import { ChatContext } from '@/components/chat/messages/ChatContext';
 import { useIsDesktop, useMouseDetected } from '@/hooks/platformHooks';
 import { useChatRole } from '@/components/chat/permissions/useChatRole';
 import { ChatMessageRow } from '@/components/chat/messages/ChatMessageRow';
+import dateSeparatorStyles from '@/components/chat/messages/MessageDateSeparator.module.scss';
 import { parseResumeHash } from '@/types/chatThreadNavigation';
 import { READ_REQUEST_COOLDOWN_MS } from '@/constants/chatTiming';
 import {
@@ -286,6 +287,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   const [pendingResumeMessageId, setPendingResumeMessageId] = useState<string | null>(initialResumeMessageId);
   const [lastFullyVisibleMessageId, setLastFullyVisibleMessageId] = useState<string | null>(null);
   const [firstVisibleMessageId, setFirstVisibleMessageId] = useState<string | null>(null);
+  const [hasVisibleDateSeparator, setHasVisibleDateSeparator] = useState(false);
 
   const topVisibleMessageDate = useMemo(() => {
     if (!firstVisibleMessageId) return null;
@@ -357,6 +359,12 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   }, [chatId, threadId, pinsLoaded, dispatch]);
 
   const [atBottom, setAtBottom] = useState(() => threadId || initialResumeMessageId == null);
+
+  const stickyDateLabel = useMemo(() => {
+    if (atBottom || !topVisibleMessageDate || hasVisibleDateSeparator) return null;
+    return formatDateSeparator(topVisibleMessageDate);
+  }, [atBottom, hasVisibleDateSeparator, topVisibleMessageDate, formatDateSeparator]);
+
   const [replyingTo, setReplyingTo] = useState<MessageResponse | null>(null);
   const [profileSender, setProfileSender] = useState<Sender | null>(null);
   const [reactionDetail, setReactionDetail] = useState<{ messageId: string; emoji?: string } | null>(null);
@@ -1700,6 +1708,13 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
           />
         )}
         <IonContent className="chat-thread-content" scrollX={false} scrollY={false}>
+          {stickyDateLabel ? (
+            <div className="sticky-date-header">
+              <div className={dateSeparatorStyles.separator}>
+                <span className={dateSeparatorStyles.label}>{stickyDateLabel}</span>
+              </div>
+            </div>
+          ) : null}
           <ChatVirtualScroll
             key={storeChatId}
             rows={chatRows}
@@ -1712,6 +1727,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
             onAtBottomChange={setAtBottom}
             onLastFullyVisibleMessageChange={setLastFullyVisibleMessageId}
             onFirstVisibleMessageChange={setFirstVisibleMessageId}
+            onVisibleDateSeparatorChange={setHasVisibleDateSeparator}
           />
           <IonFab
             vertical="bottom"

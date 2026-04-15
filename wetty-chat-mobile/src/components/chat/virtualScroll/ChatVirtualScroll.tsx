@@ -204,6 +204,7 @@ export function ChatVirtualScroll({
   onAtBottomChange,
   onLastFullyVisibleMessageChange,
   onFirstVisibleMessageChange,
+  onVisibleDateSeparatorChange,
 }: ChatVirtualScrollProps) {
   const chatFontSizeStyle = useSelector(selectChatFontSizeStyle);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -225,6 +226,7 @@ export function ChatVirtualScroll({
   const isAtBottomRef = useRef(true);
   const lastFullyVisibleMessageIdRef = useRef<string | null>(null);
   const firstVisibleMessageIdRef = useRef<string | null>(null);
+  const visibleDateSeparatorRef = useRef<boolean | null>(null);
   const initialAnchorRef = useRef(initialAnchor);
   initialAnchorRef.current = initialAnchor;
 
@@ -485,11 +487,11 @@ export function ChatVirtualScroll({
     const mounted = mountedRef.current;
     let nextMessageId: string | null = null;
     let firstMessageId: string | null = null;
-
+    let hasVisibleDateSeparator = false;
     if (mounted) {
       for (let index = mounted.end; index >= mounted.start; index -= 1) {
         const row = rows[index];
-        if (!row || row.type !== 'message') continue;
+        if (!row) continue;
 
         const rowNode = rowRefsMap.current.get(row.key);
         if (!rowNode) continue;
@@ -500,12 +502,16 @@ export function ChatVirtualScroll({
         const fullyVisible = rowRect.top >= containerRect.top - 0.5 && rowRect.bottom <= containerRect.bottom + 0.5;
         const partiallyVisible = rowRect.bottom > containerRect.top && rowRect.top < containerRect.bottom;
 
-        if (partiallyVisible) {
+        if (row.type === 'date' && partiallyVisible) {
+          hasVisibleDateSeparator = true;
+        }
+
+        if (row.type === 'message' && partiallyVisible) {
           // Since we scan from bottom to top, the last one we see is the first visible from the top
           firstMessageId = row.messageId;
         }
 
-        if (fullyVisible && nextMessageId === null) {
+        if (fullyVisible && row.type === 'message' && nextMessageId === null) {
           nextMessageId = row.messageId;
         }
       }
@@ -516,11 +522,16 @@ export function ChatVirtualScroll({
       onLastFullyVisibleMessageChange?.(nextMessageId);
     }
 
+    if (hasVisibleDateSeparator !== visibleDateSeparatorRef.current) {
+      visibleDateSeparatorRef.current = hasVisibleDateSeparator;
+      onVisibleDateSeparatorChange?.(hasVisibleDateSeparator);
+    }
+
     if (firstMessageId !== firstVisibleMessageIdRef.current) {
       firstVisibleMessageIdRef.current = firstMessageId;
       onFirstVisibleMessageChange?.(firstMessageId);
     }
-  }, [onLastFullyVisibleMessageChange, onFirstVisibleMessageChange, rows]);
+  }, [onLastFullyVisibleMessageChange, onFirstVisibleMessageChange, onVisibleDateSeparatorChange, rows]);
 
   const scrollToBottomInternal = useCallback((behavior: ScrollBehavior = 'auto') => {
     const container = containerRef.current;

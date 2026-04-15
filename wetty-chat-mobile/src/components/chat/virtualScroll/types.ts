@@ -88,6 +88,7 @@ export interface ChatVirtualScrollProps {
   onAtBottomChange?: (atBottom: boolean) => void;
   onLastFullyVisibleMessageChange?: (messageId: string | null) => void;
   onFirstVisibleMessageChange?: (messageId: string | null) => void;
+  onVisibleDateSeparatorChange?: (hasVisibleDateSeparator: boolean) => void;
 }
 
 // ── Constants ──
