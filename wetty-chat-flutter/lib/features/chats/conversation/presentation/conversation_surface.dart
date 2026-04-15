@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -101,34 +102,66 @@ class _ConversationSurfaceState extends ConsumerState<ConversationSurface> {
               ),
             ),
           ),
-          ColoredBox(
-            color: colors.backgroundSecondary,
-            child: SafeArea(
-              top: false,
-              bottom: !_isStickerPickerOpen,
-              child: ConversationComposerBar(
-                scope: widget.scope,
-                onMessageSent: _handleMessageSent,
-                onToggleStickerPicker: _toggleStickerPicker,
-                isStickerPickerOpen: _isStickerPickerOpen,
-              ),
+          ConversationBottomRegion(
+            isStickerPickerOpen: _isStickerPickerOpen,
+            surfaceColor: colors.backgroundSecondary,
+            borderColor: colors.inputBorder,
+            composer: ConversationComposerBar(
+              scope: widget.scope,
+              onMessageSent: _handleMessageSent,
+              onToggleStickerPicker: _toggleStickerPicker,
+              isStickerPickerOpen: _isStickerPickerOpen,
+            ),
+            stickerPicker: StickerPickerPanel(
+              onStickerSelected: _handleStickerSelected,
+              onClose: () => setState(() => _isStickerPickerOpen = false),
             ),
           ),
-          AnimatedSize(
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeInOut,
-            child: _isStickerPickerOpen
-                ? SafeArea(
-                    top: false,
-                    child: StickerPickerPanel(
-                      onStickerSelected: _handleStickerSelected,
-                      onClose: () =>
-                          setState(() => _isStickerPickerOpen = false),
-                    ),
-                  )
-                : const SizedBox.shrink(),
-          ),
         ],
+      ),
+    );
+  }
+}
+
+class ConversationBottomRegion extends StatelessWidget {
+  const ConversationBottomRegion({
+    super.key,
+    required this.isStickerPickerOpen,
+    required this.surfaceColor,
+    required this.borderColor,
+    required this.composer,
+    required this.stickerPicker,
+  });
+
+  final bool isStickerPickerOpen;
+  final Color surfaceColor;
+  final Color borderColor;
+  final Widget composer;
+  final Widget stickerPicker;
+
+  @override
+  Widget build(BuildContext context) {
+    final viewInsets = MediaQuery.viewInsetsOf(context);
+    final padding = MediaQuery.paddingOf(context);
+    final bottomInset = isStickerPickerOpen
+        ? padding.bottom
+        : math.max(viewInsets.bottom, padding.bottom);
+
+    return ColoredBox(
+      color: surfaceColor,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: borderColor)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            composer,
+            if (isStickerPickerOpen)
+              SizedBox(width: double.infinity, child: stickerPicker),
+            SizedBox(height: bottomInset),
+          ],
+        ),
       ),
     );
   }

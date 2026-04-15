@@ -194,6 +194,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
         }
       },
       child: CupertinoPageScaffold(
+        resizeToAvoidBottomInset: false,
         navigationBar: CupertinoNavigationBar(
           middle: Column(
             mainAxisSize: MainAxisSize.min,

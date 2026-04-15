@@ -697,179 +697,167 @@ class _ConversationComposerBarState
         !composer.canSend && (composer.canStartAudio || isRecordingPhase);
     final showAudioTargets = _activeAudioPointerId != null;
 
-    return ColoredBox(
-      color: colors.backgroundSecondary,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (_showMentionAutocomplete)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-              child: ComposerMentionAutocomplete(
-                results: _mentionResults,
-                loading: _mentionLoading,
-                onSelect: (member) {
-                  unawaited(_selectMention(member));
-                },
-              ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (_showMentionAutocomplete)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+            child: ComposerMentionAutocomplete(
+              results: _mentionResults,
+              loading: _mentionLoading,
+              onSelect: (member) {
+                unawaited(_selectMention(member));
+              },
             ),
-          Container(
-            decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: colors.inputBorder)),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Opacity(
-                    opacity: selectionLocked ? 0.45 : 1,
-                    child: CompositedTransformTarget(
-                      link: _attachmentMenuLink,
-                      child: SizedBox(
-                        width: 36,
-                        height: 36,
-                        child: CupertinoButton(
-                          padding: EdgeInsets.zero,
-                          minimumSize: const Size(36, 36),
-                          onPressed: canAttach ? _toggleAttachmentPanel : null,
-                          child: Icon(
-                            CupertinoIcons.add_circled,
-                            color: canAttach
-                                ? CupertinoColors.activeBlue.resolveFrom(
-                                    context,
-                                  )
-                                : CupertinoColors.systemGrey2.resolveFrom(
-                                    context,
-                                  ),
-                            size: 28,
-                          ),
-                        ),
+          ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Opacity(
+                opacity: selectionLocked ? 0.45 : 1,
+                child: CompositedTransformTarget(
+                  link: _attachmentMenuLink,
+                  child: SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(36, 36),
+                      onPressed: canAttach ? _toggleAttachmentPanel : null,
+                      child: Icon(
+                        CupertinoIcons.add_circled,
+                        color: canAttach
+                            ? CupertinoColors.activeBlue.resolveFrom(context)
+                            : CupertinoColors.systemGrey2.resolveFrom(context),
+                        size: 28,
                       ),
                     ),
                   ),
-                  if (composer.hasPendingAttachmentUploads)
-                    const Padding(
-                      padding: EdgeInsets.only(left: 4, bottom: 2),
-                      child: CupertinoActivityIndicator(radius: 8),
-                    ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: colors.inputBorder),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(19),
-                        child: ColoredBox(
-                          color: colors.backgroundSecondary,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
+                ),
+              ),
+              if (composer.hasPendingAttachmentUploads)
+                const Padding(
+                  padding: EdgeInsets.only(left: 4, bottom: 2),
+                  child: CupertinoActivityIndicator(radius: 8),
+                ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: colors.inputBorder),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(19),
+                    child: ColoredBox(
+                      color: colors.backgroundSecondary,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ComposerPreviewBar(
+                            composer: composer,
+                            onClearMode: () {
+                              final notifier = ref.read(
+                                conversationComposerViewModelProvider(
+                                  widget.scope,
+                                ).notifier,
+                              );
+                              if (composer.mode is ComposerEditing) {
+                                unawaited(notifier.cancelEdit());
+                                return;
+                              }
+                              notifier.clearMode();
+                            },
+                          ),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              ComposerPreviewBar(
-                                composer: composer,
-                                onClearMode: () {
-                                  final notifier = ref.read(
-                                    conversationComposerViewModelProvider(
-                                      widget.scope,
-                                    ).notifier,
-                                  );
-                                  if (composer.mode is ComposerEditing) {
-                                    unawaited(notifier.cancelEdit());
-                                    return;
-                                  }
-                                  notifier.clearMode();
-                                },
-                              ),
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Expanded(
-                                    child: ComposerInputArea(
-                                      composer: composer,
-                                      textController: _textController,
-                                      focusNode: _inputFocusNode,
-                                      inputScrollController:
-                                          _inputScrollController,
-                                      snapPosition: _audioSnapPosition,
-                                      fieldMinHeight: _composerFieldMinHeight,
-                                      onRemoveAttachment: (localId) {
-                                        ref
-                                            .read(
-                                              conversationComposerViewModelProvider(
-                                                widget.scope,
-                                              ).notifier,
-                                            )
-                                            .removeAttachment(localId);
-                                      },
-                                      onRetryAttachment: (localId) {
-                                        return ref
-                                            .read(
-                                              conversationComposerViewModelProvider(
-                                                widget.scope,
-                                              ).notifier,
-                                            )
-                                            .retryAttachment(localId);
-                                      },
-                                      onDeleteAudioDraft: () {
-                                        return ref
-                                            .read(
-                                              conversationComposerViewModelProvider(
-                                                widget.scope,
-                                              ).notifier,
-                                            )
-                                            .cancelAudioRecording();
-                                      },
-                                      onToggleStickerPicker:
-                                          _toggleStickerPicker,
-                                      isStickerPickerOpen:
-                                          widget.isStickerPickerOpen,
-                                      onDraftChanged: (value) {
-                                        unawaited(
-                                          ref
-                                              .read(
-                                                conversationComposerViewModelProvider(
-                                                  widget.scope,
-                                                ).notifier,
-                                              )
-                                              .updateDraft(value),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ],
+                              Expanded(
+                                child: ComposerInputArea(
+                                  composer: composer,
+                                  textController: _textController,
+                                  focusNode: _inputFocusNode,
+                                  inputScrollController: _inputScrollController,
+                                  snapPosition: _audioSnapPosition,
+                                  fieldMinHeight: _composerFieldMinHeight,
+                                  onRemoveAttachment: (localId) {
+                                    ref
+                                        .read(
+                                          conversationComposerViewModelProvider(
+                                            widget.scope,
+                                          ).notifier,
+                                        )
+                                        .removeAttachment(localId);
+                                  },
+                                  onRetryAttachment: (localId) {
+                                    return ref
+                                        .read(
+                                          conversationComposerViewModelProvider(
+                                            widget.scope,
+                                          ).notifier,
+                                        )
+                                        .retryAttachment(localId);
+                                  },
+                                  onDeleteAudioDraft: () {
+                                    return ref
+                                        .read(
+                                          conversationComposerViewModelProvider(
+                                            widget.scope,
+                                          ).notifier,
+                                        )
+                                        .cancelAudioRecording();
+                                  },
+                                  onToggleStickerPicker: _toggleStickerPicker,
+                                  isStickerPickerOpen:
+                                      widget.isStickerPickerOpen,
+                                  onDraftChanged: (value) {
+                                    unawaited(
+                                      ref
+                                          .read(
+                                            conversationComposerViewModelProvider(
+                                              widget.scope,
+                                            ).notifier,
+                                          )
+                                          .updateDraft(value),
+                                    );
+                                  },
+                                  onSend: () {
+                                    return _sendMessage();
+                                  },
+                                ),
                               ),
                             ],
                           ),
-                        ),
+                        ],
                       ),
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  ComposerAudioControls(
-                    showAudioRecordButton: showAudioRecordButton,
-                    showAudioTargets: showAudioTargets,
-                    isSavedDraftPhase: isSavedDraftPhase,
-                    snapPosition: _audioSnapPosition,
-                    dragOffset: _audioDragOffset,
-                    composer: composer,
-                    buttonSize: _composerActionButtonSize,
-                    slotWidth: _composerActionSlotWidth,
-                    onSendRecordedAudio:
-                        showAudioRecordButton || isSavedDraftPhase
-                        ? _sendRecordedAudio
-                        : _sendMessage,
-                    onAudioPointerDown: _handleAudioPointerDown,
-                    onAudioPointerMove: _handleAudioPointerMove,
-                    onAudioPointerFinish: _handleAudioPointerFinish,
-                  ),
-                ],
+                ),
               ),
-            ),
+              const SizedBox(width: 4),
+              ComposerAudioControls(
+                showAudioRecordButton: showAudioRecordButton,
+                showAudioTargets: showAudioTargets,
+                isSavedDraftPhase: isSavedDraftPhase,
+                snapPosition: _audioSnapPosition,
+                dragOffset: _audioDragOffset,
+                composer: composer,
+                buttonSize: _composerActionButtonSize,
+                slotWidth: _composerActionSlotWidth,
+                onSendRecordedAudio: showAudioRecordButton || isSavedDraftPhase
+                    ? _sendRecordedAudio
+                    : _sendMessage,
+                onAudioPointerDown: _handleAudioPointerDown,
+                onAudioPointerMove: _handleAudioPointerMove,
+                onAudioPointerFinish: _handleAudioPointerFinish,
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

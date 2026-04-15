@@ -186,6 +186,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage>
         }
       },
       child: CupertinoPageScaffold(
+        resizeToAvoidBottomInset: false,
         navigationBar: CupertinoNavigationBar(
           middle: _buildNavigationBarTitle(context, metadataAsync),
           leading: CupertinoNavigationBarBackButton(onPressed: _popWithResult),

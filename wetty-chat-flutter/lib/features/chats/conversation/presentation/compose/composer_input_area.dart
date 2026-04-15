@@ -23,6 +23,7 @@ class ComposerInputArea extends StatelessWidget {
     required this.snapPosition,
     required this.fieldMinHeight,
     required this.onDraftChanged,
+    required this.onSend,
     required this.onRemoveAttachment,
     required this.onRetryAttachment,
     required this.onDeleteAudioDraft,
@@ -37,6 +38,7 @@ class ComposerInputArea extends StatelessWidget {
   final ComposerAudioSnapPosition snapPosition;
   final double fieldMinHeight;
   final ValueChanged<String> onDraftChanged;
+  final Future<void> Function() onSend;
   final ValueChanged<String> onRemoveAttachment;
   final Future<void> Function(String localId) onRetryAttachment;
   final Future<void> Function() onDeleteAudioDraft;
@@ -62,6 +64,7 @@ class ComposerInputArea extends StatelessWidget {
           snapPosition: snapPosition,
           fieldMinHeight: fieldMinHeight,
           onDraftChanged: onDraftChanged,
+          onSend: onSend,
           onDeleteAudioDraft: onDeleteAudioDraft,
           onToggleStickerPicker: onToggleStickerPicker,
           isStickerPickerOpen: isStickerPickerOpen,

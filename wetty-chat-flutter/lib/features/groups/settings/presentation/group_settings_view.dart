@@ -10,6 +10,7 @@ import '../../../../app/theme/style_config.dart';
 import '../../../../core/session/dev_session_store.dart';
 import '../../../chats/list/data/chat_repository.dart';
 import '../../members/data/group_member_repository.dart';
+import '../../../../shared/presentation/app_avatar.dart';
 import '../../members/presentation/widgets/group_member_actions.dart';
 import '../../metadata/application/group_metadata_view_model.dart';
 import '../../metadata/data/group_metadata_models.dart';
@@ -191,27 +192,17 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
   }
 
   Widget _buildHeroSection(BuildContext context, ChatMetadata metadata) {
-    final firstLetter = metadata.displayName.isNotEmpty
-        ? metadata.displayName[0].toUpperCase()
-        : '?';
-
     return Column(
       children: [
-        Container(
-          width: 80,
-          height: 80,
-          decoration: const BoxDecoration(
-            color: CupertinoColors.systemGrey4,
-            shape: BoxShape.circle,
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            firstLetter,
-            style: appOnDarkTextStyle(
-              context,
-              fontSize: 32,
-              fontWeight: FontWeight.w600,
-            ),
+        AppAvatar(
+          name: metadata.displayName,
+          imageUrl: metadata.avatarUrl,
+          size: 80,
+          memCacheWidth: 160,
+          fallbackTextStyle: appOnDarkTextStyle(
+            context,
+            fontSize: 32,
+            fontWeight: FontWeight.w600,
           ),
         ),
         const SizedBox(height: 12),

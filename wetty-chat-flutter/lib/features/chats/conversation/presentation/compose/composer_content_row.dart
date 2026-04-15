@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 
 import '../../../../../l10n/app_localizations.dart';
@@ -15,6 +17,7 @@ class ComposerContentRow extends StatelessWidget {
     required this.snapPosition,
     required this.fieldMinHeight,
     required this.onDraftChanged,
+    required this.onSend,
     required this.onDeleteAudioDraft,
     required this.onToggleStickerPicker,
     required this.isStickerPickerOpen,
@@ -28,6 +31,7 @@ class ComposerContentRow extends StatelessWidget {
   final ComposerAudioSnapPosition snapPosition;
   final double fieldMinHeight;
   final ValueChanged<String> onDraftChanged;
+  final Future<void> Function() onSend;
   final Future<void> Function() onDeleteAudioDraft;
   final VoidCallback onToggleStickerPicker;
   final bool isStickerPickerOpen;
@@ -88,7 +92,9 @@ class ComposerContentRow extends StatelessWidget {
                       focusNode: focusNode,
                       scrollController: inputScrollController,
                       onChanged: onDraftChanged,
+                      onSubmitted: (_) => unawaited(onSend()),
                       onTap: onTextFieldTap,
+                      textInputAction: TextInputAction.send,
                       placeholder: l10n.message,
                       maxLines: 5,
                       minLines: 1,
