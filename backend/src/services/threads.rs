@@ -38,14 +38,46 @@ pub fn ensure_thread_subscription(
     Ok(inserted > 0)
 }
 
-/// Explicit subscribe (for "Follow thread" button). Same upsert.
+fn latest_visible_thread_message_id(
+    conn: &mut PgConnection,
+    chat_id: i64,
+    thread_root_id: i64,
+) -> Result<Option<i64>, diesel::result::Error> {
+    messages::table
+        .filter(
+            messages::chat_id
+                .eq(chat_id)
+                .and(messages::deleted_at.is_null())
+                .and(messages::is_published.eq(true))
+                .and(
+                    messages::id
+                        .eq(thread_root_id)
+                        .or(messages::reply_root_id.eq(thread_root_id)),
+                ),
+        )
+        .select(diesel::dsl::max(messages::id))
+        .first(conn)
+}
+
+/// Explicit subscribe (for "Follow thread" button).
 pub fn subscribe_to_thread(
     conn: &mut PgConnection,
     chat_id: i64,
     thread_root_id: i64,
     uid: i32,
 ) -> Result<bool, diesel::result::Error> {
-    ensure_thread_subscription(conn, chat_id, thread_root_id, uid)
+    let last_read_message_id = latest_visible_thread_message_id(conn, chat_id, thread_root_id)?;
+    let inserted = diesel::insert_into(thread_subscriptions::table)
+        .values((
+            thread_subscriptions::chat_id.eq(chat_id),
+            thread_subscriptions::thread_root_id.eq(thread_root_id),
+            thread_subscriptions::uid.eq(uid),
+            thread_subscriptions::last_read_message_id.eq(last_read_message_id),
+            thread_subscriptions::subscribed_at.eq(Utc::now()),
+        ))
+        .on_conflict_do_nothing()
+        .execute(conn)?;
+    Ok(inserted > 0)
 }
 
 /// Explicit unsubscribe (for "Unfollow thread" button).
