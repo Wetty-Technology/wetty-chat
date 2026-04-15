@@ -930,8 +930,10 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline>
                     message: message,
                     chatMessageFontSize: chatMessageFontSize,
                     isHighlighted:
+                        viewState.highlightedMessageId != null &&
+                        message.serverMessageId != null &&
                         viewState.highlightedMessageId ==
-                        message.serverMessageId,
+                            message.serverMessageId,
                     onLongPress: _openMessageOverlay,
                     onReply: () => ref
                         .read(

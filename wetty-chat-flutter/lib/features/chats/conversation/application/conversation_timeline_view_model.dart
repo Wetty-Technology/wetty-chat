@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/websocket_api_models.dart';
 import '../../list/data/chat_repository.dart';
+import 'conversation_local_mutation_registry.dart';
 import 'conversation_realtime_registry.dart';
 import '../data/conversation_repository.dart';
 import '../domain/conversation_message.dart';
@@ -247,9 +248,15 @@ class ConversationTimelineViewModel
     );
     _repository = ref.read(conversationRepositoryProvider(arg.scope));
     final realtimeRegistry = ref.read(conversationRealtimeRegistryProvider);
+    final localMutationRegistry = ref.read(
+      conversationLocalMutationRegistryProvider,
+    );
 
     final realtimeListenerToken = realtimeRegistry.addListener(
       _handleRealtimeEvent,
+    );
+    final localMutationListenerToken = localMutationRegistry.addListener(
+      _handleLocalMutation,
     );
 
     ref.onDispose(() {
@@ -258,6 +265,7 @@ class ConversationTimelineViewModel
       _readSyncDebounceTimer?.cancel();
       _highlightTimer?.cancel();
       realtimeRegistry.removeListener(realtimeListenerToken);
+      localMutationRegistry.removeListener(localMutationListenerToken);
     });
 
     return _loadInitial(arg.launchRequest);
@@ -708,6 +716,55 @@ class ConversationTimelineViewModel
     );
   }
 
+  void _handleLocalMutation(ConversationLocalMutation mutation) {
+    if (mutation.scope.storageKey != arg.scope.storageKey || !state.hasValue) {
+      return;
+    }
+
+    final current = state.requireValue;
+    final shouldTrackLatestWindow =
+        current.windowMode == ConversationWindowMode.liveLatest ||
+        _isViewportAtLiveEdge;
+    final nextWindowStableKeys = switch (mutation.kind) {
+      ConversationLocalMutationKind.inserted ||
+      ConversationLocalMutationKind.removed when shouldTrackLatestWindow =>
+        _repository.latestWindowStableKeys(limit: _windowSize),
+      _ => current.windowStableKeys,
+    };
+    final nextViewportCommand = switch (mutation.kind) {
+      ConversationLocalMutationKind.inserted when shouldTrackLatestWindow =>
+        _settleAtBottomAfterMutationCommand(),
+      _ => current.viewportCommand,
+    };
+    developer.log(
+      'local mutation: kind=${mutation.kind}, '
+      'currentHighlight=${current.highlightedMessageId}, '
+      'preserveHighlight=${current.highlightedMessageId}',
+      name: 'TimelineVM',
+    );
+
+    final nextState = _buildState(
+      windowStableKeys: nextWindowStableKeys,
+      windowMode: current.windowMode,
+      viewportPlacement: current.viewportPlacement,
+      anchorMessageId: current.anchorMessageId,
+      unreadMarkerMessageId: current.unreadMarkerMessageId,
+      highlightedMessageId: current.highlightedMessageId,
+      infoMessage: current.infoMessage,
+      shouldRefreshChats: true,
+      pendingLiveCount: current.pendingLiveCount,
+      viewportCommand: nextViewportCommand,
+    );
+    _setStateIfActive(
+      AsyncData(
+        nextState.copyWith(
+          isLoadingOlder: current.isLoadingOlder,
+          isLoadingNewer: current.isLoadingNewer,
+        ),
+      ),
+    );
+  }
+
   Future<bool> loadOlder({
     String? preserveAnchorStableKey,
     double? preserveAnchorDy,
@@ -925,6 +982,12 @@ class ConversationTimelineViewModel
     if (current == null) {
       return;
     }
+    developer.log(
+      'jumpToLatest: currentHighlight=${current.highlightedMessageId}, '
+      'canLoadNewer=${current.canLoadNewer}, '
+      'windowMode=${current.windowMode}',
+      name: 'TimelineVM',
+    );
     _isViewportAtLiveEdge = true;
     _pendingLiveMessageIds.clear();
     if (!_repository.hasNewerOutsideWindow(current.windowStableKeys)) {
@@ -961,6 +1024,12 @@ class ConversationTimelineViewModel
     if (current == null) {
       return false;
     }
+    developer.log(
+      'jumpToMessage: messageId=$messageId, '
+      'highlight=$highlight, '
+      'currentHighlight=${current.highlightedMessageId}',
+      name: 'TimelineVM',
+    );
     _isViewportAtLiveEdge = false;
     final targetIndex = _repository.findWindowIndex(
       current.windowStableKeys,
@@ -986,6 +1055,11 @@ class ConversationTimelineViewModel
             viewportCommand: _scrollToLoadedTargetCommand(messageId),
           ),
         ),
+      );
+      developer.log(
+        'jumpToMessage: applied cached target, '
+        'newHighlight=${highlight ? messageId : null}',
+        name: 'TimelineVM',
       );
       if (highlight) {
         _scheduleHighlightClear();
@@ -1017,6 +1091,11 @@ class ConversationTimelineViewModel
           viewportCommand: _bootstrapTargetCommand(messageId),
         ),
       ),
+    );
+    developer.log(
+      'jumpToMessage: applied fetched target, '
+      'newHighlight=${highlight ? messageId : null}',
+      name: 'TimelineVM',
     );
     if (highlight) {
       _scheduleHighlightClear();
@@ -1173,9 +1252,17 @@ class ConversationTimelineViewModel
 
   void _scheduleHighlightClear() {
     _highlightTimer?.cancel();
+    developer.log(
+      'scheduleHighlightClear: currentHighlight=${state.value?.highlightedMessageId}',
+      name: 'TimelineVM',
+    );
     _highlightTimer = Timer(const Duration(seconds: 2), () {
       final current = state.value;
       if (current != null) {
+        developer.log(
+          'scheduleHighlightClear: clearing highlight=${current.highlightedMessageId}',
+          name: 'TimelineVM',
+        );
         _setStateIfActive(
           AsyncData(current.copyWith(highlightedMessageId: null)),
         );

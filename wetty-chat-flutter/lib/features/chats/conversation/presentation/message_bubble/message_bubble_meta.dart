@@ -22,8 +22,10 @@ class MessageBubbleMeta extends StatelessWidget {
   Widget build(BuildContext context) {
     final showDeliveryStatus = isMe && !message.isFailed;
     final deliveryIndicator = switch (message.deliveryState) {
-      ConversationDeliveryState.sending => const CupertinoActivityIndicator(
-        radius: MessageBubblePresentation.statusIconSize / 2,
+      ConversationDeliveryState.sending => Icon(
+        CupertinoIcons.checkmark_alt_circle,
+        size: MessageBubblePresentation.statusIconSize,
+        color: presentation.metaColor,
       ),
       ConversationDeliveryState.sent => Icon(
         CupertinoIcons.checkmark_alt_circle,

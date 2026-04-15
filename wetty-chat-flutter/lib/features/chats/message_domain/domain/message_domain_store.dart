@@ -150,6 +150,20 @@ class MessageDomainStore {
 
   ConversationMessage applyEditConfirmed(ConversationMessage message) {
     final merged = _mergeIncoming(
+      message.copyWith(deliveryState: ConversationDeliveryState.confirmed),
+    );
+    _syncThreadAnchorStateFromMessage(merged);
+    if (_isThreadAnchor(merged)) {
+      _ensureThreadWindowContainsAnchor(
+        chatId: merged.scope.chatId,
+        anchorId: merged.serverMessageId!,
+      );
+    }
+    return merged;
+  }
+
+  ConversationMessage applyEditAccepted(ConversationMessage message) {
+    final merged = _mergeIncoming(
       message.copyWith(deliveryState: ConversationDeliveryState.sent),
     );
     _syncThreadAnchorStateFromMessage(merged);

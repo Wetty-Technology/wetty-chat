@@ -472,10 +472,14 @@ class ConversationRepository {
     _store.applySendFailed(clientGeneratedId);
   }
 
+  ConversationMessage restartFailedSend(ConversationMessage message) {
+    return _store.retryFailedSend(message);
+  }
+
   Future<ConversationMessage> retryFailedSend(
     ConversationMessage message,
   ) async {
-    final optimistic = _store.retryFailedSend(message);
+    final optimistic = restartFailedSend(message);
     return commitSend(
       clientGeneratedId: optimistic.clientGeneratedId,
       text: optimistic.message ?? '',
@@ -489,7 +493,7 @@ class ConversationRepository {
     _removeStableKey(message.stableKey);
   }
 
-  ConversationMessage? beginOptimisticEdit(int messageId) {
+  ConversationMessage? beginOptimisticEdit(int messageId, String newText) {
     final stableKey = _store.stableKeyForServerId(messageId);
     if (stableKey == null) {
       return null;
@@ -500,7 +504,9 @@ class ConversationRepository {
     }
     _optimisticSnapshots[stableKey] = message;
     final updating = message.copyWith(
-      deliveryState: ConversationDeliveryState.editing,
+      message: newText,
+      isEdited: true,
+      deliveryState: ConversationDeliveryState.sending,
     );
     _store.upsertCanonicalMessage(updating);
     return updating;
@@ -734,7 +740,7 @@ class ConversationRepository {
   }
 
   ConversationMessage _applyServerUpdated(ConversationMessage incoming) {
-    final message = _store.applyEditConfirmed(
+    final message = _store.applyEditAccepted(
       _mergeIncomingSnapshot(
         incoming,
         deliveryState: ConversationDeliveryState.sent,

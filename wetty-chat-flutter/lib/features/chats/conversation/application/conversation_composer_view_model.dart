@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -18,6 +19,7 @@ import '../data/audio_waveform_cache_service.dart';
 import '../data/conversation_repository.dart';
 import '../domain/conversation_message.dart';
 import '../domain/conversation_scope.dart';
+import 'conversation_local_mutation_registry.dart';
 import 'conversation_draft_store.dart';
 
 const int composerMaxAttachments =
@@ -339,6 +341,7 @@ class ConversationComposerViewModel
   late final AttachmentPickerService _pickerService;
   late final AudioRecorderService _audioRecorderService;
   late final AudioWaveformCacheService _audioWaveformCacheService;
+  late final ConversationLocalMutationRegistry _localMutationRegistry;
   late final ConversationScope _scope;
   Timer? _audioDurationTimer;
   DateTime? _audioRecordingStartedAt;
@@ -353,6 +356,9 @@ class ConversationComposerViewModel
     _pickerService = ref.read(attachmentPickerServiceProvider);
     _audioRecorderService = ref.read(audioRecorderServiceProvider);
     _audioWaveformCacheService = ref.read(audioWaveformCacheServiceProvider);
+    _localMutationRegistry = ref.read(
+      conversationLocalMutationRegistryProvider,
+    );
     ref.onDispose(() {
       _audioDurationTimer?.cancel();
       unawaited(_audioRecorderService.dispose());
@@ -495,21 +501,27 @@ class ConversationComposerViewModel
       if (attachmentIds.isNotEmpty) {
         throw Exception('Editing messages does not support attachments');
       }
-      _repository.beginOptimisticEdit(mode.message.serverMessageId!);
-      try {
-        await _repository.commitEdit(mode.message.serverMessageId!, trimmed);
-        state = state.copyWith(
-          draft: '',
-          mode: const ComposerIdle(),
-          attachments: const <ComposerAttachment>[],
-          audioDraft: null,
-          savedDraftBeforeEdit: null,
-        );
-        await _draftStore.clearDraft(_scope);
-      } catch (_) {
-        _repository.rollbackEdit(mode.message.serverMessageId!);
-        rethrow;
-      }
+      final messageId = mode.message.serverMessageId!;
+      final originalMessage = mode.message;
+      final savedDraftBeforeEdit = state.savedDraftBeforeEdit;
+      _repository.beginOptimisticEdit(messageId, trimmed);
+      _dispatchLocalMutation(ConversationLocalMutationKind.updated);
+      state = state.copyWith(
+        draft: '',
+        mode: const ComposerIdle(),
+        attachments: const <ComposerAttachment>[],
+        audioDraft: null,
+        savedDraftBeforeEdit: null,
+      );
+      await _draftStore.clearDraft(_scope);
+      unawaited(
+        _commitEditInBackground(
+          messageId: messageId,
+          newText: trimmed,
+          originalMessage: originalMessage,
+          savedDraftBeforeEdit: savedDraftBeforeEdit,
+        ),
+      );
       return;
     }
 
@@ -971,6 +983,7 @@ class ConversationComposerViewModel
       replyToId: request.replyToId,
       sticker: request.sticker,
     );
+    _dispatchLocalMutation(ConversationLocalMutationKind.inserted);
     state = state.copyWith(
       draft: '',
       mode: const ComposerIdle(),
@@ -991,7 +1004,41 @@ class ConversationComposerViewModel
       );
     } catch (_) {
       _repository.markSendFailed(clientGeneratedId);
+      _dispatchLocalMutation(ConversationLocalMutationKind.updated);
       rethrow;
+    }
+  }
+
+  Future<void> _commitEditInBackground({
+    required int messageId,
+    required String newText,
+    required ConversationMessage originalMessage,
+    required String? savedDraftBeforeEdit,
+  }) async {
+    try {
+      await _repository.commitEdit(messageId, newText);
+      _dispatchLocalMutation(ConversationLocalMutationKind.updated);
+    } catch (error, stackTrace) {
+      developer.log(
+        'edit commit failed for messageId=$messageId',
+        name: 'ComposerVM',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      _repository.rollbackEdit(messageId);
+      _dispatchLocalMutation(ConversationLocalMutationKind.updated);
+      state = state.copyWith(
+        draft: newText,
+        mode: ComposerEditing(originalMessage),
+        attachments: const <ComposerAttachment>[],
+        audioDraft: null,
+        savedDraftBeforeEdit: savedDraftBeforeEdit,
+      );
+      if (newText.trim().isEmpty) {
+        await _draftStore.clearDraft(_scope);
+      } else {
+        await _draftStore.setDraft(_scope, newText);
+      }
     }
   }
 
@@ -1030,23 +1077,48 @@ class ConversationComposerViewModel
     final messageId = message.serverMessageId;
     if (messageId == null) {
       _repository.discardFailedMessage(message);
+      _dispatchLocalMutation(ConversationLocalMutationKind.removed);
       return;
     }
     _repository.beginOptimisticDelete(messageId);
+    _dispatchLocalMutation(ConversationLocalMutationKind.removed);
     try {
       await _repository.commitDelete(messageId);
+      _dispatchLocalMutation(ConversationLocalMutationKind.removed);
     } catch (_) {
       _repository.rollbackDelete(messageId);
+      _dispatchLocalMutation(ConversationLocalMutationKind.updated);
       rethrow;
     }
   }
 
   Future<void> retryFailedMessage(ConversationMessage message) async {
-    await _repository.retryFailedSend(message);
+    final optimistic = _repository.restartFailedSend(message);
+    _dispatchLocalMutation(ConversationLocalMutationKind.updated);
+    try {
+      await _repository.commitSend(
+        clientGeneratedId: optimistic.clientGeneratedId,
+        text: optimistic.message ?? '',
+        messageType: optimistic.messageType,
+        attachmentIds: optimistic.attachments.map((item) => item.id).toList(),
+        replyToId: optimistic.replyRootId,
+      );
+    } catch (_) {
+      _repository.markSendFailed(optimistic.clientGeneratedId);
+      _dispatchLocalMutation(ConversationLocalMutationKind.updated);
+      rethrow;
+    }
   }
 
   Future<void> discardFailedMessage(ConversationMessage message) async {
     _repository.discardFailedMessage(message);
+    _dispatchLocalMutation(ConversationLocalMutationKind.removed);
+  }
+
+  void _dispatchLocalMutation(ConversationLocalMutationKind kind) {
+    _localMutationRegistry.dispatch(
+      ConversationLocalMutation(scope: _scope, kind: kind),
+    );
   }
 }
 

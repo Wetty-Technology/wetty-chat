@@ -99,8 +99,11 @@ void main() {
       notifier.beginEdit(_message(scope, id: 44, text: 'message being edited'));
 
       await notifier.send(text: 'edited message');
+      await Future<void>.delayed(Duration.zero);
 
       final state = container.read(provider);
+      expect(repository.beginEditMessageId, 44);
+      expect(repository.beginEditText, 'edited message');
       expect(repository.lastEditedMessageId, 44);
       expect(repository.lastEditedText, 'edited message');
       expect(state.mode, isA<ComposerIdle>());
@@ -166,12 +169,14 @@ class _FakeConversationRepository extends ConversationRepository {
       );
 
   int? beginEditMessageId;
+  String? beginEditText;
   int? lastEditedMessageId;
   String? lastEditedText;
 
   @override
-  ConversationMessage? beginOptimisticEdit(int messageId) {
+  ConversationMessage? beginOptimisticEdit(int messageId, String newText) {
     beginEditMessageId = messageId;
+    beginEditText = newText;
     return null;
   }
 
