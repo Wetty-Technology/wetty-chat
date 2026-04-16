@@ -16,6 +16,15 @@ import 'dio_client.dart';
 /// Manages the WebSocket connection.
 /// Handles ticket-based auth, keep-alive (pings), and broadcasts events.
 class WebSocketService {
+  WebSocketService(
+    this._dio, {
+    Future<String> Function()? ticketLoader,
+    WebSocketChannel Function(Uri uri)? channelFactory,
+    Duration pingInterval = const Duration(seconds: 30),
+  }) : _ticketLoader = ticketLoader,
+       _channelFactory = channelFactory,
+       _pingInterval = pingInterval;
+
   WebSocketChannel? _channel;
   final StreamController<ApiWsEvent> _eventController =
       StreamController<ApiWsEvent>.broadcast();
@@ -25,10 +34,18 @@ class WebSocketService {
   Timer? _pingTimer;
   Timer? _reconnectTimer;
   bool _isConnecting = false;
+  WsClientAppState _appState = WsClientAppState.active;
 
   final Dio _dio;
+  final Future<String> Function()? _ticketLoader;
+  final WebSocketChannel Function(Uri uri)? _channelFactory;
+  final Duration _pingInterval;
 
-  WebSocketService(this._dio);
+  @visibleForTesting
+  WsClientAppState get appState => _appState;
+
+  @visibleForTesting
+  bool get isConnected => _channel != null;
 
   /// Initialize the connection.
   Future<void> init() async {
@@ -38,16 +55,18 @@ class WebSocketService {
 
     try {
       // Fetch auth ticket
-      final ticketRes = await _dio.get<Map<String, dynamic>>('/ws/ticket');
-      final ticket = WsTicketResponseDto.fromJson(ticketRes.data!).ticket;
+      final ticket = await _loadTicket();
 
       // create a WebSocketChannel
       final wsUrl = '${apiBaseUrl.replaceFirst('http', 'ws')}/ws';
       debugPrint('[WS] connecting to $wsUrl');
-      _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
+      _channel = (_channelFactory ?? WebSocketChannel.connect)(
+        Uri.parse(wsUrl),
+      );
 
       // Send auth message
       _channel!.sink.add(jsonEncode(WsAuthMessageDto(ticket: ticket).toJson()));
+      _sendCurrentAppState(force: true);
 
       // Listen for messages
       _channel!.stream.listen(
@@ -74,11 +93,7 @@ class WebSocketService {
 
       // Start ping loop (every 30 seconds)
       _pingTimer?.cancel();
-      _pingTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
-        if (_channel != null) {
-          _channel!.sink.add(jsonEncode(const WsPingMessageDto().toJson()));
-        }
-      });
+      _pingTimer = Timer.periodic(_pingInterval, (timer) => _sendPing());
 
       debugPrint('[WS] connected');
       _isConnecting = false;
@@ -114,6 +129,41 @@ class WebSocketService {
     _reconnectTimer?.cancel();
     _channel?.sink.close();
     _eventController.close();
+  }
+
+  void updateAppState(WsClientAppState nextState) {
+    if (_appState == nextState) return;
+    _appState = nextState;
+    _sendCurrentAppState(force: false);
+  }
+
+  Future<String> _loadTicket() async {
+    final ticketLoader = _ticketLoader;
+    if (ticketLoader != null) {
+      return ticketLoader();
+    }
+    final ticketRes = await _dio.get<Map<String, dynamic>>('/ws/ticket');
+    return WsTicketResponseDto.fromJson(ticketRes.data!).ticket;
+  }
+
+  void _sendCurrentAppState({required bool force}) {
+    if (_channel == null) return;
+    _sendAppStateMessage();
+    _sendPing();
+  }
+
+  void _sendAppStateMessage() {
+    final channel = _channel;
+    if (channel == null) return;
+    channel.sink.add(
+      jsonEncode(WsAppStateMessageDto(state: _appState).toJson()),
+    );
+  }
+
+  void _sendPing() {
+    final channel = _channel;
+    if (channel == null) return;
+    channel.sink.add(jsonEncode(WsPingMessageDto(state: _appState).toJson()));
   }
 }
 

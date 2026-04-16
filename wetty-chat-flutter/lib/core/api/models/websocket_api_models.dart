@@ -5,6 +5,13 @@ import 'messages_api_models.dart';
 
 part 'websocket_api_models.g.dart';
 
+enum WsClientAppState {
+  @JsonValue('active')
+  active,
+  @JsonValue('inactive')
+  inactive,
+}
+
 @JsonSerializable(explicitToJson: true)
 class WsTicketResponseDto {
   const WsTicketResponseDto({required this.ticket});
@@ -32,14 +39,28 @@ class WsAuthMessageDto {
 
 @JsonSerializable(explicitToJson: true)
 class WsPingMessageDto {
-  const WsPingMessageDto({this.type = 'ping'});
+  const WsPingMessageDto({this.type = 'ping', this.state});
 
   final String type;
+  final WsClientAppState? state;
 
   factory WsPingMessageDto.fromJson(Map<String, dynamic> json) =>
       _$WsPingMessageDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$WsPingMessageDtoToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
+class WsAppStateMessageDto {
+  const WsAppStateMessageDto({this.type = 'appState', required this.state});
+
+  final String type;
+  final WsClientAppState state;
+
+  factory WsAppStateMessageDto.fromJson(Map<String, dynamic> json) =>
+      _$WsAppStateMessageDtoFromJson(json);
+
+  Map<String, dynamic> toJson() => _$WsAppStateMessageDtoToJson(this);
 }
 
 sealed class ApiWsEvent {

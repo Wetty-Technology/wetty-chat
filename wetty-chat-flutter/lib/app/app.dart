@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/app_localizations.dart';
 import '../core/network/api_config.dart';
+import '../core/network/ws_app_visibility.dart';
 import '../core/network/ws_event_router.dart';
+import '../core/network/websocket_service.dart';
 import '../core/notifications/apns_channel.dart';
 import '../core/notifications/notification_tap_handler.dart';
 import '../core/notifications/push_notification_provider.dart';
@@ -43,6 +45,7 @@ class _WettyChatAppState extends ConsumerState<WettyChatApp>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    ref.read(webSocketProvider).updateAppState(mapLifecycleToWsAppState(state));
     if (state == AppLifecycleState.resumed) {
       // Retry push subscription if a previous attempt failed.
       ref.read(pushNotificationProvider.notifier).ensureSubscribed();

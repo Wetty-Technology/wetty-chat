@@ -23,10 +23,35 @@ Map<String, dynamic> _$WsAuthMessageDtoToJson(WsAuthMessageDto instance) =>
     <String, dynamic>{'type': instance.type, 'ticket': instance.ticket};
 
 WsPingMessageDto _$WsPingMessageDtoFromJson(Map<String, dynamic> json) =>
-    WsPingMessageDto(type: json['type'] as String? ?? 'ping');
+    WsPingMessageDto(
+      type: json['type'] as String? ?? 'ping',
+      state: $enumDecodeNullable(_$WsClientAppStateEnumMap, json['state']),
+    );
 
 Map<String, dynamic> _$WsPingMessageDtoToJson(WsPingMessageDto instance) =>
-    <String, dynamic>{'type': instance.type};
+    <String, dynamic>{
+      'type': instance.type,
+      'state': _$WsClientAppStateEnumMap[instance.state],
+    };
+
+const _$WsClientAppStateEnumMap = {
+  WsClientAppState.active: 'active',
+  WsClientAppState.inactive: 'inactive',
+};
+
+WsAppStateMessageDto _$WsAppStateMessageDtoFromJson(
+  Map<String, dynamic> json,
+) => WsAppStateMessageDto(
+  type: json['type'] as String? ?? 'appState',
+  state: $enumDecode(_$WsClientAppStateEnumMap, json['state']),
+);
+
+Map<String, dynamic> _$WsAppStateMessageDtoToJson(
+  WsAppStateMessageDto instance,
+) => <String, dynamic>{
+  'type': instance.type,
+  'state': _$WsClientAppStateEnumMap[instance.state]!,
+};
 
 MessageCreatedWsEvent _$MessageCreatedWsEventFromJson(
   Map<String, dynamic> json,
