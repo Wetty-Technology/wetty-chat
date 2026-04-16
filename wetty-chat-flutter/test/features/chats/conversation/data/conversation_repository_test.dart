@@ -439,35 +439,69 @@ void main() {
       },
     );
 
-    test('provider-backed repository bumps scope revision for realtime events', () async {
-      final service = _FakeMessageApiService(
-        messages: [
-          _message(id: 10, message: 'Root one'),
-          _message(id: 11, message: 'Root two'),
-        ],
-      );
-      final container = ProviderContainer(
-        overrides: [
-          messageApiServiceProvider.overrideWithValue(service),
-        ],
-      );
-      addTearDown(container.dispose);
-      const scope = ConversationScope.chat(chatId: '1');
-      final repository = container.read(conversationRepositoryProvider(scope));
+    test(
+      'provider-backed repository bumps scope revision for realtime events',
+      () async {
+        final service = _FakeMessageApiService(
+          messages: [
+            _message(id: 10, message: 'Root one'),
+            _message(id: 11, message: 'Root two'),
+          ],
+        );
+        final container = ProviderContainer(
+          overrides: [messageApiServiceProvider.overrideWithValue(service)],
+        );
+        addTearDown(container.dispose);
+        const scope = ConversationScope.chat(chatId: '1');
+        final repository = container.read(
+          conversationRepositoryProvider(scope),
+        );
 
-      await repository.loadLatestWindow();
-      final before = container.read(conversationCacheRevisionProvider(scope));
+        await repository.loadLatestWindow();
+        final before = container.read(conversationCacheRevisionProvider(scope));
 
-      final handled = repository.applyRealtimeEvent(
-        MessageCreatedWsEvent(
-          payload: _message(id: 12, message: 'Root three'),
-        ),
-      );
+        final handled = repository.applyRealtimeEvent(
+          MessageCreatedWsEvent(
+            payload: _message(id: 12, message: 'Root three'),
+          ),
+        );
 
-      final after = container.read(conversationCacheRevisionProvider(scope));
-      expect(handled, isTrue);
-      expect(after, greaterThan(before));
-    });
+        final after = container.read(conversationCacheRevisionProvider(scope));
+        expect(handled, isTrue);
+        expect(after, greaterThan(before));
+      },
+    );
+
+    test(
+      'loading a historical range does not replace the cached latest range',
+      () async {
+        final service = _FakeMessageApiService(
+          messages: List<MessageItemDto>.generate(
+            150,
+            (index) => _message(id: index + 1, message: 'Message ${index + 1}'),
+          ),
+        );
+        final repository = ConversationRepository(
+          scope: const ConversationScope.chat(chatId: '1'),
+          service: service,
+          store: MessageDomainStore(),
+        );
+
+        await repository.loadLatestWindow();
+        final latestBefore = repository.latestWindowStableKeys();
+
+        final historical = await repository.loadAroundMessage(10);
+        final latestAfter = repository.latestWindowStableKeys();
+
+        expect(
+          historical.map((message) => message.serverMessageId),
+          contains(10),
+        );
+        expect(latestBefore.first, 'server:51');
+        expect(latestBefore.last, 'server:150');
+        expect(latestAfter, latestBefore);
+      },
+    );
   });
 
   group('ConversationRepository reactions', () {

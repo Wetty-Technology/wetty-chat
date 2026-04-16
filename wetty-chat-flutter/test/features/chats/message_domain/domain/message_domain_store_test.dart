@@ -322,6 +322,36 @@ void main() {
     });
 
     test(
+      'thread anchor is not treated as a complete around-window without replies',
+      () {
+        final store = MessageDomainStore();
+        store.reconcileFetchedWindow(
+          scope: chatScope,
+          messages: [
+            _serverMessage(
+              scope: chatScope,
+              id: 10,
+              chatId: 'chat-1',
+              sender: sender,
+              text: 'Anchor',
+              threadInfo: const ThreadInfo(replyCount: 2),
+            ),
+          ],
+        );
+
+        expect(
+          store.hasVisibleWindowAroundServerMessage(
+            threadScope,
+            10,
+            before: 0,
+            after: 1,
+          ),
+          isFalse,
+        );
+      },
+    );
+
+    test(
       'replying to a deleted anchor is allowed and keeps the thread active',
       () {
         final store = MessageDomainStore();

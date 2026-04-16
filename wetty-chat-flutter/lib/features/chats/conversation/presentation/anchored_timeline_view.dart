@@ -91,8 +91,22 @@ class _AnchoredTimelineViewState extends State<AnchoredTimelineView> {
       }
       _initController();
     }
+    final oldAnchorKey = oldWidget.entries.isEmpty
+        ? null
+        : oldWidget
+              .entries[oldWidget.anchorIndex.clamp(
+                0,
+                oldWidget.entries.length - 1,
+              )]
+              .key;
+    final newAnchorKey = widget.entries.isEmpty
+        ? null
+        : widget
+              .entries[widget.anchorIndex.clamp(0, widget.entries.length - 1)]
+              .key;
     if (widget.viewportPlacement != oldWidget.viewportPlacement ||
         widget.anchorIndex != oldWidget.anchorIndex ||
+        oldAnchorKey != newAnchorKey ||
         widget.entries.length != oldWidget.entries.length ||
         widget.bottomPadding != oldWidget.bottomPadding) {
       _topPreferredAlignment = 0;

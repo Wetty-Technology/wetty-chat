@@ -24,11 +24,13 @@ enum ConversationWindowMode { liveLatest, anchoredTarget, historyBrowsing }
 
 enum ConversationViewportCommandType {
   showLatest,
+  showLatestImmediate,
   bootstrapTarget,
   scrollToLoadedTarget,
   preserveOnPrepend,
   preserveOnAppend,
   settleAtBottomAfterMutation,
+  settleAtBottomAfterLatestRefresh,
   settleAtBottomAfterViewportResize,
 }
 
@@ -48,6 +50,15 @@ class ConversationViewportCommand {
   }) : this._(
          transactionId: transactionId,
          type: ConversationViewportCommandType.showLatest,
+         placement: placement,
+       );
+
+  const ConversationViewportCommand.showLatestImmediate({
+    required int transactionId,
+    required ConversationViewportPlacement placement,
+  }) : this._(
+         transactionId: transactionId,
+         type: ConversationViewportCommandType.showLatestImmediate,
          placement: placement,
        );
 
@@ -108,6 +119,15 @@ class ConversationViewportCommand {
          placement: placement,
        );
 
+  const ConversationViewportCommand.settleAtBottomAfterLatestRefresh({
+    required int transactionId,
+    required ConversationViewportPlacement placement,
+  }) : this._(
+         transactionId: transactionId,
+         type: ConversationViewportCommandType.settleAtBottomAfterLatestRefresh,
+         placement: placement,
+       );
+
   const ConversationViewportCommand.settleAtBottomAfterViewportResize({
     required int transactionId,
     required ConversationViewportPlacement placement,
@@ -141,6 +161,7 @@ class ConversationTimelineState {
     required this.anchorEntryIndex,
     this.isLoadingOlder = false,
     this.isLoadingNewer = false,
+    this.isReplacingRange = false,
     this.pendingLiveCount = 0,
     this.highlightedMessageId,
     this.anchorMessageId,
@@ -162,6 +183,7 @@ class ConversationTimelineState {
 
   final bool isLoadingOlder;
   final bool isLoadingNewer;
+  final bool isReplacingRange;
   final int pendingLiveCount;
   final int? highlightedMessageId;
   final int? anchorMessageId;
@@ -180,6 +202,7 @@ class ConversationTimelineState {
     int? anchorEntryIndex,
     bool? isLoadingOlder,
     bool? isLoadingNewer,
+    bool? isReplacingRange,
     int? pendingLiveCount,
     Object? highlightedMessageId = _sentinel,
     Object? anchorMessageId = _sentinel,
@@ -198,6 +221,7 @@ class ConversationTimelineState {
       anchorEntryIndex: anchorEntryIndex ?? this.anchorEntryIndex,
       isLoadingOlder: isLoadingOlder ?? this.isLoadingOlder,
       isLoadingNewer: isLoadingNewer ?? this.isLoadingNewer,
+      isReplacingRange: isReplacingRange ?? this.isReplacingRange,
       pendingLiveCount: pendingLiveCount ?? this.pendingLiveCount,
       highlightedMessageId: highlightedMessageId == _sentinel
           ? this.highlightedMessageId
@@ -238,11 +262,15 @@ class ConversationTimelineViewModel
   bool _isResumeRefreshInFlight = false;
   final Set<int> _pendingLiveMessageIds = <int>{};
   int _nextViewportTransactionId = 1;
+  int _rangeSessionId = 0;
 
   @override
   Future<ConversationTimelineState> build() async {
     _isDisposed = false;
-    ref.listen<int>(conversationCacheRevisionProvider(arg.scope), (previous, next) {
+    ref.listen<int>(conversationCacheRevisionProvider(arg.scope), (
+      previous,
+      next,
+    ) {
       _rebuildCurrentState();
     });
     developer.log(
@@ -487,6 +515,7 @@ class ConversationTimelineViewModel
           ).copyWith(
             isLoadingOlder: current.isLoadingOlder,
             isLoadingNewer: current.isLoadingNewer,
+            isReplacingRange: current.isReplacingRange,
           ),
         ),
       );
@@ -530,6 +559,7 @@ class ConversationTimelineViewModel
             fallbackState.copyWith(
               isLoadingOlder: current.isLoadingOlder,
               isLoadingNewer: current.isLoadingNewer,
+              isReplacingRange: current.isReplacingRange,
             ),
           ),
         );
@@ -551,6 +581,7 @@ class ConversationTimelineViewModel
           ).copyWith(
             isLoadingOlder: current.isLoadingOlder,
             isLoadingNewer: current.isLoadingNewer,
+            isReplacingRange: current.isReplacingRange,
           ),
         ),
       );
@@ -671,8 +702,8 @@ class ConversationTimelineViewModel
 
     final current = state.requireValue;
     final pendingLiveCount = _applyPendingLiveMutation(event);
-    final nextWindowStableKeys = current.windowMode ==
-            ConversationWindowMode.liveLatest
+    final nextWindowStableKeys =
+        current.windowMode == ConversationWindowMode.liveLatest
         ? _repository.latestWindowStableKeys(limit: _windowSize)
         : current.windowStableKeys;
     final nextViewportCommand =
@@ -700,6 +731,7 @@ class ConversationTimelineViewModel
         nextState.copyWith(
           isLoadingOlder: current.isLoadingOlder,
           isLoadingNewer: current.isLoadingNewer,
+          isReplacingRange: current.isReplacingRange,
         ),
       ),
     );
@@ -749,6 +781,7 @@ class ConversationTimelineViewModel
         nextState.copyWith(
           isLoadingOlder: current.isLoadingOlder,
           isLoadingNewer: current.isLoadingNewer,
+          isReplacingRange: current.isReplacingRange,
         ),
       ),
     );
@@ -775,6 +808,7 @@ class ConversationTimelineViewModel
       'first=${current.windowStableKeys.firstOrNull}',
       name: 'TimelineVM',
     );
+    final sessionId = _rangeSessionId;
     _setStateIfActive(AsyncData(current.copyWith(isLoadingOlder: true)));
     final oldestStableKey = current.windowStableKeys.firstOrNull;
     if (oldestStableKey == null) {
@@ -787,6 +821,13 @@ class ConversationTimelineViewModel
         anchorStableKey: oldestStableKey,
         pageSize: _pageSize,
       );
+      if (sessionId != _rangeSessionId) {
+        final latest = state.value;
+        if (latest != null && latest.isLoadingOlder) {
+          _setStateIfActive(AsyncData(latest.copyWith(isLoadingOlder: false)));
+        }
+        return false;
+      }
       var nextWindow = _repository.prependWindowPage(
         current.windowStableKeys,
         oldestStableKey,
@@ -874,6 +915,7 @@ class ConversationTimelineViewModel
     if (current == null || current.isLoadingNewer || !current.canLoadNewer) {
       return false;
     }
+    final sessionId = _rangeSessionId;
     _setStateIfActive(AsyncData(current.copyWith(isLoadingNewer: true)));
     final newestStableKey = current.windowStableKeys.lastOrNull;
     if (newestStableKey == null) {
@@ -886,6 +928,13 @@ class ConversationTimelineViewModel
         anchorStableKey: newestStableKey,
         pageSize: _pageSize,
       );
+      if (sessionId != _rangeSessionId) {
+        final latest = state.value;
+        if (latest != null && latest.isLoadingNewer) {
+          _setStateIfActive(AsyncData(latest.copyWith(isLoadingNewer: false)));
+        }
+        return false;
+      }
       var nextWindow = _repository.appendWindowPage(
         current.windowStableKeys,
         newestStableKey,
@@ -977,35 +1026,85 @@ class ConversationTimelineViewModel
       'windowMode=${current.windowMode}',
       name: 'TimelineVM',
     );
+    _rangeSessionId += 1;
     _isViewportAtLiveEdge = true;
     _pendingLiveMessageIds.clear();
-    if (!_repository.hasNewerOutsideWindow(current.windowStableKeys)) {
-      _setStateIfActive(
-        AsyncData(
-          _buildState(
-            windowStableKeys: current.windowStableKeys,
-            windowMode: ConversationWindowMode.liveLatest,
-            viewportPlacement: ConversationViewportPlacement.liveEdge,
-            shouldRefreshChats: current.shouldRefreshChats,
-            pendingLiveCount: 0,
-            viewportCommand: _settleAtBottomAfterMutationCommand(),
-          ),
-        ),
-      );
-      return;
-    }
-    final latest = await _repository.refreshLatestWindow(limit: _windowSize);
+    final latestWindowStableKeys = _repository.latestWindowStableKeys(
+      limit: _windowSize,
+    );
+    final immediateWindowStableKeys = latestWindowStableKeys.isNotEmpty
+        ? latestWindowStableKeys
+        : current.windowStableKeys;
+    final previousTailStableKey = immediateWindowStableKeys.lastOrNull;
     _setStateIfActive(
       AsyncData(
         _buildState(
-          windowStableKeys: latest.map((item) => item.stableKey).toList(),
+          windowStableKeys: immediateWindowStableKeys,
           windowMode: ConversationWindowMode.liveLatest,
           viewportPlacement: ConversationViewportPlacement.liveEdge,
+          shouldRefreshChats: current.shouldRefreshChats,
           pendingLiveCount: 0,
-          viewportCommand: _showLatestCommand(),
+          viewportCommand: _showLatestImmediateCommand(),
         ),
       ),
     );
+    if (!_repository.hasNewerOutsideWindow(immediateWindowStableKeys)) {
+      return;
+    }
+    unawaited(_refreshLatestAfterReturnToLiveEdge(previousTailStableKey));
+  }
+
+  Future<void> scrollToLoadedMessage(
+    int messageId, {
+    bool highlight = true,
+  }) async {
+    final current = state.value;
+    if (current == null) {
+      return;
+    }
+    _isViewportAtLiveEdge = false;
+    _setStateIfActive(
+      AsyncData(
+        current.copyWith(
+          highlightedMessageId: highlight ? messageId : null,
+          viewportCommand: _scrollToLoadedTargetCommand(messageId),
+        ),
+      ),
+    );
+    if (highlight) {
+      _scheduleHighlightClear();
+    }
+  }
+
+  Future<void> relocateToLoadedMessage(
+    int messageId, {
+    bool highlight = true,
+  }) async {
+    final current = state.value;
+    if (current == null) {
+      return;
+    }
+    _rangeSessionId += 1;
+    _isViewportAtLiveEdge = false;
+    _setStateIfActive(AsyncData(current.copyWith(isReplacingRange: true)));
+    _setStateIfActive(
+      AsyncData(
+        _buildState(
+          windowStableKeys: current.windowStableKeys,
+          windowMode: ConversationWindowMode.anchoredTarget,
+          viewportPlacement: ConversationViewportPlacement.topPreferred,
+          anchorMessageId: messageId,
+          highlightedMessageId: highlight ? messageId : null,
+          shouldRefreshChats: current.shouldRefreshChats,
+          pendingLiveCount: current.pendingLiveCount,
+          unreadMarkerMessageId: current.unreadMarkerMessageId,
+          viewportCommand: _bootstrapTargetCommand(messageId),
+        ).copyWith(isReplacingRange: false),
+      ),
+    );
+    if (highlight) {
+      _scheduleHighlightClear();
+    }
   }
 
   Future<bool> jumpToMessage(int messageId, {bool highlight = true}) async {
@@ -1019,42 +1118,9 @@ class ConversationTimelineViewModel
       'currentHighlight=${current.highlightedMessageId}',
       name: 'TimelineVM',
     );
+    _rangeSessionId += 1;
     _isViewportAtLiveEdge = false;
-    final targetIndex = _repository.findWindowIndex(
-      current.windowStableKeys,
-      messageId,
-    );
-    if (targetIndex != null) {
-      _setStateIfActive(
-        AsyncData(
-          _buildState(
-            windowStableKeys: current.windowStableKeys,
-            windowMode: current.windowMode == ConversationWindowMode.liveLatest
-                ? ConversationWindowMode.historyBrowsing
-                : current.windowMode,
-            viewportPlacement:
-                current.windowMode == ConversationWindowMode.liveLatest
-                ? ConversationViewportPlacement.topPreferred
-                : current.viewportPlacement,
-            anchorMessageId: current.anchorMessageId ?? messageId,
-            highlightedMessageId: highlight ? messageId : null,
-            shouldRefreshChats: current.shouldRefreshChats,
-            pendingLiveCount: current.pendingLiveCount,
-            unreadMarkerMessageId: current.unreadMarkerMessageId,
-            viewportCommand: _scrollToLoadedTargetCommand(messageId),
-          ),
-        ),
-      );
-      developer.log(
-        'jumpToMessage: applied cached target, '
-        'newHighlight=${highlight ? messageId : null}',
-        name: 'TimelineVM',
-      );
-      if (highlight) {
-        _scheduleHighlightClear();
-      }
-      return true;
-    }
+    _setStateIfActive(AsyncData(current.copyWith(isReplacingRange: true)));
     final messages = await _repository.loadAroundMessage(
       messageId,
       before: _windowSize ~/ 2,
@@ -1062,7 +1128,12 @@ class ConversationTimelineViewModel
     );
     if (messages.isEmpty) {
       _setStateIfActive(
-        AsyncData(current.copyWith(infoMessage: 'Message unavailable')),
+        AsyncData(
+          current.copyWith(
+            infoMessage: 'Message unavailable',
+            isReplacingRange: false,
+          ),
+        ),
       );
       return false;
     }
@@ -1078,7 +1149,7 @@ class ConversationTimelineViewModel
           unreadMarkerMessageId: current.unreadMarkerMessageId,
           pendingLiveCount: current.pendingLiveCount,
           viewportCommand: _bootstrapTargetCommand(messageId),
-        ),
+        ).copyWith(isReplacingRange: false),
       ),
     );
     developer.log(
@@ -1288,6 +1359,7 @@ class ConversationTimelineViewModel
         nextState.copyWith(
           isLoadingOlder: current.isLoadingOlder,
           isLoadingNewer: current.isLoadingNewer,
+          isReplacingRange: current.isReplacingRange,
         ),
       ),
     );
@@ -1297,6 +1369,12 @@ class ConversationTimelineViewModel
 
   ConversationViewportCommand _showLatestCommand() =>
       ConversationViewportCommand.showLatest(
+        transactionId: _nextViewportTransaction(),
+        placement: ConversationViewportPlacement.liveEdge,
+      );
+
+  ConversationViewportCommand _showLatestImmediateCommand() =>
+      ConversationViewportCommand.showLatestImmediate(
         transactionId: _nextViewportTransaction(),
         placement: ConversationViewportPlacement.liveEdge,
       );
@@ -1343,11 +1421,45 @@ class ConversationTimelineViewModel
         placement: ConversationViewportPlacement.liveEdge,
       );
 
+  ConversationViewportCommand _settleAtBottomAfterLatestRefreshCommand() =>
+      ConversationViewportCommand.settleAtBottomAfterLatestRefresh(
+        transactionId: _nextViewportTransaction(),
+        placement: ConversationViewportPlacement.liveEdge,
+      );
+
   ConversationViewportCommand _settleAtBottomAfterViewportResizeCommand() =>
       ConversationViewportCommand.settleAtBottomAfterViewportResize(
         transactionId: _nextViewportTransaction(),
         placement: ConversationViewportPlacement.liveEdge,
       );
+
+  Future<void> _refreshLatestAfterReturnToLiveEdge(
+    String? previousTailStableKey,
+  ) async {
+    final latest = await _repository.refreshLatestWindow(limit: _windowSize);
+    final current = state.value;
+    if (current == null ||
+        current.windowMode != ConversationWindowMode.liveLatest ||
+        current.anchorMessageId != null) {
+      return;
+    }
+    final nextStableKeys = latest.map((item) => item.stableKey).toList();
+    final tailChanged = nextStableKeys.lastOrNull != previousTailStableKey;
+    _setStateIfActive(
+      AsyncData(
+        _buildState(
+          windowStableKeys: nextStableKeys,
+          windowMode: ConversationWindowMode.liveLatest,
+          viewportPlacement: ConversationViewportPlacement.liveEdge,
+          shouldRefreshChats: current.shouldRefreshChats,
+          pendingLiveCount: 0,
+          viewportCommand: tailChanged
+              ? _settleAtBottomAfterLatestRefreshCommand()
+              : null,
+        ),
+      ),
+    );
+  }
 }
 
 const _sentinel = Object();

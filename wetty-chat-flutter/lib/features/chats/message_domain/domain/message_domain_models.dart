@@ -48,6 +48,59 @@ class MessageThreadAnchorState {
 
 enum MessageWindowPageDirection { older, newer }
 
+enum MessageRangeKind { latest, active }
+
+class MessageRangeState {
+  const MessageRangeState({
+    required this.kind,
+    required this.stableKeys,
+    this.anchorMessageId,
+    this.hasReachedOldest = false,
+    this.hasReachedNewest = false,
+  });
+
+  final MessageRangeKind kind;
+  final List<String> stableKeys;
+  final int? anchorMessageId;
+  final bool hasReachedOldest;
+  final bool hasReachedNewest;
+
+  int? get minServerId => _rangeBound(first: true);
+  int? get maxServerId => _rangeBound(first: false);
+
+  MessageRangeState copyWith({
+    MessageRangeKind? kind,
+    List<String>? stableKeys,
+    Object? anchorMessageId = _messageRangeSentinel,
+    bool? hasReachedOldest,
+    bool? hasReachedNewest,
+  }) {
+    return MessageRangeState(
+      kind: kind ?? this.kind,
+      stableKeys: stableKeys ?? this.stableKeys,
+      anchorMessageId: anchorMessageId == _messageRangeSentinel
+          ? this.anchorMessageId
+          : anchorMessageId as int?,
+      hasReachedOldest: hasReachedOldest ?? this.hasReachedOldest,
+      hasReachedNewest: hasReachedNewest ?? this.hasReachedNewest,
+    );
+  }
+
+  int? _rangeBound({required bool first}) {
+    final ordered = stableKeys
+        .where((key) => key.startsWith('server:'))
+        .map((key) => int.tryParse(key.substring('server:'.length)))
+        .whereType<int>()
+        .toList(growable: false);
+    if (ordered.isEmpty) {
+      return null;
+    }
+    return first ? ordered.first : ordered.last;
+  }
+}
+
+const _messageRangeSentinel = Object();
+
 /// Helpers for normalizing domain messages from backend models.
 abstract final class MessageDomainMessageFactory {
   static ConversationScope inferScope(MessageItem message) {

@@ -60,10 +60,11 @@ class ConversationRepository {
       scope,
       max: limit,
     );
-    _reconcileDtos(response.messages);
+    _reconcileLatestDtos(response.messages, limit: limit);
+    _store.activateLatestRange(scope, limit: limit);
     _hasReachedNewest = true;
     _hasReachedOldest = response.messages.length < limit;
-    final keys = _store.latestVisibleStableKeys(scope, limit: limit);
+    final keys = _store.activeRangeStableKeys(scope);
     _bumpRevision();
     return _messagesForWindow(keys);
   }
@@ -75,10 +76,11 @@ class ConversationRepository {
       scope,
       max: limit,
     );
-    _reconcileDtos(response.messages);
+    _reconcileLatestDtos(response.messages, limit: limit);
+    _store.activateLatestRange(scope, limit: limit);
     _hasReachedNewest = true;
     _hasReachedOldest = response.messages.length < limit;
-    final keys = _store.latestVisibleStableKeys(scope, limit: limit);
+    final keys = _store.activeRangeStableKeys(scope);
     _bumpRevision();
     return _messagesForWindow(keys);
   }
@@ -96,7 +98,7 @@ class ConversationRepository {
       after: lastReadMessageId,
       max: 1,
     );
-    _reconcileDtos(response.messages);
+    _mergeFetchedCanonicalDtos(response.messages);
     _bumpRevision();
     return response.messages.firstOrNull?.id;
   }
@@ -107,7 +109,7 @@ class ConversationRepository {
     int after = defaultWindowSize ~/ 2,
   }) async {
     final alreadyCached = _containsServerMessage(messageId);
-    final hasCachedWindow = _hasWindowAroundServerMessage(
+    final hasCachedWindow = _hasRangeAroundServerMessage(
       messageId,
       before: before,
       after: after,
@@ -131,7 +133,7 @@ class ConversationRepository {
         before: before,
         after: after,
       );
-      _reconcileDtos(response.messages);
+      _mergeFetchedCanonicalDtos(response.messages);
       developer.log(
         'loadAroundMessage: fetched ${response.messages.length} msgs, '
         'stableKey after merge=${_store.stableKeyForServerId(messageId)}, '
@@ -139,7 +141,7 @@ class ConversationRepository {
         name: 'ConvRepo',
       );
     }
-    final keys = _store.visibleStableKeysAroundServerMessage(
+    final keys = _store.activateHistoricalRangeAroundServerMessage(
       scope,
       messageId,
       before: before,
@@ -175,7 +177,7 @@ class ConversationRepository {
       before: oldestId,
       max: pageSize,
     );
-    _mergeWindowPageDtos(
+    _mergeActiveRangePageDtos(
       response.messages,
       direction: MessageWindowPageDirection.older,
     );
@@ -210,7 +212,7 @@ class ConversationRepository {
       after: newestId,
       max: pageSize,
     );
-    _mergeWindowPageDtos(
+    _mergeActiveRangePageDtos(
       response.messages,
       direction: MessageWindowPageDirection.newer,
     );
@@ -241,14 +243,14 @@ class ConversationRepository {
   }
 
   List<String> latestWindowStableKeys({int limit = defaultWindowSize}) =>
-      _store.latestVisibleStableKeys(scope, limit: limit);
+      _store.latestRangeStableKeys(scope, limit: limit);
 
   List<ConversationMessage> cachedWindowAroundMessage(
     int messageId, {
     int before = defaultWindowSize ~/ 2,
     int after = defaultWindowSize ~/ 2,
   }) {
-    final keys = _store.visibleStableKeysAroundServerMessage(
+    final keys = _store.historicalRangeSnapshotAroundServerMessage(
       scope,
       messageId,
       before: before,
@@ -262,7 +264,7 @@ class ConversationRepository {
     int before = defaultWindowSize ~/ 2,
     int after = defaultWindowSize ~/ 2,
   }) {
-    return _hasWindowAroundServerMessage(
+    return _hasRangeAroundServerMessage(
       messageId,
       before: before,
       after: after,
@@ -285,12 +287,12 @@ class ConversationRepository {
       before: before,
       after: after,
     );
-    _reconcileDtos(response.messages);
+    _mergeFetchedCanonicalDtos(response.messages);
     if (response.messages.isEmpty) {
       _bumpRevision();
       return const <ConversationMessage>[];
     }
-    final keys = _store.visibleStableKeysAroundServerMessage(
+    final keys = _store.activateHistoricalRangeAroundServerMessage(
       scope,
       messageId,
       before: before,
@@ -369,7 +371,7 @@ class ConversationRepository {
       return currentWindow;
     }
     final newestStableKey = currentWindow.last;
-    final visibleKeys = _store.selectVisibleStableKeys(scope);
+    final visibleKeys = _store.activeRangeStableKeys(scope);
     final newestIndex = visibleKeys.indexOf(newestStableKey);
     if (newestIndex < 0 || newestIndex >= visibleKeys.length - 1) {
       return currentWindow;
@@ -379,7 +381,7 @@ class ConversationRepository {
       ...visibleKeys.sublist(newestIndex + 1),
     ];
     return _store
-        .selectVisibleWindow(scope)
+        .selectActiveWindow(scope)
         .map((message) => message.stableKey)
         .where(nextWindow.contains)
         .toList(growable: false);
@@ -628,10 +630,12 @@ class ConversationRepository {
       MessageCreatedWsEvent(:final payload) => _matchesMessagePayload(payload),
       MessageUpdatedWsEvent(:final payload) => _matchesMessagePayload(payload),
       MessageDeletedWsEvent(:final payload) => _matchesMessagePayload(payload),
-      ReactionUpdatedWsEvent(:final payload) => _matchesReactionPayload(payload),
+      ReactionUpdatedWsEvent(:final payload) => _matchesReactionPayload(
+        payload,
+      ),
       ThreadUpdatedWsEvent(:final payload) =>
         scope.threadRootId == payload.threadRootId.toString() &&
-        scope.chatId == payload.chatId.toString(),
+            scope.chatId == payload.chatId.toString(),
       StickerPackOrderUpdatedWsEvent() => false,
       PongWsEvent() => false,
     };
@@ -818,18 +822,29 @@ class ConversationRepository {
         .toList(growable: false);
   }
 
-  void _reconcileDtos(List<MessageItemDto> messages) {
-    _store.reconcileFetchedWindow(
+  void _reconcileLatestDtos(
+    List<MessageItemDto> messages, {
+    required int limit,
+  }) {
+    _store.reconcileFetchedLatestRange(
+      scope: scope,
+      messages: messages.map(_messageFromDto).toList(growable: false),
+      limit: limit,
+    );
+  }
+
+  void _mergeFetchedCanonicalDtos(List<MessageItemDto> messages) {
+    _store.mergeFetchedCanonicalMessages(
       scope: scope,
       messages: messages.map(_messageFromDto).toList(growable: false),
     );
   }
 
-  void _mergeWindowPageDtos(
+  void _mergeActiveRangePageDtos(
     List<MessageItemDto> messages, {
     required MessageWindowPageDirection direction,
   }) {
-    _store.mergeFetchedWindowPage(
+    _store.mergeFetchedActiveRangePage(
       scope: scope,
       messages: messages.map(_messageFromDto).toList(),
       direction: direction,
@@ -877,12 +892,12 @@ class ConversationRepository {
     _store.removeMessageByStableKey(stableKey);
   }
 
-  bool _hasWindowAroundServerMessage(
+  bool _hasRangeAroundServerMessage(
     int messageId, {
     required int before,
     required int after,
   }) {
-    if (_store.hasVisibleWindowAroundServerMessage(
+    if (_store.hasCanonicalRangeAroundServerMessage(
       scope,
       messageId,
       before: before,
@@ -897,7 +912,7 @@ class ConversationRepository {
     }
 
     if (!scope.isThread) {
-      final visibleKeys = _store.selectVisibleStableKeys(scope);
+      final visibleKeys = _store.activeRangeStableKeys(scope);
       final index = visibleKeys.indexOf(stableKey);
       if (index < 0) {
         return false;
@@ -1004,7 +1019,7 @@ class ConversationRepository {
   }
 
   List<String> _paginatableVisibleKeys() {
-    final visibleKeys = _store.selectVisibleStableKeys(scope);
+    final visibleKeys = _store.activeRangeStableKeys(scope);
     final anchorKey = _threadAnchorStableKey();
     if (anchorKey == null) {
       return visibleKeys;

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -33,8 +35,30 @@ void main() {
       expect(state.viewportPlacement, ConversationViewportPlacement.liveEdge);
     });
 
+    test('scrollToLoadedMessage leaves anchor and session unchanged', () async {
+      final container = _createContainer();
+      addTearDown(container.dispose);
+      final provider = conversationTimelineViewModelProvider(_args());
+
+      final initial = await container.read(provider.future);
+      final notifier = container.read(provider.notifier);
+
+      await notifier.scrollToLoadedMessage(120);
+      final state = container.read(provider).value;
+
+      expect(state, isNotNull);
+      expect(state!.windowStableKeys, initial.windowStableKeys);
+      expect(state.anchorMessageId, initial.anchorMessageId);
+      expect(state.windowMode, initial.windowMode);
+      expect(
+        state.viewportCommand?.type,
+        ConversationViewportCommandType.scrollToLoadedTarget,
+      );
+      expect(state.viewportPlacement, initial.viewportPlacement);
+    });
+
     test(
-      'jumpToMessage reuses current window when target is already loaded',
+      'relocateToLoadedMessage reuses current window and replaces anchor',
       () async {
         final container = _createContainer();
         addTearDown(container.dispose);
@@ -43,20 +67,16 @@ void main() {
         final initial = await container.read(provider.future);
         final notifier = container.read(provider.notifier);
 
-        final changed = await notifier.jumpToMessage(120);
+        await notifier.relocateToLoadedMessage(120);
         final state = container.read(provider).value;
 
-        expect(changed, isTrue);
         expect(state, isNotNull);
         expect(state!.windowStableKeys, initial.windowStableKeys);
         expect(state.anchorMessageId, 120);
+        expect(state.windowMode, ConversationWindowMode.anchoredTarget);
         expect(
           state.viewportCommand?.type,
-          ConversationViewportCommandType.scrollToLoadedTarget,
-        );
-        expect(
-          state.viewportCommand?.placement,
-          ConversationViewportPlacement.topPreferred,
+          ConversationViewportCommandType.bootstrapTarget,
         );
         expect(
           state.viewportPlacement,
@@ -116,7 +136,43 @@ void main() {
     );
 
     test(
-      'jumpToLatest reuses current window when latest is already loaded',
+      'jumpToMessage marks the timeline as replacing while fetch is in flight',
+      () async {
+        final service = _FakeMessageApiService(_buildMessages());
+        final gate = Completer<void>();
+        service.aroundFetchGate = gate;
+        final container = _createContainer(service: service);
+        addTearDown(container.dispose);
+        final provider = conversationTimelineViewModelProvider(_args());
+        final sub = container.listen(
+          provider,
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(sub.close);
+
+        await container.read(provider.future);
+        final notifier = container.read(provider.notifier);
+
+        final jumpFuture = notifier.jumpToMessage(10);
+        await pumpEventQueue();
+
+        final loadingState = container.read(provider).asData?.value;
+        expect(loadingState, isNotNull);
+        expect(loadingState!.isReplacingRange, isTrue);
+
+        gate.complete();
+        await jumpFuture;
+
+        final resolvedState = container.read(provider).asData?.value;
+        expect(resolvedState, isNotNull);
+        expect(resolvedState!.isReplacingRange, isFalse);
+        expect(resolvedState.anchorMessageId, 10);
+      },
+    );
+
+    test(
+      'jumpToLatest immediately switches to the latest-backed window',
       () async {
         final container = _createContainer();
         addTearDown(container.dispose);
@@ -132,16 +188,18 @@ void main() {
         expect(state, isNotNull);
         expect(state!.windowMode, ConversationWindowMode.liveLatest);
         expect(state.anchorMessageId, isNull);
+        expect(state.windowStableKeys.first, 'server:51');
+        expect(state.windowStableKeys.last, 'server:150');
         expect(
           state.viewportCommand?.type,
-          ConversationViewportCommandType.settleAtBottomAfterMutation,
+          ConversationViewportCommandType.showLatestImmediate,
         );
         expect(state.viewportPlacement, ConversationViewportPlacement.liveEdge);
       },
     );
 
     test(
-      'jumpToLatest replaces window when returning from far history',
+      'second long jump inside loaded window replaces the old pivot',
       () async {
         final container = _createContainer();
         addTearDown(container.dispose);
@@ -150,20 +208,28 @@ void main() {
         await container.read(provider.future);
         final notifier = container.read(provider.notifier);
 
-        await notifier.jumpToMessage(10);
-        await notifier.jumpToLatest();
+        await notifier.relocateToLoadedMessage(120);
+        final firstJumpTransaction = container
+            .read(provider)
+            .value!
+            .viewportCommand!
+            .transactionId;
+        notifier.consumeViewportCommand(firstJumpTransaction);
+
+        await notifier.relocateToLoadedMessage(130);
         final state = container.read(provider).value;
 
         expect(state, isNotNull);
-        expect(state!.windowMode, ConversationWindowMode.liveLatest);
-        expect(state.anchorMessageId, isNull);
+        expect(state!.windowMode, ConversationWindowMode.anchoredTarget);
+        expect(state.anchorMessageId, 130);
         expect(
           state.viewportCommand?.type,
-          ConversationViewportCommandType.showLatest,
+          ConversationViewportCommandType.bootstrapTarget,
         );
-        expect(state.windowStableKeys.first, 'server:51');
-        expect(state.windowStableKeys.last, 'server:150');
-        expect(state.viewportPlacement, ConversationViewportPlacement.liveEdge);
+        expect(
+          state.viewportPlacement,
+          ConversationViewportPlacement.topPreferred,
+        );
       },
     );
 
@@ -214,37 +280,6 @@ void main() {
     );
 
     test(
-      'loaded jump while already browsing history keeps the existing pivot',
-      () async {
-        final container = _createContainer();
-        addTearDown(container.dispose);
-        final provider = conversationTimelineViewModelProvider(_args());
-
-        await container.read(provider.future);
-        final notifier = container.read(provider.notifier);
-
-        await notifier.jumpToMessage(120);
-        final firstJumpTransaction = container
-            .read(provider)
-            .value!
-            .viewportCommand!
-            .transactionId;
-        notifier.consumeViewportCommand(firstJumpTransaction);
-
-        await notifier.jumpToMessage(130);
-        final state = container.read(provider).value;
-
-        expect(state, isNotNull);
-        expect(state!.windowMode, ConversationWindowMode.historyBrowsing);
-        expect(state.anchorMessageId, 120);
-        expect(
-          state.viewportCommand?.type,
-          ConversationViewportCommandType.scrollToLoadedTarget,
-        );
-      },
-    );
-
-    test(
       'viewport resize emits bottom-settle command only while at live latest',
       () async {
         final container = _createContainer();
@@ -270,7 +305,7 @@ void main() {
         expect(historyState, isNotNull);
         expect(
           historyState!.viewportCommand?.type,
-          ConversationViewportCommandType.scrollToLoadedTarget,
+          ConversationViewportCommandType.bootstrapTarget,
         );
       },
     );
@@ -307,7 +342,11 @@ void main() {
           ),
         );
         container
-            .read(conversationRepositoryProvider(const ConversationScope.chat(chatId: '1')))
+            .read(
+              conversationRepositoryProvider(
+                const ConversationScope.chat(chatId: '1'),
+              ),
+            )
             .applyRealtimeEvent(event);
         container.read(conversationRealtimeRegistryProvider).dispatch(event);
 
@@ -425,48 +464,51 @@ void main() {
       },
     );
 
-    test('realtime event for another chat is ignored by the active timeline', () async {
-      final container = _createContainer();
-      addTearDown(container.dispose);
-      final provider = conversationTimelineViewModelProvider(_args());
+    test(
+      'realtime event for another chat is ignored by the active timeline',
+      () async {
+        final container = _createContainer();
+        addTearDown(container.dispose);
+        final provider = conversationTimelineViewModelProvider(_args());
 
-      await container.read(provider.future);
-      final notifier = container.read(provider.notifier);
-      final initialTransactionId = container
-          .read(provider)
-          .value!
-          .viewportCommand!
-          .transactionId;
-      notifier.consumeViewportCommand(initialTransactionId);
-      notifier.onViewportLiveEdgeChanged(false);
+        await container.read(provider.future);
+        final notifier = container.read(provider.notifier);
+        final initialTransactionId = container
+            .read(provider)
+            .value!
+            .viewportCommand!
+            .transactionId;
+        notifier.consumeViewportCommand(initialTransactionId);
+        notifier.onViewportLiveEdgeChanged(false);
 
-      final before = container.read(provider).value!;
+        final before = container.read(provider).value!;
 
-      container
-          .read(conversationRealtimeRegistryProvider)
-          .dispatch(
-            MessageCreatedWsEvent(
-              payload: MessageItemDto(
-                id: 151,
-                message: 'Other chat message',
-                sender: const SenderDto(uid: 7, name: 'Tester'),
-                chatId: 2,
-                createdAt: DateTime.utc(
-                  2026,
-                  1,
-                  1,
-                ).add(const Duration(minutes: 151)),
-                clientGeneratedId: 'cg-151',
+        container
+            .read(conversationRealtimeRegistryProvider)
+            .dispatch(
+              MessageCreatedWsEvent(
+                payload: MessageItemDto(
+                  id: 151,
+                  message: 'Other chat message',
+                  sender: const SenderDto(uid: 7, name: 'Tester'),
+                  chatId: 2,
+                  createdAt: DateTime.utc(
+                    2026,
+                    1,
+                    1,
+                  ).add(const Duration(minutes: 151)),
+                  clientGeneratedId: 'cg-151',
+                ),
               ),
-            ),
-          );
+            );
 
-      final after = container.read(provider).value!;
+        final after = container.read(provider).value!;
 
-      expect(after.pendingLiveCount, before.pendingLiveCount);
-      expect(after.windowStableKeys, before.windowStableKeys);
-      expect(after.viewportCommand, before.viewportCommand);
-    });
+        expect(after.pendingLiveCount, before.pendingLiveCount);
+        expect(after.windowStableKeys, before.windowStableKeys);
+        expect(after.viewportCommand, before.viewportCommand);
+      },
+    );
 
     test('re-entering live edge clears pending live count', () async {
       final container = _createContainer();
@@ -638,29 +680,32 @@ void main() {
       expect(refreshed.windowStableKeys.last, 'server:151');
     });
 
-    test('resume refresh does not disturb history browsing state', () async {
-      final service = _FakeMessageApiService(_buildMessages());
-      final container = _createContainer(service: service);
-      addTearDown(container.dispose);
-      final provider = conversationTimelineViewModelProvider(_args());
+    test(
+      'resume refresh after a local scroll keeps live-latest semantics',
+      () async {
+        final service = _FakeMessageApiService(_buildMessages());
+        final container = _createContainer(service: service);
+        addTearDown(container.dispose);
+        final provider = conversationTimelineViewModelProvider(_args());
 
-      await container.read(provider.future);
-      final notifier = container.read(provider.notifier);
+        await container.read(provider.future);
+        final notifier = container.read(provider.notifier);
 
-      await notifier.jumpToMessage(120);
-      service.appendMessage(151);
+        await notifier.scrollToLoadedMessage(120);
+        service.appendMessage(151);
 
-      await notifier.refreshOnResume();
-      final refreshed = container.read(provider).value;
+        await notifier.refreshOnResume();
+        final refreshed = container.read(provider).value;
 
-      expect(refreshed, isNotNull);
-      expect(service.latestFetchCount, 1);
-      expect(service.aroundFetchCount, 0);
-      expect(refreshed!.windowMode, ConversationWindowMode.historyBrowsing);
-      expect(refreshed.anchorMessageId, 120);
-      expect(refreshed.windowStableKeys, contains('server:120'));
-      expect(refreshed.windowStableKeys, isNot(contains('server:151')));
-    });
+        expect(refreshed, isNotNull);
+        expect(service.latestFetchCount, 2);
+        expect(service.aroundFetchCount, 0);
+        expect(refreshed!.windowMode, ConversationWindowMode.liveLatest);
+        expect(refreshed.anchorMessageId, isNull);
+        expect(refreshed.windowStableKeys, contains('server:120'));
+        expect(refreshed.windowStableKeys, contains('server:151'));
+      },
+    );
 
     test(
       'entry refresh does not clobber mode changes before it completes',
@@ -687,9 +732,135 @@ void main() {
         final state = container.read(provider).value;
 
         expect(state, isNotNull);
-        expect(state!.windowMode, ConversationWindowMode.historyBrowsing);
+        expect(state!.windowMode, ConversationWindowMode.anchoredTarget);
         expect(state.anchorMessageId, 120);
         expect(service.latestFetchCount, 1);
+      },
+    );
+
+    test(
+      'jumpToLatest refresh emits follow-up settle only when the tail changed',
+      () async {
+        final service = _FakeMessageApiService(_buildMessages());
+        final container = _createContainer(service: service);
+        addTearDown(container.dispose);
+        final provider = conversationTimelineViewModelProvider(_args());
+        final sub = container.listen(
+          provider,
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(sub.close);
+
+        await container.read(provider.future);
+        await container.read(provider.notifier).jumpToMessage(10);
+
+        final gate = Completer<void>();
+        service.latestFetchGate = gate;
+        await container.read(provider.notifier).jumpToLatest();
+
+        final immediate = container.read(provider).value;
+        expect(immediate, isNotNull);
+        expect(immediate!.windowMode, ConversationWindowMode.liveLatest);
+        expect(immediate.anchorMessageId, isNull);
+        expect(immediate.windowStableKeys, isNotEmpty);
+        expect(
+          immediate.viewportCommand?.type,
+          ConversationViewportCommandType.showLatestImmediate,
+        );
+
+        final firstTransaction = immediate.viewportCommand!.transactionId;
+        container
+            .read(provider.notifier)
+            .consumeViewportCommand(firstTransaction);
+        service.appendMessage(151);
+        gate.complete();
+        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 10);
+
+        final refreshed = container.read(provider).value;
+        expect(refreshed, isNotNull);
+        expect(refreshed!.windowStableKeys.last, 'server:151');
+        expect(
+          refreshed.viewportCommand?.type,
+          ConversationViewportCommandType.settleAtBottomAfterLatestRefresh,
+        );
+      },
+    );
+
+    test(
+      'jumpToLatest refresh does not emit follow-up settle after leaving live edge',
+      () async {
+        final service = _FakeMessageApiService(_buildMessages());
+        final container = _createContainer(service: service);
+        addTearDown(container.dispose);
+        final provider = conversationTimelineViewModelProvider(_args());
+        final sub = container.listen(
+          provider,
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(sub.close);
+
+        await container.read(provider.future);
+        await container.read(provider.notifier).jumpToMessage(10);
+
+        final gate = Completer<void>();
+        service.latestFetchGate = gate;
+        final notifier = container.read(provider.notifier);
+        await notifier.jumpToLatest();
+
+        final firstTransaction = container
+            .read(provider)
+            .value!
+            .viewportCommand!
+            .transactionId;
+        notifier.consumeViewportCommand(firstTransaction);
+        await notifier.relocateToLoadedMessage(120);
+        service.appendMessage(151);
+        gate.complete();
+        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 10);
+
+        final refreshed = container.read(provider).value;
+        expect(refreshed, isNotNull);
+        expect(refreshed!.windowMode, ConversationWindowMode.anchoredTarget);
+        expect(refreshed.anchorMessageId, 120);
+        expect(
+          refreshed.viewportCommand?.type,
+          ConversationViewportCommandType.bootstrapTarget,
+        );
+      },
+    );
+
+    test(
+      'stale newer-page fetch does not overwrite a later jumpToLatest transition',
+      () async {
+        final service = _FakeMessageApiService(_buildMessages());
+        final gate = Completer<void>();
+        service.afterFetchGate = gate;
+        final container = _createContainer(service: service);
+        addTearDown(container.dispose);
+        final provider = conversationTimelineViewModelProvider(_args());
+        final sub = container.listen(provider, (_, _) {}, fireImmediately: true);
+        addTearDown(sub.close);
+
+        await container.read(provider.future);
+        final notifier = container.read(provider.notifier);
+        await notifier.jumpToMessage(10);
+
+        final loadNewerFuture = notifier.loadNewer();
+        await pumpEventQueue();
+
+        await notifier.jumpToLatest();
+        gate.complete();
+        await loadNewerFuture;
+        await pumpEventQueue(times: 10);
+
+        final state = container.read(provider).asData?.value;
+        expect(state, isNotNull);
+        expect(state!.windowMode, ConversationWindowMode.liveLatest);
+        expect(state.anchorMessageId, isNull);
       },
     );
   });
@@ -731,6 +902,9 @@ class _FakeMessageApiService extends MessageApiService {
   final List<MessageItemDto> _messages;
   int latestFetchCount = 0;
   int aroundFetchCount = 0;
+  Completer<void>? latestFetchGate;
+  Completer<void>? aroundFetchGate;
+  Completer<void>? afterFetchGate;
 
   void appendMessage(int id) {
     _messages.add(
@@ -753,12 +927,23 @@ class _FakeMessageApiService extends MessageApiService {
     int? after,
     int? around,
   }) async {
+    final isLatestFetch = around == null && before == null && after == null;
     if (around != null) {
       aroundFetchCount += 1;
-    } else if (before == null && after == null) {
+    } else if (isLatestFetch) {
       latestFetchCount += 1;
     }
+    final gate = latestFetchGate;
+    if (isLatestFetch && gate != null) {
+      await gate.future;
+      latestFetchGate = null;
+    }
     if (around != null) {
+      final aroundGate = aroundFetchGate;
+      if (aroundGate != null) {
+        await aroundGate.future;
+        aroundFetchGate = null;
+      }
       final index = _messages.indexWhere((message) => message.id == around);
       if (index < 0) {
         return const ListMessagesResponseDto();
@@ -784,6 +969,11 @@ class _FakeMessageApiService extends MessageApiService {
       );
     }
     if (after != null) {
+      final afterGate = afterFetchGate;
+      if (afterGate != null) {
+        await afterGate.future;
+        afterFetchGate = null;
+      }
       final filtered = _messages
           .where((message) => message.id > after)
           .toList(growable: false);

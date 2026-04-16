@@ -74,6 +74,7 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline>
     with WidgetsBindingObserver {
   static const double _liveEdgeTolerance = 0.5;
   static const double _timelineEndPadding = 12;
+  static const double _localJumpViewportDistanceMultiplier = 2;
   static const Duration _overlayAnimationDuration = Duration(milliseconds: 150);
 
   final ScrollController _timelineScrollController = ScrollController();
@@ -518,11 +519,26 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline>
   }
 
   Future<void> _jumpToMessage(int messageId) async {
-    await ref
-        .read(
-          conversationTimelineViewModelProvider(widget.timelineArgs).notifier,
-        )
-        .jumpToMessage(messageId);
+    final notifier = ref.read(
+      conversationTimelineViewModelProvider(widget.timelineArgs).notifier,
+    );
+    final viewState = ref
+        .read(conversationTimelineViewModelProvider(widget.timelineArgs))
+        .value;
+    if (viewState == null) {
+      return;
+    }
+    switch (_classifyTargetJump(viewState, messageId)) {
+      case _TargetJumpKind.localScroll:
+        await notifier.scrollToLoadedMessage(messageId);
+        break;
+      case _TargetJumpKind.relocateLoaded:
+        await notifier.relocateToLoadedMessage(messageId);
+        break;
+      case _TargetJumpKind.relocateUnloaded:
+        await notifier.jumpToMessage(messageId);
+        break;
+    }
   }
 
   void _resetViewportSession(int sessionId) {
@@ -551,13 +567,10 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline>
     _activeViewportTransactionId = command.transactionId;
     switch (command.type) {
       case ConversationViewportCommandType.showLatest:
-      case ConversationViewportCommandType.bootstrapTarget:
         _viewportGeneration += 1;
         setState(() {
           _isBootstrapActive = true;
-          _isAtLiveEdge =
-              command.type == ConversationViewportCommandType.showLatest &&
-              !viewState.canLoadNewer;
+          _isAtLiveEdge = !viewState.canLoadNewer;
           _resetViewportSession(_viewportGeneration);
         });
         WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -566,8 +579,38 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline>
           if (!mounted) {
             return;
           }
-          if (command.type == ConversationViewportCommandType.showLatest) {
+          _jumpToBottomImmediate();
+          setState(() {
+            _isBootstrapActive = false;
+          });
+          _consumeViewportCommand(command.transactionId);
+        });
+        break;
+      case ConversationViewportCommandType.showLatestImmediate:
+      case ConversationViewportCommandType.bootstrapTarget:
+        if (command.type ==
+            ConversationViewportCommandType.showLatestImmediate) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted || _isUserDragging) {
+              return;
+            }
+            _isAtLiveEdge = !viewState.canLoadNewer;
             _jumpToBottomImmediate();
+            _consumeViewportCommand(command.transactionId);
+          });
+          break;
+        }
+        _viewportGeneration += 1;
+        setState(() {
+          _isBootstrapActive = true;
+          _isAtLiveEdge = false;
+          _resetViewportSession(_viewportGeneration);
+        });
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          await WidgetsBinding.instance.endOfFrame;
+          await WidgetsBinding.instance.endOfFrame;
+          if (!mounted) {
+            return;
           }
           setState(() {
             _isBootstrapActive = false;
@@ -601,6 +644,7 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline>
         });
         break;
       case ConversationViewportCommandType.settleAtBottomAfterMutation:
+      case ConversationViewportCommandType.settleAtBottomAfterLatestRefresh:
       case ConversationViewportCommandType.settleAtBottomAfterViewportResize:
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted || _isUserDragging) {
@@ -706,6 +750,61 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline>
       return;
     }
     _timelineScrollController.jumpTo(bottom);
+  }
+
+  _TargetJumpKind _classifyTargetJump(
+    ConversationTimelineState viewState,
+    int messageId,
+  ) {
+    TimelineMessageEntry? targetEntry;
+    for (final entry in viewState.entries.whereType<TimelineMessageEntry>()) {
+      if (entry.message.serverMessageId == messageId) {
+        targetEntry = entry;
+        break;
+      }
+    }
+    if (targetEntry == null) {
+      return _TargetJumpKind.relocateUnloaded;
+    }
+    final viewportContext = _overlayViewportKey.currentContext;
+    final viewportRenderBox = viewportContext?.findRenderObject() as RenderBox?;
+    if (viewportRenderBox == null || !viewportRenderBox.attached) {
+      return _TargetJumpKind.relocateLoaded;
+    }
+    final rowContext =
+        _messageRowKeys[targetEntry.message.stableKey]?.currentContext;
+    final rowRenderBox = rowContext?.findRenderObject() as RenderBox?;
+    if (rowRenderBox == null || !rowRenderBox.attached) {
+      return _TargetJumpKind.relocateLoaded;
+    }
+    final viewportRect =
+        viewportRenderBox.localToGlobal(Offset.zero) & viewportRenderBox.size;
+    final rowRect = rowRenderBox.localToGlobal(Offset.zero) & rowRenderBox.size;
+    if (!rowRect.intersect(viewportRect).isEmpty) {
+      return _TargetJumpKind.localScroll;
+    }
+    final travelDistance = _distanceToViewport(
+      rowRect: rowRect,
+      viewportRect: viewportRect,
+    );
+    if (travelDistance <=
+        viewportRect.height * _localJumpViewportDistanceMultiplier) {
+      return _TargetJumpKind.localScroll;
+    }
+    return _TargetJumpKind.relocateLoaded;
+  }
+
+  double _distanceToViewport({
+    required Rect rowRect,
+    required Rect viewportRect,
+  }) {
+    if (rowRect.bottom < viewportRect.top) {
+      return viewportRect.top - rowRect.bottom;
+    }
+    if (rowRect.top > viewportRect.bottom) {
+      return rowRect.top - viewportRect.bottom;
+    }
+    return 0;
   }
 
   void _showErrorDialog(String message) {
@@ -861,8 +960,9 @@ class _ConversationTimelineState extends ConsumerState<ConversationTimeline>
                     ),
                   ),
                 ),
-                data: (viewState) =>
-                    _buildTimeline(viewState, settings.fontSize),
+                data: (viewState) => viewState.isReplacingRange
+                    ? const Center(child: CupertinoActivityIndicator())
+                    : _buildTimeline(viewState, settings.fontSize),
               ),
             ),
           ),
@@ -1045,3 +1145,5 @@ class _VisibleAnchor {
   final int? messageId;
   final double dy;
 }
+
+enum _TargetJumpKind { localScroll, relocateLoaded, relocateUnloaded }
