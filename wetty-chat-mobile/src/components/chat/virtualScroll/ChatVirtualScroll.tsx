@@ -39,9 +39,11 @@ import {
 import styles from './ChatVirtualScroll.module.scss';
 import { Trans } from '@lingui/react/macro';
 import { useNativeScrollActivity } from '@/hooks/useNativeScrollActivity';
-import { USER_SCROLL_ACTIVITY_GRACE_MS } from '@/constants/ui';
-
-const TOP_DATE_FLOATING_GAP_PX = 12;
+import {
+  USER_SCROLL_ACTIVITY_GRACE_MS,
+  TOP_DATE_FLOATING_GAP_PX,
+  TOP_DATE_OVERLAY_FALLBACK_HEIGHT,
+} from '@/constants/ui';
 
 function arraysEqual(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((value, index) => value === b[index]);
@@ -210,7 +212,7 @@ export function ChatVirtualScroll({
   onLastFullyVisibleMessageChange,
   onFirstVisibleMessageChange,
   onScrollActivityChange,
-  onTopDateOffsetChange,
+  onTopDateCollidingChange,
 }: ChatVirtualScrollProps) {
   const chatFontSizeStyle = useSelector(selectChatFontSizeStyle);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -220,15 +222,48 @@ export function ChatVirtualScroll({
   const treeRef = useRef(new FenwickTree(0));
   const treeKeysRef = useRef<string[]>([]);
   const mountedRef = useRef<MountedWindow | null>(null);
-  const scrollingRef = useRef(false);
-  const topDateOffsetRef = useRef(0);
-
   const lastFontSizeRef = useRef(chatFontSizeStyle);
+  const overlayMeasureElRef = useRef<HTMLElement | null>(null);
+  const overlayHeightRef = useRef<number | null>(null);
+
+  const topDateCollidingRef = useRef(false);
+  const scrollingRef = useRef(false);
   if (lastFontSizeRef.current !== chatFontSizeStyle) {
     lastFontSizeRef.current = chatFontSizeStyle;
     heightCacheRef.current.clear();
     treeKeysRef.current = [];
   }
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Create a hidden measurement element inside the container so CSS context
+    // matches the real floating label. We prefer keeping a persistent node
+    // to avoid reflows on every measurement.
+    let el = overlayMeasureElRef.current;
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'chat-thread-floating-date__label';
+      el.style.visibility = 'hidden';
+      el.style.position = 'absolute';
+      el.style.pointerEvents = 'none';
+      el.style.transform = 'translateY(-99999px)';
+      container.appendChild(el);
+      overlayMeasureElRef.current = el;
+    }
+
+    // Measure height for collision calculations
+    overlayHeightRef.current = el.getBoundingClientRect().height || null;
+
+    return () => {
+      if (overlayMeasureElRef.current && overlayMeasureElRef.current.parentElement) {
+        overlayMeasureElRef.current.parentElement.removeChild(overlayMeasureElRef.current);
+      }
+      overlayMeasureElRef.current = null;
+      overlayHeightRef.current = null;
+    };
+  }, [chatFontSizeStyle]);
 
   const layoutIntentRef = useRef<LayoutIntent | null>(null);
   const isAtBottomRef = useRef(true);
@@ -484,11 +519,9 @@ export function ChatVirtualScroll({
       onScrollActivityChange?.(scrolling);
       if (!scrolling) {
         setHiddenDateRowKey(null);
-        topDateOffsetRef.current = 0;
-        onTopDateOffsetChange?.(0);
       }
     },
-    [onScrollActivityChange, onTopDateOffsetChange],
+    [onScrollActivityChange],
   );
   const { active: nativeScrollActive, markIntent } = useNativeScrollActivity(
     containerRef,
@@ -503,10 +536,6 @@ export function ChatVirtualScroll({
   const updateLastFullyVisibleMessage = useCallback(() => {
     const container = containerRef.current;
     if (!container || container.clientHeight === 0 || phaseRef.current !== 'READY') {
-      if (topDateOffsetRef.current !== 0) {
-        topDateOffsetRef.current = 0;
-        onTopDateOffsetChange?.(0);
-      }
       if (lastFullyVisibleMessageIdRef.current !== null) {
         lastFullyVisibleMessageIdRef.current = null;
         onLastFullyVisibleMessageChange?.(null);
@@ -523,11 +552,17 @@ export function ChatVirtualScroll({
     let nextMessageId: string | null = null;
     let firstMessageId: string | null = null;
     let firstMessageIndex: number | null = null;
+    let nextTopDateColliding = false;
+    let nextHiddenDateRowKey: string | null = null;
 
     if (mounted) {
+      const overlayHeight = overlayHeightRef.current || TOP_DATE_OVERLAY_FALLBACK_HEIGHT;
+      const floatingTop = TOP_DATE_FLOATING_GAP_PX;
+      const floatingBottom = floatingTop + overlayHeight;
+
       for (let index = mounted.end; index >= mounted.start; index -= 1) {
         const row = rows[index];
-        if (!row || row.type !== 'message') continue;
+        if (!row) continue;
 
         const rowNode = rowRefsMap.current.get(row.key);
         if (!rowNode) continue;
@@ -535,55 +570,49 @@ export function ChatVirtualScroll({
         const rowRect = rowNode.getBoundingClientRect();
         if (rowRect.height <= 0) continue;
 
-        const fullyVisible = rowRect.top >= containerRect.top - 0.5 && rowRect.bottom <= containerRect.bottom + 0.5;
-        const partiallyVisible = rowRect.bottom > containerRect.top && rowRect.top < containerRect.bottom;
+        if (row.type === 'message') {
+          const fullyVisible = rowRect.top >= containerRect.top - 0.5 && rowRect.bottom <= containerRect.bottom + 0.5;
+          const partiallyVisible = rowRect.bottom > containerRect.top && rowRect.top < containerRect.bottom;
 
-        if (partiallyVisible) {
-          // Since we scan from bottom to top, the last one we see is the first visible from the top
-          firstMessageId = row.messageId;
-          firstMessageIndex = index;
-        }
+          if (partiallyVisible) {
+            firstMessageId = row.messageId;
+            firstMessageIndex = index;
+          }
 
-        if (fullyVisible && nextMessageId === null) {
-          nextMessageId = row.messageId;
+          if (fullyVisible && nextMessageId === null) {
+            nextMessageId = row.messageId;
+          }
+        } else if (row.type === 'date' && !nextTopDateColliding) {
+          const distanceFromTop = rowRect.top - containerRect.top;
+          const distanceBottom = distanceFromTop + rowRect.height;
+          const MARGIN = 1;
+          if (distanceBottom + MARGIN >= floatingTop && distanceFromTop - MARGIN <= floatingBottom) {
+            nextTopDateColliding = true;
+          }
         }
       }
     }
 
-    let nextTopDateOffset = 0;
-    let nextHiddenDateRowKey: string | null = null;
-    if (scrollingRef.current && firstMessageIndex != null) {
+    if (scrollingRef.current && firstMessageIndex != null && mounted) {
+      let activeDateRowKey: string | null = null;
       for (let index = firstMessageIndex; index >= 0; index -= 1) {
         const row = rows[index];
-        if (row?.type !== 'date') continue;
-        nextHiddenDateRowKey = row.key;
-        break;
+        if (row?.type === 'date') {
+          activeDateRowKey = row.key;
+          break;
+        }
       }
 
-      for (let index = firstMessageIndex + 1; index < rows.length; index += 1) {
-        const row = rows[index];
-        if (row?.type !== 'date') continue;
-
-        const rowNode = rowRefsMap.current.get(row.key);
-        if (!rowNode) break;
-
-        const rowRect = rowNode.getBoundingClientRect();
-        if (rowRect.height <= 0) break;
-
-        const distanceFromTop = rowRect.top - containerRect.top;
-        const collisionThreshold = TOP_DATE_FLOATING_GAP_PX + rowRect.height;
-        if (distanceFromTop > 0 && distanceFromTop < collisionThreshold) {
-          nextTopDateOffset = Math.round(distanceFromTop - collisionThreshold);
-        }
-        break;
+      if (!nextTopDateColliding) {
+        nextHiddenDateRowKey = activeDateRowKey;
       }
     }
 
     setHiddenDateRowKey((current) => (current === nextHiddenDateRowKey ? current : nextHiddenDateRowKey));
 
-    if (nextTopDateOffset !== topDateOffsetRef.current) {
-      topDateOffsetRef.current = nextTopDateOffset;
-      onTopDateOffsetChange?.(nextTopDateOffset);
+    if (topDateCollidingRef.current !== nextTopDateColliding) {
+      topDateCollidingRef.current = nextTopDateColliding;
+      onTopDateCollidingChange?.(nextTopDateColliding);
     }
 
     if (nextMessageId !== lastFullyVisibleMessageIdRef.current) {
@@ -595,7 +624,7 @@ export function ChatVirtualScroll({
       firstVisibleMessageIdRef.current = firstMessageId;
       onFirstVisibleMessageChange?.(firstMessageId);
     }
-  }, [onLastFullyVisibleMessageChange, onFirstVisibleMessageChange, onTopDateOffsetChange, rows]);
+  }, [onLastFullyVisibleMessageChange, onFirstVisibleMessageChange, onTopDateCollidingChange, rows]);
 
   const scrollToBottomInternal = useCallback((behavior: ScrollBehavior = 'auto') => {
     const container = containerRef.current;
@@ -1321,6 +1350,11 @@ export function ChatVirtualScroll({
   ]);
 
   const handleScroll = useCallback(() => {
+    // Immediately mark activity so updateLastFullyVisibleMessage runs with
+    // scrollingRef set. This prevents a race where the scroll handler runs
+    // before the native scroll activity effect updates `scrollingRef`, which
+    // caused the floating date to appear and overlap a visible fixed date.
+    setScrollActivity(true);
     const container = containerRef.current;
     const now = performance.now();
     if (container) {
@@ -1394,6 +1428,7 @@ export function ChatVirtualScroll({
     scrollDistances,
     updateAtBottom,
     updateLastFullyVisibleMessage,
+    setScrollActivity,
   ]);
 
   useLayoutEffect(() => {

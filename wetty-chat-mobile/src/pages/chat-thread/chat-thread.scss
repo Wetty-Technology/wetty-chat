@@ -40,6 +40,7 @@
   transition:
     opacity 0.2s ease,
     transform 0.2s ease;
+  will-change: opacity, transform;
   opacity: 1;
 }
 
@@ -63,11 +64,6 @@
     --background-hover: var(--ion-color-light, #f4f5f8);
     --box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
     --color: var(--ion-color-medium, #92949c);
-    transition: transform 120ms ease;
-
-    &::part(native) {
-      transition: transform 120ms ease;
-    }
 
     &:active::part(native) {
       transform: scale(0.94);
