@@ -53,8 +53,11 @@
 .scroll-to-bottom-fab {
   opacity: 1;
   overflow: visible;
-  transition: opacity 0.2s ease;
-  margin-right: 16px;
+  transform: translateY(0);
+  transition:
+    opacity 120ms ease-out,
+    transform 120ms cubic-bezier(0.2, 0, 0, 1);
+  margin-right: 8px;
 
   ion-fab-button {
     width: 48px;
@@ -72,6 +75,7 @@
 
   &--hidden {
     opacity: 0;
+    transform: translateY(64px);
     pointer-events: none;
   }
 }

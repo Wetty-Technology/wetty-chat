@@ -140,6 +140,14 @@ function parseComparableMessageId(messageId: string): bigint | null {
   return BigInt(messageId);
 }
 
+function isMessageAtOrAfter(messageId: string | null, targetMessageId: string): boolean {
+  if (!messageId) return false;
+  const comparableId = parseComparableMessageId(messageId);
+  const targetComparableId = parseComparableMessageId(targetMessageId);
+  if (comparableId == null || targetComparableId == null) return false;
+  return comparableId >= targetComparableId;
+}
+
 function areAttachmentIdsEqual(left: string[], right: string[]): boolean {
   return left.length === right.length && left.every((value, index) => value === right[index]);
 }
@@ -298,6 +306,8 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   const [pendingResumeMessageId, setPendingResumeMessageId] = useState<string | null>(initialResumeMessageId);
   const [lastFullyVisibleMessageId, setLastFullyVisibleMessageId] = useState<string | null>(null);
   const [firstVisibleMessageId, setFirstVisibleMessageId] = useState<string | null>(null);
+  const [isScrollingTowardNewerMessages, setIsScrollingTowardNewerMessages] = useState(false);
+  const previousFirstVisibleComparableIdRef = useRef<bigint | null>(null);
   const [messageListScrolling, setMessageListScrolling] = useState(false);
   const [floatingDateColliding, setFloatingDateColliding] = useState(false);
 
@@ -327,6 +337,24 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
 
   const chatRows = useChatRows(messages, formatDateSeparator);
   const [presentAlert] = useIonAlert();
+
+  const handleFirstVisibleMessageChange = useCallback((messageId: string | null) => {
+    setFirstVisibleMessageId(messageId);
+
+    const comparableId = messageId ? parseComparableMessageId(messageId) : null;
+    const previousComparableId = previousFirstVisibleComparableIdRef.current;
+    if (comparableId == null) return;
+
+    if (previousComparableId != null && comparableId !== previousComparableId) {
+      setIsScrollingTowardNewerMessages(comparableId > previousComparableId);
+    }
+    previousFirstVisibleComparableIdRef.current = comparableId;
+  }, []);
+
+  useEffect(() => {
+    previousFirstVisibleComparableIdRef.current = null;
+    setIsScrollingTowardNewerMessages(false);
+  }, [storeChatId]);
 
   // Thread subscription state
   const [threadSubscribed, setThreadSubscribed] = useState<boolean | null>(null);
@@ -1032,6 +1060,44 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
 
   const nextCursor = useSelector((state: RootState) => selectNextCursorForChat(state, storeChatId));
   const prevCursor = useSelector((state: RootState) => selectPrevCursorForChat(state, storeChatId));
+
+  const scrollToAbsoluteBottom = useCallback(() => {
+    if (prevCursor != null) {
+      fetchLatestWindow({ forceReopen: true });
+      return;
+    }
+
+    scrollApiRef.current?.scrollToBottom();
+  }, [fetchLatestWindow, prevCursor]);
+
+  const handleScrollToBottomClick = useCallback(() => {
+    const hasUnreadReadBoundary =
+      !threadId &&
+      scrollToBottomUnreadCount > 0 &&
+      lastReadMessageId != null &&
+      parseComparableMessageId(lastReadMessageId) != null;
+    const alreadyAtReadBoundary =
+      lastReadMessageId != null && isMessageAtOrAfter(lastFullyVisibleMessageId, lastReadMessageId);
+
+    if (hasUnreadReadBoundary && !alreadyAtReadBoundary) {
+      void jumpToMessage(lastReadMessageId, { silent: true }).then((found) => {
+        if (!found) {
+          scrollToAbsoluteBottom();
+        }
+      });
+      return;
+    }
+
+    scrollToAbsoluteBottom();
+  }, [
+    jumpToMessage,
+    lastFullyVisibleMessageId,
+    lastReadMessageId,
+    scrollToAbsoluteBottom,
+    scrollToBottomUnreadCount,
+    threadId,
+  ]);
+  const showScrollToBottomButton = scrollToBottomUnreadCount > 0 || (!atBottom && isScrollingTowardNewerMessages);
 
   const uploadAttachment = useCallback(async ({ file, dimensions, onProgress, signal, order }: ComposeUploadInput) => {
     const res = await requestUploadUrl({
@@ -1801,30 +1867,21 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
             bottomPadding={16}
             onAtBottomChange={setAtBottom}
             onLastFullyVisibleMessageChange={setLastFullyVisibleMessageId}
-            onFirstVisibleMessageChange={setFirstVisibleMessageId}
+            onFirstVisibleMessageChange={handleFirstVisibleMessageChange}
             onScrollActivityChange={setMessageListScrolling}
             onTopDateCollidingChange={setFloatingDateColliding}
           />
           <IonFab
             vertical="bottom"
             horizontal="end"
-            className={`scroll-to-bottom-fab ${atBottom ? 'scroll-to-bottom-fab--hidden' : ''}`}
+            className={`scroll-to-bottom-fab ${showScrollToBottomButton ? '' : 'scroll-to-bottom-fab--hidden'}`}
           >
             {scrollToBottomUnreadCount > 0 && (
               <span className="scroll-to-bottom-fab__badge">
                 {scrollToBottomUnreadCount > 99 ? '99+' : scrollToBottomUnreadCount}
               </span>
             )}
-            <IonFabButton
-              size="small"
-              onClick={() => {
-                if (prevCursor != null) {
-                  fetchLatestWindow({ forceReopen: true });
-                } else {
-                  scrollApiRef.current?.scrollToBottom();
-                }
-              }}
-            >
+            <IonFabButton size="small" onClick={handleScrollToBottomClick}>
               <IonIcon icon={chevronDown} />
             </IonFabButton>
           </IonFab>
