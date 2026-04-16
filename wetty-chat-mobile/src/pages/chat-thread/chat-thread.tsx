@@ -297,7 +297,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   const [lastFullyVisibleMessageId, setLastFullyVisibleMessageId] = useState<string | null>(null);
   const [firstVisibleMessageId, setFirstVisibleMessageId] = useState<string | null>(null);
   const [messageListScrolling, setMessageListScrolling] = useState(false);
-  const [floatingDateOffset, setFloatingDateOffset] = useState(0);
+  const [floatingDateColliding, setFloatingDateColliding] = useState(false);
 
   const topVisibleMessageDate = useMemo(() => {
     if (!firstVisibleMessageId) return null;
@@ -310,12 +310,18 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   );
 
   const floatingDateLabel = useMemo(() => {
-    if (!topVisibleMessageDate) return null;
+    if (!topVisibleMessageDate || floatingDateColliding) return null;
     if (messageListScrolling || floatingDateVisible || floatingDateFading)
       return formatDateSeparator(topVisibleMessageDate);
     return null;
-  }, [formatDateSeparator, messageListScrolling, topVisibleMessageDate, floatingDateVisible, floatingDateFading]);
-  const floatingDateStyle = useMemo(() => ({ transform: `translateY(${floatingDateOffset}px)` }), [floatingDateOffset]);
+  }, [
+    formatDateSeparator,
+    messageListScrolling,
+    topVisibleMessageDate,
+    floatingDateVisible,
+    floatingDateFading,
+    floatingDateColliding,
+  ]);
 
   const chatRows = useChatRows(messages, formatDateSeparator);
 
@@ -1733,7 +1739,6 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
               floatingDateLabel ? (
                 <div
                   className={`chat-thread-floating-date ${floatingDateFading ? 'chat-thread-floating-date--fading' : ''}`}
-                  style={floatingDateStyle}
                 >
                   <span className="chat-thread-floating-date__label">{floatingDateLabel}</span>
                 </div>
@@ -1747,7 +1752,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
             onLastFullyVisibleMessageChange={setLastFullyVisibleMessageId}
             onFirstVisibleMessageChange={setFirstVisibleMessageId}
             onScrollActivityChange={setMessageListScrolling}
-            onTopDateOffsetChange={setFloatingDateOffset}
+            onTopDateCollidingChange={setFloatingDateColliding}
           />
           <IonFab
             vertical="bottom"

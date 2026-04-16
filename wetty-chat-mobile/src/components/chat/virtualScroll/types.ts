@@ -90,7 +90,7 @@ export interface ChatVirtualScrollProps {
   onLastFullyVisibleMessageChange?: (messageId: string | null) => void;
   onFirstVisibleMessageChange?: (messageId: string | null) => void;
   onScrollActivityChange?: (scrolling: boolean) => void;
-  onTopDateOffsetChange?: (offset: number) => void;
+  onTopDateCollidingChange?: (colliding: boolean) => void;
 }
 
 // ── Constants ──
