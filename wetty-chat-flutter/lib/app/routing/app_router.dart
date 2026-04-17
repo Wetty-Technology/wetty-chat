@@ -1,30 +1,29 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
-import '../../core/session/dev_session_store.dart';
-import '../../features/auth/presentation/auth_login_view.dart';
-import '../../features/auth/presentation/auth_bootstrap_view.dart';
-import '../../features/chats/conversation/presentation/attachment_viewer_page.dart';
-import '../../features/chats/conversation/presentation/attachment_viewer_request.dart';
-import '../../features/chats/conversation/presentation/chat_detail_view.dart';
-import '../../features/chats/conversation/presentation/thread_detail_view.dart';
-import '../../features/chats/conversation/domain/launch_request.dart';
-import '../../features/chats/list/presentation/chat_list_view.dart';
-import '../../features/chats/list/presentation/new_chat_view.dart';
-import '../../features/groups/members/presentation/group_members_view.dart';
-import '../../features/groups/settings/presentation/group_settings_view.dart';
-import '../../features/settings/presentation/dev_session_settings_view.dart';
-import '../../features/settings/presentation/font_size_settings_view.dart';
-import '../../features/settings/presentation/language_settings_view.dart';
-import '../../features/settings/presentation/cache_settings_view.dart';
-import '../../features/settings/presentation/notification_settings_view.dart';
-import '../../features/settings/presentation/profile_settings_view.dart';
-import '../../features/settings/presentation/settings_view.dart';
-import '../../features/stickers/presentation/sticker_pack_detail_page.dart';
-import '../../features/stickers/presentation/sticker_pack_list_page.dart';
-import '../presentation/home_root_view.dart';
-import 'route_names.dart';
+import 'package:chahua/app/presentation/home_root_view.dart';
+import 'package:chahua/app/routing/route_names.dart';
+import 'package:chahua/core/session/dev_session_store.dart';
+import 'package:chahua/features/auth/presentation/auth_bootstrap_view.dart';
+import 'package:chahua/features/auth/presentation/auth_login_view.dart';
+import 'package:chahua/features/chats/conversation/domain/launch_request.dart';
+import 'package:chahua/features/chats/conversation/presentation/attachment_viewer_page.dart';
+import 'package:chahua/features/chats/conversation/presentation/attachment_viewer_request.dart';
+import 'package:chahua/features/chats/conversation_v2/presentation/chat_detail_v2_view.dart';
+import 'package:chahua/features/chats/conversation_v2/presentation/thread_detail_v2_view.dart';
+import 'package:chahua/features/chats/list/presentation/chat_list_view.dart';
+import 'package:chahua/features/chats/list/presentation/new_chat_view.dart';
+import 'package:chahua/features/groups/members/presentation/group_members_view.dart';
+import 'package:chahua/features/groups/settings/presentation/group_settings_view.dart';
+import 'package:chahua/features/settings/presentation/cache_settings_view.dart';
+import 'package:chahua/features/settings/presentation/dev_session_settings_view.dart';
+import 'package:chahua/features/settings/presentation/font_size_settings_view.dart';
+import 'package:chahua/features/settings/presentation/language_settings_view.dart';
+import 'package:chahua/features/settings/presentation/notification_settings_view.dart';
+import 'package:chahua/features/settings/presentation/profile_settings_view.dart';
+import 'package:chahua/features/settings/presentation/settings_view.dart';
+import 'package:chahua/features/stickers/presentation/sticker_pack_detail_page.dart';
+import 'package:chahua/features/stickers/presentation/sticker_pack_list_page.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
   debugLabel: 'root',
@@ -126,7 +125,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                       final extra = state.extra as Map<String, dynamic>?;
                       return CupertinoPage(
                         key: state.pageKey,
-                        child: ChatDetailPage(
+                        child: ChatDetailV2Page(
                           chatId: chatId,
                           launchRequest:
                               extra?['launchRequest'] as LaunchRequest? ??
@@ -166,7 +165,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                           final extra = state.extra as Map<String, dynamic>?;
                           return CupertinoPage(
                             key: state.pageKey,
-                            child: ThreadDetailPage(
+                            child: ThreadDetailV2Page(
                               chatId: chatId,
                               threadRootId: threadId,
                               launchRequest:
@@ -187,7 +186,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                       final extra = state.extra as Map<String, dynamic>?;
                       return CupertinoPage(
                         key: state.pageKey,
-                        child: ThreadDetailPage(
+                        child: ThreadDetailV2Page(
                           chatId: chatId,
                           threadRootId: threadId,
                           launchRequest:
