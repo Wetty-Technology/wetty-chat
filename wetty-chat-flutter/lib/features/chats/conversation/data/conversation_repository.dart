@@ -245,6 +245,8 @@ class ConversationRepository {
   List<String> latestWindowStableKeys({int limit = defaultWindowSize}) =>
       _store.latestRangeStableKeys(scope, limit: limit);
 
+  List<String> activeWindowStableKeys() => _store.activeRangeStableKeys(scope);
+
   List<ConversationMessage> cachedWindowAroundMessage(
     int messageId, {
     int before = defaultWindowSize ~/ 2,

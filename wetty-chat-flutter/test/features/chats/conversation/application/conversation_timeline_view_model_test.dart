@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:chahua/core/api/models/chats_api_models.dart';
 import 'package:chahua/core/api/models/messages_api_models.dart';
 import 'package:chahua/core/api/models/websocket_api_models.dart';
+import 'package:chahua/features/chats/conversation/application/conversation_local_mutation_registry.dart';
 import 'package:chahua/features/chats/conversation/application/conversation_timeline_view_model.dart';
 import 'package:chahua/features/chats/conversation/application/conversation_realtime_registry.dart';
 import 'package:chahua/features/chats/conversation/data/conversation_repository.dart';
@@ -14,6 +15,7 @@ import 'package:chahua/features/chats/conversation/data/message_api_service.dart
 import 'package:chahua/features/chats/conversation/domain/conversation_scope.dart';
 import 'package:chahua/features/chats/conversation/domain/launch_request.dart';
 import 'package:chahua/features/chats/conversation/domain/viewport_placement.dart';
+import 'package:chahua/features/chats/models/message_models.dart';
 
 void main() {
   group('ConversationTimelineViewModel viewport commands', () {
@@ -172,6 +174,56 @@ void main() {
     );
 
     test(
+      'optimistic send from anchored mode rebuilds from active range instead of collapsing to latest',
+      () async {
+        final container = _createContainer();
+        addTearDown(container.dispose);
+        final provider = conversationTimelineViewModelProvider(_args());
+
+        await container.read(provider.future);
+        final notifier = container.read(provider.notifier);
+        await notifier.jumpToMessage(10);
+        notifier.onViewportLiveEdgeChanged(true);
+
+        final before = container.read(provider).value!;
+        expect(before.windowMode, ConversationWindowMode.anchoredTarget);
+
+        container
+            .read(
+              conversationRepositoryProvider(
+                const ConversationScope.chat(chatId: '1'),
+              ),
+            )
+            .insertOptimisticSend(
+              sender: const Sender(uid: 7, name: 'Tester'),
+              text: 'Local optimistic message',
+              messageType: 'text',
+              attachments: const <AttachmentItem>[],
+              clientGeneratedId: 'optimistic-local',
+            );
+        container
+            .read(conversationLocalMutationRegistryProvider)
+            .dispatch(
+              const ConversationLocalMutation(
+                scope: ConversationScope.chat(chatId: '1'),
+                kind: ConversationLocalMutationKind.inserted,
+              ),
+            );
+
+        final state = container.read(provider).value;
+        expect(state, isNotNull);
+        expect(state!.windowMode, ConversationWindowMode.anchoredTarget);
+        expect(state.anchorMessageId, 10);
+        expect(
+          state.windowStableKeys.length,
+          greaterThan(before.windowStableKeys.length),
+        );
+        expect(state.windowStableKeys, contains('local:local-1'));
+        expect(state.windowStableKeys, contains('server:10'));
+      },
+    );
+
+    test(
       'jumpToLatest immediately switches to the latest-backed window',
       () async {
         final container = _createContainer();
@@ -195,6 +247,73 @@ void main() {
           ConversationViewportCommandType.showLatestImmediate,
         );
         expect(state.viewportPlacement, ConversationViewportPlacement.liveEdge);
+      },
+    );
+
+    test(
+      'returnToLatestAfterSend refreshes latest when leaving anchored mode',
+      () async {
+        final service = _FakeMessageApiService(_buildMessages());
+        service.appendMessage(151);
+        final container = _createContainer(service: service);
+        addTearDown(container.dispose);
+        final provider = conversationTimelineViewModelProvider(_args());
+
+        await container.read(provider.future);
+        final notifier = container.read(provider.notifier);
+
+        await notifier.jumpToMessage(10);
+        await notifier.returnToLatestAfterSend();
+        final state = container.read(provider).value;
+
+        expect(state, isNotNull);
+        expect(state!.windowMode, ConversationWindowMode.liveLatest);
+        expect(state.anchorMessageId, isNull);
+        expect(state.windowStableKeys.last, 'server:151');
+        expect(
+          state.viewportCommand?.type,
+          ConversationViewportCommandType.showLatestImmediate,
+        );
+      },
+    );
+
+    test(
+      'stale returnToLatestAfterSend refresh does not overwrite a later jump',
+      () async {
+        final service = _FakeMessageApiService(_buildMessages());
+        service.appendMessage(151);
+        final container = _createContainer(service: service);
+        addTearDown(container.dispose);
+        final provider = conversationTimelineViewModelProvider(_args());
+        final sub = container.listen(
+          provider,
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(sub.close);
+
+        await container.read(provider.future);
+        final notifier = container.read(provider.notifier);
+
+        await notifier.jumpToMessage(10);
+        final gate = Completer<void>();
+        service.latestFetchGate = gate;
+        final returnFuture = notifier.returnToLatestAfterSend();
+        await pumpEventQueue();
+
+        await notifier.relocateToLoadedMessage(120);
+        gate.complete();
+        await returnFuture;
+        await pumpEventQueue(times: 10);
+
+        final state = container.read(provider).value;
+        expect(state, isNotNull);
+        expect(state!.windowMode, ConversationWindowMode.anchoredTarget);
+        expect(state.anchorMessageId, 120);
+        expect(
+          state.viewportCommand?.type,
+          ConversationViewportCommandType.bootstrapTarget,
+        );
       },
     );
 
@@ -842,7 +961,11 @@ void main() {
         final container = _createContainer(service: service);
         addTearDown(container.dispose);
         final provider = conversationTimelineViewModelProvider(_args());
-        final sub = container.listen(provider, (_, _) {}, fireImmediately: true);
+        final sub = container.listen(
+          provider,
+          (_, _) {},
+          fireImmediately: true,
+        );
         addTearDown(sub.close);
 
         await container.read(provider.future);

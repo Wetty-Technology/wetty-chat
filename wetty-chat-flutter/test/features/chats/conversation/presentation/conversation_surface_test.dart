@@ -10,6 +10,7 @@ import 'package:chahua/core/api/models/stickers_api_models.dart';
 import 'package:chahua/core/providers/shared_preferences_provider.dart';
 import 'package:chahua/core/session/dev_session_store.dart';
 import 'package:chahua/features/chats/conversation/application/conversation_composer_view_model.dart';
+import 'package:chahua/features/chats/conversation/application/conversation_timeline_view_model.dart';
 import 'package:chahua/features/chats/conversation/data/audio_recorder_service.dart';
 import 'package:chahua/features/chats/conversation/data/audio_waveform_cache_service.dart';
 import 'package:chahua/features/chats/conversation/data/message_api_service.dart';
@@ -95,6 +96,67 @@ void main() {
       find.byKey(const ValueKey('picker-sticker-favorite-1')),
       findsNothing,
     );
+  });
+
+  testWidgets('surface returns to latest after send while launched anchored', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    final environment = await _createEnvironment(messageCount: 160);
+    addTearDown(environment.container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: environment.container,
+        child: _buildApp(
+          child: ConversationSurface(
+            scope: const ConversationScope.chat(chatId: '1'),
+            timelineArgs: (
+              scope: const ConversationScope.chat(chatId: '1'),
+              launchRequest: const LaunchRequest.message(
+                messageId: 10,
+                highlight: false,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final before = environment.container.read(
+      conversationTimelineViewModelProvider((
+        scope: const ConversationScope.chat(chatId: '1'),
+        launchRequest: const LaunchRequest.message(
+          messageId: 10,
+          highlight: false,
+        ),
+      )),
+    );
+    expect(before.value, isNotNull);
+    expect(before.value!.windowMode, ConversationWindowMode.anchoredTarget);
+
+    await tester.tap(find.byIcon(CupertinoIcons.smiley));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('picker-sticker-favorite-1')));
+    await tester.pumpAndSettle();
+
+    final after = environment.container.read(
+      conversationTimelineViewModelProvider((
+        scope: const ConversationScope.chat(chatId: '1'),
+        launchRequest: const LaunchRequest.message(
+          messageId: 10,
+          highlight: false,
+        ),
+      )),
+    );
+    expect(after.value, isNotNull);
+    expect(after.value!.windowMode, ConversationWindowMode.liveLatest);
+    expect(after.value!.anchorMessageId, isNull);
+    expect(after.value!.windowStableKeys.last, 'server:161');
   });
 
   testWidgets('surface does not re-emit latest visible message unchanged', (

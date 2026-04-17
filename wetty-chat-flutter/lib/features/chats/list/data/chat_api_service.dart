@@ -37,7 +37,7 @@ class ChatApiService {
   Future<MarkChatReadStateResponseDto> markChatAsUnread(String chatId) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/chats/$chatId/unread',
-      data: 'null',
+      data: {},
     );
     return MarkChatReadStateResponseDto.fromJson(response.data!);
   }

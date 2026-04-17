@@ -46,7 +46,19 @@ class _ConversationSurfaceState extends ConsumerState<ConversationSurface> {
   bool _isStickerPickerOpen = false;
 
   Future<void> _handleMessageSent() async {
-    await _timelineController.scrollToLatest();
+    final timelineState = ref.read(
+      conversationTimelineViewModelProvider(widget.timelineArgs),
+    );
+    final viewState = timelineState.value;
+    if (viewState?.windowMode == ConversationWindowMode.liveLatest) {
+      await _timelineController.scrollToLatest();
+      return;
+    }
+    await ref
+        .read(
+          conversationTimelineViewModelProvider(widget.timelineArgs).notifier,
+        )
+        .returnToLatestAfterSend();
   }
 
   void _toggleStickerPicker() {
@@ -62,15 +74,21 @@ class _ConversationSurfaceState extends ConsumerState<ConversationSurface> {
     if (sticker.id == null) {
       return;
     }
-    unawaited(
-      ref
-          .read(conversationComposerViewModelProvider(widget.scope).notifier)
-          .sendSticker(sticker),
-    );
     setState(() {
       _isStickerPickerOpen = false;
     });
-    unawaited(_handleMessageSent());
+    unawaited(_sendStickerAndReturnToLatest(sticker));
+  }
+
+  Future<void> _sendStickerAndReturnToLatest(StickerSummary sticker) async {
+    try {
+      await ref
+          .read(conversationComposerViewModelProvider(widget.scope).notifier)
+          .sendSticker(sticker);
+      await _handleMessageSent();
+    } catch (_) {
+      // Error presentation is handled by the composer state / retry flows.
+    }
   }
 
   @override

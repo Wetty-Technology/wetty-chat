@@ -743,17 +743,20 @@ class ConversationTimelineViewModel
     }
 
     final current = state.requireValue;
-    final shouldTrackLatestWindow =
-        current.windowMode == ConversationWindowMode.liveLatest ||
-        _isViewportAtLiveEdge;
+    final shouldRebuildFromLatestRange =
+        current.windowMode == ConversationWindowMode.liveLatest;
     final nextWindowStableKeys = switch (mutation.kind) {
       ConversationLocalMutationKind.inserted ||
-      ConversationLocalMutationKind.removed when shouldTrackLatestWindow =>
+      ConversationLocalMutationKind.removed when shouldRebuildFromLatestRange =>
         _repository.latestWindowStableKeys(limit: _windowSize),
+      ConversationLocalMutationKind.inserted ||
+      ConversationLocalMutationKind.removed =>
+        _repository.activeWindowStableKeys(),
       _ => current.windowStableKeys,
     };
     final nextViewportCommand = switch (mutation.kind) {
-      ConversationLocalMutationKind.inserted when shouldTrackLatestWindow =>
+      ConversationLocalMutationKind.inserted
+          when shouldRebuildFromLatestRange =>
         _settleAtBottomAfterMutationCommand(),
       _ => current.viewportCommand,
     };
@@ -1027,6 +1030,7 @@ class ConversationTimelineViewModel
       name: 'TimelineVM',
     );
     _rangeSessionId += 1;
+    final sessionId = _rangeSessionId;
     _isViewportAtLiveEdge = true;
     _pendingLiveMessageIds.clear();
     final latestWindowStableKeys = _repository.latestWindowStableKeys(
@@ -1051,7 +1055,51 @@ class ConversationTimelineViewModel
     if (!_repository.hasNewerOutsideWindow(immediateWindowStableKeys)) {
       return;
     }
-    unawaited(_refreshLatestAfterReturnToLiveEdge(previousTailStableKey));
+    unawaited(
+      _refreshLatestAfterReturnToLiveEdge(
+        previousTailStableKey,
+        sessionId: sessionId,
+      ),
+    );
+  }
+
+  Future<void> returnToLatestAfterSend() async {
+    final current = state.value;
+    if (current == null) {
+      return;
+    }
+    if (current.windowMode == ConversationWindowMode.liveLatest) {
+      await jumpToLatest();
+      return;
+    }
+
+    developer.log(
+      'returnToLatestAfterSend: refreshing latest from mode=${current.windowMode}',
+      name: 'TimelineVM',
+    );
+    _rangeSessionId += 1;
+    final sessionId = _rangeSessionId;
+    _isViewportAtLiveEdge = true;
+    _pendingLiveMessageIds.clear();
+
+    final latest = await _repository.refreshLatestWindow(limit: _windowSize);
+    final latestStableKeys = latest.map((item) => item.stableKey).toList();
+    if (_isDisposed || sessionId != _rangeSessionId) {
+      return;
+    }
+
+    _setStateIfActive(
+      AsyncData(
+        _buildState(
+          windowStableKeys: latestStableKeys,
+          windowMode: ConversationWindowMode.liveLatest,
+          viewportPlacement: ConversationViewportPlacement.liveEdge,
+          shouldRefreshChats: current.shouldRefreshChats,
+          pendingLiveCount: 0,
+          viewportCommand: _showLatestImmediateCommand(),
+        ),
+      ),
+    );
   }
 
   Future<void> scrollToLoadedMessage(
@@ -1434,11 +1482,13 @@ class ConversationTimelineViewModel
       );
 
   Future<void> _refreshLatestAfterReturnToLiveEdge(
-    String? previousTailStableKey,
-  ) async {
+    String? previousTailStableKey, {
+    required int sessionId,
+  }) async {
     final latest = await _repository.refreshLatestWindow(limit: _windowSize);
     final current = state.value;
     if (current == null ||
+        sessionId != _rangeSessionId ||
         current.windowMode != ConversationWindowMode.liveLatest ||
         current.anchorMessageId != null) {
       return;
