@@ -1858,7 +1858,12 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
             onRequestEditLastMessage={requestEditLastOwnMessage}
           />
         </IonFooter>
-        <UserProfileModal sender={profileSender} onDismiss={() => setProfileSender(null)} />
+        <UserProfileModal
+          sender={profileSender}
+          onDismiss={() => setProfileSender(null)}
+          chatId={chatId}
+          canManage={isAdmin}
+        />
         <ReactionDetailsModal
           chatId={chatId}
           messageId={reactionDetail?.messageId ?? null}

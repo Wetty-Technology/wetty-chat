@@ -1,0 +1,25 @@
+.buttonRow {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.singleButton,
+.splitButton {
+  border-radius: 10px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+  padding: 8px 5px;
+  font-weight: normal;
+}
+
+.singleButton {
+  flex: 1 1 90%;
+}
+
+.splitButton {
+  flex: 1 1 48%;
+}

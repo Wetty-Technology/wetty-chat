@@ -80,6 +80,7 @@ export default function ChatMembersCore({ chatId: propChatId, backAction }: Chat
   const [presentToast] = useIonToast();
   const [presentAlert] = useIonAlert();
   const [profileSender, setProfileSender] = useState<Sender | null>(null);
+  const [profileMember, setProfileMember] = useState<MemberResponse | null>(null);
 
   const [members, setMembers] = useState<MemberResponse[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -416,22 +417,33 @@ export default function ChatMembersCore({ chatId: propChatId, backAction }: Chat
                     isAdmin={isAdmin}
                     isCurrentUser={member.uid === currentUserId}
                     role={member.role}
-                    onSelect={(m) =>
+                    onSelect={(m) => {
                       setProfileSender({
                         uid: m.uid,
                         avatarUrl: m.avatarUrl ?? undefined,
                         name: m.username,
                         gender: m.gender,
                         userGroup: m.userGroup ?? undefined,
-                      })
-                    }
+                      });
+                      setProfileMember(m);
+                    }}
                   />
                 )}
               />
             </div>
           </div>
         )}
-        <UserProfileModal sender={profileSender} onDismiss={() => setProfileSender(null)} />
+        <UserProfileModal
+          sender={profileSender}
+          onDismiss={() => {
+            setProfileSender(null);
+            setProfileMember(null);
+          }}
+          chatId={chatId}
+          canManage={isAdmin}
+          member={profileMember}
+          onActionComplete={resetAndReloadMembers}
+        />
       </IonContent>
     </div>
   );

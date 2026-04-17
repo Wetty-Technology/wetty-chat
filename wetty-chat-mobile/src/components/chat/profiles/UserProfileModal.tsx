@@ -1,48 +1,235 @@
-import { IonButton, IonChip, IonContent, IonIcon, IonLabel, IonModal } from '@ionic/react';
+import { IonButton, IonChip, IonContent, IonIcon, IonLabel, IonModal, useIonAlert, useIonToast } from '@ionic/react';
 import { close, openOutline } from 'ionicons/icons';
 import { t } from '@lingui/core/macro';
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import type { Sender } from '@/api/messages';
 import { useIsDarkMode, useIsDesktop } from '@/hooks/platformHooks';
 import { UserAvatar } from '@/components/UserAvatar';
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/store';
+import { getMembers, removeMember, updateMemberRole, type MemberResponse } from '@/api/group';
+import styles from './UserProfileModal.module.scss';
 
 interface UserProfileModalProps {
   sender: Sender | null;
   onDismiss: () => void;
+  chatId?: string | number;
+  canManage?: boolean;
+  member?: MemberResponse | null;
+  onActionComplete?: () => void;
 }
 
-export function UserProfileModal({ sender, onDismiss }: UserProfileModalProps) {
+export function UserProfileModal({
+  sender,
+  onDismiss,
+  chatId,
+  canManage = false,
+  member: memberProp = null,
+  onActionComplete,
+}: UserProfileModalProps) {
   const isDesktop = useIsDesktop();
   const isDarkMode = useIsDarkMode();
 
+  const contentRef = useRef<HTMLDivElement | null>(null);
   const [prevSender, setPrevSender] = useState<Sender | null>(sender);
   const [localSender, setLocalSender] = useState<Sender | null>(sender);
+  const [memberInfo, setMemberInfo] = useState<MemberResponse | null>(memberProp);
+  const [memberLoading, setMemberLoading] = useState(false);
+  const [initialBreakpoint, setInitialBreakpoint] = useState<number | null>(null);
+
+  const isAnimatingRef = useRef(false);
 
   if (sender !== prevSender) {
     setPrevSender(sender);
     if (sender) {
       setLocalSender(sender);
+      isAnimatingRef.current = true;
+    } else {
+      isAnimatingRef.current = false;
+      setInitialBreakpoint(null);
     }
   }
 
   const displaySender = sender || localSender;
-  const displayName = displaySender?.name ?? (displaySender ? `User ${displaySender.uid}` : '');
   const groupName = displaySender?.userGroup?.name?.trim() || null;
-  const groupNameColor = isDarkMode
-    ? displaySender?.userGroup?.chatGroupColorDark || displaySender?.userGroup?.chatGroupColor || undefined
-    : displaySender?.userGroup?.chatGroupColor || undefined;
   const currentUserId = useSelector((state: RootState) => state.user.uid);
   const isOwn = displaySender?.uid === currentUserId;
 
+  const measure = useCallback(() => {
+    const node = contentRef.current;
+    if (!node) return null;
+
+    const contentHeight = node.scrollHeight + 80;
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+    const bpRaw = viewportHeight > 0 ? contentHeight / viewportHeight : null;
+    const bp = bpRaw != null ? Math.max(0.3, Math.min(0.98, Number(bpRaw.toFixed(3)))) : null;
+
+    if (bp != null) {
+      if (isAnimatingRef.current) return bp;
+      setInitialBreakpoint(bp);
+    }
+    return bp;
+  }, []);
+
+  useLayoutEffect(() => {
+    if (isDesktop || !sender) {
+      setInitialBreakpoint(null);
+      return;
+    }
+
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    if (ro && contentRef.current) {
+      ro.observe(contentRef.current);
+    }
+
+    const onVh = measure;
+    window.addEventListener('resize', onVh);
+    window.visualViewport?.addEventListener('resize', onVh);
+
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener('resize', onVh);
+      window.visualViewport?.removeEventListener('resize', onVh);
+    };
+  }, [isDesktop, sender, measure]);
+
+  const handleDidPresent = useCallback(() => {
+    isAnimatingRef.current = false;
+    measure(); // trigger final measurement after opening completes
+  }, [measure]);
+
+  // Dynamically guess base height for smoother opening (avoids scrollbar flash)
+  let fallbackBp = 0.52;
+  if (canManage && !isOwn) {
+    fallbackBp = 0.62;
+  } else if (groupName) {
+    fallbackBp = 0.55;
+  }
+
+  const mobileModalProps = !isDesktop
+    ? initialBreakpoint != null
+      ? { initialBreakpoint, breakpoints: [0, initialBreakpoint] as number[] }
+      : { initialBreakpoint: fallbackBp, breakpoints: [0, fallbackBp] as number[] }
+    : {};
+
+  const [presentAlert] = useIonAlert();
+  const [presentToast] = useIonToast();
+
+  const displayName = displaySender?.name ?? (displaySender ? `User ${displaySender.uid}` : '');
+  const groupNameColor = isDarkMode
+    ? displaySender?.userGroup?.chatGroupColorDark || displaySender?.userGroup?.chatGroupColor || undefined
+    : displaySender?.userGroup?.chatGroupColor || undefined;
+
+  useEffect(() => {
+    setMemberInfo(memberProp ?? null);
+  }, [memberProp]);
+
+  const loadMemberInfo = useCallback(() => {
+    if (!chatId || !displaySender || !canManage) return;
+    setMemberLoading(true);
+    getMembers(chatId, { q: String(displaySender.uid), mode: 'submitted', limit: 1 })
+      .then((res) => {
+        const found = res.data.members.find((m) => m.uid === displaySender.uid) ?? null;
+        setMemberInfo(found);
+      })
+      .catch(() => setMemberInfo(null))
+      .finally(() => setMemberLoading(false));
+  }, [chatId, canManage, displaySender]);
+
+  useEffect(() => {
+    if (sender && chatId && canManage && !memberProp) {
+      loadMemberInfo();
+    }
+  }, [sender, chatId, canManage, memberProp, loadMemberInfo]);
+
+  const doOnActionComplete = useCallback(() => {
+    try {
+      onActionComplete?.();
+    } catch {
+      // ignore
+    }
+  }, [onActionComplete]);
+
+  const handleConfirmAction = useCallback(
+    (
+      header: string,
+      message: string,
+      successMessage: string,
+      confirmText: string,
+      actionFn: (value?: any) => Promise<any>,
+      isDestructive = false,
+      inputs?: any[],
+    ) => {
+      presentAlert({
+        header,
+        message,
+        inputs,
+        buttons: [
+          { text: t`Cancel`, role: 'cancel' },
+          {
+            text: confirmText,
+            role: isDestructive ? 'destructive' : undefined,
+            handler: (value: string) => {
+              actionFn(value)
+                .then((msg: string | void) => {
+                  presentToast(msg || successMessage, 2000);
+                  doOnActionComplete();
+                  onDismiss();
+                })
+                .catch((err: Error) => presentToast(err.message || t`Action failed`));
+            },
+          },
+        ],
+      });
+    },
+    [presentAlert, presentToast, doOnActionComplete, onDismiss],
+  );
+
+  const handlePromote = useCallback(() => {
+    if (!chatId || !displaySender) return;
+    const displayName = displaySender.name ?? `User ${displaySender.uid}`;
+    handleConfirmAction(t`Promote Member`, t`Promote ${displayName} to admin?`, t`Member promoted`, t`Promote`, () =>
+      updateMemberRole(chatId, displaySender.uid, { role: 'admin' }),
+    );
+  }, [chatId, displaySender, handleConfirmAction]);
+
+  const handleDemote = useCallback(() => {
+    if (!chatId || !displaySender) return;
+    const displayName = displaySender.name ?? `User ${displaySender.uid}`;
+    handleConfirmAction(t`Demote Member`, t`Demote ${displayName} to member?`, t`Member demoted`, t`Demote`, () =>
+      updateMemberRole(chatId, displaySender.uid, { role: 'member' }),
+    );
+  }, [chatId, displaySender, handleConfirmAction]);
+
+  const handleRemove = useCallback(() => {
+    if (!chatId || !displaySender) return;
+    const displayName = displaySender.name ?? `User ${displaySender.uid}`;
+    handleConfirmAction(
+      t`Remove Member`,
+      t`Remove ${displayName} from this group?`,
+      '', // message is dynamic here
+      t`Remove`,
+      async (value: string) => {
+        const deleteMessages = value !== 'none' ? value : undefined;
+        await removeMember(chatId, displaySender.uid, deleteMessages);
+        return deleteMessages === 'all'
+          ? t`Member removed, deleting all messages...`
+          : deleteMessages === 'last24h'
+            ? t`Member removed, deleting recent messages...`
+            : t`Member removed`;
+      },
+      true,
+      [
+        { type: 'radio', label: t`Keep messages`, value: 'none', checked: true },
+        { type: 'radio', label: t`Delete messages from last 24 hours`, value: 'last24h' },
+        { type: 'radio', label: t`Delete all messages`, value: 'all' },
+      ],
+    );
+  }, [chatId, displaySender, handleConfirmAction]);
+
   return (
-    <IonModal
-      isOpen={sender != null}
-      onDidDismiss={onDismiss}
-      {...(!isDesktop ? { initialBreakpoint: 0.5, breakpoints: [0, 0.5] } : {})}
-    >
-      <IonContent className="ion-padding">
+    <IonModal isOpen={sender != null} onDidPresent={handleDidPresent} onDidDismiss={onDismiss} {...mobileModalProps}>
+      <IonContent className="ion-padding" scrollY={false}>
         <button
           onClick={onDismiss}
           aria-label={t`Close`}
@@ -68,7 +255,7 @@ export function UserProfileModal({ sender, onDismiss }: UserProfileModalProps) {
           <IonIcon icon={close} style={{ fontSize: 20, color: 'var(--ion-text-color)' }} />
         </button>
         {displaySender && (
-          <div style={{ textAlign: 'center', paddingTop: 44 }}>
+          <div ref={contentRef} style={{ textAlign: 'center', paddingTop: 44 }}>
             <UserAvatar
               name={displayName}
               avatarUrl={displaySender.avatarUrl}
@@ -122,6 +309,26 @@ export function UserProfileModal({ sender, onDismiss }: UserProfileModalProps) {
                   <IonIcon slot="end" icon={openOutline}></IonIcon>
                 </IonButton>
               </>
+            )}
+            {canManage && !isOwn && (
+              <div className={styles.buttonRow}>
+                {memberLoading ? (
+                  <div style={{ color: 'var(--ion-text-color)' }}>{t`Loading...`}</div>
+                ) : memberInfo?.role === 'admin' ? (
+                  <IonButton color="danger" fill="solid" onClick={handleDemote} className={styles.singleButton}>
+                    {t`Demote to Member`}
+                  </IonButton>
+                ) : memberInfo?.role === 'member' ? (
+                  <>
+                    <IonButton color="primary" fill="solid" onClick={handlePromote} className={styles.splitButton}>
+                      {t`Promote to Admin`}
+                    </IonButton>
+                    <IonButton color="danger" fill="solid" onClick={handleRemove} className={styles.splitButton}>
+                      {t`Remove from Group`}
+                    </IonButton>
+                  </>
+                ) : null}
+              </div>
             )}
           </div>
         )}
