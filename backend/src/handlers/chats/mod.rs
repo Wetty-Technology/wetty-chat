@@ -1073,6 +1073,8 @@ pub struct ListChatsQuery {
     )]
     #[schema(value_type = Option<String>)]
     after: Option<i64>,
+    #[serde(default)]
+    archived: Option<bool>,
 }
 
 #[derive(Serialize, utoipa::ToSchema)]
@@ -1090,6 +1092,7 @@ pub struct ChatListItem {
     last_read_message_id: Option<i64>,
     last_message: Option<MessageResponse>,
     muted_until: Option<DateTime<Utc>>,
+    archived: bool,
 }
 
 #[derive(Serialize, utoipa::ToSchema)]
@@ -1109,6 +1112,7 @@ pub struct ListChatsResponse {
     params(
         ("limit" = Option<i64>, Query, description = "Max number of chats to return"),
         ("after" = Option<String>, Query, description = "Cursor for pagination"),
+        ("archived" = Option<bool>, Query, description = "When true, list archived chats instead of active ones"),
     ),
     responses(
         (status = 200, description = "List of chats", body = ListChatsResponse),
@@ -1124,6 +1128,7 @@ async fn get_chats(
     let conn = &mut *conn;
 
     let limit = validate_limit(q.limit, MAX_CHATS_LIMIT);
+    let archived = q.archived.unwrap_or(false);
 
     let unread_count_sql = format!(
         "(SELECT count(*) FROM (
@@ -1155,7 +1160,8 @@ async fn get_chats(
                 .eq(media::id.nullable())
                 .and(media::deleted_at.is_null())),
         )
-        .filter(group_membership::uid.eq(uid));
+        .filter(group_membership::uid.eq(uid))
+        .filter(group_membership::archived.eq(archived));
 
     type RowType = (
         i64,
@@ -1166,6 +1172,7 @@ async fn get_chats(
         Option<i64>,
         Option<crate::models::Message>,
         Option<DateTime<Utc>>,
+        bool,
     );
 
     let rows: Vec<RowType> = match q.after {
@@ -1179,6 +1186,7 @@ async fn get_chats(
                 group_membership::last_read_message_id,
                 messages_schema::all_columns.nullable(),
                 group_membership::muted_until,
+                group_membership::archived,
             ))
             .order_by((
                 groups::last_message_at.desc().nulls_last(),
@@ -1217,6 +1225,7 @@ async fn get_chats(
                         group_membership::last_read_message_id,
                         messages_schema::all_columns.nullable(),
                         group_membership::muted_until,
+                        group_membership::archived,
                     ))
                     .filter(
                         groups::last_message_at
@@ -1242,6 +1251,7 @@ async fn get_chats(
                         group_membership::last_read_message_id,
                         messages_schema::all_columns.nullable(),
                         group_membership::muted_until,
+                        group_membership::archived,
                     ))
                     .filter(
                         groups::last_message_at
@@ -1263,7 +1273,7 @@ async fn get_chats(
 
     let messages_to_process: Vec<crate::models::Message> = items_to_process
         .iter()
-        .filter_map(|(_, _, _, _, _, _, msg, _)| msg.clone())
+        .filter_map(|(_, _, _, _, _, _, msg, _, _)| msg.clone())
         .collect();
 
     let message_responses = attach_metadata(conn, messages_to_process, &state, uid).await;
@@ -1286,6 +1296,7 @@ async fn get_chats(
                 last_read_message_id,
                 msg,
                 muted_until,
+                archived,
             )| {
                 let mr = msg.and_then(|m| message_response_map.remove(&m.id));
                 ChatListItem {
@@ -1299,6 +1310,7 @@ async fn get_chats(
                     last_read_message_id,
                     last_message: mr,
                     muted_until,
+                    archived,
                 }
             },
         )
@@ -1388,13 +1400,13 @@ async fn mark_as_unread(
     CurrentUid(uid): CurrentUid,
     Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
     mut conn: DbConn,
-    Json(body): Json<Option<MarkAsUnreadBody>>,
+    body: Option<Json<MarkAsUnreadBody>>,
 ) -> Result<Json<MarkChatReadStateResponse>, AppError> {
     let conn = &mut *conn;
 
     check_membership(conn, chat_id, uid)?;
 
-    let explicit_id = body.map(|b| b.message_id);
+    let explicit_id = body.map(|Json(b)| b.message_id);
 
     let (new_read_id, unread_count) = if let Some(message_id) = explicit_id {
         use crate::schema::group_membership::dsl as gm_dsl;
@@ -1491,6 +1503,7 @@ async fn get_chat_unread_count(
 #[serde(rename_all = "camelCase")]
 pub struct UnreadCountResponse {
     unread_count: i64,
+    archived_unread_count: i64,
 }
 
 /// GET /chats/unread — Get total unread count for the current user.
@@ -1510,10 +1523,119 @@ async fn get_unread_count(
     let conn = &mut *conn;
 
     let counts = crate::services::chat::get_unread_counts(conn, &[uid])?;
+    let archived_counts = crate::services::chat::get_archived_unread_counts(conn, &[uid])?;
 
     let unread_count = counts.get(&uid).copied().unwrap_or(0);
+    let archived_unread_count = archived_counts.get(&uid).copied().unwrap_or(0);
 
-    Ok(Json(UnreadCountResponse { unread_count }))
+    Ok(Json(UnreadCountResponse {
+        unread_count,
+        archived_unread_count,
+    }))
+}
+
+/// PUT /chats/:chat_id/archive — Archive a chat and mute it indefinitely.
+#[utoipa::path(
+    put,
+    path = "/archive",
+    tag = "chats",
+    params(
+        ("chat_id" = i64, Path, description = "Chat ID"),
+    ),
+    responses(
+        (status = NO_CONTENT),
+    ),
+    security(("uid_header" = []), ("bearer_jwt" = [])),
+)]
+async fn archive_chat(
+    CurrentUid(uid): CurrentUid,
+    State(state): State<AppState>,
+    Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
+    mut conn: DbConn,
+) -> Result<axum::http::StatusCode, AppError> {
+    let conn = &mut *conn;
+
+    check_membership(conn, chat_id, uid)?;
+
+    diesel::update(
+        group_membership::table.filter(
+            group_membership::chat_id
+                .eq(chat_id)
+                .and(group_membership::uid.eq(uid)),
+        ),
+    )
+    .set((
+        group_membership::archived.eq(true),
+        group_membership::muted_until.eq(Some(chat::indefinite_mute_until())),
+    ))
+    .execute(conn)?;
+
+    state.ws_registry.broadcast_to_uids(
+        &[uid],
+        std::sync::Arc::new(
+            crate::handlers::ws::messages::ServerWsMessage::ChatArchiveStateChanged(
+                crate::handlers::ws::messages::ChatArchiveStateChangedPayload {
+                    chat_id,
+                    archived: true,
+                    muted_until: Some(chat::indefinite_mute_until()),
+                },
+            ),
+        ),
+    );
+
+    Ok(axum::http::StatusCode::NO_CONTENT)
+}
+
+/// DELETE /chats/:chat_id/archive — Unarchive a chat and unmute it.
+#[utoipa::path(
+    delete,
+    path = "/archive",
+    tag = "chats",
+    params(
+        ("chat_id" = i64, Path, description = "Chat ID"),
+    ),
+    responses(
+        (status = NO_CONTENT),
+    ),
+    security(("uid_header" = []), ("bearer_jwt" = [])),
+)]
+async fn unarchive_chat(
+    CurrentUid(uid): CurrentUid,
+    State(state): State<AppState>,
+    Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
+    mut conn: DbConn,
+) -> Result<axum::http::StatusCode, AppError> {
+    let conn = &mut *conn;
+
+    check_membership(conn, chat_id, uid)?;
+
+    diesel::update(
+        group_membership::table.filter(
+            group_membership::chat_id
+                .eq(chat_id)
+                .and(group_membership::uid.eq(uid)),
+        ),
+    )
+    .set((
+        group_membership::archived.eq(false),
+        group_membership::muted_until.eq(None::<DateTime<Utc>>),
+    ))
+    .execute(conn)?;
+
+    state.ws_registry.broadcast_to_uids(
+        &[uid],
+        std::sync::Arc::new(
+            crate::handlers::ws::messages::ServerWsMessage::ChatArchiveStateChanged(
+                crate::handlers::ws::messages::ChatArchiveStateChangedPayload {
+                    chat_id,
+                    archived: false,
+                    muted_until: None,
+                },
+            ),
+        ),
+    );
+
+    Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
 // ---------------------------------------------------------------------------
@@ -1574,6 +1696,7 @@ pub fn router() -> OpenApiRouter<crate::AppState> {
         .nest(
             "/{chat_id}",
             OpenApiRouter::new()
+                .routes(utoipa_axum::routes!(archive_chat, unarchive_chat))
                 .nest(
                     "/messages",
                     messages_router().nest("/{message_id}/reactions", reactions_router()),

@@ -109,11 +109,13 @@ import {
   getThreadSubscriptionStatus,
   getThreads,
   subscribeToThread,
+  unarchiveThread,
   unsubscribeFromThread,
 } from '@/api/threads';
 import {
   markThreadRead as markThreadReadAction,
   removeThread,
+  selectThreadArchivedStatus,
   selectThreadSubscriptionStatus,
   setThreadSubscriptionStatus,
   setThreadsList,
@@ -325,12 +327,17 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   ]);
 
   const chatRows = useChatRows(messages, formatDateSeparator);
+  const [presentAlert] = useIonAlert();
 
   // Thread subscription state
   const [threadSubscribed, setThreadSubscribed] = useState<boolean | null>(null);
+  const [threadArchived, setThreadArchived] = useState<boolean>(false);
   const [threadSubLoading, setThreadSubLoading] = useState(false);
   const syncedThreadSubscribed = useSelector((state: RootState) =>
     threadId ? selectThreadSubscriptionStatus(state, threadId) : null,
+  );
+  const syncedThreadArchived = useSelector((state: RootState) =>
+    threadId ? selectThreadArchivedStatus(state, threadId) : null,
   );
 
   useEffect(() => {
@@ -339,7 +346,14 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
     getThreadSubscriptionStatus(chatId, threadId)
       .then((res) => {
         setThreadSubscribed(res.data.subscribed);
-        dispatch(setThreadSubscriptionStatus({ threadRootId: threadId, subscribed: res.data.subscribed }));
+        setThreadArchived(res.data.archived);
+        dispatch(
+          setThreadSubscriptionStatus({
+            threadRootId: threadId,
+            subscribed: res.data.subscribed,
+            archived: res.data.archived,
+          }),
+        );
       })
       .catch(() => setThreadSubscribed(null));
   }, [chatId, threadId, dispatch]);
@@ -350,22 +364,56 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
     }
   }, [syncedThreadSubscribed]);
 
+  useEffect(() => {
+    if (syncedThreadArchived != null) {
+      setThreadArchived(syncedThreadArchived);
+    }
+  }, [syncedThreadArchived]);
+
   const handleToggleThreadSubscription = useCallback(async () => {
     if (!threadId || !chatId || threadSubscribed == null) return;
+
+    if (threadArchived) {
+      presentAlert({
+        header: t`Unarchive thread?`,
+        message: t`Unmuting will move this thread back to Threads. Continue?`,
+        buttons: [
+          { text: t`Cancel`, role: 'cancel' },
+          {
+            text: t`Continue`,
+            handler: () => {
+              setThreadSubLoading(true);
+              void unarchiveThread(chatId, threadId)
+                .then(() => {
+                  setThreadSubscribed(true);
+                  setThreadArchived(false);
+                  dispatch(setThreadSubscriptionStatus({ threadRootId: threadId, subscribed: true, archived: false }));
+                })
+                .catch((err) => console.error('Failed to unarchive thread', err))
+                .finally(() => setThreadSubLoading(false));
+            },
+          },
+        ],
+      });
+      return;
+    }
+
     setThreadSubLoading(true);
     try {
       if (threadSubscribed) {
         await unsubscribeFromThread(chatId, threadId);
         setThreadSubscribed(false);
-        dispatch(setThreadSubscriptionStatus({ threadRootId: threadId, subscribed: false }));
+        dispatch(setThreadSubscriptionStatus({ threadRootId: threadId, subscribed: false, archived: false }));
         dispatch(removeThread({ threadRootId: threadId }));
       } else {
         await subscribeToThread(chatId, threadId);
         setThreadSubscribed(true);
-        dispatch(setThreadSubscriptionStatus({ threadRootId: threadId, subscribed: true }));
+        dispatch(setThreadSubscriptionStatus({ threadRootId: threadId, subscribed: true, archived: false }));
         // Refresh threads list so the newly subscribed thread appears
-        getThreads({ limit: 20 })
-          .then((res) => dispatch(setThreadsList({ threads: res.data.threads, nextCursor: res.data.nextCursor })))
+        getThreads()
+          .then((res) =>
+            dispatch(setThreadsList({ threads: res.data.threads, nextCursor: res.data.nextCursor, archived: false })),
+          )
           .catch(() => {});
       }
     } catch (err) {
@@ -373,7 +421,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
     } finally {
       setThreadSubLoading(false);
     }
-  }, [chatId, threadId, threadSubscribed, dispatch]);
+  }, [chatId, threadArchived, threadId, threadSubscribed, dispatch, presentAlert]);
 
   // Pinned messages state (main chat only)
   const pins = useSelector((state: RootState) => selectPinsForChat(state, chatId));
@@ -402,7 +450,6 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   );
 
   const [presentToast] = useIonToast();
-  const [presentAlert] = useIonAlert();
   const [overlayMessage, setOverlayMessage] = useState<{
     message: MessageResponse;
     sourceRect: DOMRect;
@@ -1701,9 +1748,12 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
                   <IonButton
                     onClick={handleToggleThreadSubscription}
                     disabled={threadSubLoading}
-                    color={threadSubscribed ? undefined : 'medium'}
+                    color={threadSubscribed && !threadArchived ? undefined : 'medium'}
                   >
-                    <IonIcon slot="icon-only" icon={threadSubscribed ? notifications : notificationsOffOutline} />
+                    <IonIcon
+                      slot="icon-only"
+                      icon={threadSubscribed && !threadArchived ? notifications : notificationsOffOutline}
+                    />
                   </IonButton>
                 )
               ) : (

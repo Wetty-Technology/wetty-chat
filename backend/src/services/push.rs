@@ -647,12 +647,15 @@ async fn process_push_job(
                         .and(gm_dsl::uid.eq(ts_dsl::uid))),
                 )
                 .filter(ts_dsl::thread_root_id.eq(thread_root_id))
+                .filter(ts_dsl::archived.eq(false))
+                .filter(gm_dsl::archived.eq(false))
                 .select((ts_dsl::uid, group_membership::muted_until))
                 .load(&mut conn)
                 .map_err(|e| format!("Failed to load thread subscriber UIDs: {:?}", e))?
         } else {
             group_membership::table
                 .filter(gm_dsl::chat_id.eq(job.chat_id))
+                .filter(gm_dsl::archived.eq(false))
                 .select((group_membership::uid, group_membership::muted_until))
                 .load(&mut conn)
                 .map_err(|e| format!("Failed to load member UIDs: {:?}", e))?

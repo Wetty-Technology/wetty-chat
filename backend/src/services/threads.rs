@@ -32,6 +32,7 @@ pub fn ensure_thread_subscription(
             thread_subscriptions::thread_root_id.eq(thread_root_id),
             thread_subscriptions::uid.eq(uid),
             thread_subscriptions::subscribed_at.eq(Utc::now()),
+            thread_subscriptions::archived.eq(false),
         ))
         .on_conflict_do_nothing()
         .execute(conn)?;
@@ -74,6 +75,7 @@ pub fn subscribe_to_thread(
             thread_subscriptions::uid.eq(uid),
             thread_subscriptions::last_read_message_id.eq(last_read_message_id),
             thread_subscriptions::subscribed_at.eq(Utc::now()),
+            thread_subscriptions::archived.eq(false),
         ))
         .on_conflict_do_nothing()
         .execute(conn)?;
@@ -99,22 +101,22 @@ pub fn unsubscribe_from_thread(
     Ok(deleted > 0)
 }
 
-/// Check if a user is subscribed to a thread.
-pub fn is_subscribed(
+pub fn get_subscription_state(
     conn: &mut PgConnection,
     chat_id: i64,
     thread_root_id: i64,
     uid: i32,
-) -> Result<bool, diesel::result::Error> {
-    diesel::select(diesel::dsl::exists(
-        thread_subscriptions::table.filter(
+) -> Result<Option<bool>, diesel::result::Error> {
+    thread_subscriptions::table
+        .filter(
             thread_subscriptions::chat_id
                 .eq(chat_id)
                 .and(thread_subscriptions::thread_root_id.eq(thread_root_id))
                 .and(thread_subscriptions::uid.eq(uid)),
-        ),
-    ))
-    .get_result(conn)
+        )
+        .select(thread_subscriptions::archived)
+        .first(conn)
+        .optional()
 }
 
 /// Update `last_read_message_id` for an existing subscription only.
@@ -341,6 +343,8 @@ pub struct ThreadListRow {
     pub last_reply_at: DateTime<Utc>,
     #[diesel(sql_type = diesel::sql_types::Timestamptz)]
     pub subscribed_at: DateTime<Utc>,
+    #[diesel(sql_type = diesel::sql_types::Bool)]
+    pub archived: bool,
 }
 
 /// List threads the user is subscribed to, ordered by most recent reply.
@@ -349,6 +353,7 @@ pub fn get_user_threads(
     uid: i32,
     limit: i64,
     before_cursor: Option<DateTime<Utc>>,
+    archived: bool,
 ) -> Result<Vec<ThreadListRow>, diesel::result::Error> {
     let query = sql_query(
         "SELECT
@@ -358,20 +363,23 @@ pub fn get_user_threads(
             avatar_media.storage_key AS chat_avatar_key,
             COALESCE(tm.reply_count, 0)::bigint AS reply_count,
             COALESCE(tm.last_reply_at, ts.subscribed_at) AS last_reply_at,
-            ts.subscribed_at
+            ts.subscribed_at,
+            ts.archived
         FROM thread_subscriptions ts
         LEFT JOIN thread_meta tm ON tm.chat_id = ts.chat_id AND tm.thread_root_id = ts.thread_root_id
         JOIN groups g ON g.id = ts.chat_id
         LEFT JOIN media avatar_media ON g.avatar_image_id = avatar_media.id AND avatar_media.deleted_at IS NULL
         JOIN messages root_msg ON root_msg.id = ts.thread_root_id
         WHERE ts.uid = $1
+          AND ts.archived = $2
           AND root_msg.deleted_at IS NULL
           AND root_msg.is_published = TRUE
-          AND ($2::timestamptz IS NULL OR COALESCE(tm.last_reply_at, ts.subscribed_at) < $2)
+          AND ($3::timestamptz IS NULL OR COALESCE(tm.last_reply_at, ts.subscribed_at) < $3)
         ORDER BY COALESCE(tm.last_reply_at, ts.subscribed_at) DESC
-        LIMIT $3",
+        LIMIT $4",
     )
     .bind::<diesel::sql_types::Integer, _>(uid)
+    .bind::<diesel::sql_types::Bool, _>(archived)
     .bind::<diesel::sql_types::Nullable<diesel::sql_types::Timestamptz>, _>(before_cursor)
     .bind::<diesel::sql_types::BigInt, _>(limit);
 
@@ -394,12 +402,14 @@ struct UnreadThreadCountRow {
 pub fn get_total_unread_thread_count(
     conn: &mut PgConnection,
     uid: i32,
+    archived: bool,
 ) -> Result<i64, diesel::result::Error> {
     let query = sql_query(
         "SELECT COUNT(*)::bigint AS unread_thread_count
          FROM thread_subscriptions ts
          JOIN messages root_msg ON root_msg.id = ts.thread_root_id
          WHERE ts.uid = $1
+           AND ts.archived = $2
            AND root_msg.deleted_at IS NULL
            AND root_msg.is_published = TRUE
            AND EXISTS (
@@ -410,7 +420,8 @@ pub fn get_total_unread_thread_count(
                  AND m.id > COALESCE(ts.last_read_message_id, 0)
            )",
     )
-    .bind::<diesel::sql_types::Integer, _>(uid);
+    .bind::<diesel::sql_types::Integer, _>(uid)
+    .bind::<diesel::sql_types::Bool, _>(archived);
 
     query
         .get_result::<UnreadThreadCountRow>(conn)
@@ -473,6 +484,7 @@ pub struct ThreadListItem {
     pub last_reply_at: DateTime<Utc>,
     pub unread_count: i64,
     pub subscribed_at: DateTime<Utc>,
+    pub archived: bool,
 }
 
 #[derive(Serialize, utoipa::ToSchema)]
@@ -537,17 +549,19 @@ pub fn enrich_thread_list(
     }
     let unread_rows: Vec<UnreadRow> = sql_query(
         "SELECT ts.thread_root_id,
-                LEAST(COUNT(*)::bigint, $3) AS unread_count
+                LEAST(COUNT(*)::bigint, $4) AS unread_count
          FROM thread_subscriptions ts
          JOIN messages m ON m.reply_root_id = ts.thread_root_id
                         AND m.deleted_at IS NULL
                         AND m.is_published = TRUE
                         AND m.id > COALESCE(ts.last_read_message_id, 0)
          WHERE ts.uid = $1
-           AND ts.thread_root_id = ANY($2)
+           AND ts.archived = $2
+           AND ts.thread_root_id = ANY($3)
          GROUP BY ts.thread_root_id",
     )
     .bind::<diesel::sql_types::Integer, _>(uid)
+    .bind::<diesel::sql_types::Bool, _>(rows.first().map(|row| row.archived).unwrap_or(false))
     .bind::<diesel::sql_types::Array<diesel::sql_types::BigInt>, _>(&root_ids)
     .bind::<diesel::sql_types::BigInt, _>(MAX_UNREAD_COUNT)
     .load(conn)?;
@@ -780,6 +794,7 @@ pub fn enrich_thread_list(
                 last_reply_at: row.last_reply_at,
                 unread_count: unread_map.get(&row.thread_root_id).copied().unwrap_or(0),
                 subscribed_at: row.subscribed_at,
+                archived: row.archived,
             })
         })
         .collect();
@@ -788,6 +803,44 @@ pub fn enrich_thread_list(
         threads,
         next_cursor,
     })
+}
+
+pub fn archive_thread(
+    conn: &mut PgConnection,
+    chat_id: i64,
+    thread_root_id: i64,
+    uid: i32,
+) -> Result<bool, diesel::result::Error> {
+    let updated = diesel::update(
+        thread_subscriptions::table.filter(
+            thread_subscriptions::chat_id
+                .eq(chat_id)
+                .and(thread_subscriptions::thread_root_id.eq(thread_root_id))
+                .and(thread_subscriptions::uid.eq(uid)),
+        ),
+    )
+    .set(thread_subscriptions::archived.eq(true))
+    .execute(conn)?;
+    Ok(updated > 0)
+}
+
+pub fn unarchive_thread(
+    conn: &mut PgConnection,
+    chat_id: i64,
+    thread_root_id: i64,
+    uid: i32,
+) -> Result<bool, diesel::result::Error> {
+    let updated = diesel::update(
+        thread_subscriptions::table.filter(
+            thread_subscriptions::chat_id
+                .eq(chat_id)
+                .and(thread_subscriptions::thread_root_id.eq(thread_root_id))
+                .and(thread_subscriptions::uid.eq(uid)),
+        ),
+    )
+    .set(thread_subscriptions::archived.eq(false))
+    .execute(conn)?;
+    Ok(updated > 0)
 }
 
 #[cfg(test)]

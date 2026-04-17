@@ -21,6 +21,7 @@ pub enum ServerWsMessage {
     PresenceUpdate(PresenceUpdatePayload),
     ThreadUpdate(ThreadUpdatePayload),
     ThreadMembershipChanged(ThreadMembershipChangedPayload),
+    ChatArchiveStateChanged(ChatArchiveStateChangedPayload),
     PinAdded(PinUpdatePayload),
     PinRemoved(PinUpdatePayload),
     StickerPackOrderUpdated(StickerPackOrderUpdatePayload),
@@ -37,6 +38,7 @@ impl ServerWsMessage {
             Self::PresenceUpdate(_) => "presenceUpdate",
             Self::ThreadUpdate(_) => "threadUpdate",
             Self::ThreadMembershipChanged(_) => "threadMembershipChanged",
+            Self::ChatArchiveStateChanged(_) => "chatArchiveStateChanged",
             Self::PinAdded(_) => "pinAdded",
             Self::PinRemoved(_) => "pinRemoved",
             Self::StickerPackOrderUpdated(_) => "stickerPackOrderUpdated",
@@ -84,6 +86,17 @@ pub struct ThreadMembershipChangedPayload {
     #[serde(with = "crate::serde_i64_string")]
     #[schema(value_type = String)]
     pub chat_id: i64,
+}
+
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ChatArchiveStateChangedPayload {
+    #[serde(with = "crate::serde_i64_string")]
+    #[schema(value_type = String)]
+    pub chat_id: i64,
+    pub archived: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub muted_until: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Serialize, utoipa::ToSchema)]

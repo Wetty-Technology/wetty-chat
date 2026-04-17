@@ -29,6 +29,8 @@ pub struct ListThreadsQuery {
     limit: Option<i64>,
     #[serde(default)]
     before: Option<DateTime<Utc>>,
+    #[serde(default)]
+    archived: Option<bool>,
 }
 
 /// GET /threads — List threads the user is subscribed to.
@@ -39,6 +41,7 @@ pub struct ListThreadsQuery {
     params(
         ("limit" = Option<i64>, Query, description = "Page size limit"),
         ("before" = Option<DateTime<Utc>>, Query, description = "Cursor for pagination"),
+        ("archived" = Option<bool>, Query, description = "When true, list archived thread subscriptions instead of active ones"),
     ),
     responses(
         (status = OK, body = ListThreadsResponse),
@@ -54,7 +57,8 @@ async fn get_threads(
     let conn = &mut *conn;
 
     let limit = validate_limit(query.limit.or(Some(20)), 50);
-    let rows = thread_svc::get_user_threads(conn, uid, limit + 1, query.before)?;
+    let archived = query.archived.unwrap_or(false);
+    let rows = thread_svc::get_user_threads(conn, uid, limit + 1, query.before, archived)?;
 
     let has_more = rows.len() as i64 > limit;
     let rows: Vec<_> = rows.into_iter().take(limit as usize).collect();
@@ -133,6 +137,7 @@ async fn mark_thread_read(
 #[serde(rename_all = "camelCase")]
 struct UnreadThreadCountResponse {
     unread_thread_count: i64,
+    archived_unread_thread_count: i64,
 }
 
 /// GET /threads/unread — Get total unread thread count for the current user.
@@ -151,10 +156,12 @@ async fn get_unread_thread_count(
 ) -> Result<Json<UnreadThreadCountResponse>, AppError> {
     let conn = &mut *conn;
 
-    let count = thread_svc::get_total_unread_thread_count(conn, uid)?;
+    let count = thread_svc::get_total_unread_thread_count(conn, uid, false)?;
+    let archived_count = thread_svc::get_total_unread_thread_count(conn, uid, true)?;
 
     Ok(Json(UnreadThreadCountResponse {
         unread_thread_count: count,
+        archived_unread_thread_count: archived_count,
     }))
 }
 
@@ -168,7 +175,7 @@ pub struct ThreadSubscribePath {
 /// PUT /chats/:chat_id/threads/:thread_root_id/subscribe — Follow a thread.
 #[utoipa::path(
     put,
-    path = "/subscribe",
+    path = "/",
     tag = "threads",
     params(
         ("chat_id" = i64, Path, description = "Chat ID"),
@@ -225,7 +232,7 @@ async fn subscribe_thread(
 /// DELETE /chats/:chat_id/threads/:thread_root_id/subscribe — Unfollow a thread.
 #[utoipa::path(
     delete,
-    path = "/subscribe",
+    path = "/",
     tag = "threads",
     params(
         ("chat_id" = i64, Path, description = "Chat ID"),
@@ -273,12 +280,13 @@ pub struct ThreadSubscriptionStatusPath {
 #[serde(rename_all = "camelCase")]
 struct ThreadSubscriptionStatusResponse {
     subscribed: bool,
+    archived: bool,
 }
 
 /// GET /chats/:chat_id/threads/:thread_root_id/subscribe — Check subscription status.
 #[utoipa::path(
     get,
-    path = "/subscribe",
+    path = "/",
     tag = "threads",
     params(
         ("chat_id" = i64, Path, description = "Chat ID"),
@@ -301,9 +309,93 @@ async fn get_subscription_status(
 
     check_membership(conn, chat_id, uid)?;
 
-    let subscribed = thread_svc::is_subscribed(conn, chat_id, thread_root_id, uid)?;
+    let archived = thread_svc::get_subscription_state(conn, chat_id, thread_root_id, uid)?;
+    let subscribed = archived.is_some();
 
-    Ok(Json(ThreadSubscriptionStatusResponse { subscribed }))
+    Ok(Json(ThreadSubscriptionStatusResponse {
+        subscribed,
+        archived: archived.unwrap_or(false),
+    }))
+}
+
+/// PUT /chats/:chat_id/threads/:thread_root_id/archive — Archive a thread subscription.
+#[utoipa::path(
+    put,
+    path = "/",
+    tag = "threads",
+    params(
+        ("chat_id" = i64, Path, description = "Chat ID"),
+        ("thread_root_id" = i64, Path, description = "Thread root message ID"),
+    ),
+    responses(
+        (status = NO_CONTENT),
+    ),
+    security(("uid_header" = []), ("bearer_jwt" = [])),
+)]
+async fn archive_thread(
+    CurrentUid(uid): CurrentUid,
+    State(state): State<AppState>,
+    Path(ThreadSubscribePath {
+        chat_id,
+        thread_root_id,
+    }): Path<ThreadSubscribePath>,
+    mut conn: DbConn,
+) -> Result<StatusCode, AppError> {
+    let conn = &mut *conn;
+
+    check_membership(conn, chat_id, uid)?;
+
+    let updated = thread_svc::archive_thread(conn, chat_id, thread_root_id, uid)?;
+    if updated {
+        thread_svc::broadcast_thread_membership_changed_to_user(
+            &state.ws_registry,
+            uid,
+            chat_id,
+            thread_root_id,
+        );
+    }
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// DELETE /chats/:chat_id/threads/:thread_root_id/archive — Unarchive a thread subscription.
+#[utoipa::path(
+    delete,
+    path = "/",
+    tag = "threads",
+    params(
+        ("chat_id" = i64, Path, description = "Chat ID"),
+        ("thread_root_id" = i64, Path, description = "Thread root message ID"),
+    ),
+    responses(
+        (status = NO_CONTENT),
+    ),
+    security(("uid_header" = []), ("bearer_jwt" = [])),
+)]
+async fn unarchive_thread(
+    CurrentUid(uid): CurrentUid,
+    State(state): State<AppState>,
+    Path(ThreadSubscribePath {
+        chat_id,
+        thread_root_id,
+    }): Path<ThreadSubscribePath>,
+    mut conn: DbConn,
+) -> Result<StatusCode, AppError> {
+    let conn = &mut *conn;
+
+    check_membership(conn, chat_id, uid)?;
+
+    let updated = thread_svc::unarchive_thread(conn, chat_id, thread_root_id, uid)?;
+    if updated {
+        thread_svc::broadcast_thread_membership_changed_to_user(
+            &state.ws_registry,
+            uid,
+            chat_id,
+            thread_root_id,
+        );
+    }
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
 pub fn router() -> OpenApiRouter<crate::AppState> {
@@ -315,9 +407,17 @@ pub fn router() -> OpenApiRouter<crate::AppState> {
 
 /// Routes that are nested under /chats/:chat_id/threads/:thread_root_id
 pub fn subscribe_router() -> OpenApiRouter<crate::AppState> {
-    OpenApiRouter::new().routes(utoipa_axum::routes!(
-        get_subscription_status,
-        subscribe_thread,
-        unsubscribe_thread
-    ))
+    OpenApiRouter::new()
+        .nest(
+            "/subscribe",
+            OpenApiRouter::new().routes(utoipa_axum::routes!(
+                get_subscription_status,
+                subscribe_thread,
+                unsubscribe_thread
+            )),
+        )
+        .nest(
+            "/archive",
+            OpenApiRouter::new().routes(utoipa_axum::routes!(archive_thread, unarchive_thread)),
+        )
 }

@@ -183,5 +183,5 @@ export function markMessagesAsRead(
 }
 
 export function markChatAsUnread(chatId: string | number): Promise<AxiosResponse<MarkChatReadStateResponse>> {
-  return apiClient.post(`/chats/${chatId}/unread`, null);
+  return apiClient.post(`/chats/${chatId}/unread`);
 }

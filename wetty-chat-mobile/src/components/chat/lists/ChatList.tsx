@@ -14,28 +14,54 @@ import {
   type RefresherEventDetail,
 } from '@ionic/react';
 import { useDispatch, useSelector } from 'react-redux';
-import { checkmarkDone, mailUnreadOutline, notificationsOffOutline } from 'ionicons/icons';
-import { type ChatListEntry, getChats } from '@/api/chats';
-import { selectAllChats, setChatLastReadMessageId, setChatsList, setChatUnreadCount } from '@/store/chatsSlice';
-import { selectEffectiveLocale, selectShowAllTab } from '@/store/settingsSlice';
+import {
+  archiveOutline,
+  arrowUndoOutline,
+  checkmarkDone,
+  folderOpenOutline,
+  mailUnreadOutline,
+  notificationsOffOutline,
+} from 'ionicons/icons';
+import { useHistory } from 'react-router-dom';
 import { Trans } from '@lingui/react/macro';
-import { markChatAsUnread, markMessagesAsRead, type MessageResponse } from '@/api/messages';
 import { t } from '@lingui/core/macro';
+import { type ChatListEntry, archiveChat, getChats, unarchiveChat } from '@/api/chats';
+import { archiveThread, getThreads, unarchiveThread } from '@/api/threads';
+import {
+  selectAllChats,
+  selectArchivedChats,
+  selectTotalArchivedUnreadChatCount,
+  selectTotalUnreadChatCount,
+  setChatArchived,
+  setChatLastReadMessageId,
+  setChatMutedUntil,
+  setChatsList,
+  setChatUnreadCount,
+} from '@/store/chatsSlice';
+import {
+  selectActiveThreads,
+  selectArchivedThreads,
+  selectTotalArchivedUnreadThreadCount,
+  selectTotalUnreadThreadCount,
+  setThreadSubscriptionStatus,
+  setThreadsList,
+} from '@/store/threadsSlice';
+import { selectEffectiveLocale, selectShowAllTab } from '@/store/settingsSlice';
+import { markChatAsUnread, markMessagesAsRead, type MessageResponse } from '@/api/messages';
 import { syncAppBadgeCount } from '@/utils/badges';
 import { getChatDisplayName } from '@/utils/chatDisplay';
 import { UserAvatar } from '@/components/UserAvatar';
 import { formatMessagePreview, getNotificationPreviewLabels } from '@/utils/messagePreview';
 import { buildResumeHash } from '@/types/chatThreadNavigation';
 import { CHAT_LIST_REFRESH_MIN_DURATION_MS } from '@/constants/chatTiming';
-import { getThreads } from '@/api/threads';
-import { selectThreads, selectThreadsLoaded, selectTotalUnreadThreadCount, setThreadsList } from '@/store/threadsSlice';
-import { selectTotalUnreadChatCount } from '@/store/chatsSlice';
-import { ThreadsListInner } from '@/pages/threads';
 import { type ChatListTab, ChatListSegment } from '@/components/chat/lists/ChatListSegment';
 import { ThreadListRow } from '@/components/chat/lists/ThreadListRow';
 import type { RootState } from '@/store';
 import { compareMessageOrder, isOptimisticMessageId } from '@/store/messageProjection';
+import type { StoredThreadListItem } from '@/api/threads';
 import styles from './ChatList.module.scss';
+
+const INDEFINITE_MUTE_UNTIL = '9999-12-31T23:59:59Z';
 
 function formatLastActivity(isoString: string | null, locale: string): string {
   if (!isoString) return '';
@@ -52,26 +78,16 @@ function formatLastActivity(isoString: string | null, locale: string): string {
 
     if (diffMins < 60) {
       return rtf.format(-Math.max(1, diffMins), 'minute');
-    } else {
-      const diffHours = Math.floor(diffMins / 60);
-      return rtf.format(-diffHours, 'hour');
     }
+
+    return rtf.format(-Math.floor(diffMins / 60), 'hour');
   }
 
-  const isSameYear = date.getFullYear() === now.getFullYear();
-
-  if (isSameYear) {
-    return Intl.DateTimeFormat(locale, {
-      month: 'short',
-      day: 'numeric',
-    }).format(date);
-  } else {
-    return Intl.DateTimeFormat(locale, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    }).format(date);
+  if (date.getFullYear() === now.getFullYear()) {
+    return Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(date);
   }
+
+  return Intl.DateTimeFormat(locale, { year: 'numeric', month: 'short', day: 'numeric' }).format(date);
 }
 
 function isChatMuted(chat: ChatListEntry): boolean {
@@ -116,56 +132,92 @@ function getLatestConfirmedRootMessageId(
 
 type MergedItem =
   | { type: 'group'; chat: ChatListEntry; sortTime: number }
-  | { type: 'thread'; thread: import('@/api/threads').StoredThreadListItem; sortTime: number };
+  | { type: 'thread'; thread: StoredThreadListItem; sortTime: number };
 
 interface ChatListProps {
   activeChatId?: string;
   activeThreadId?: string;
+  archivedMode?: boolean;
+  initialTab?: ChatListTab;
+  onOpenArchived?: (tab: ChatListTab) => void;
   onChatSelect: (chatId: string, resumeHash?: string) => void;
   onThreadSelect?: (chatId: string, threadRootId: string) => void;
 }
 
-export function ChatList({ activeChatId, activeThreadId, onChatSelect, onThreadSelect }: ChatListProps) {
+export function ChatList({
+  activeChatId,
+  activeThreadId,
+  archivedMode = false,
+  initialTab,
+  onOpenArchived,
+  onChatSelect,
+  onThreadSelect,
+}: ChatListProps) {
   const dispatch = useDispatch();
+  const history = useHistory();
   const locale = useSelector(selectEffectiveLocale);
-  const chats = useSelector(selectAllChats);
-  const threads = useSelector(selectThreads);
-  const threadsLoaded = useSelector(selectThreadsLoaded);
-  const unreadThreadCount = useSelector(selectTotalUnreadThreadCount);
-  const unreadChatCount = useSelector(selectTotalUnreadChatCount);
+  const activeChats = useSelector(selectAllChats);
+  const archivedChats = useSelector(selectArchivedChats);
+  const activeThreads = useSelector(selectActiveThreads);
+  const archivedThreads = useSelector(selectArchivedThreads);
+  const unreadChats = useSelector(selectTotalUnreadChatCount);
+  const archivedUnreadChats = useSelector(selectTotalArchivedUnreadChatCount);
+  const unreadThreads = useSelector(selectTotalUnreadThreadCount);
+  const archivedUnreadThreads = useSelector(selectTotalArchivedUnreadThreadCount);
   const showAllTab = useSelector(selectShowAllTab);
   const messageChats = useSelector((state: RootState) => state.messages.chats);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<ChatListTab>(showAllTab ? 'all' : 'groups');
+  const [activeTab, setActiveTab] = useState<ChatListTab>(initialTab ?? (showAllTab ? 'all' : 'groups'));
   const effectiveTab = activeTab === 'all' && !showAllTab ? 'groups' : activeTab;
+  const chats = archivedMode ? archivedChats : activeChats;
+  const threads = archivedMode ? archivedThreads : activeThreads;
 
   const updateAppBadge = useCallback(async () => {
-    await syncAppBadgeCount();
-  }, []);
+    if (!archivedMode) {
+      await syncAppBadgeCount();
+    }
+  }, [archivedMode]);
+
+  const loadLists = useCallback(async () => {
+    const [activeChatRes, activeThreadRes, archivedChatRes, archivedThreadRes] = await Promise.all([
+      getChats({ archived: false }),
+      getThreads({ archived: false }),
+      getChats({ archived: true }),
+      getThreads({ archived: true }),
+    ]);
+
+    dispatch(setChatsList({ chats: activeChatRes.data.chats || [], archived: false }));
+    dispatch(
+      setThreadsList({
+        threads: activeThreadRes.data.threads,
+        nextCursor: activeThreadRes.data.nextCursor,
+        archived: false,
+      }),
+    );
+    dispatch(setChatsList({ chats: archivedChatRes.data.chats || [], archived: true }));
+    dispatch(
+      setThreadsList({
+        threads: archivedThreadRes.data.threads,
+        nextCursor: archivedThreadRes.data.nextCursor,
+        archived: true,
+      }),
+    );
+  }, [dispatch]);
 
   useEffect(() => {
-    void getChats()
-      .then((res) => {
-        const chatList = res.data.chats || [];
-        dispatch(setChatsList(chatList));
+    loadLists()
+      .then(() => {
         setError(null);
       })
-      .catch((err: Error) => {
-        setError(err.message || t`Failed to load chats`);
-      })
+      .catch((err: Error) => setError(err.message || t`Failed to load chats`))
       .finally(() => setLoading(false));
     void updateAppBadge();
-  }, [dispatch, updateAppBadge]);
+  }, [loadLists, updateAppBadge]);
 
-  // Load threads on mount so the "All" tab can interleave them
   useEffect(() => {
-    if (!threadsLoaded) {
-      void getThreads({ limit: 20 }).then((res) => {
-        dispatch(setThreadsList({ threads: res.data.threads, nextCursor: res.data.nextCursor }));
-      });
-    }
-  }, [threadsLoaded, dispatch]);
+    void updateAppBadge();
+  }, [unreadChats, unreadThreads, updateAppBadge]);
 
   const handleToggleRead = async (chat: ChatListEntry, slidingItem: HTMLIonItemSlidingElement | null) => {
     slidingItem?.close();
@@ -182,51 +234,86 @@ export function ChatList({ activeChatId, activeThreadId, onChatSelect, onThreadS
       } catch (err) {
         console.error('Failed to mark as read', err);
       }
-    } else {
-      if (!chat.lastMessage) return;
+      return;
+    }
 
-      try {
-        dispatch(setChatUnreadCount({ chatId: chat.id, unreadCount: 1 }));
-        const res = await markChatAsUnread(chat.id);
-        dispatch(setChatLastReadMessageId({ chatId: chat.id, lastReadMessageId: res.data.lastReadMessageId }));
-        dispatch(setChatUnreadCount({ chatId: chat.id, unreadCount: res.data.unreadCount }));
-        await updateAppBadge();
-      } catch (err) {
-        console.error('Failed to mark as unread', err);
-      }
+    if (!chat.lastMessage) return;
+
+    try {
+      dispatch(setChatUnreadCount({ chatId: chat.id, unreadCount: 1 }));
+      const res = await markChatAsUnread(chat.id);
+      dispatch(setChatLastReadMessageId({ chatId: chat.id, lastReadMessageId: res.data.lastReadMessageId }));
+      dispatch(setChatUnreadCount({ chatId: chat.id, unreadCount: res.data.unreadCount }));
+      await updateAppBadge();
+    } catch (err) {
+      console.error('Failed to mark as unread', err);
     }
   };
 
+  const handleArchiveChat = useCallback(
+    async (chat: ChatListEntry, archived: boolean, slidingItem: HTMLIonItemSlidingElement | null) => {
+      slidingItem?.close();
+      try {
+        if (archived) {
+          await unarchiveChat(chat.id);
+          dispatch(setChatArchived({ chatId: chat.id, archived: false }));
+          dispatch(setChatMutedUntil({ chatId: chat.id, mutedUntil: null }));
+        } else {
+          await archiveChat(chat.id);
+          dispatch(setChatArchived({ chatId: chat.id, archived: true }));
+          dispatch(setChatMutedUntil({ chatId: chat.id, mutedUntil: INDEFINITE_MUTE_UNTIL }));
+        }
+        await updateAppBadge();
+      } catch (err) {
+        console.error('Failed to toggle chat archive state', err);
+      }
+    },
+    [dispatch, updateAppBadge],
+  );
+
+  const handleArchiveThread = useCallback(
+    async (thread: StoredThreadListItem, archived: boolean) => {
+      try {
+        if (archived) {
+          await unarchiveThread(thread.chatId, thread.threadRootMessage.id);
+        } else {
+          await archiveThread(thread.chatId, thread.threadRootMessage.id);
+        }
+        dispatch(
+          setThreadSubscriptionStatus({
+            threadRootId: thread.threadRootMessage.id,
+            subscribed: true,
+            archived: !archived,
+          }),
+        );
+      } catch (err) {
+        console.error('Failed to toggle thread archive state', err);
+      }
+    },
+    [dispatch],
+  );
+
   const handleRefresh = (event: CustomEvent<RefresherEventDetail>) => {
     const startTime = Date.now();
-    const refreshChats = getChats()
-      .then((res) => {
-        const chatList = res.data.chats || [];
-        dispatch(setChatsList(chatList));
+
+    loadLists()
+      .then(() => {
         setError(null);
       })
       .catch((err: Error) => {
         setError(err.message || t`Failed to refresh chats`);
-      });
-    const refreshThreads = getThreads({ limit: 20 })
-      .then((res) => {
-        dispatch(setThreadsList({ threads: res.data.threads, nextCursor: res.data.nextCursor }));
       })
-      .catch(() => {
-        // threads refresh failure is non-critical
+      .finally(() => {
+        const elapsed = Date.now() - startTime;
+        const delay = Math.max(0, CHAT_LIST_REFRESH_MIN_DURATION_MS - elapsed);
+        setTimeout(() => {
+          event.detail.complete();
+        }, delay);
       });
 
-    Promise.all([refreshChats, refreshThreads]).finally(() => {
-      const elapsed = Date.now() - startTime;
-      const delay = Math.max(0, CHAT_LIST_REFRESH_MIN_DURATION_MS - elapsed);
-      setTimeout(() => {
-        event.detail.complete();
-      }, delay);
-    });
     void updateAppBadge();
   };
 
-  // Merged interleaved list for "All" tab
   const mergedItems = useMemo((): MergedItem[] => {
     const items: MergedItem[] = [];
     for (const chat of chats) {
@@ -254,6 +341,49 @@ export function ChatList({ activeChatId, activeThreadId, onChatSelect, onThreadS
     [onThreadSelect],
   );
 
+  const archivedGroupsVisible = archivedChats.length > 0;
+  const archivedThreadsVisible = archivedThreads.length > 0;
+  const archivedAllVisible = archivedGroupsVisible || archivedThreadsVisible;
+
+  const openArchived = useCallback(
+    (tab: ChatListTab) => {
+      if (onOpenArchived) {
+        onOpenArchived(tab);
+        return;
+      }
+      history.push(`/chats/archived/${tab}`);
+    },
+    [history, onOpenArchived],
+  );
+
+  const renderArchivedEntry = (count: number) => (
+    <IonItem button detail={false} className={styles.chatListItem} onClick={() => openArchived(effectiveTab)}>
+      <span slot="start" className={styles.threadsRowIcon}>
+        <IonIcon icon={folderOpenOutline} />
+      </span>
+      <IonLabel className={styles.chatsListLabel}>
+        <h3 className={styles.chatsListTitle}>
+          <span className={styles.chatsListTitleText}>
+            <Trans>Archived</Trans>
+          </span>
+        </h3>
+        <p className={styles.chatsListPreview}>
+          <Trans>View archived chats and threads</Trans>
+        </p>
+      </IonLabel>
+      <div slot="end" className={styles.chatsListEndSlot}>
+        <div className={styles.chatsListTime} />
+        <div className={styles.chatsListBadge}>
+          {count > 0 ? (
+            <IonBadge mode="ios" color="medium">
+              {count > 99 ? '99+' : count}
+            </IonBadge>
+          ) : null}
+        </div>
+      </div>
+    </IonItem>
+  );
+
   const renderChatItem = (chat: ChatListEntry) => (
     <IonItemSliding key={chat.id}>
       <IonItemOptions
@@ -273,6 +403,19 @@ export function ChatList({ activeChatId, activeThreadId, onChatSelect, onThreadS
         >
           <IonIcon slot="top" icon={chat.unreadCount > 0 ? checkmarkDone : mailUnreadOutline} />
           {chat.unreadCount > 0 ? <Trans>Read</Trans> : <Trans>Unread</Trans>}
+        </IonItemOption>
+      </IonItemOptions>
+      <IonItemOptions side="end">
+        <IonItemOption
+          color={archivedMode ? 'success' : 'medium'}
+          expandable
+          onClick={(e) => {
+            const slidingItem = (e.target as HTMLElement).closest('ion-item-sliding');
+            void handleArchiveChat(chat, archivedMode, slidingItem as HTMLIonItemSlidingElement | null);
+          }}
+        >
+          <IonIcon slot="top" icon={archivedMode ? arrowUndoOutline : archiveOutline} />
+          {archivedMode ? <Trans>Unarchive</Trans> : <Trans>Archive</Trans>}
         </IonItemOption>
       </IonItemOptions>
       <IonItem
@@ -321,6 +464,24 @@ export function ChatList({ activeChatId, activeThreadId, onChatSelect, onThreadS
     </IonItemSliding>
   );
 
+  const renderThreadItem = (thread: StoredThreadListItem) => (
+    <ThreadListRow
+      key={`thread-${thread.threadRootMessage.id}`}
+      thread={thread}
+      locale={locale}
+      isActive={activeThreadId === thread.threadRootMessage.id}
+      onSelect={handleThreadSelect}
+      endAction={{
+        color: archivedMode ? 'success' : 'medium',
+        icon: archivedMode ? arrowUndoOutline : archiveOutline,
+        label: archivedMode ? t`Unarchive` : t`Archive`,
+        onAction: () => {
+          void handleArchiveThread(thread, archivedMode);
+        },
+      }}
+    />
+  );
+
   const renderContent = () => {
     if (error) {
       return (
@@ -350,32 +511,60 @@ export function ChatList({ activeChatId, activeThreadId, onChatSelect, onThreadS
     }
 
     if (effectiveTab === 'threads') {
-      return <ThreadsListInner activeThreadId={activeThreadId} onThreadSelect={handleThreadSelect} />;
-    }
+      if (!archivedMode && archivedThreadsVisible) {
+        return (
+          <IonList>
+            {renderArchivedEntry(archivedUnreadThreads)}
+            {threads.length === 0 ? (
+              <IonItem>
+                <IonLabel>
+                  <Trans>No threads yet</Trans>
+                </IonLabel>
+              </IonItem>
+            ) : (
+              threads.map(renderThreadItem)
+            )}
+          </IonList>
+        );
+      }
 
-    if (effectiveTab === 'groups') {
-      if (chats.length === 0) {
+      if (threads.length === 0) {
         return (
           <IonList>
             <IonItem>
-              <IonLabel>
-                <Trans>No chats yet</Trans>
-              </IonLabel>
+              <IonLabel>{archivedMode ? <Trans>No archived threads</Trans> : <Trans>No threads yet</Trans>}</IonLabel>
             </IonItem>
           </IonList>
         );
       }
-      return <IonList>{chats.map(renderChatItem)}</IonList>;
+
+      return <IonList>{threads.map(renderThreadItem)}</IonList>;
     }
 
-    // "all" tab — interleaved groups + threads
-    if (mergedItems.length === 0) {
+    if (effectiveTab === 'groups') {
+      if (chats.length === 0 && (!archivedGroupsVisible || archivedMode)) {
+        return (
+          <IonList>
+            <IonItem>
+              <IonLabel>{archivedMode ? <Trans>No archived chats</Trans> : <Trans>No chats yet</Trans>}</IonLabel>
+            </IonItem>
+          </IonList>
+        );
+      }
+
+      return (
+        <IonList>
+          {!archivedMode && archivedGroupsVisible ? renderArchivedEntry(archivedUnreadChats) : null}
+          {chats.map(renderChatItem)}
+        </IonList>
+      );
+    }
+
+    if (mergedItems.length === 0 && (!archivedAllVisible || archivedMode)) {
       return (
         <IonList>
           <IonItem>
-            <IonLabel>
-              <Trans>No chats yet</Trans>
-            </IonLabel>
+            <IonLabel>{archivedMode ? <Trans>No archived conversations</Trans> : <Trans>No chats yet</Trans>}</IonLabel>
           </IonItem>
         </IonList>
       );
@@ -383,19 +572,12 @@ export function ChatList({ activeChatId, activeThreadId, onChatSelect, onThreadS
 
     return (
       <IonList>
+        {!archivedMode && archivedAllVisible ? renderArchivedEntry(archivedUnreadChats + archivedUnreadThreads) : null}
         {mergedItems.map((item) => {
           if (item.type === 'group') {
             return renderChatItem(item.chat);
           }
-          return (
-            <ThreadListRow
-              key={`thread-${item.thread.threadRootMessage.id}`}
-              thread={item.thread}
-              locale={locale}
-              isActive={activeThreadId === item.thread.threadRootMessage.id}
-              onSelect={handleThreadSelect}
-            />
-          );
+          return renderThreadItem(item.thread);
         })}
       </IonList>
     );
@@ -409,9 +591,11 @@ export function ChatList({ activeChatId, activeThreadId, onChatSelect, onThreadS
       <ChatListSegment
         value={effectiveTab}
         onChange={setActiveTab}
-        allUnreadCount={unreadChatCount + unreadThreadCount}
-        groupsUnreadCount={unreadChatCount}
-        threadsUnreadCount={unreadThreadCount}
+        allUnreadCount={
+          (archivedMode ? archivedUnreadChats : unreadChats) + (archivedMode ? archivedUnreadThreads : unreadThreads)
+        }
+        groupsUnreadCount={archivedMode ? archivedUnreadChats : unreadChats}
+        threadsUnreadCount={archivedMode ? archivedUnreadThreads : unreadThreads}
         showAllTab={showAllTab}
       />
       {renderContent()}

@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { type ReactNode, useMemo } from 'react';
 import { useSelector } from 'react-redux';
-import { IonBadge, IonItem, IonLabel } from '@ionic/react';
+import { IonBadge, IonIcon, IonItem, IonItemOption, IonItemOptions, IonItemSliding, IonLabel } from '@ionic/react';
 import type { StoredThreadListItem, ThreadReplyPreview } from '@/api/threads';
 import { OverlayAvatar } from '@/components/OverlayAvatar';
 import type { RootState } from '@/store/index';
@@ -52,9 +52,15 @@ interface ThreadListRowProps {
   locale: string;
   isActive?: boolean;
   onSelect: (chatId: string, threadRootId: string) => void;
+  endAction?: {
+    color: string;
+    icon: string;
+    label: ReactNode;
+    onAction: () => void;
+  };
 }
 
-export function ThreadListRow({ thread, locale, isActive, onSelect }: ThreadListRowProps) {
+export function ThreadListRow({ thread, locale, isActive, onSelect, endAction }: ThreadListRowProps) {
   const rootMsg = thread.threadRootMessage;
   const rootPreview = formatMessagePreview(rootMsg, getNotificationPreviewLabels(locale));
 
@@ -79,7 +85,7 @@ export function ThreadListRow({ thread, locale, isActive, onSelect }: ThreadList
 
   const lastReplyPreview = lastReply ? formatReplyPreview(lastReply, locale) : null;
 
-  return (
+  const content = (
     <IonItem
       button
       detail={false}
@@ -117,5 +123,21 @@ export function ThreadListRow({ thread, locale, isActive, onSelect }: ThreadList
         </div>
       </div>
     </IonItem>
+  );
+
+  if (!endAction) {
+    return content;
+  }
+
+  return (
+    <IonItemSliding>
+      <IonItemOptions side="end">
+        <IonItemOption color={endAction.color} expandable onClick={endAction.onAction}>
+          <IonIcon slot="top" icon={endAction.icon} />
+          {endAction.label}
+        </IonItemOption>
+      </IonItemOptions>
+      {content}
+    </IonItemSliding>
   );
 }

@@ -20,6 +20,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import {
+  selectIsChatArchived,
   selectChatMeta,
   selectChatMutedUntil,
   setChatInList,
@@ -75,6 +76,7 @@ interface ChatSettingsContentProps {
   chatId: string;
   formState: ChatSettingsFormState;
   mutedUntil: string | null;
+  archived: boolean;
   myRole: GroupRole | null;
   saving: boolean;
   leavingGroup: boolean;
@@ -92,6 +94,7 @@ function ChatSettingsContent({
   chatId,
   formState,
   mutedUntil,
+  archived,
   myRole,
   saving,
   leavingGroup,
@@ -146,7 +149,7 @@ function ChatSettingsContent({
       />
 
       <div className={styles.shareActions}>
-        <ChatMuteSettingItem chatId={chatId} mutedUntil={mutedUntil} />
+        <ChatMuteSettingItem chatId={chatId} mutedUntil={mutedUntil} archived={archived} />
 
         <ChatRoleGate chatId={chatId} allow="admin" role={myRole}>
           <GroupSettingsActionButton icon={linkOutline} onClick={() => setShareModalOpen(true)}>
@@ -202,6 +205,7 @@ function ChatSettingsSession({ chatId, backAction }: { chatId: string; backActio
   const [presentAlert, dismissAlert] = useIonAlert();
   const cachedMeta = useSelector((state: RootState) => selectChatMeta(state, chatId));
   const mutedUntil = useSelector((state: RootState) => selectChatMutedUntil(state, chatId));
+  const archived = useSelector((state: RootState) => selectIsChatArchived(state, chatId));
   const currentUserId = useSelector((state: RootState) => state.user.uid);
   const [formState, setFormState] = useState<ChatSettingsFormState>(() => getInitialFormState(cachedMeta));
   const [loading, setLoading] = useState(() => !hasLoadedChatSettingsMeta(cachedMeta));
@@ -536,6 +540,7 @@ function ChatSettingsSession({ chatId, backAction }: { chatId: string; backActio
             chatId={chatId}
             formState={formState}
             mutedUntil={mutedUntil}
+            archived={archived}
             myRole={formState.myRole}
             saving={saving}
             leavingGroup={leavingGroup}

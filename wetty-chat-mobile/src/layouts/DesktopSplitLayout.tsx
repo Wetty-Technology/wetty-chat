@@ -1,9 +1,10 @@
-import { type ReactNode, useCallback, useRef } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { matchPath, useHistory, useLocation } from 'react-router-dom';
 import { Trans } from '@lingui/react/macro';
 import { IonButton, IonButtons, IonHeader, IonIcon, IonModal, IonTitle, IonToolbar } from '@ionic/react';
-import { addCircleOutline, settings } from 'ionicons/icons';
+import { addCircleOutline, arrowBack, settings } from 'ionicons/icons';
 import { ChatList } from '@/components/chat/lists/ChatList';
+import type { ChatListTab } from '@/components/chat/lists/ChatListSegment';
 import ChatThreadCore from '@/pages/chat-thread/chat-thread';
 import ChatSettingsCore from '@/pages/chat-thread/chat-settings';
 import ChatMembersCore from '@/pages/chat-thread/chat-members';
@@ -26,6 +27,7 @@ type DesktopRouteState = ChatThreadRouteState;
 
 interface DesktopRouteMatches {
   activeChatId: string | undefined;
+  archivedMatch: { tab?: string } | null;
   threadMatch: { id: string; threadId: string } | null;
   settingsMatch: { id: string } | null;
   membersMatch: { id: string } | null;
@@ -43,6 +45,10 @@ interface DesktopRouteMatches {
 function getDesktopRouteMatches(pathname: string): DesktopRouteMatches {
   const threadRaw = matchPath<{ id: string; threadId: string }>(pathname, {
     path: '/chats/chat/:id/thread/:threadId',
+    exact: true,
+  });
+  const archivedRaw = matchPath<{ tab?: string }>(pathname, {
+    path: '/chats/archived/:tab?',
     exact: true,
   });
   const settingsRaw = matchPath<{ id: string }>(pathname, {
@@ -103,6 +109,7 @@ function getDesktopRouteMatches(pathname: string): DesktopRouteMatches {
       invitesRaw?.params.id ??
       chatRaw?.params.id ??
       undefined,
+    archivedMatch: archivedRaw?.params ?? null,
     threadMatch: threadRaw?.params ?? null,
     settingsMatch: settingsRaw?.params ?? null,
     membersMatch: membersRaw?.params ?? null,
@@ -185,6 +192,7 @@ export function DesktopSplitLayout() {
   const baseRoute = currentRoute.globalSettings ? getDesktopRouteMatches(backgroundPath) : currentRoute;
   const {
     activeChatId,
+    archivedMatch,
     threadMatch,
     settingsMatch,
     membersMatch,
@@ -194,6 +202,21 @@ export function DesktopSplitLayout() {
     isJoinChat,
   } = baseRoute;
   const globalSettingsOpen = currentRoute.globalSettings;
+  const initialArchivedTab: ChatListTab | null =
+    archivedMatch?.tab === 'threads' || archivedMatch?.tab === 'groups' || archivedMatch?.tab === 'all'
+      ? archivedMatch.tab
+      : archivedMatch
+        ? 'all'
+        : null;
+  const [archivedSidebarTab, setArchivedSidebarTab] = useState<ChatListTab | null>(initialArchivedTab);
+  const archivedMode = archivedSidebarTab != null;
+  const archivedTab = archivedSidebarTab ?? 'all';
+
+  useEffect(() => {
+    if (archivedMatch) {
+      history.replace('/chats');
+    }
+  }, [archivedMatch, history]);
 
   const handleChatSelect = useCallback(
     (chatId: string, resumeHash?: string) => {
@@ -287,21 +310,29 @@ export function DesktopSplitLayout() {
         <IonHeader>
           <IonToolbar>
             <IonButtons slot="start">
-              <IonButton onClick={openSettingsModal} aria-label="Open settings">
-                <IonIcon slot="icon-only" icon={settings} />
-              </IonButton>
+              {archivedMode ? (
+                <IonButton onClick={() => setArchivedSidebarTab(null)} aria-label="Back to chats">
+                  <IonIcon slot="icon-only" icon={arrowBack} />
+                </IonButton>
+              ) : (
+                <IonButton onClick={openSettingsModal} aria-label="Open settings">
+                  <IonIcon slot="icon-only" icon={settings} />
+                </IonButton>
+              )}
             </IonButtons>
-            <IonTitle>
-              <Trans>Chats</Trans>
-            </IonTitle>
+            <IonTitle>{archivedMode ? <Trans>Archived</Trans> : <Trans>Chats</Trans>}</IonTitle>
             <IonButtons slot="end">
               <HeaderActionMenu icon={addCircleOutline} actions={headerActions} />
             </IonButtons>
           </IonToolbar>
         </IonHeader>
         <ChatList
+          key={archivedMode ? `archived-${archivedTab}` : 'active'}
           activeChatId={activeChatId}
           activeThreadId={threadMatch?.threadId}
+          archivedMode={archivedMode}
+          initialTab={archivedTab}
+          onOpenArchived={setArchivedSidebarTab}
           onChatSelect={handleChatSelect}
           onThreadSelect={handleThreadSelect}
         />

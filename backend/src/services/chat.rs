@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use diesel::sql_query;
 use diesel::PgConnection;
@@ -8,6 +9,12 @@ use crate::schema::group_membership;
 
 pub const MAX_UNREAD_COUNT: i64 = 100;
 const UNREAD_COUNT_CHUNK_SIZE: usize = 50;
+
+pub fn indefinite_mute_until() -> DateTime<Utc> {
+    DateTime::parse_from_rfc3339("9999-12-31T23:59:59Z")
+        .expect("valid indefinite mute timestamp")
+        .with_timezone(&Utc)
+}
 
 #[derive(QueryableByName)]
 struct UnreadCountRow {
@@ -36,7 +43,27 @@ pub fn get_unread_counts(
     let mut result = HashMap::with_capacity(target_uids.len());
 
     for chunk in target_uids.chunks(UNREAD_COUNT_CHUNK_SIZE) {
-        let rows = get_unread_counts_batch(conn, chunk)?;
+        let rows = get_unread_counts_batch(conn, chunk, false, true)?;
+        for row in rows {
+            result.insert(row.uid, row.unread_count.min(MAX_UNREAD_COUNT));
+        }
+    }
+
+    Ok(result)
+}
+
+pub fn get_archived_unread_counts(
+    conn: &mut PgConnection,
+    target_uids: &[i32],
+) -> Result<HashMap<i32, i64>, diesel::result::Error> {
+    if target_uids.is_empty() {
+        return Ok(HashMap::new());
+    }
+
+    let mut result = HashMap::with_capacity(target_uids.len());
+
+    for chunk in target_uids.chunks(UNREAD_COUNT_CHUNK_SIZE) {
+        let rows = get_unread_counts_batch(conn, chunk, true, false)?;
         for row in rows {
             result.insert(row.uid, row.unread_count.min(MAX_UNREAD_COUNT));
         }
@@ -48,6 +75,8 @@ pub fn get_unread_counts(
 fn get_unread_counts_batch(
     conn: &mut PgConnection,
     uids: &[i32],
+    archived: bool,
+    respect_mute: bool,
 ) -> Result<Vec<UnreadCountRow>, diesel::result::Error> {
     let query = sql_query(
         "WITH input_uids AS (
@@ -62,16 +91,23 @@ fn get_unread_counts_batch(
              JOIN messages AS m
                ON m.chat_id = gm.chat_id
              WHERE gm.uid = input_uids.uid
+               AND gm.archived = $2
                AND m.id > COALESCE(gm.last_read_message_id, 0)
                AND m.deleted_at IS NULL
                AND m.is_published = TRUE
                AND m.reply_root_id IS NULL
-               AND (gm.muted_until IS NULL OR gm.muted_until <= NOW())
+               AND (
+                 NOT $3
+                 OR gm.muted_until IS NULL
+                 OR gm.muted_until <= NOW()
+               )
              LIMIT 100
          ) AS unread_messages ON TRUE
          GROUP BY input_uids.uid",
     )
-    .bind::<diesel::sql_types::Array<diesel::sql_types::Integer>, _>(uids.to_vec());
+    .bind::<diesel::sql_types::Array<diesel::sql_types::Integer>, _>(uids.to_vec())
+    .bind::<diesel::sql_types::Bool, _>(archived)
+    .bind::<diesel::sql_types::Bool, _>(respect_mute);
 
     match query.load::<UnreadCountRow>(conn) {
         Ok(rows) => Ok(rows),

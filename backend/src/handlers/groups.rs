@@ -32,7 +32,7 @@ const MAX_GROUP_SELECTOR_LIMIT: i64 = 50;
 
 /// Far-future date used for "mute indefinitely".
 fn indefinite_mute_until() -> DateTime<Utc> {
-    DateTime::from_timestamp(253402300799, 0).unwrap() // 9999-12-31T23:59:59Z
+    crate::services::chat::indefinite_mute_until()
 }
 
 #[derive(serde::Deserialize, utoipa::ToSchema)]
@@ -709,7 +709,10 @@ async fn delete_mute(
     diesel::update(
         group_membership::table.filter(gm_dsl::chat_id.eq(chat_id).and(gm_dsl::uid.eq(uid))),
     )
-    .set(gm_dsl::muted_until.eq(None::<DateTime<Utc>>))
+    .set((
+        gm_dsl::muted_until.eq(None::<DateTime<Utc>>),
+        gm_dsl::archived.eq(false),
+    ))
     .execute(conn)?;
 
     Ok(StatusCode::NO_CONTENT)

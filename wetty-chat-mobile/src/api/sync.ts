@@ -30,22 +30,34 @@ export async function syncApp() {
 
     isSyncing = true;
     try {
-      // 1. Sync Chats List & App Badge
-      const chatsRes = await getChats();
-      const chats = chatsRes.data.chats || [];
-      store.dispatch(setChatsList(chats));
+      // 1. Sync chat/thread snapshots for both active and archived buckets, then refresh the app badge.
+      const [activeChatsRes, archivedChatsRes, activeThreadsRes, archivedThreadsRes] = await Promise.all([
+        getChats({ archived: false }),
+        getChats({ archived: true }),
+        getThreads({ archived: false }),
+        getThreads({ archived: true }),
+      ]);
+
+      const chats = activeChatsRes.data.chats || [];
+      store.dispatch(setChatsList({ chats, archived: false }));
+      store.dispatch(setChatsList({ chats: archivedChatsRes.data.chats || [], archived: true }));
+
+      store.dispatch(
+        setThreadsList({
+          threads: activeThreadsRes.data.threads,
+          nextCursor: activeThreadsRes.data.nextCursor,
+          archived: false,
+        }),
+      );
+      store.dispatch(
+        setThreadsList({
+          threads: archivedThreadsRes.data.threads,
+          nextCursor: archivedThreadsRes.data.nextCursor,
+          archived: true,
+        }),
+      );
 
       await syncAppBadgeCount();
-
-      // 1b. Sync Threads List (setThreadsList recalculates totalUnreadCount from per-thread counts)
-      try {
-        const threadListRes = await getThreads({ limit: 20 });
-        store.dispatch(
-          setThreadsList({ threads: threadListRes.data.threads, nextCursor: threadListRes.data.nextCursor }),
-        );
-      } catch (err) {
-        console.error('Failed to sync thread list', err);
-      }
 
       // 2. Sync Active Message Windows
       const state = store.getState();

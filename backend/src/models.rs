@@ -748,6 +748,7 @@ pub struct ThreadSubscription {
     pub uid: i32,
     pub last_read_message_id: Option<i64>,
     pub subscribed_at: DateTime<Utc>,
+    pub archived: bool,
 }
 
 #[derive(Debug, Clone, Insertable)]
@@ -758,6 +759,7 @@ pub struct NewThreadSubscription {
     pub uid: i32,
     pub last_read_message_id: Option<i64>,
     pub subscribed_at: DateTime<Utc>,
+    pub archived: bool,
 }
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize, Insertable)]

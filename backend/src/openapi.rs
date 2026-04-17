@@ -1,6 +1,6 @@
 use crate::handlers::ws::messages::{
-    PinUpdatePayload, PresenceUpdatePayload, ReactionUpdatePayload, ServerWsMessage,
-    ThreadMembershipChangedPayload, ThreadUpdatePayload,
+    ChatArchiveStateChangedPayload, PinUpdatePayload, PresenceUpdatePayload, ReactionUpdatePayload,
+    ServerWsMessage, ThreadMembershipChangedPayload, ThreadUpdatePayload,
 };
 use utoipa::openapi::security::{ApiKey, ApiKeyValue, Http, HttpAuthScheme, SecurityScheme};
 use utoipa::OpenApi;
@@ -20,6 +20,7 @@ use utoipa::OpenApi;
             PresenceUpdatePayload,
             ThreadUpdatePayload,
             ThreadMembershipChangedPayload,
+            ChatArchiveStateChangedPayload,
             PinUpdatePayload,
         )
     ),

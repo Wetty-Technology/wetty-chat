@@ -3,6 +3,7 @@ import { syncApp } from '@/api/sync';
 import type { MessageResponse, ReactionSummary } from '@/api/messages';
 import { setActiveConnections, setWsConnected } from '@/store/connectionSlice';
 import { selectEffectiveLocale } from '@/store/settingsSlice';
+import { setChatArchived, setChatMutedUntil } from '@/store/chatsSlice';
 import {
   removeThread,
   setThreadSubscriptionStatus,
@@ -150,8 +151,8 @@ function showLocalNotification(message: MessageResponse): void {
   // Skip local notification for thread replies if user is not subscribed
   if (message.replyRootId) {
     const threadItems = store.getState().threads.items;
-    const isSubscribed = threadItems.some((t) => t.threadRootMessage.id === message.replyRootId);
-    if (!isSubscribed) return;
+    const threadEntry = threadItems.find((t) => t.threadRootMessage.id === message.replyRootId);
+    if (!threadEntry || threadEntry.archived) return;
   }
 
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
@@ -258,9 +259,9 @@ function handleWsMessage(payload: unknown): void {
 }
 
 function refreshThreadsList(): void {
-  getThreads({ limit: 20 })
+  getThreads()
     .then((res) => {
-      store.dispatch(setThreadsList({ threads: res.data.threads, nextCursor: res.data.nextCursor }));
+      store.dispatch(setThreadsList({ threads: res.data.threads, nextCursor: res.data.nextCursor, archived: false }));
     })
     .catch((err) => console.error('Failed to refresh threads list from websocket event', err));
 }
@@ -454,7 +455,7 @@ async function connectWebSocket(): Promise<void> {
             const alreadyKnown = threadsState.items.some((t) => t.threadRootMessage.id === payload.threadRootId);
             store.dispatch(setThreadSubscriptionStatus({ threadRootId: payload.threadRootId, subscribed: true }));
             store.dispatch(updateThreadFromWs(payload));
-            if (!alreadyKnown && threadsState.isLoaded) {
+            if (!alreadyKnown && threadsState.buckets.active.isLoaded) {
               refreshThreadsList();
             }
           }
@@ -470,6 +471,7 @@ async function connectWebSocket(): Promise<void> {
                   setThreadSubscriptionStatus({
                     threadRootId: payload.threadRootId,
                     subscribed: res.data.subscribed,
+                    archived: res.data.archived,
                   }),
                 );
 
@@ -478,11 +480,20 @@ async function connectWebSocket(): Promise<void> {
                   return;
                 }
 
-                if (store.getState().threads.isLoaded) {
+                if (store.getState().threads.buckets.active.isLoaded) {
                   refreshThreadsList();
                 }
               })
               .catch((err) => console.error('Failed to refresh thread membership after websocket event', err));
+          }
+          return;
+        }
+
+        if (message.type === 'chatArchiveStateChanged' && message.payload != null) {
+          const payload = message.payload as { chatId: string; archived: boolean; mutedUntil?: string | null };
+          if (payload.chatId) {
+            store.dispatch(setChatArchived({ chatId: payload.chatId, archived: payload.archived }));
+            store.dispatch(setChatMutedUntil({ chatId: payload.chatId, mutedUntil: payload.mutedUntil ?? null }));
           }
           return;
         }

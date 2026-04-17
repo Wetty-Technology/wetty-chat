@@ -39,6 +39,7 @@ export interface ThreadListItem {
   lastReplyAt: string;
   unreadCount: number;
   subscribedAt: string;
+  archived: boolean;
 }
 
 /** Internal Redux state representation — replaces `lastReply` with a cache-only fallback. */
@@ -53,16 +54,23 @@ export interface ListThreadsResponse {
 
 export interface UnreadThreadCountResponse {
   unreadThreadCount: number;
+  archivedUnreadThreadCount: number;
 }
 
 export interface ThreadSubscriptionStatusResponse {
   subscribed: boolean;
+  archived: boolean;
 }
 
-export function getThreads(params?: { limit?: number; before?: string }): Promise<AxiosResponse<ListThreadsResponse>> {
-  const query: Record<string, string | number> = {};
+export function getThreads(params?: {
+  limit?: number;
+  before?: string;
+  archived?: boolean;
+}): Promise<AxiosResponse<ListThreadsResponse>> {
+  const query: Record<string, string | number | boolean> = {};
   if (params?.limit != null) query.limit = params.limit;
   if (params?.before != null) query.before = params.before;
+  if (params?.archived != null) query.archived = params.archived;
   return apiClient.get('/threads', { params: query });
 }
 
@@ -96,4 +104,12 @@ export function getThreadSubscriptionStatus(
   threadRootId: string | number,
 ): Promise<AxiosResponse<ThreadSubscriptionStatusResponse>> {
   return apiClient.get(`/chats/${chatId}/threads/${threadRootId}/subscribe`);
+}
+
+export function archiveThread(chatId: string | number, threadRootId: string | number): Promise<AxiosResponse<void>> {
+  return apiClient.put(`/chats/${chatId}/threads/${threadRootId}/archive`);
+}
+
+export function unarchiveThread(chatId: string | number, threadRootId: string | number): Promise<AxiosResponse<void>> {
+  return apiClient.delete(`/chats/${chatId}/threads/${threadRootId}/archive`);
 }

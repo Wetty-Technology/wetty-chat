@@ -102,6 +102,7 @@ diesel::table! {
         muted_until -> Nullable<Timestamptz>,
         join_reason -> GroupJoinReason,
         join_reason_extra -> Nullable<Jsonb>,
+        archived -> Bool,
     }
 }
 
@@ -317,6 +318,7 @@ diesel::table! {
         uid -> Int4,
         last_read_message_id -> Nullable<Int8>,
         subscribed_at -> Timestamptz,
+        archived -> Bool,
     }
 }
 

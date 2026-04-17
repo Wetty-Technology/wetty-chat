@@ -11,6 +11,7 @@ export interface ChatListEntry {
   lastReadMessageId?: string | null;
   lastMessage: MessageResponse | null;
   mutedUntil: string | null;
+  archived: boolean;
 }
 
 interface ListChatsResponse {
@@ -29,7 +30,13 @@ export interface ChatUnreadCountResponse {
   unreadCount: number;
 }
 
-export function getChats(params: { limit?: number; after?: string } = {}): Promise<AxiosResponse<ListChatsResponse>> {
+export function getChats(
+  params: {
+    limit?: number;
+    after?: string;
+    archived?: boolean;
+  } = {},
+): Promise<AxiosResponse<ListChatsResponse>> {
   return apiClient.get('/chats', { params });
 }
 
@@ -37,10 +44,18 @@ export function createChat(body: { name?: string } = {}): Promise<AxiosResponse<
   return apiClient.post('/group', body);
 }
 
-export function getUnreadCount(): Promise<AxiosResponse<{ unreadCount: number }>> {
+export function getUnreadCount(): Promise<AxiosResponse<{ unreadCount: number; archivedUnreadCount: number }>> {
   return apiClient.get('/chats/unread');
 }
 
 export function getChatUnreadCount(chatId: string | number): Promise<AxiosResponse<ChatUnreadCountResponse>> {
   return apiClient.get(`/chats/${chatId}/unread`);
+}
+
+export function archiveChat(chatId: string | number): Promise<AxiosResponse<void>> {
+  return apiClient.put(`/chats/${chatId}/archive`);
+}
+
+export function unarchiveChat(chatId: string | number): Promise<AxiosResponse<void>> {
+  return apiClient.delete(`/chats/${chatId}/archive`);
 }

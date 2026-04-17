@@ -70,7 +70,7 @@ export default function CreateChatCore({ backAction }: CreateChatCoreProps) {
 
       try {
         const chatsResponse = await getChats();
-        dispatch(setChatsList(chatsResponse.data.chats || []));
+        dispatch(setChatsList({ chats: chatsResponse.data.chats || [] }));
       } catch (refreshError) {
         console.warn('Failed to refresh chats after creation', refreshError);
       }

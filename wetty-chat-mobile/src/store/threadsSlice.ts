@@ -15,46 +15,72 @@ function toStoredThread(item: ThreadListItem): StoredThreadListItem {
   return { ...rest, cachedLastReply: lastReply };
 }
 
+interface ThreadListBucketState {
+  nextCursor: string | null;
+  isLoaded: boolean;
+}
+
 interface ThreadsState {
   items: StoredThreadListItem[];
-  nextCursor: string | null;
-  totalUnreadCount: number;
-  isLoaded: boolean;
+  buckets: Record<'active' | 'archived', ThreadListBucketState>;
   subscriptionByThreadId: Record<string, boolean>;
+  archivedByThreadId: Record<string, boolean>;
 }
 
 const initialState: ThreadsState = {
   items: [],
-  nextCursor: null,
-  totalUnreadCount: 0,
-  isLoaded: false,
+  buckets: {
+    active: { nextCursor: null, isLoaded: false },
+    archived: { nextCursor: null, isLoaded: false },
+  },
   subscriptionByThreadId: {},
+  archivedByThreadId: {},
 };
+
+function bucketKey(archived: boolean): 'active' | 'archived' {
+  return archived ? 'archived' : 'active';
+}
 
 const threadsSlice = createSlice({
   name: 'threads',
   initialState,
   reducers: {
-    setThreadsList(state, action: PayloadAction<{ threads: ThreadListItem[]; nextCursor: string | null }>) {
-      state.items = action.payload.threads.map(toStoredThread);
-      state.nextCursor = action.payload.nextCursor;
-      state.isLoaded = true;
-      state.subscriptionByThreadId = Object.fromEntries(
-        action.payload.threads.map((thread) => [thread.threadRootMessage.id, true]),
-      );
-      state.totalUnreadCount = state.items.reduce((sum, t) => sum + (t.unreadCount ?? 0), 0);
+    setThreadsList(
+      state,
+      action: PayloadAction<{ threads: ThreadListItem[]; nextCursor: string | null; archived?: boolean }>,
+    ) {
+      const archived = action.payload.archived ?? false;
+      const key = bucketKey(archived);
+      const nextItems = action.payload.threads.map(toStoredThread);
+
+      // `setThreadsList` is used for full snapshot refreshes, so the target bucket
+      // must be replaced wholesale to avoid keeping stale entries that moved buckets
+      // or disappeared while this client missed realtime updates.
+      state.items = state.items.filter((thread) => thread.archived !== archived);
+      state.items.push(...nextItems);
+      state.buckets[key] = { nextCursor: action.payload.nextCursor, isLoaded: true };
+      for (const thread of action.payload.threads) {
+        state.subscriptionByThreadId[thread.threadRootMessage.id] = true;
+        state.archivedByThreadId[thread.threadRootMessage.id] = thread.archived;
+      }
     },
-    appendThreads(state, action: PayloadAction<{ threads: ThreadListItem[]; nextCursor: string | null }>) {
+    appendThreads(
+      state,
+      action: PayloadAction<{ threads: ThreadListItem[]; nextCursor: string | null; archived?: boolean }>,
+    ) {
+      const archived = action.payload.archived ?? false;
+      const key = bucketKey(archived);
       const existingIds = new Set(state.items.map((t) => t.threadRootMessage.id));
       const newThreads = action.payload.threads
         .filter((t) => !existingIds.has(t.threadRootMessage.id))
         .map(toStoredThread);
       state.items.push(...newThreads);
-      state.nextCursor = action.payload.nextCursor;
+      state.buckets[key].nextCursor = action.payload.nextCursor;
+      state.buckets[key].isLoaded = true;
       for (const thread of action.payload.threads) {
         state.subscriptionByThreadId[thread.threadRootMessage.id] = true;
+        state.archivedByThreadId[thread.threadRootMessage.id] = thread.archived;
       }
-      state.totalUnreadCount = state.items.reduce((sum, t) => sum + (t.unreadCount ?? 0), 0);
     },
     updateThreadFromWs(state, action: PayloadAction<ThreadUpdatePayload>) {
       const { threadRootId, lastReplyAt, replyCount } = action.payload;
@@ -67,7 +93,6 @@ const threadsSlice = createSlice({
         state.items.splice(idx, 1);
         state.items.unshift(thread);
       }
-      state.totalUnreadCount = state.items.reduce((sum, t) => sum + (t.unreadCount ?? 0), 0);
     },
     /** Update the cached preview for threads whose messages aren't loaded in messagesSlice. */
     updateThreadCachedLastReply(
@@ -94,22 +119,30 @@ const threadsSlice = createSlice({
       if (thread) {
         thread.unreadCount = (thread.unreadCount ?? 0) + 1;
       }
-      state.totalUnreadCount = state.items.reduce((sum, t) => sum + (t.unreadCount ?? 0), 0);
     },
     markThreadRead(state, action: PayloadAction<{ threadRootId: string }>) {
       const thread = state.items.find((t) => t.threadRootMessage.id === action.payload.threadRootId);
       if (thread) {
         thread.unreadCount = 0;
       }
-      state.totalUnreadCount = state.items.reduce((sum, t) => sum + (t.unreadCount ?? 0), 0);
     },
-    setThreadSubscriptionStatus(state, action: PayloadAction<{ threadRootId: string; subscribed: boolean }>) {
+    setThreadSubscriptionStatus(
+      state,
+      action: PayloadAction<{ threadRootId: string; subscribed: boolean; archived?: boolean }>,
+    ) {
       state.subscriptionByThreadId[action.payload.threadRootId] = action.payload.subscribed;
+      if (action.payload.archived !== undefined) {
+        state.archivedByThreadId[action.payload.threadRootId] = action.payload.archived;
+        const thread = state.items.find((t) => t.threadRootMessage.id === action.payload.threadRootId);
+        if (thread) {
+          thread.archived = action.payload.archived;
+        }
+      }
     },
     removeThread(state, action: PayloadAction<{ threadRootId: string }>) {
       state.items = state.items.filter((t) => t.threadRootMessage.id !== action.payload.threadRootId);
       state.subscriptionByThreadId[action.payload.threadRootId] = false;
-      state.totalUnreadCount = state.items.reduce((sum, t) => sum + (t.unreadCount ?? 0), 0);
+      delete state.archivedByThreadId[action.payload.threadRootId];
     },
     patchThreadRootMessage(
       state,
@@ -122,9 +155,10 @@ const threadsSlice = createSlice({
     },
     clearThreads(state) {
       state.items = [];
-      state.nextCursor = null;
-      state.isLoaded = false;
+      state.buckets.active = { nextCursor: null, isLoaded: false };
+      state.buckets.archived = { nextCursor: null, isLoaded: false };
       state.subscriptionByThreadId = {};
+      state.archivedByThreadId = {};
     },
   },
 });
@@ -144,12 +178,22 @@ export const {
 } = threadsSlice.actions;
 
 export const selectThreads = (state: RootState) => state.threads.items;
-export const selectThreadsLoaded = (state: RootState) => state.threads.isLoaded;
-export const selectThreadsNextCursor = (state: RootState) => state.threads.nextCursor;
-export const selectTotalUnreadThreadCount = (state: RootState) => state.threads.totalUnreadCount;
+export const selectActiveThreads = (state: RootState) => state.threads.items.filter((thread) => !thread.archived);
+export const selectArchivedThreads = (state: RootState) => state.threads.items.filter((thread) => thread.archived);
+export const selectThreadsLoaded = (state: RootState, archived = false) =>
+  state.threads.buckets[bucketKey(archived)].isLoaded;
+export const selectThreadsNextCursor = (state: RootState, archived = false) =>
+  state.threads.buckets[bucketKey(archived)].nextCursor;
+export const selectTotalUnreadThreadCount = (state: RootState) =>
+  state.threads.items.filter((thread) => !thread.archived).reduce((sum, thread) => sum + (thread.unreadCount ?? 0), 0);
+export const selectTotalArchivedUnreadThreadCount = (state: RootState) =>
+  state.threads.items.filter((thread) => thread.archived).reduce((sum, thread) => sum + (thread.unreadCount ?? 0), 0);
 export const selectThreadSubscriptionStatus = (state: RootState, threadRootId: string) =>
   state.threads.subscriptionByThreadId[threadRootId] ?? null;
+export const selectThreadArchivedStatus = (state: RootState, threadRootId: string) =>
+  state.threads.archivedByThreadId[threadRootId] ?? null;
 export const selectShouldShowThreadsRow = (state: RootState) =>
-  state.threads.totalUnreadCount > 0 || (state.threads.isLoaded && state.threads.items.length > 0);
+  selectTotalUnreadThreadCount(state) > 0 ||
+  (selectThreadsLoaded(state, false) && selectActiveThreads(state).length > 0);
 
 export default threadsSlice.reducer;

@@ -16,7 +16,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import { getThreads } from '@/api/threads';
 import {
-  selectThreads,
+  selectActiveThreads,
   selectThreadsLoaded,
   selectThreadsNextCursor,
   setThreadsList,
@@ -26,6 +26,7 @@ import { selectEffectiveLocale } from '@/store/settingsSlice';
 import { TitleWithConnectionStatus } from '@/components/TitleWithConnectionStatus';
 import { BackButton } from '@/components/BackButton';
 import { ThreadListRow } from '@/components/chat/lists/ThreadListRow';
+import type { RootState } from '@/store';
 import styles from './threads.module.scss';
 
 export interface ThreadsListInnerProps {
@@ -40,9 +41,9 @@ export interface ThreadsListInnerProps {
  */
 export function ThreadsListInner({ activeThreadId, onThreadSelect }: ThreadsListInnerProps) {
   const dispatch = useDispatch();
-  const threads = useSelector(selectThreads);
-  const isLoaded = useSelector(selectThreadsLoaded);
-  const nextCursor = useSelector(selectThreadsNextCursor);
+  const threads = useSelector(selectActiveThreads);
+  const isLoaded = useSelector((state: RootState) => selectThreadsLoaded(state, false));
+  const nextCursor = useSelector((state: RootState) => selectThreadsNextCursor(state, false));
   const locale = useSelector(selectEffectiveLocale);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -50,8 +51,8 @@ export function ThreadsListInner({ activeThreadId, onThreadSelect }: ThreadsList
 
   const fetchThreads = useCallback(async () => {
     try {
-      const res = await getThreads({ limit: 20 });
-      dispatch(setThreadsList({ threads: res.data.threads, nextCursor: res.data.nextCursor }));
+      const res = await getThreads();
+      dispatch(setThreadsList({ threads: res.data.threads, nextCursor: res.data.nextCursor, archived: false }));
     } catch (err) {
       console.error('Failed to fetch threads', err);
     }
@@ -67,8 +68,8 @@ export function ThreadsListInner({ activeThreadId, onThreadSelect }: ThreadsList
     if (!nextCursor || isLoadingMore) return;
     setIsLoadingMore(true);
     try {
-      const res = await getThreads({ limit: 20, before: nextCursor });
-      dispatch(appendThreads({ threads: res.data.threads, nextCursor: res.data.nextCursor }));
+      const res = await getThreads({ before: nextCursor });
+      dispatch(appendThreads({ threads: res.data.threads, nextCursor: res.data.nextCursor, archived: false }));
     } catch (err) {
       console.error('Failed to load more threads', err);
     } finally {
@@ -146,12 +147,12 @@ interface ThreadsListCoreProps {
 
 export function ThreadsListCore({ activeThreadId, onThreadSelect }: ThreadsListCoreProps) {
   const dispatch = useDispatch();
-  const isLoaded = useSelector(selectThreadsLoaded);
+  const isLoaded = useSelector((state: RootState) => selectThreadsLoaded(state, false));
 
   const fetchThreads = useCallback(async () => {
     try {
-      const res = await getThreads({ limit: 20 });
-      dispatch(setThreadsList({ threads: res.data.threads, nextCursor: res.data.nextCursor }));
+      const res = await getThreads();
+      dispatch(setThreadsList({ threads: res.data.threads, nextCursor: res.data.nextCursor, archived: false }));
     } catch (err) {
       console.error('Failed to fetch threads', err);
     }

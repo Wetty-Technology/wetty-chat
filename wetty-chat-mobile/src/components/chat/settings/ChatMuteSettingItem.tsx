@@ -1,17 +1,18 @@
 import type { ReactNode } from 'react';
-import { useIonActionSheet, useIonToast } from '@ionic/react';
+import { useIonActionSheet, useIonAlert, useIonToast } from '@ionic/react';
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import { notifications, notificationsOff } from 'ionicons/icons';
 import { useDispatch, useSelector } from 'react-redux';
 import { muteChat, unmuteChat } from '@/api/group';
-import { setChatMutedUntil } from '@/store/chatsSlice';
+import { setChatArchived, setChatMutedUntil } from '@/store/chatsSlice';
 import { selectEffectiveLocale } from '@/store/settingsSlice';
 import { GroupSettingsActionButton } from './GroupSettingsActionButton';
 
 interface ChatMuteSettingItemProps {
   chatId: string;
   mutedUntil: string | null | undefined;
+  archived?: boolean;
 }
 
 function isChatMuted(mutedUntil: string | null | undefined): boolean {
@@ -60,11 +61,12 @@ function getMutedUntilLabel(locale: string, mutedUntil: string): ReactNode {
   );
 }
 
-export function ChatMuteSettingItem({ chatId, mutedUntil }: ChatMuteSettingItemProps) {
+export function ChatMuteSettingItem({ chatId, mutedUntil, archived = false }: ChatMuteSettingItemProps) {
   const dispatch = useDispatch();
   const locale = useSelector(selectEffectiveLocale);
   const [presentToast] = useIonToast();
   const [presentActionSheet] = useIonActionSheet();
+  const [presentAlert] = useIonAlert();
   const muted = isChatMuted(mutedUntil);
 
   const handleMute = (durationSeconds: number | null) => {
@@ -79,6 +81,31 @@ export function ChatMuteSettingItem({ chatId, mutedUntil }: ChatMuteSettingItemP
   };
 
   const handleUnmute = () => {
+    if (archived) {
+      presentAlert({
+        header: t`Unarchive chat?`,
+        message: t`Unmuting will unarchive this chat. Continue?`,
+        buttons: [
+          { text: t`Cancel`, role: 'cancel' },
+          {
+            text: t`Continue`,
+            handler: () => {
+              void unmuteChat(chatId)
+                .then(() => {
+                  dispatch(setChatMutedUntil({ chatId, mutedUntil: null }));
+                  dispatch(setChatArchived({ chatId, archived: false }));
+                  presentToast({ message: t`Notifications unmuted`, duration: 2000 });
+                })
+                .catch((error: Error) => {
+                  presentToast({ message: error.message || t`Failed to unmute`, duration: 3000 });
+                });
+            },
+          },
+        ],
+      });
+      return;
+    }
+
     unmuteChat(chatId)
       .then(() => {
         dispatch(setChatMutedUntil({ chatId, mutedUntil: null }));

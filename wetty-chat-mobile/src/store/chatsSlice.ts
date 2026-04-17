@@ -23,6 +23,7 @@ interface ChatListMeta {
   lastMessage?: MessageResponse | null;
   inList?: boolean;
   mutedUntil?: string | null;
+  archived?: boolean;
 }
 
 interface ChatStateEntry {
@@ -82,6 +83,7 @@ function getEffectiveListMeta(entry?: ChatStateEntry): ChatListMeta {
     lastReadMessageId: live?.lastReadMessageId ?? snapshot?.lastReadMessageId ?? null,
     lastMessage: latest,
     lastMessageAt: latest?.createdAt ?? snapshot?.lastMessageAt ?? null,
+    archived: live?.archived ?? snapshot?.archived ?? false,
   };
 }
 
@@ -110,8 +112,23 @@ const chatsSlice = createSlice({
         entry.details = { ...entry.details, ...meta };
       }
     },
-    setChatsList(state, action: PayloadAction<ChatListEntry[]>) {
-      for (const chat of action.payload) {
+    setChatsList(state, action: PayloadAction<{ chats: ChatListEntry[]; archived?: boolean }>) {
+      const archived = action.payload.archived ?? false;
+      const nextIds = new Set(action.payload.chats.map((chat) => chat.id));
+
+      for (const [chatId, entry] of Object.entries(state.byId)) {
+        const snapshotArchived = entry.listSnapshot?.archived ?? false;
+        if (snapshotArchived !== archived) continue;
+        if (nextIds.has(chatId)) continue;
+
+        entry.listSnapshot = {
+          ...entry.listSnapshot,
+          inList: false,
+          archived,
+        };
+      }
+
+      for (const chat of action.payload.chats) {
         const entry = getChatEntry(state, chat.id);
         entry.details = {
           ...entry.details,
@@ -125,6 +142,7 @@ const chatsSlice = createSlice({
           lastReadMessageId: chat.lastReadMessageId,
           inList: true,
           mutedUntil: chat.mutedUntil,
+          archived: chat.archived ?? archived,
         };
         reconcileAuthoritativeListFields(entry, chat.unreadCount);
       }
@@ -141,6 +159,13 @@ const chatsSlice = createSlice({
       entry.liveProjection = {
         ...entry.liveProjection,
         inList: action.payload.inList,
+      };
+    },
+    setChatArchived(state, action: PayloadAction<{ chatId: string; archived: boolean }>) {
+      const entry = getChatEntry(state, action.payload.chatId);
+      entry.liveProjection = {
+        ...entry.liveProjection,
+        archived: action.payload.archived,
       };
     },
     projectChatMessageAdded(
@@ -270,6 +295,7 @@ export const {
   setChatsList,
   setChatMutedUntil,
   setChatInList,
+  setChatArchived,
   projectChatMessageAdded,
   projectChatMessageConfirmed,
   setChatUnreadCount,
@@ -305,36 +331,70 @@ export function selectChatUnreadCount(state: RootState, chatId: string): number 
   return getEffectiveListMeta(entry).unreadCount ?? 0;
 }
 
+export function selectIsChatArchived(state: RootState, chatId: string): boolean {
+  const entry = state.chats.byId[chatId];
+  return getEffectiveListMeta(entry).archived ?? false;
+}
+
 const selectChatsById = (state: RootState) => state.chats.byId;
+
+function mapChatEntry(id: string, entry: ChatStateEntry): ChatListEntry {
+  const listMeta = getEffectiveListMeta(entry);
+  return {
+    id,
+    name: entry.details.name ?? null,
+    avatar: entry.details.avatar ?? null,
+    lastMessageAt: listMeta.lastMessageAt ?? null,
+    unreadCount: listMeta.unreadCount ?? 0,
+    lastReadMessageId: listMeta.lastReadMessageId ?? null,
+    lastMessage: listMeta.lastMessage ?? null,
+    mutedUntil: resolveMutedUntil(entry?.listSnapshot, entry?.liveProjection),
+    archived: listMeta.archived ?? false,
+  };
+}
+
+function sortChats(a: ChatListEntry, b: ChatListEntry): number {
+  return compareMessageOrder(b.lastMessage, a.lastMessage);
+}
 
 export const selectAllChats = createSelector([selectChatsById], (byId): ChatListEntry[] => {
   return Object.entries(byId)
-    .filter(([, entry]) => getEffectiveListMeta(entry).inList)
-    .map(([id, entry]) => {
-      const listMeta = getEffectiveListMeta(entry);
-      return {
-        id,
-        name: entry.details.name ?? null,
-        avatar: entry.details.avatar ?? null,
-        lastMessageAt: listMeta.lastMessageAt ?? null,
-        unreadCount: listMeta.unreadCount ?? 0,
-        lastReadMessageId: listMeta.lastReadMessageId ?? null,
-        lastMessage: listMeta.lastMessage ?? null,
-        mutedUntil: resolveMutedUntil(entry?.listSnapshot, entry?.liveProjection),
-      };
+    .filter(([, entry]) => {
+      const meta = getEffectiveListMeta(entry);
+      return meta.inList && !meta.archived;
     })
-    .sort((a, b) => {
-      return compareMessageOrder(b.lastMessage, a.lastMessage);
-    });
+    .map(([id, entry]) => mapChatEntry(id, entry))
+    .sort(sortChats);
+});
+
+export const selectArchivedChats = createSelector([selectChatsById], (byId): ChatListEntry[] => {
+  return Object.entries(byId)
+    .filter(([, entry]) => {
+      const meta = getEffectiveListMeta(entry);
+      return meta.inList && !!meta.archived;
+    })
+    .map(([id, entry]) => mapChatEntry(id, entry))
+    .sort(sortChats);
 });
 
 export const selectTotalUnreadChatCount = createSelector([selectChatsById], (byId): number => {
   let total = 0;
   for (const entry of Object.values(byId)) {
     const meta = getEffectiveListMeta(entry);
-    if (meta.inList) {
+    if (meta.inList && !meta.archived) {
       const mutedUntil = resolveMutedUntil(entry?.listSnapshot, entry?.liveProjection);
       if (mutedUntil && new Date(mutedUntil) > new Date()) continue;
+      total += meta.unreadCount ?? 0;
+    }
+  }
+  return total;
+});
+
+export const selectTotalArchivedUnreadChatCount = createSelector([selectChatsById], (byId): number => {
+  let total = 0;
+  for (const entry of Object.values(byId)) {
+    const meta = getEffectiveListMeta(entry);
+    if (meta.inList && meta.archived) {
       total += meta.unreadCount ?? 0;
     }
   }
