@@ -59,11 +59,12 @@ flowchart LR
 
 The key design rule is:
 
-- the provider family key identifies the conversation session
+- the provider family key identifies the conversation only
 - ingress layers feed the canonical message store
 - repository decides what scoped data window exists
 - timeline VM decides logical timeline behavior
 - viewport/widget decides physical scroll behavior
+- `launchRequest` is an initial command consumed by the VM build path, not part of VM identity
 
 ## Historical Bug Themes
 
@@ -280,22 +281,38 @@ Owns:
 
 - `chatId`
 - `threadRootId`
-- `launchRequest`
 
 This layer answers:
 
 - what conversation are we opening?
-- why did we open it?
 - what initial resolve flow should `build()` run?
 
 This is not a separate runtime layer or provider.
 In v2, this should just be the Riverpod `family` key for the timeline VM.
+
+Important distinction:
+
+- provider identity should be only the conversation identity
+- `launchRequest` should be passed into VM initialization as an initial command
+- the same conversation opened with `latest`, `unread`, or `message(id)` should not become three different VM identities
+
+Recommended key shape:
+
+- `chatId`
+- `threadRootId`
 
 Important clarification:
 
 - initial open and in-conversation `jumpTo` are the same operation class
 - both should use the same resolve/load/reveal pipeline
 - the only difference is when they are invoked
+
+Why this split matters:
+
+- `launchRequest` answers "what should this conversation do first?"
+- provider identity answers "which conversation is this?"
+- tying `launchRequest` to the provider key couples navigation intent to VM lifetime
+- leaving it out preserves one VM per conversation while still allowing initial open to run the same target-resolution pipeline as later jumps
 
 Lifecycle contract:
 
@@ -468,7 +485,6 @@ Suggested contents:
 - `restoreDy`
   - `null` means no preservation
 - `highlight`
-- `immediate`
 
 ```mermaid
 flowchart LR
@@ -484,6 +500,23 @@ This is preferable to:
 
 The widget `State` object is already the viewport controller.
 V2 should not add a second controller class unless it demonstrably removes complexity.
+
+Important ownership clarification:
+
+- the VM decides whether a jump target is already covered by the current slice
+- if yes, the VM emits a reveal effect directly
+- if not, the VM enters a resolving state, loads or activates the correct slice,
+  then emits the reveal effect after the target becomes renderable
+- the widget decides how to execute the reveal:
+  - jump
+  - animate
+  - wait until the target row is mounted
+
+This means:
+
+- VM owns semantic navigation intent and slice replacement
+- widget owns physical motion policy and scroll execution
+- "highlight this row" is metadata on the reveal effect, not a separate command type
 
 ## Important Design Rules
 

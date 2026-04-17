@@ -18,11 +18,9 @@ class ChatDetailV2Page extends StatelessWidget {
       navigationBar: const CupertinoNavigationBar(middle: Text('Chat V2')),
       child: SafeArea(
         child: ConversationTimelineV2(
-          args: (
-            chatId: chatId,
-            threadRootId: null,
-            launchRequest: launchRequest,
-          ),
+          chatId: chatId,
+          threadRootId: null,
+          launchRequest: launchRequest,
         ),
       ),
     );

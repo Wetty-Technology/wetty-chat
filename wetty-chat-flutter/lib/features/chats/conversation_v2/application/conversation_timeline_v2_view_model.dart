@@ -4,43 +4,44 @@ import 'package:chahua/features/chats/conversation/domain/conversation_message.d
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
 
-typedef ConversationTimelineV2Args = ({
+typedef ConversationTimelineV2Identity = ({
   String chatId,
   String? threadRootId,
-  LaunchRequest launchRequest,
 });
 
 typedef ConversationTimelineV2State = ({
-  String chatId,
-  String? threadRootId,
-  LaunchRequest launchRequest,
-  String title,
   List<ConversationMessageV2> messages,
+  bool isResolvingJump,
+  String? highlightedStableKey,
 });
 
 class ConversationTimelineV2ViewModel
     extends AsyncNotifier<ConversationTimelineV2State> {
-  final ConversationTimelineV2Args arg;
+  final ConversationTimelineV2Identity identity;
+  LaunchRequest? _initialLaunchRequest;
 
-  ConversationTimelineV2ViewModel(this.arg);
+  ConversationTimelineV2ViewModel(this.identity);
 
   @override
   Future<ConversationTimelineV2State> build() async {
     final now = DateTime.now().toUtc();
 
     return (
-      chatId: arg.chatId,
-      threadRootId: arg.threadRootId,
-      launchRequest: arg.launchRequest,
-      title: arg.threadRootId == null
-          ? 'Chat Timeline V2'
-          : 'Thread Timeline V2',
       messages: List<ConversationMessageV2>.generate(
         50,
         (index) => _fakeMessage(now, index),
         growable: false,
       ),
+      isResolvingJump: false,
+      highlightedStableKey: null,
     );
+  }
+
+  void initialize(LaunchRequest launchRequest) {
+    if (_initialLaunchRequest == launchRequest) {
+      return;
+    }
+    _initialLaunchRequest = launchRequest;
   }
 
   ConversationMessageV2 _fakeMessage(DateTime now, int index) {
@@ -73,7 +74,7 @@ class ConversationTimelineV2ViewModel
     return ConversationMessageV2(
       serverMessageId: index + 1,
       clientGeneratedId:
-          'fake-${arg.chatId}-${arg.threadRootId ?? 'chat'}-$index',
+          'fake-${identity.chatId}-${identity.threadRootId ?? 'chat'}-$index',
       sender: sender,
       createdAt: now.subtract(Duration(minutes: (50 - index) * 3)),
       isEdited: index % 11 == 0,
@@ -90,7 +91,7 @@ class ConversationTimelineV2ViewModel
 
   MessageContent _fakeContent(int index) {
     return TextMessageContent(
-      text: 'Placeholder v2 message #$index for chat ${arg.chatId}',
+      text: 'Placeholder v2 message #$index for chat ${identity.chatId}',
       mentions: index % 13 == 0
           ? const <MentionInfo>[MentionInfo(uid: 9, username: 'casey')]
           : const <MentionInfo>[],
@@ -102,5 +103,5 @@ final conversationTimelineV2ViewModelProvider =
     AsyncNotifierProvider.family<
       ConversationTimelineV2ViewModel,
       ConversationTimelineV2State,
-      ConversationTimelineV2Args
+      ConversationTimelineV2Identity
     >(ConversationTimelineV2ViewModel.new, isAutoDispose: true);

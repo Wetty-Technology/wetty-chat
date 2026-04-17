@@ -20,11 +20,9 @@ class ThreadDetailV2Page extends StatelessWidget {
       navigationBar: const CupertinoNavigationBar(middle: Text('Thread V2')),
       child: SafeArea(
         child: ConversationTimelineV2(
-          args: (
-            chatId: chatId,
-            threadRootId: threadRootId,
-            launchRequest: launchRequest,
-          ),
+          chatId: chatId,
+          threadRootId: threadRootId,
+          launchRequest: launchRequest,
         ),
       ),
     );
