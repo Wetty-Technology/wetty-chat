@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:chahua/features/chats/conversation/domain/launch_request.dart';
@@ -18,6 +19,7 @@ typedef ConversationTimelineV2State = ({
   bool isResolvingJump,
   String? highlightedStableKey,
   String? anchorStableKey,
+  double? anchorViewportFraction,
 });
 
 class ConversationTimelineV2ViewModel
@@ -49,6 +51,7 @@ class ConversationTimelineV2ViewModel
       isResolvingJump: false,
       highlightedStableKey: null,
       anchorStableKey: null,
+      anchorViewportFraction: null,
     );
   }
 
@@ -79,6 +82,7 @@ class ConversationTimelineV2ViewModel
       isResolvingJump: false,
       highlightedStableKey: null,
       anchorStableKey: null,
+      anchorViewportFraction: null,
     );
     _effectsController.add(const TimelineViewportEffect.revealBottom());
   }
@@ -98,6 +102,7 @@ class ConversationTimelineV2ViewModel
         isResolvingJump: true,
         highlightedStableKey: null,
         anchorStableKey: null,
+        anchorViewportFraction: null,
       );
       return;
     }
@@ -106,6 +111,7 @@ class ConversationTimelineV2ViewModel
       isResolvingJump: false,
       highlightedStableKey: stableKey,
       anchorStableKey: stableKey,
+      anchorViewportFraction: 0.5,
     );
     _effectsController.add(
       TimelineViewportEffect.revealMessage(
@@ -116,7 +122,10 @@ class ConversationTimelineV2ViewModel
     );
   }
 
-  void loadOlder() {
+  void loadOlderPreservingAnchor({
+    required String? anchorStableKey,
+    required double? anchorViewportFraction,
+  }) {
     final currentState = state.asData?.value;
     if (currentState == null) {
       return;
@@ -128,11 +137,15 @@ class ConversationTimelineV2ViewModel
       growable: false,
     ).reversed.toList(growable: false);
 
+    log("olderMessages ${olderMessages.map((e) => e.stableKey)}");
+
     state = AsyncData((
       messages: [...olderMessages, ...currentState.messages],
       isResolvingJump: currentState.isResolvingJump,
       highlightedStableKey: currentState.highlightedStableKey,
-      anchorStableKey: currentState.anchorStableKey,
+      anchorStableKey: anchorStableKey ?? currentState.anchorStableKey,
+      anchorViewportFraction:
+          anchorViewportFraction ?? currentState.anchorViewportFraction,
     ));
   }
 
@@ -140,6 +153,7 @@ class ConversationTimelineV2ViewModel
     required bool isResolvingJump,
     required String? highlightedStableKey,
     required String? anchorStableKey,
+    required double? anchorViewportFraction,
   }) {
     final currentState = state.asData?.value;
     if (currentState == null) {
@@ -151,6 +165,7 @@ class ConversationTimelineV2ViewModel
       isResolvingJump: isResolvingJump,
       highlightedStableKey: highlightedStableKey,
       anchorStableKey: anchorStableKey,
+      anchorViewportFraction: anchorViewportFraction,
     ));
   }
 

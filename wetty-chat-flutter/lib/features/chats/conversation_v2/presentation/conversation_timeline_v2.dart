@@ -6,7 +6,6 @@ import 'package:chahua/features/chats/conversation_v2/application/timeline_viewp
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:chahua/features/chats/conversation_v2/presentation/message_bubble/message_row_v2.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class ConversationTimelineV2 extends ConsumerStatefulWidget {
@@ -30,10 +29,13 @@ class _ConversationTimelineV2State
     extends ConsumerState<ConversationTimelineV2> {
   static const double _edgeThreshold = 80;
 
-  late final ScrollController _scrollController;
+  late ScrollController _scrollController;
   StreamSubscription<TimelineViewportEffect>? _effectSubscription;
+  ProviderSubscription<AsyncValue<ConversationTimelineV2State>>?
+  _stateSubscription;
+  final GlobalKey _anchorSliverKey = GlobalKey();
+  final GlobalKey _scrollViewportKey = GlobalKey();
   final Map<String, GlobalKey> _messageKeys = <String, GlobalKey>{};
-  TimelineViewportEffect? _pendingAnchorEffect;
   bool _lastIsNearTop = true;
   bool _lastIsNearBottom = false;
 
@@ -43,10 +45,10 @@ class _ConversationTimelineV2State
   @override
   void initState() {
     super.initState();
-    _scrollController = ScrollController();
-    _scrollController.addListener(_handleScroll);
+    _scrollController = _buildScrollController();
     _initializeLaunchRequest();
     _subscribeToEffects();
+    _subscribeToState();
   }
 
   @override
@@ -55,10 +57,19 @@ class _ConversationTimelineV2State
     if (oldWidget.chatId != widget.chatId ||
         oldWidget.threadRootId != widget.threadRootId) {
       _subscribeToEffects();
+      _subscribeToState();
     }
     if (oldWidget.launchRequest != widget.launchRequest) {
       _initializeLaunchRequest();
     }
+  }
+
+  ScrollController _buildScrollController({double initialScrollOffset = 0}) {
+    final controller = ScrollController(
+      initialScrollOffset: initialScrollOffset,
+    );
+    controller.addListener(_handleScroll);
+    return controller;
   }
 
   void _initializeLaunchRequest() {
@@ -73,6 +84,44 @@ class _ConversationTimelineV2State
         .read(conversationTimelineV2ViewModelProvider(_identity).notifier)
         .effects
         .listen(_handleViewportEffect);
+  }
+
+  void _subscribeToState() {
+    _stateSubscription?.close();
+    _stateSubscription = ref
+        .listenManual<AsyncValue<ConversationTimelineV2State>>(
+          conversationTimelineV2ViewModelProvider(_identity),
+          (previous, next) {
+            final previousState = previous?.asData?.value;
+            final nextState = next.asData?.value;
+            if (nextState == null) {
+              return;
+            }
+
+            final anchorChanged =
+                previousState?.anchorStableKey != nextState.anchorStableKey ||
+                previousState?.anchorViewportFraction !=
+                    nextState.anchorViewportFraction;
+
+            if (anchorChanged && nextState.anchorStableKey != null) {
+              _replaceScrollController(initialScrollOffset: 0);
+            }
+          },
+        );
+  }
+
+  void _replaceScrollController({required double initialScrollOffset}) {
+    final oldController = _scrollController;
+    final nextController = _buildScrollController(
+      initialScrollOffset: initialScrollOffset,
+    );
+
+    setState(() {
+      _scrollController = nextController;
+    });
+
+    oldController.removeListener(_handleScroll);
+    oldController.dispose();
   }
 
   void _handleScroll() {
@@ -112,15 +161,7 @@ class _ConversationTimelineV2State
   Future<void> _handleViewportEffect(TimelineViewportEffect effect) async {
     if (effect.isBottomTarget) {
       await _scrollToBottom();
-      return;
     }
-
-    _pendingAnchorEffect = effect;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _settlePendingAnchorEffect();
-      }
-    });
   }
 
   Future<void> _scrollToBottom() async {
@@ -140,64 +181,52 @@ class _ConversationTimelineV2State
     );
   }
 
-  Future<void> _settlePendingAnchorEffect() async {
-    final effect = _pendingAnchorEffect;
-    if (effect == null) {
-      return;
-    }
-
-    final target = effect.target;
-    if (target == null) {
-      return;
-    }
-
-    final targetKey = _messageKeys[target];
-    final targetContext = targetKey?.currentContext;
-    final targetRenderObject = targetContext?.findRenderObject();
-    if (targetContext == null || targetRenderObject == null) {
-      assert(
-        false,
-        'Anchor target $target is not mounted after re-anchoring. '
-        'This usually means the anchor row was not built into the current '
-        'sliver tree yet.',
-      );
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _settlePendingAnchorEffect();
-        }
-      });
-      return;
-    }
-
-    final viewport = RenderAbstractViewport.of(targetRenderObject);
-    if (!_scrollController.hasClients) {
-      return;
-    }
-
-    final targetOffset = viewport
-        .getOffsetToReveal(targetRenderObject, switch (effect.alignment) {
-          TimelineViewportAlignment.top => 0,
-          TimelineViewportAlignment.center => 0.5,
-          TimelineViewportAlignment.bottom => 1,
-        })
-        .offset
-        .clamp(
-          _scrollController.position.minScrollExtent,
-          _scrollController.position.maxScrollExtent,
+  void _handleLoadOlder() {
+    final preservedAnchor = _capturePreservedAnchor();
+    ref
+        .read(conversationTimelineV2ViewModelProvider(_identity).notifier)
+        .loadOlderPreservingAnchor(
+          anchorStableKey: preservedAnchor?.$1,
+          anchorViewportFraction: preservedAnchor?.$2,
         );
+  }
 
-    _pendingAnchorEffect = null;
+  (String, double)? _capturePreservedAnchor() {
+    final currentState = ref
+        .read(conversationTimelineV2ViewModelProvider(_identity))
+        .asData
+        ?.value;
+    final viewportContext = _scrollViewportKey.currentContext;
+    final viewportRenderObject = viewportContext?.findRenderObject();
+    if (currentState == null || viewportRenderObject is! RenderBox) {
+      return null;
+    }
 
-    await _scrollController.animateTo(
-      targetOffset,
-      duration: const Duration(milliseconds: 220),
-      curve: Curves.easeOutCubic,
-    );
+    final viewportHeight = viewportRenderObject.size.height;
+
+    for (final message in currentState.messages) {
+      final key = _messageKeys[message.stableKey];
+      final context = key?.currentContext;
+      final renderObject = context?.findRenderObject();
+      if (renderObject is! RenderBox) {
+        continue;
+      }
+
+      final globalOrigin = renderObject.localToGlobal(Offset.zero);
+      final localOrigin = viewportRenderObject.globalToLocal(globalOrigin);
+      final localDy = localOrigin.dy;
+
+      if (localDy >= 0 && localDy <= viewportHeight) {
+        return (message.stableKey, (localDy / viewportHeight).clamp(0.0, 1.0));
+      }
+    }
+    return null;
   }
 
   @override
   void dispose() {
     _effectSubscription?.cancel();
+    _stateSubscription?.close();
     _scrollController.removeListener(_handleScroll);
     _scrollController.dispose();
     super.dispose();
@@ -220,12 +249,24 @@ class _ConversationTimelineV2State
               );
         final hasAnchor = anchorIndex >= 0;
         final beforeMessages = hasAnchor
-            ? state.messages.take(anchorIndex).toList(growable: false)
+            ? state.messages
+                  .take(anchorIndex)
+                  .toList(growable: false)
+                  .reversed
+                  .toList(growable: false)
             : state.messages;
         final anchorMessage = hasAnchor ? state.messages[anchorIndex] : null;
         final afterMessages = hasAnchor
             ? state.messages.skip(anchorIndex + 1).toList(growable: false)
             : const <ConversationMessageV2>[];
+        final anchorViewportFraction = state.anchorViewportFraction ?? 0.0;
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted || !_scrollController.hasClients) return;
+          debugPrint(
+            'anchorFraction: $anchorViewportFraction, scrollMin: ${_scrollController.position.minScrollExtent}, scrollMax: ${_scrollController.position.maxScrollExtent}',
+          );
+        });
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -254,13 +295,7 @@ class _ConversationTimelineV2State
                     horizontal: 16,
                     vertical: 8,
                   ),
-                  onPressed: () => ref
-                      .read(
-                        conversationTimelineV2ViewModelProvider(
-                          _identity,
-                        ).notifier,
-                      )
-                      .loadOlder(),
+                  onPressed: _handleLoadOlder,
                   child: const Text('Load Older'),
                 ),
                 CupertinoButton(
@@ -274,7 +309,7 @@ class _ConversationTimelineV2State
                           _identity,
                         ).notifier,
                       )
-                      .jumpToMessage(state.messages[20].stableKey),
+                      .jumpToMessage(state.messages[10].stableKey),
                   child: const Text('Jump To Message'),
                 ),
                 CupertinoButton(
@@ -301,51 +336,60 @@ class _ConversationTimelineV2State
             if (anchorMessage != null)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text('Anchor: ${anchorMessage.stableKey}'),
+                child: Text(
+                  'Anchor: ${anchorMessage.stableKey}'
+                  ' @ ${anchorViewportFraction.toStringAsFixed(2)}',
+                ),
               ),
             Expanded(
-              child: CustomScrollView(
-                controller: _scrollController,
-                slivers: [
-                  const SliverPadding(padding: EdgeInsets.only(top: 8)),
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    sliver: _buildMessageSliver(beforeMessages),
-                  ),
-                  if (anchorMessage != null)
+              child: KeyedSubtree(
+                key: _scrollViewportKey,
+                child: CustomScrollView(
+                  center: hasAnchor ? _anchorSliverKey : null,
+                  anchor: hasAnchor ? anchorViewportFraction : 0.0,
+                  controller: _scrollController,
+                  slivers: [
+                    const SliverPadding(padding: EdgeInsets.only(top: 8)),
                     SliverPadding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      sliver: SliverToBoxAdapter(
-                        child: Padding(
-                          padding: EdgeInsets.only(
-                            bottom: afterMessages.isEmpty ? 0 : 12,
-                          ),
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                color: CupertinoColors.activeBlue,
-                                width: 1.5,
-                              ),
-                              borderRadius: BorderRadius.circular(14),
+                      sliver: _buildMessageSliver(beforeMessages),
+                    ),
+                    if (anchorMessage != null)
+                      SliverPadding(
+                        key: _anchorSliverKey,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        sliver: SliverToBoxAdapter(
+                          child: Padding(
+                            padding: EdgeInsets.only(
+                              bottom: afterMessages.isEmpty ? 0 : 12,
                             ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(2),
-                              child: KeyedSubtree(
-                                key: _keyForMessage(anchorMessage),
-                                child: MessageRowV2(message: anchorMessage),
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: CupertinoColors.activeBlue,
+                                  width: 1.5,
+                                ),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(2),
+                                child: KeyedSubtree(
+                                  key: _keyForMessage(anchorMessage),
+                                  child: MessageRowV2(message: anchorMessage),
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  if (afterMessages.isNotEmpty)
-                    SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      sliver: _buildMessageSliver(afterMessages),
-                    ),
-                  const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
-                ],
+                    if (afterMessages.isNotEmpty)
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        sliver: _buildMessageSliver(afterMessages),
+                      ),
+                    const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
+                  ],
+                ),
               ),
             ),
           ],
