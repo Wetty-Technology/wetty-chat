@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:developer';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:chahua/features/chats/conversation/domain/launch_request.dart';
 import 'package:chahua/features/chats/conversation/domain/conversation_message.dart';
@@ -14,23 +12,31 @@ typedef ConversationTimelineV2Identity = ({
   String? threadRootId,
 });
 
+enum ConversationTimelineV2Mode { live, anchored }
+
 typedef ConversationTimelineV2State = ({
-  List<ConversationMessageV2> messages,
+  ConversationTimelineV2Mode mode,
+  List<ConversationMessageV2> beforeMessages,
+  List<ConversationMessageV2> centerMessages,
+  List<ConversationMessageV2> afterMessages,
+  bool isLoadingOlder,
+  bool isLoadingNewer,
   bool isResolvingJump,
   String? highlightedStableKey,
-  String? anchorStableKey,
-  double? anchorViewportFraction,
+  double centerViewportFraction,
 });
 
 class ConversationTimelineV2ViewModel
     extends AsyncNotifier<ConversationTimelineV2State> {
   final ConversationTimelineV2Identity identity;
   LaunchRequest? _initialLaunchRequest;
-  TimelineViewportFacts? _lastViewportFacts;
   final StreamController<TimelineViewportEffect> _effectsController =
       StreamController<TimelineViewportEffect>.broadcast();
   late DateTime _baseNow;
   int _nextOlderSequence = -1;
+  int _nextNewerSequence = 50;
+  bool _isLoadingOlder = false;
+  bool _isLoadingNewer = false;
 
   ConversationTimelineV2ViewModel(this.identity);
 
@@ -42,16 +48,22 @@ class ConversationTimelineV2ViewModel
 
     _baseNow = DateTime.now().toUtc();
 
+    final initialMessages = List<ConversationMessageV2>.generate(
+      50,
+      (index) => _fakeMessage(index),
+      growable: false,
+    );
+
     return (
-      messages: List<ConversationMessageV2>.generate(
-        50,
-        (index) => _fakeMessage(index),
-        growable: false,
-      ),
+      mode: ConversationTimelineV2Mode.anchored,
+      beforeMessages: const <ConversationMessageV2>[],
+      centerMessages: initialMessages,
+      afterMessages: const <ConversationMessageV2>[],
+      isLoadingOlder: false,
+      isLoadingNewer: false,
       isResolvingJump: false,
       highlightedStableKey: null,
-      anchorStableKey: null,
-      anchorViewportFraction: null,
+      centerViewportFraction: 0.0,
     );
   }
 
@@ -63,26 +75,25 @@ class ConversationTimelineV2ViewModel
   }
 
   void onViewportChanged(TimelineViewportFacts facts) {
-    final previousFacts = _lastViewportFacts;
-    _lastViewportFacts = facts;
-
-    if (previousFacts == null) {
+    final currentState = state.asData?.value;
+    if (currentState == null) {
       return;
     }
 
-    if (previousFacts.isNearTop != facts.isNearTop ||
-        previousFacts.isNearBottom != facts.isNearBottom) {
-      // Placeholder seam for future timeline policy:
-      // loading older/newer, pending-live updates, and live-edge decisions.
-    }
+    _maybeLoadFromFacts(currentState, facts);
   }
 
   void jumpToLatest() {
     _updateState(
+      mode: ConversationTimelineV2Mode.live,
+      beforeMessages: const <ConversationMessageV2>[],
+      centerMessages: _allMessages,
+      afterMessages: const <ConversationMessageV2>[],
+      isLoadingOlder: false,
+      isLoadingNewer: false,
       isResolvingJump: false,
       highlightedStableKey: null,
-      anchorStableKey: null,
-      anchorViewportFraction: null,
+      centerViewportFraction: 0.0,
     );
     _effectsController.add(const TimelineViewportEffect.revealBottom());
   }
@@ -93,25 +104,37 @@ class ConversationTimelineV2ViewModel
       return;
     }
 
-    final hasTargetInCurrentSlice = currentState.messages.any(
+    final messages = _flattenMessages(currentState);
+    final targetIndex = messages.indexWhere(
       (message) => message.stableKey == stableKey,
     );
 
-    if (!hasTargetInCurrentSlice) {
+    if (targetIndex < 0) {
       _updateState(
+        mode: currentState.mode,
+        beforeMessages: currentState.beforeMessages,
+        centerMessages: currentState.centerMessages,
+        afterMessages: currentState.afterMessages,
+        isLoadingOlder: currentState.isLoadingOlder,
+        isLoadingNewer: currentState.isLoadingNewer,
         isResolvingJump: true,
         highlightedStableKey: null,
-        anchorStableKey: null,
-        anchorViewportFraction: null,
+        centerViewportFraction: currentState.centerViewportFraction,
       );
       return;
     }
 
+    final targetMessage = messages[targetIndex];
     _updateState(
+      mode: ConversationTimelineV2Mode.anchored,
+      beforeMessages: messages.take(targetIndex).toList(growable: false),
+      centerMessages: <ConversationMessageV2>[targetMessage],
+      afterMessages: messages.skip(targetIndex + 1).toList(growable: false),
+      isLoadingOlder: false,
+      isLoadingNewer: false,
       isResolvingJump: false,
       highlightedStableKey: stableKey,
-      anchorStableKey: stableKey,
-      anchorViewportFraction: 0.5,
+      centerViewportFraction: 0.5,
     );
     _effectsController.add(
       TimelineViewportEffect.revealMessage(
@@ -122,51 +145,156 @@ class ConversationTimelineV2ViewModel
     );
   }
 
-  void loadOlderPreservingAnchor({
-    required String? anchorStableKey,
-    required double? anchorViewportFraction,
-  }) {
+  Future<void> loadOlder() async {
     final currentState = state.asData?.value;
-    if (currentState == null) {
+    if (currentState == null || _isLoadingOlder) {
       return;
     }
+    _isLoadingOlder = true;
 
-    final olderMessages = List<ConversationMessageV2>.generate(
-      10,
-      (_) => _fakeMessage(_nextOlderSequence--),
-      growable: false,
-    ).reversed.toList(growable: false);
-
-    log("olderMessages ${olderMessages.map((e) => e.stableKey)}");
-
-    state = AsyncData((
-      messages: [...olderMessages, ...currentState.messages],
+    _updateState(
+      mode: currentState.mode,
+      beforeMessages: currentState.beforeMessages,
+      centerMessages: currentState.centerMessages,
+      afterMessages: currentState.afterMessages,
+      isLoadingOlder: true,
+      isLoadingNewer: currentState.isLoadingNewer,
       isResolvingJump: currentState.isResolvingJump,
       highlightedStableKey: currentState.highlightedStableKey,
-      anchorStableKey: anchorStableKey ?? currentState.anchorStableKey,
-      anchorViewportFraction:
-          anchorViewportFraction ?? currentState.anchorViewportFraction,
-    ));
+      centerViewportFraction: currentState.centerViewportFraction,
+    );
+
+    try {
+      final latestState = state.asData?.value;
+      if (latestState == null) {
+        return;
+      }
+
+      final olderMessages = List<ConversationMessageV2>.generate(
+        10,
+        (_) => _fakeMessage(_nextOlderSequence--),
+        growable: false,
+      ).reversed.toList(growable: false);
+
+      _updateState(
+        mode: latestState.mode,
+        beforeMessages: [...olderMessages, ...latestState.beforeMessages],
+        centerMessages: latestState.centerMessages,
+        afterMessages: latestState.afterMessages,
+        isLoadingOlder: false,
+        isLoadingNewer: latestState.isLoadingNewer,
+        isResolvingJump: latestState.isResolvingJump,
+        highlightedStableKey: latestState.highlightedStableKey,
+        centerViewportFraction: latestState.centerViewportFraction,
+      );
+    } finally {
+      _isLoadingOlder = false;
+    }
+  }
+
+  Future<void> loadNewer() async {
+    final currentState = state.asData?.value;
+    if (currentState == null || _isLoadingNewer) {
+      return;
+    }
+    _isLoadingNewer = true;
+
+    _updateState(
+      mode: currentState.mode,
+      beforeMessages: currentState.beforeMessages,
+      centerMessages: currentState.centerMessages,
+      afterMessages: currentState.afterMessages,
+      isLoadingOlder: currentState.isLoadingOlder,
+      isLoadingNewer: true,
+      isResolvingJump: currentState.isResolvingJump,
+      highlightedStableKey: currentState.highlightedStableKey,
+      centerViewportFraction: currentState.centerViewportFraction,
+    );
+
+    try {
+      final latestState = state.asData?.value;
+      if (latestState == null) {
+        return;
+      }
+
+      final newerMessages = List<ConversationMessageV2>.generate(
+        10,
+        (_) => _fakeMessage(_nextNewerSequence++),
+        growable: false,
+      );
+
+      _updateState(
+        mode: latestState.mode,
+        beforeMessages: latestState.beforeMessages,
+        centerMessages: latestState.centerMessages,
+        afterMessages: [...latestState.afterMessages, ...newerMessages],
+        isLoadingOlder: latestState.isLoadingOlder,
+        isLoadingNewer: false,
+        isResolvingJump: latestState.isResolvingJump,
+        highlightedStableKey: latestState.highlightedStableKey,
+        centerViewportFraction: latestState.centerViewportFraction,
+      );
+    } finally {
+      _isLoadingNewer = false;
+    }
   }
 
   void _updateState({
+    required ConversationTimelineV2Mode mode,
+    required List<ConversationMessageV2> beforeMessages,
+    required List<ConversationMessageV2> centerMessages,
+    required List<ConversationMessageV2> afterMessages,
+    required bool isLoadingOlder,
+    required bool isLoadingNewer,
     required bool isResolvingJump,
     required String? highlightedStableKey,
-    required String? anchorStableKey,
-    required double? anchorViewportFraction,
+    required double centerViewportFraction,
   }) {
-    final currentState = state.asData?.value;
-    if (currentState == null) {
+    state = AsyncData((
+      mode: mode,
+      beforeMessages: beforeMessages,
+      centerMessages: centerMessages,
+      afterMessages: afterMessages,
+      isLoadingOlder: isLoadingOlder,
+      isLoadingNewer: isLoadingNewer,
+      isResolvingJump: isResolvingJump,
+      highlightedStableKey: highlightedStableKey,
+      centerViewportFraction: centerViewportFraction,
+    ));
+  }
+
+  void _maybeLoadFromFacts(
+    ConversationTimelineV2State currentState,
+    TimelineViewportFacts facts,
+  ) {
+    if (currentState.mode != ConversationTimelineV2Mode.anchored) {
       return;
     }
 
-    state = AsyncData((
-      messages: currentState.messages,
-      isResolvingJump: isResolvingJump,
-      highlightedStableKey: highlightedStableKey,
-      anchorStableKey: anchorStableKey,
-      anchorViewportFraction: anchorViewportFraction,
-    ));
+    if (facts.isNearTop && !currentState.isLoadingOlder) {
+      unawaited(loadOlder());
+    }
+    if (facts.isNearBottom && !currentState.isLoadingNewer) {
+      unawaited(loadNewer());
+    }
+  }
+
+  List<ConversationMessageV2> get _allMessages {
+    final currentState = state.asData?.value;
+    if (currentState == null) {
+      return const <ConversationMessageV2>[];
+    }
+    return _flattenMessages(currentState);
+  }
+
+  List<ConversationMessageV2> _flattenMessages(
+    ConversationTimelineV2State state,
+  ) {
+    return <ConversationMessageV2>[
+      ...state.beforeMessages,
+      ...state.centerMessages,
+      ...state.afterMessages,
+    ];
   }
 
   ConversationMessageV2 _fakeMessage(int sequence) {
