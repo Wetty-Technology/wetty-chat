@@ -23,12 +23,15 @@ class ConversationTimelineV2 extends ConsumerStatefulWidget {
 
 class _ConversationTimelineV2State
     extends ConsumerState<ConversationTimelineV2> {
+  late final ScrollController _scrollController;
+
   ConversationTimelineV2Identity get _identity =>
       (chatId: widget.chatId, threadRootId: widget.threadRootId);
 
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController();
     _initializeLaunchRequest();
   }
 
@@ -47,6 +50,12 @@ class _ConversationTimelineV2State
   }
 
   @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final stateAsync = ref.watch(
       conversationTimelineV2ViewModelProvider(_identity),
@@ -60,6 +69,7 @@ class _ConversationTimelineV2State
         children: [
           Expanded(
             child: ListView.separated(
+              controller: _scrollController,
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               itemCount: state.messages.length,
               separatorBuilder: (_, _) => const SizedBox(height: 12),
