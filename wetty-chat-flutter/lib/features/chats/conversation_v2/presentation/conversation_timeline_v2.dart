@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:developer';
-
 import 'package:chahua/features/chats/conversation/domain/launch_request.dart';
 import 'package:chahua/features/chats/conversation_v2/application/timeline_viewport_effect.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_view_model.dart';
@@ -143,7 +141,6 @@ class _ConversationTimelineV2State
     final targetKey = _messageKeys[target];
     final targetContext = targetKey?.currentContext;
     if (targetContext == null) {
-      log("targetContext is null");
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           _handleViewportEffect(effect);
@@ -198,6 +195,20 @@ class _ConversationTimelineV2State
                         _identity,
                       ).notifier,
                     )
+                    .jumpToMessage('client:missing-message'),
+                child: const Text('Jump Missing'),
+              ),
+              CupertinoButton(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                onPressed: () => ref
+                    .read(
+                      conversationTimelineV2ViewModelProvider(
+                        _identity,
+                      ).notifier,
+                    )
                     .jumpToMessage(state.messages[20].stableKey),
                 child: const Text('Jump To Message'),
               ),
@@ -217,6 +228,11 @@ class _ConversationTimelineV2State
               ),
             ],
           ),
+          if (state.isResolvingJump)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Text('Resolving jump target...'),
+            ),
           Expanded(
             child: ListView.separated(
               controller: _scrollController,

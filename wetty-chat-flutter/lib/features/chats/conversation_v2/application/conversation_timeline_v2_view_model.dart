@@ -71,10 +71,26 @@ class ConversationTimelineV2ViewModel
   }
 
   void jumpToLatest() {
+    _updateState(isResolvingJump: false, highlightedStableKey: null);
     _effectsController.add(const TimelineViewportEffect.revealBottom());
   }
 
   void jumpToMessage(String stableKey) {
+    final currentState = state.asData?.value;
+    if (currentState == null) {
+      return;
+    }
+
+    final hasTargetInCurrentSlice = currentState.messages.any(
+      (message) => message.stableKey == stableKey,
+    );
+
+    if (!hasTargetInCurrentSlice) {
+      _updateState(isResolvingJump: true, highlightedStableKey: null);
+      return;
+    }
+
+    _updateState(isResolvingJump: false, highlightedStableKey: stableKey);
     _effectsController.add(
       TimelineViewportEffect.revealMessage(
         stableKey,
@@ -82,6 +98,22 @@ class ConversationTimelineV2ViewModel
         highlight: true,
       ),
     );
+  }
+
+  void _updateState({
+    required bool isResolvingJump,
+    required String? highlightedStableKey,
+  }) {
+    final currentState = state.asData?.value;
+    if (currentState == null) {
+      return;
+    }
+
+    state = AsyncData((
+      messages: currentState.messages,
+      isResolvingJump: isResolvingJump,
+      highlightedStableKey: highlightedStableKey,
+    ));
   }
 
   ConversationMessageV2 _fakeMessage(DateTime now, int index) {
