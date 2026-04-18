@@ -74,6 +74,16 @@ class ConversationTimelineV2ViewModel
     _effectsController.add(const TimelineViewportEffect.revealBottom());
   }
 
+  void jumpToMessage(String stableKey) {
+    _effectsController.add(
+      TimelineViewportEffect.revealMessage(
+        stableKey,
+        alignment: TimelineViewportAlignment.center,
+        highlight: true,
+      ),
+    );
+  }
+
   ConversationMessageV2 _fakeMessage(DateTime now, int index) {
     final isMe = index.isOdd;
     final sender = Sender(

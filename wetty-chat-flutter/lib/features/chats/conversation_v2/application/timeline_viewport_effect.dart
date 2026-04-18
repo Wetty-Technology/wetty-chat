@@ -1,10 +1,27 @@
 class TimelineViewportEffect {
-  const TimelineViewportEffect._({required this.type});
+  const TimelineViewportEffect({
+    required this.target,
+    required this.alignment,
+    this.highlight = false,
+  });
 
-  const TimelineViewportEffect.revealBottom()
-    : this._(type: TimelineViewportEffectType.revealBottom);
+  const TimelineViewportEffect.revealBottom({
+    this.alignment = TimelineViewportAlignment.bottom,
+  }) : target = null,
+       highlight = false;
 
-  final TimelineViewportEffectType type;
+  const TimelineViewportEffect.revealMessage(
+    this.target, {
+    this.alignment = TimelineViewportAlignment.center,
+    this.highlight = false,
+  });
+
+  /// `null` means the live-edge / bottom sentinel.
+  final String? target;
+  final TimelineViewportAlignment alignment;
+  final bool highlight;
+
+  bool get isBottomTarget => target == null;
 }
 
-enum TimelineViewportEffectType { revealBottom }
+enum TimelineViewportAlignment { top, center, bottom }

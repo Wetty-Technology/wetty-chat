@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:chahua/features/chats/conversation/domain/launch_request.dart';
 import 'package:chahua/features/chats/conversation_v2/application/timeline_viewport_effect.dart';
@@ -31,6 +32,7 @@ class _ConversationTimelineV2State
 
   late final ScrollController _scrollController;
   StreamSubscription<TimelineViewportEffect>? _effectSubscription;
+  final Map<String, GlobalKey> _messageKeys = <String, GlobalKey>{};
   bool _lastIsNearTop = true;
   bool _lastIsNearBottom = false;
 
@@ -107,10 +109,12 @@ class _ConversationTimelineV2State
   }
 
   Future<void> _handleViewportEffect(TimelineViewportEffect effect) async {
-    switch (effect.type) {
-      case TimelineViewportEffectType.revealBottom:
-        await _scrollToBottom();
+    if (effect.isBottomTarget) {
+      await _scrollToBottom();
+      return;
     }
+
+    await _scrollToMessage(effect);
   }
 
   Future<void> _scrollToBottom() async {
@@ -127,6 +131,36 @@ class _ConversationTimelineV2State
       _scrollController.position.maxScrollExtent,
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOutCubic,
+    );
+  }
+
+  Future<void> _scrollToMessage(TimelineViewportEffect effect) async {
+    final target = effect.target;
+    if (target == null) {
+      return;
+    }
+
+    final targetKey = _messageKeys[target];
+    final targetContext = targetKey?.currentContext;
+    if (targetContext == null) {
+      log("targetContext is null");
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _handleViewportEffect(effect);
+        }
+      });
+      return;
+    }
+
+    await Scrollable.ensureVisible(
+      targetContext,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      alignment: switch (effect.alignment) {
+        TimelineViewportAlignment.top => 0,
+        TimelineViewportAlignment.center => 0.5,
+        TimelineViewportAlignment.bottom => 1,
+      },
     );
   }
 
@@ -150,17 +184,38 @@ class _ConversationTimelineV2State
       data: (state) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Align(
-            alignment: Alignment.centerRight,
-            child: CupertinoButton(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              onPressed: () => ref
-                  .read(
-                    conversationTimelineV2ViewModelProvider(_identity).notifier,
-                  )
-                  .jumpToLatest(),
-              child: const Text('Jump To Latest'),
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              CupertinoButton(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                onPressed: () => ref
+                    .read(
+                      conversationTimelineV2ViewModelProvider(
+                        _identity,
+                      ).notifier,
+                    )
+                    .jumpToMessage(state.messages[20].stableKey),
+                child: const Text('Jump To Message'),
+              ),
+              CupertinoButton(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                onPressed: () => ref
+                    .read(
+                      conversationTimelineV2ViewModelProvider(
+                        _identity,
+                      ).notifier,
+                    )
+                    .jumpToLatest(),
+                child: const Text('Jump To Latest'),
+              ),
+            ],
           ),
           Expanded(
             child: ListView.separated(
@@ -168,8 +223,18 @@ class _ConversationTimelineV2State
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               itemCount: state.messages.length,
               separatorBuilder: (_, _) => const SizedBox(height: 12),
-              itemBuilder: (context, index) =>
-                  MessageRowV2(message: state.messages[index]),
+              itemBuilder: (context, index) {
+                final message = state.messages[index];
+                final messageKey = _messageKeys.putIfAbsent(
+                  message.stableKey,
+                  GlobalKey.new,
+                );
+
+                return KeyedSubtree(
+                  key: messageKey,
+                  child: MessageRowV2(message: message),
+                );
+              },
             ),
           ),
         ],
