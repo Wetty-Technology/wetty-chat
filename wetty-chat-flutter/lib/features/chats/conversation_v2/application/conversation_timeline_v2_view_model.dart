@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:chahua/features/chats/conversation/domain/launch_request.dart';
 import 'package:chahua/features/chats/conversation/domain/conversation_message.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
+import 'package:chahua/features/chats/conversation_v2/application/timeline_viewport_facts.dart';
+import 'package:chahua/features/chats/conversation_v2/application/timeline_viewport_effect.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
 
 typedef ConversationTimelineV2Identity = ({
@@ -19,11 +23,18 @@ class ConversationTimelineV2ViewModel
     extends AsyncNotifier<ConversationTimelineV2State> {
   final ConversationTimelineV2Identity identity;
   LaunchRequest? _initialLaunchRequest;
+  TimelineViewportFacts? _lastViewportFacts;
+  final StreamController<TimelineViewportEffect> _effectsController =
+      StreamController<TimelineViewportEffect>.broadcast();
 
   ConversationTimelineV2ViewModel(this.identity);
 
+  Stream<TimelineViewportEffect> get effects => _effectsController.stream;
+
   @override
   Future<ConversationTimelineV2State> build() async {
+    ref.onDispose(_effectsController.close);
+
     final now = DateTime.now().toUtc();
 
     return (
@@ -42,6 +53,25 @@ class ConversationTimelineV2ViewModel
       return;
     }
     _initialLaunchRequest = launchRequest;
+  }
+
+  void onViewportChanged(TimelineViewportFacts facts) {
+    final previousFacts = _lastViewportFacts;
+    _lastViewportFacts = facts;
+
+    if (previousFacts == null) {
+      return;
+    }
+
+    if (previousFacts.isNearTop != facts.isNearTop ||
+        previousFacts.isNearBottom != facts.isNearBottom) {
+      // Placeholder seam for future timeline policy:
+      // loading older/newer, pending-live updates, and live-edge decisions.
+    }
+  }
+
+  void jumpToLatest() {
+    _effectsController.add(const TimelineViewportEffect.revealBottom());
   }
 
   ConversationMessageV2 _fakeMessage(DateTime now, int index) {
