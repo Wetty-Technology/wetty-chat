@@ -3,6 +3,7 @@ import 'package:chahua/features/chats/conversation/domain/launch_request.dart';
 import 'package:chahua/features/chats/conversation_v2/application/timeline_viewport_effect.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_view_model.dart';
 import 'package:chahua/features/chats/conversation_v2/application/timeline_viewport_facts.dart';
+import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:chahua/features/chats/conversation_v2/presentation/message_bubble/message_row_v2.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -178,83 +179,151 @@ class _ConversationTimelineV2State
     return stateAsync.when(
       loading: () => const Center(child: CupertinoActivityIndicator()),
       error: (error, _) => Center(child: Text('error: $error')),
-      data: (state) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              CupertinoButton(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                onPressed: () => ref
-                    .read(
-                      conversationTimelineV2ViewModelProvider(
-                        _identity,
-                      ).notifier,
-                    )
-                    .jumpToMessage('client:missing-message'),
-                child: const Text('Jump Missing'),
-              ),
-              CupertinoButton(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                onPressed: () => ref
-                    .read(
-                      conversationTimelineV2ViewModelProvider(
-                        _identity,
-                      ).notifier,
-                    )
-                    .jumpToMessage(state.messages[20].stableKey),
-                child: const Text('Jump To Message'),
-              ),
-              CupertinoButton(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                onPressed: () => ref
-                    .read(
-                      conversationTimelineV2ViewModelProvider(
-                        _identity,
-                      ).notifier,
-                    )
-                    .jumpToLatest(),
-                child: const Text('Jump To Latest'),
-              ),
-            ],
-          ),
-          if (state.isResolvingJump)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Text('Resolving jump target...'),
-            ),
-          Expanded(
-            child: ListView.separated(
-              controller: _scrollController,
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-              itemCount: state.messages.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final message = state.messages[index];
-                final messageKey = _messageKeys.putIfAbsent(
-                  message.stableKey,
-                  GlobalKey.new,
-                );
+      data: (state) {
+        final anchorIndex = state.anchorStableKey == null
+            ? -1
+            : state.messages.indexWhere(
+                (message) => message.stableKey == state.anchorStableKey,
+              );
+        final hasAnchor = anchorIndex >= 0;
+        final beforeMessages = hasAnchor
+            ? state.messages.take(anchorIndex).toList(growable: false)
+            : state.messages;
+        final anchorMessage = hasAnchor ? state.messages[anchorIndex] : null;
+        final afterMessages = hasAnchor
+            ? state.messages.skip(anchorIndex + 1).toList(growable: false)
+            : const <ConversationMessageV2>[];
 
-                return KeyedSubtree(
-                  key: messageKey,
-                  child: MessageRowV2(message: message),
-                );
-              },
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                CupertinoButton(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  onPressed: () => ref
+                      .read(
+                        conversationTimelineV2ViewModelProvider(
+                          _identity,
+                        ).notifier,
+                      )
+                      .jumpToMessage('client:missing-message'),
+                  child: const Text('Jump Missing'),
+                ),
+                CupertinoButton(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  onPressed: () => ref
+                      .read(
+                        conversationTimelineV2ViewModelProvider(
+                          _identity,
+                        ).notifier,
+                      )
+                      .jumpToMessage(state.messages[20].stableKey),
+                  child: const Text('Jump To Message'),
+                ),
+                CupertinoButton(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  onPressed: () => ref
+                      .read(
+                        conversationTimelineV2ViewModelProvider(
+                          _identity,
+                        ).notifier,
+                      )
+                      .jumpToLatest(),
+                  child: const Text('Jump To Latest'),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
+            if (state.isResolvingJump)
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Text('Resolving jump target...'),
+              ),
+            if (anchorMessage != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text('Anchor: ${anchorMessage.stableKey}'),
+              ),
+            Expanded(
+              child: CustomScrollView(
+                controller: _scrollController,
+                slivers: [
+                  const SliverPadding(padding: EdgeInsets.only(top: 8)),
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    sliver: _buildMessageSliver(beforeMessages),
+                  ),
+                  if (anchorMessage != null)
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      sliver: SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.only(
+                            bottom: afterMessages.isEmpty ? 0 : 12,
+                          ),
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: CupertinoColors.activeBlue,
+                                width: 1.5,
+                              ),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(2),
+                              child: KeyedSubtree(
+                                key: _keyForMessage(anchorMessage),
+                                child: MessageRowV2(message: anchorMessage),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (afterMessages.isNotEmpty)
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      sliver: _buildMessageSliver(afterMessages),
+                    ),
+                  const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
+  }
+
+  SliverList _buildMessageSliver(List<ConversationMessageV2> messages) {
+    return SliverList.builder(
+      itemCount: messages.length,
+      itemBuilder: (context, index) {
+        final message = messages[index];
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: index == messages.length - 1 ? 0 : 12,
+          ),
+          child: KeyedSubtree(
+            key: _keyForMessage(message),
+            child: MessageRowV2(message: message),
+          ),
+        );
+      },
+    );
+  }
+
+  GlobalKey _keyForMessage(ConversationMessageV2 message) {
+    return _messageKeys.putIfAbsent(message.stableKey, GlobalKey.new);
   }
 }

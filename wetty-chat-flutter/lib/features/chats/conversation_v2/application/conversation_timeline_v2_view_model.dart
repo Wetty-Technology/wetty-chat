@@ -17,6 +17,7 @@ typedef ConversationTimelineV2State = ({
   List<ConversationMessageV2> messages,
   bool isResolvingJump,
   String? highlightedStableKey,
+  String? anchorStableKey,
 });
 
 class ConversationTimelineV2ViewModel
@@ -45,6 +46,7 @@ class ConversationTimelineV2ViewModel
       ),
       isResolvingJump: false,
       highlightedStableKey: null,
+      anchorStableKey: null,
     );
   }
 
@@ -71,7 +73,11 @@ class ConversationTimelineV2ViewModel
   }
 
   void jumpToLatest() {
-    _updateState(isResolvingJump: false, highlightedStableKey: null);
+    _updateState(
+      isResolvingJump: false,
+      highlightedStableKey: null,
+      anchorStableKey: null,
+    );
     _effectsController.add(const TimelineViewportEffect.revealBottom());
   }
 
@@ -86,11 +92,19 @@ class ConversationTimelineV2ViewModel
     );
 
     if (!hasTargetInCurrentSlice) {
-      _updateState(isResolvingJump: true, highlightedStableKey: null);
+      _updateState(
+        isResolvingJump: true,
+        highlightedStableKey: null,
+        anchorStableKey: null,
+      );
       return;
     }
 
-    _updateState(isResolvingJump: false, highlightedStableKey: stableKey);
+    _updateState(
+      isResolvingJump: false,
+      highlightedStableKey: stableKey,
+      anchorStableKey: stableKey,
+    );
     _effectsController.add(
       TimelineViewportEffect.revealMessage(
         stableKey,
@@ -103,6 +117,7 @@ class ConversationTimelineV2ViewModel
   void _updateState({
     required bool isResolvingJump,
     required String? highlightedStableKey,
+    required String? anchorStableKey,
   }) {
     final currentState = state.asData?.value;
     if (currentState == null) {
@@ -113,6 +128,7 @@ class ConversationTimelineV2ViewModel
       messages: currentState.messages,
       isResolvingJump: isResolvingJump,
       highlightedStableKey: highlightedStableKey,
+      anchorStableKey: anchorStableKey,
     ));
   }
 
