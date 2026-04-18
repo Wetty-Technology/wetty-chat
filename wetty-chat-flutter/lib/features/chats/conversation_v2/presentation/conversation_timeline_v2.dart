@@ -42,7 +42,7 @@ class _ConversationTimelineV2State
   void initState() {
     super.initState();
     _scrollController = _buildScrollController();
-    _initializeLaunchRequest();
+    // _scheduleInitializeLaunchRequest();
     _subscribeToEffects();
   }
 
@@ -54,7 +54,7 @@ class _ConversationTimelineV2State
       _subscribeToEffects();
     }
     if (oldWidget.launchRequest != widget.launchRequest) {
-      _initializeLaunchRequest();
+      _scheduleInitializeLaunchRequest();
     }
   }
 
@@ -66,10 +66,16 @@ class _ConversationTimelineV2State
     return controller;
   }
 
-  void _initializeLaunchRequest() {
-    ref
-        .read(conversationTimelineV2ViewModelProvider(_identity).notifier)
-        .initialize(widget.launchRequest);
+  void _scheduleInitializeLaunchRequest() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+
+      ref
+          .read(conversationTimelineV2ViewModelProvider(_identity).notifier)
+          .initialize(widget.launchRequest);
+    });
   }
 
   void _subscribeToEffects() {
@@ -119,18 +125,6 @@ class _ConversationTimelineV2State
     );
   }
 
-  void _handleLoadOlder() {
-    ref
-        .read(conversationTimelineV2ViewModelProvider(_identity).notifier)
-        .loadOlder();
-  }
-
-  void _handleLoadNewer() {
-    ref
-        .read(conversationTimelineV2ViewModelProvider(_identity).notifier)
-        .loadNewer();
-  }
-
   @override
   void dispose() {
     _effectSubscription?.cancel();
@@ -177,23 +171,7 @@ class _ConversationTimelineV2State
                         ).notifier,
                       )
                       .jumpToMessage('client:missing-message'),
-                  child: const Text('Jump Missing'),
-                ),
-                CupertinoButton(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  onPressed: _handleLoadOlder,
-                  child: const Text('Load Older'),
-                ),
-                CupertinoButton(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  onPressed: _handleLoadNewer,
-                  child: const Text('Load Newer'),
+                  child: const Text('missing'),
                 ),
                 CupertinoButton(
                   padding: const EdgeInsets.symmetric(
@@ -207,7 +185,21 @@ class _ConversationTimelineV2State
                         ).notifier,
                       )
                       .jumpToMessage(allMessages[10].stableKey),
-                  child: const Text('Jump To Message'),
+                  child: const Text('#10'),
+                ),
+                CupertinoButton(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  onPressed: () => ref
+                      .read(
+                        conversationTimelineV2ViewModelProvider(
+                          _identity,
+                        ).notifier,
+                      )
+                      .jumpToUnread(25),
+                  child: const Text('unread 25'),
                 ),
                 CupertinoButton(
                   padding: const EdgeInsets.symmetric(

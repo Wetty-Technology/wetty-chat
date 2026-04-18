@@ -28,6 +28,7 @@ typedef ConversationTimelineV2State = ({
 
 class ConversationTimelineV2ViewModel
     extends AsyncNotifier<ConversationTimelineV2State> {
+  static const int _jumpWindowSize = 11;
   final ConversationTimelineV2Identity identity;
   LaunchRequest? _initialLaunchRequest;
   final StreamController<TimelineViewportEffect> _effectsController =
@@ -72,6 +73,15 @@ class ConversationTimelineV2ViewModel
       return;
     }
     _initialLaunchRequest = launchRequest;
+
+    switch (launchRequest) {
+      case LatestLaunchRequest():
+        jumpToLatest();
+      case UnreadLaunchRequest(:final lastReadMessageId):
+        jumpToUnread(lastReadMessageId);
+      case MessageLaunchRequest(:final messageId, :final highlight):
+        jumpToMessageServerId(messageId, highlight: highlight);
+    }
   }
 
   void onViewportChanged(TimelineViewportFacts facts) {
@@ -110,38 +120,65 @@ class ConversationTimelineV2ViewModel
     );
 
     if (targetIndex < 0) {
-      _updateState(
-        mode: currentState.mode,
-        beforeMessages: currentState.beforeMessages,
-        centerMessages: currentState.centerMessages,
-        afterMessages: currentState.afterMessages,
-        isLoadingOlder: currentState.isLoadingOlder,
-        isLoadingNewer: currentState.isLoadingNewer,
-        isResolvingJump: true,
-        highlightedStableKey: null,
-        centerViewportFraction: currentState.centerViewportFraction,
-      );
+      _setResolvingJump(currentState, isResolvingJump: true);
       return;
     }
 
-    final targetMessage = messages[targetIndex];
-    _updateState(
-      mode: ConversationTimelineV2Mode.anchored,
-      beforeMessages: messages.take(targetIndex).toList(growable: false),
-      centerMessages: <ConversationMessageV2>[targetMessage],
-      afterMessages: messages.skip(targetIndex + 1).toList(growable: false),
-      isLoadingOlder: false,
-      isLoadingNewer: false,
-      isResolvingJump: false,
+    _activateWindowAroundIndex(
+      messages,
+      targetIndex,
       highlightedStableKey: stableKey,
       centerViewportFraction: 0.5,
     );
-    _effectsController.add(
-      TimelineViewportEffect.revealMessage(
-        stableKey,
-        alignment: TimelineViewportAlignment.center,
-        highlight: true,
-      ),
+  }
+
+  void jumpToMessageServerId(int messageId, {bool highlight = true}) {
+    final currentState = state.asData?.value;
+    if (currentState == null) {
+      return;
+    }
+
+    final messages = _flattenMessages(currentState);
+    final targetIndex = messages.indexWhere(
+      (message) => message.serverMessageId == messageId,
+    );
+
+    if (targetIndex < 0) {
+      _setResolvingJump(currentState, isResolvingJump: true);
+      return;
+    }
+
+    _activateWindowAroundIndex(
+      messages,
+      targetIndex,
+      highlightedStableKey: highlight ? messages[targetIndex].stableKey : null,
+      centerViewportFraction: 0.5,
+    );
+  }
+
+  void jumpToUnread(int lastReadMessageId) {
+    final currentState = state.asData?.value;
+    if (currentState == null) {
+      return;
+    }
+
+    final messages = _flattenMessages(currentState);
+    final unreadIndex = messages.indexWhere(
+      (message) =>
+          message.serverMessageId != null &&
+          message.serverMessageId! > lastReadMessageId,
+    );
+
+    if (unreadIndex < 0) {
+      jumpToLatest();
+      return;
+    }
+
+    _activateWindowAroundIndex(
+      messages,
+      unreadIndex,
+      highlightedStableKey: messages[unreadIndex].stableKey,
+      centerViewportFraction: 0.0,
     );
   }
 
@@ -295,6 +332,60 @@ class ConversationTimelineV2ViewModel
       ...state.centerMessages,
       ...state.afterMessages,
     ];
+  }
+
+  void _activateWindowAroundIndex(
+    List<ConversationMessageV2> messages,
+    int targetIndex, {
+    required String? highlightedStableKey,
+    required double centerViewportFraction,
+  }) {
+    final targetWindowSize = _jumpWindowSize.clamp(1, messages.length);
+    final desiredBefore = targetWindowSize ~/ 2;
+    final desiredAfter = targetWindowSize - desiredBefore - 1;
+    var windowStart = targetIndex - desiredBefore;
+    var windowEnd = targetIndex + desiredAfter + 1;
+
+    if (windowStart < 0) {
+      windowEnd = (windowEnd - windowStart).clamp(0, messages.length);
+      windowStart = 0;
+    }
+    if (windowEnd > messages.length) {
+      final overshoot = windowEnd - messages.length;
+      windowStart = (windowStart - overshoot).clamp(0, messages.length);
+      windowEnd = messages.length;
+    }
+
+    _updateState(
+      mode: ConversationTimelineV2Mode.anchored,
+      beforeMessages: messages.take(windowStart).toList(growable: false),
+      centerMessages: messages
+          .sublist(windowStart, windowEnd)
+          .toList(growable: false),
+      afterMessages: messages.skip(windowEnd).toList(growable: false),
+      isLoadingOlder: false,
+      isLoadingNewer: false,
+      isResolvingJump: false,
+      highlightedStableKey: highlightedStableKey,
+      centerViewportFraction: centerViewportFraction,
+    );
+  }
+
+  void _setResolvingJump(
+    ConversationTimelineV2State currentState, {
+    required bool isResolvingJump,
+  }) {
+    _updateState(
+      mode: currentState.mode,
+      beforeMessages: currentState.beforeMessages,
+      centerMessages: currentState.centerMessages,
+      afterMessages: currentState.afterMessages,
+      isLoadingOlder: currentState.isLoadingOlder,
+      isLoadingNewer: currentState.isLoadingNewer,
+      isResolvingJump: isResolvingJump,
+      highlightedStableKey: currentState.highlightedStableKey,
+      centerViewportFraction: currentState.centerViewportFraction,
+    );
   }
 
   ConversationMessageV2 _fakeMessage(int sequence) {
