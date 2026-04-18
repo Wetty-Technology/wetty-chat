@@ -6,6 +6,7 @@ import 'package:chahua/features/chats/conversation_v2/application/timeline_viewp
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:chahua/features/chats/conversation_v2/presentation/message_bubble/message_row_v2.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class ConversationTimelineV2 extends ConsumerStatefulWidget {
@@ -32,6 +33,7 @@ class _ConversationTimelineV2State
   late final ScrollController _scrollController;
   StreamSubscription<TimelineViewportEffect>? _effectSubscription;
   final Map<String, GlobalKey> _messageKeys = <String, GlobalKey>{};
+  TimelineViewportEffect? _pendingAnchorEffect;
   bool _lastIsNearTop = true;
   bool _lastIsNearBottom = false;
 
@@ -113,7 +115,12 @@ class _ConversationTimelineV2State
       return;
     }
 
-    await _scrollToMessage(effect);
+    _pendingAnchorEffect = effect;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _settlePendingAnchorEffect();
+      }
+    });
   }
 
   Future<void> _scrollToBottom() async {
@@ -133,7 +140,12 @@ class _ConversationTimelineV2State
     );
   }
 
-  Future<void> _scrollToMessage(TimelineViewportEffect effect) async {
+  Future<void> _settlePendingAnchorEffect() async {
+    final effect = _pendingAnchorEffect;
+    if (effect == null) {
+      return;
+    }
+
     final target = effect.target;
     if (target == null) {
       return;
@@ -141,24 +153,45 @@ class _ConversationTimelineV2State
 
     final targetKey = _messageKeys[target];
     final targetContext = targetKey?.currentContext;
-    if (targetContext == null) {
+    final targetRenderObject = targetContext?.findRenderObject();
+    if (targetContext == null || targetRenderObject == null) {
+      assert(
+        false,
+        'Anchor target $target is not mounted after re-anchoring. '
+        'This usually means the anchor row was not built into the current '
+        'sliver tree yet.',
+      );
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          _handleViewportEffect(effect);
+          _settlePendingAnchorEffect();
         }
       });
       return;
     }
 
-    await Scrollable.ensureVisible(
-      targetContext,
+    final viewport = RenderAbstractViewport.of(targetRenderObject);
+    if (!_scrollController.hasClients) {
+      return;
+    }
+
+    final targetOffset = viewport
+        .getOffsetToReveal(targetRenderObject, switch (effect.alignment) {
+          TimelineViewportAlignment.top => 0,
+          TimelineViewportAlignment.center => 0.5,
+          TimelineViewportAlignment.bottom => 1,
+        })
+        .offset
+        .clamp(
+          _scrollController.position.minScrollExtent,
+          _scrollController.position.maxScrollExtent,
+        );
+
+    _pendingAnchorEffect = null;
+
+    await _scrollController.animateTo(
+      targetOffset,
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOutCubic,
-      alignment: switch (effect.alignment) {
-        TimelineViewportAlignment.top => 0,
-        TimelineViewportAlignment.center => 0.5,
-        TimelineViewportAlignment.bottom => 1,
-      },
     );
   }
 
@@ -197,8 +230,10 @@ class _ConversationTimelineV2State
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 8,
+              runSpacing: 0,
               children: [
                 CupertinoButton(
                   padding: const EdgeInsets.symmetric(
@@ -213,6 +248,20 @@ class _ConversationTimelineV2State
                       )
                       .jumpToMessage('client:missing-message'),
                   child: const Text('Jump Missing'),
+                ),
+                CupertinoButton(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  onPressed: () => ref
+                      .read(
+                        conversationTimelineV2ViewModelProvider(
+                          _identity,
+                        ).notifier,
+                      )
+                      .loadOlder(),
+                  child: const Text('Load Older'),
                 ),
                 CupertinoButton(
                   padding: const EdgeInsets.symmetric(

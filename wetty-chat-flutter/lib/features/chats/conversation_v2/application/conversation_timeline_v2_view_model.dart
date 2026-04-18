@@ -27,6 +27,8 @@ class ConversationTimelineV2ViewModel
   TimelineViewportFacts? _lastViewportFacts;
   final StreamController<TimelineViewportEffect> _effectsController =
       StreamController<TimelineViewportEffect>.broadcast();
+  late DateTime _baseNow;
+  int _nextOlderSequence = -1;
 
   ConversationTimelineV2ViewModel(this.identity);
 
@@ -36,12 +38,12 @@ class ConversationTimelineV2ViewModel
   Future<ConversationTimelineV2State> build() async {
     ref.onDispose(_effectsController.close);
 
-    final now = DateTime.now().toUtc();
+    _baseNow = DateTime.now().toUtc();
 
     return (
       messages: List<ConversationMessageV2>.generate(
         50,
-        (index) => _fakeMessage(now, index),
+        (index) => _fakeMessage(index),
         growable: false,
       ),
       isResolvingJump: false,
@@ -114,6 +116,26 @@ class ConversationTimelineV2ViewModel
     );
   }
 
+  void loadOlder() {
+    final currentState = state.asData?.value;
+    if (currentState == null) {
+      return;
+    }
+
+    final olderMessages = List<ConversationMessageV2>.generate(
+      10,
+      (_) => _fakeMessage(_nextOlderSequence--),
+      growable: false,
+    ).reversed.toList(growable: false);
+
+    state = AsyncData((
+      messages: [...olderMessages, ...currentState.messages],
+      isResolvingJump: currentState.isResolvingJump,
+      highlightedStableKey: currentState.highlightedStableKey,
+      anchorStableKey: currentState.anchorStableKey,
+    ));
+  }
+
   void _updateState({
     required bool isResolvingJump,
     required String? highlightedStableKey,
@@ -132,8 +154,8 @@ class ConversationTimelineV2ViewModel
     ));
   }
 
-  ConversationMessageV2 _fakeMessage(DateTime now, int index) {
-    final isMe = index.isOdd;
+  ConversationMessageV2 _fakeMessage(int sequence) {
+    final isMe = sequence.isOdd;
     final sender = Sender(
       uid: isMe ? 1 : 2,
       name: isMe ? 'Me' : 'Alex',
@@ -141,46 +163,46 @@ class ConversationTimelineV2ViewModel
       gender: isMe ? 1 : 0,
     );
 
-    final replyPreview = index % 9 == 0
+    final replyPreview = sequence % 9 == 0
         ? ReplyToMessage(
-            id: 1000 + index,
+            id: 1000 + sequence,
             message: 'Earlier message preview',
             sender: const Sender(uid: 3, name: 'Taylor'),
           )
         : null;
 
-    final reactions = index % 7 == 0
+    final reactions = sequence % 7 == 0
         ? const <ReactionSummary>[
             ReactionSummary(emoji: '👍', count: 2, reactedByMe: true),
           ]
         : const <ReactionSummary>[];
 
-    final threadInfo = index % 8 == 0
-        ? ThreadInfo(replyCount: 3 + (index % 4))
+    final threadInfo = sequence % 8 == 0
+        ? ThreadInfo(replyCount: 3 + (sequence % 4).abs())
         : null;
 
     return ConversationMessageV2(
-      serverMessageId: index + 1,
+      serverMessageId: sequence >= 0 ? sequence + 1 : null,
       clientGeneratedId:
-          'fake-${identity.chatId}-${identity.threadRootId ?? 'chat'}-$index',
+          'fake-${identity.chatId}-${identity.threadRootId ?? 'chat'}-$sequence',
       sender: sender,
-      createdAt: now.subtract(Duration(minutes: (50 - index) * 3)),
-      isEdited: index % 11 == 0,
-      isDeleted: index == 17,
+      createdAt: _baseNow.subtract(Duration(minutes: (50 - sequence) * 3)),
+      isEdited: sequence % 11 == 0,
+      isDeleted: sequence == 17,
       replyToMessage: replyPreview,
       reactions: reactions,
       threadInfo: threadInfo,
-      deliveryState: isMe && index > 46
+      deliveryState: isMe && sequence > 46
           ? ConversationDeliveryState.confirmed
           : ConversationDeliveryState.sent,
-      content: _fakeContent(index),
+      content: _fakeContent(sequence),
     );
   }
 
-  MessageContent _fakeContent(int index) {
+  MessageContent _fakeContent(int sequence) {
     return TextMessageContent(
-      text: 'Placeholder v2 message #$index for chat ${identity.chatId}',
-      mentions: index % 13 == 0
+      text: 'Placeholder v2 message #$sequence for chat ${identity.chatId}',
+      mentions: sequence % 13 == 0
           ? const <MentionInfo>[MentionInfo(uid: 9, username: 'casey')]
           : const <MentionInfo>[],
     );
