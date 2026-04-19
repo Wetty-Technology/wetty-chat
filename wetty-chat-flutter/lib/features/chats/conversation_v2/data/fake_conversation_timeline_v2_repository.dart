@@ -1,15 +1,9 @@
 import 'package:chahua/features/chats/conversation/domain/conversation_message.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_view_model.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
+import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_window.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-typedef FakeConversationTimelineV2Window = ({
-  List<ConversationMessageV2> beforeMessages,
-  List<ConversationMessageV2> afterMessages,
-  bool canLoadOlder,
-  bool canLoadNewer,
-});
 
 class FakeConversationTimelineV2Repository {
   FakeConversationTimelineV2Repository(this.identity)
@@ -31,7 +25,7 @@ class FakeConversationTimelineV2Repository {
   final DateTime _baseNow;
   final List<ConversationMessageV2> _history;
 
-  FakeConversationTimelineV2Window buildInitialAnchoredWindow({
+  ConversationTimelineV2Window buildInitialAnchoredWindow({
     required int loadedWindowSize,
   }) {
     return windowAroundHistoryIndex(
@@ -40,7 +34,7 @@ class FakeConversationTimelineV2Repository {
     );
   }
 
-  FakeConversationTimelineV2Window latestWindow({required int limit}) {
+  ConversationTimelineV2Window latestWindow({required int limit}) {
     final startIndex = (_history.length - limit).clamp(0, _history.length);
     return (
       beforeMessages: _history.sublist(startIndex),
@@ -50,7 +44,7 @@ class FakeConversationTimelineV2Repository {
     );
   }
 
-  FakeConversationTimelineV2Window windowAroundHistoryIndex(
+  ConversationTimelineV2Window windowAroundHistoryIndex(
     int historyIndex, {
     required int loadedWindowSize,
   }) {
@@ -76,7 +70,7 @@ class FakeConversationTimelineV2Repository {
     );
   }
 
-  FakeConversationTimelineV2Window? windowAroundStableKey(
+  ConversationTimelineV2Window? windowAroundStableKey(
     String stableKey, {
     required int loadedWindowSize,
   }) {
@@ -93,7 +87,7 @@ class FakeConversationTimelineV2Repository {
     );
   }
 
-  FakeConversationTimelineV2Window? windowAroundServerMessageId(
+  ConversationTimelineV2Window? windowAroundServerMessageId(
     int serverMessageId, {
     required int loadedWindowSize,
   }) {

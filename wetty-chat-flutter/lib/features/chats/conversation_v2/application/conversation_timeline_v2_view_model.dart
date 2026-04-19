@@ -4,6 +4,7 @@ import 'package:chahua/features/chats/conversation/domain/launch_request.dart';
 import 'package:chahua/features/chats/conversation_v2/application/timeline_viewport_facts.dart';
 import 'package:chahua/features/chats/conversation_v2/data/fake_conversation_timeline_v2_repository.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
+import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_window.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 typedef ConversationTimelineV2Identity = ({
@@ -459,7 +460,7 @@ class ConversationTimelineV2ViewModel
   }
 
   void _activateRepositoryWindow(
-    FakeConversationTimelineV2Window window, {
+    ConversationTimelineV2Window window, {
     required String? highlightedStableKey,
     required double centerViewportFraction,
   }) {
