@@ -167,7 +167,6 @@ class _ConversationTimelineV2State
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _consumeViewportCommand(state);
     });
-    final allMessages = _flattenMessages(state);
     final beforeMessages = state.beforeMessages.reversed.toList(
       growable: false,
     );
@@ -197,17 +196,8 @@ class _ConversationTimelineV2State
                   .read(
                     conversationTimelineV2ViewModelProvider(_identity).notifier,
                   )
-                  .jumpToMessage(allMessages[10].stableKey),
-              child: const Text('#10'),
-            ),
-            CupertinoButton(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              onPressed: () => ref
-                  .read(
-                    conversationTimelineV2ViewModelProvider(_identity).notifier,
-                  )
-                  .jumpToUnread(25),
-              child: const Text('unread 25'),
+                  .jumpToFarHistory(),
+              child: const Text('Jump Far History'),
             ),
             CupertinoButton(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -298,14 +288,5 @@ class _ConversationTimelineV2State
 
   GlobalKey _keyForMessage(ConversationMessageV2 message) {
     return _messageKeys.putIfAbsent(message.stableKey, GlobalKey.new);
-  }
-
-  List<ConversationMessageV2> _flattenMessages(
-    ConversationTimelineV2State state,
-  ) {
-    return <ConversationMessageV2>[
-      ...state.beforeMessages,
-      ...state.afterMessages,
-    ];
   }
 }

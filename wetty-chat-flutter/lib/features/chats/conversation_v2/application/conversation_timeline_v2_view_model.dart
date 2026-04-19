@@ -133,6 +133,10 @@ class ConversationTimelineV2ViewModel
     _markRepositoryTodo('jumpToUnread(lastReadMessageId: $lastReadMessageId)');
   }
 
+  void jumpToFarHistory() {
+    _markRepositoryTodo('jumpToFarHistory()');
+  }
+
   Future<void> addMessage() async {
     _scrollToBottomOnNextLatestUpdate =
         _latestViewportFacts?.isNearBottom ?? false;
