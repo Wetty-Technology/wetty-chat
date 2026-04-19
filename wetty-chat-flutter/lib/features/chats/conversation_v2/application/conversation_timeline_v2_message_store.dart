@@ -349,24 +349,53 @@ final conversationTimelineV2MessageStoreProvider =
       ConversationTimelineV2MessageStoreState
     >(ConversationTimelineV2MessageStore.new);
 
-final conversationTimelineV2LatestActiveSegmentProvider =
+typedef ConversationTimelineV2ActiveSegmentProviderArgs = ({
+  ConversationTimelineV2Identity identity,
+  ConversationTimelineV2ActiveSegmentMode mode,
+});
+
+final conversationTimelineV2ActiveSegmentProvider =
     Provider.family<
       ConversationTimelineV2ActiveSegment?,
-      ConversationTimelineV2Identity
-    >((ref, identity) {
+      ConversationTimelineV2ActiveSegmentProviderArgs
+    >((ref, args) {
       final scope = ref.watch(
         conversationTimelineV2MessageStoreProvider.select(
-          (state) => state[identity],
+          (state) => state[args.identity],
         ),
       );
-      if (scope == null || scope.segments.isEmpty || !scope.hasLatestSegment) {
+      if (scope == null || scope.segments.isEmpty) {
         return null;
       }
 
-      final latestSegment = scope.segments.last;
-      return (
-        orderedMessages: latestSegment.orderedMessages,
-        canLoadBefore: true,
-        canLoadAfter: false,
-      );
+      if (args.mode.isLatest) {
+        if (!scope.hasLatestSegment) {
+          return null;
+        }
+
+        final latestSegment = scope.segments.last;
+        return (
+          orderedMessages: latestSegment.orderedMessages,
+          canLoadBefore: true,
+          canLoadAfter: false,
+        );
+      }
+
+      final targetServerMessageId = args.mode.targetServerMessageId;
+      if (targetServerMessageId == null) {
+        return null;
+      }
+
+      for (final segment in scope.segments) {
+        if (segment.firstServerMessageId <= targetServerMessageId &&
+            segment.lastServerMessageId >= targetServerMessageId) {
+          return (
+            orderedMessages: segment.orderedMessages,
+            canLoadBefore: true,
+            canLoadAfter: true,
+          );
+        }
+      }
+
+      return null;
     });
