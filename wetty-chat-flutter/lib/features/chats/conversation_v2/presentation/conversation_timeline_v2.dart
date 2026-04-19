@@ -103,9 +103,41 @@ class _ConversationTimelineV2State
   }
 
   Future<void> _handleViewportEffect(TimelineViewportEffect effect) async {
+    if (effect.resetToCenterOrigin) {
+      await _resetToCenterOrigin();
+      return;
+    }
+
     if (effect.isBottomTarget) {
       await _scrollToBottom();
     }
+  }
+
+  Future<void> _resetToCenterOrigin() async {
+    if (!_scrollController.hasClients) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _resetToCenterOrigin();
+        }
+      });
+      return;
+    }
+
+    const animateThreshold = 600.0;
+    final currentOffset = _scrollController.position.pixels;
+    final targetOffset = 0.0;
+    final distance = (currentOffset - targetOffset).abs();
+
+    if (distance <= animateThreshold) {
+      await _scrollController.animateTo(
+        targetOffset,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+      );
+      return;
+    }
+
+    _scrollController.jumpTo(targetOffset);
   }
 
   Future<void> _scrollToBottom() async {

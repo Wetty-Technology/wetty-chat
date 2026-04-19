@@ -28,7 +28,6 @@ typedef ConversationTimelineV2State = ({
 
 class ConversationTimelineV2ViewModel
     extends AsyncNotifier<ConversationTimelineV2State> {
-  static const int _jumpWindowSize = 11;
   final ConversationTimelineV2Identity identity;
   LaunchRequest? _initialLaunchRequest;
   final StreamController<TimelineViewportEffect> _effectsController =
@@ -124,7 +123,7 @@ class ConversationTimelineV2ViewModel
       return;
     }
 
-    _activateWindowAroundIndex(
+    _activateSingleMessageCenter(
       messages,
       targetIndex,
       highlightedStableKey: stableKey,
@@ -148,7 +147,7 @@ class ConversationTimelineV2ViewModel
       return;
     }
 
-    _activateWindowAroundIndex(
+    _activateSingleMessageCenter(
       messages,
       targetIndex,
       highlightedStableKey: highlight ? messages[targetIndex].stableKey : null,
@@ -174,7 +173,7 @@ class ConversationTimelineV2ViewModel
       return;
     }
 
-    _activateWindowAroundIndex(
+    _activateSingleMessageCenter(
       messages,
       unreadIndex,
       highlightedStableKey: messages[unreadIndex].stableKey,
@@ -334,40 +333,32 @@ class ConversationTimelineV2ViewModel
     ];
   }
 
-  void _activateWindowAroundIndex(
+  void _activateSingleMessageCenter(
     List<ConversationMessageV2> messages,
     int targetIndex, {
     required String? highlightedStableKey,
     required double centerViewportFraction,
   }) {
-    final targetWindowSize = _jumpWindowSize.clamp(1, messages.length);
-    final desiredBefore = targetWindowSize ~/ 2;
-    final desiredAfter = targetWindowSize - desiredBefore - 1;
-    var windowStart = targetIndex - desiredBefore;
-    var windowEnd = targetIndex + desiredAfter + 1;
-
-    if (windowStart < 0) {
-      windowEnd = (windowEnd - windowStart).clamp(0, messages.length);
-      windowStart = 0;
-    }
-    if (windowEnd > messages.length) {
-      final overshoot = windowEnd - messages.length;
-      windowStart = (windowStart - overshoot).clamp(0, messages.length);
-      windowEnd = messages.length;
-    }
+    final targetMessage = messages[targetIndex];
 
     _updateState(
       mode: ConversationTimelineV2Mode.anchored,
-      beforeMessages: messages.take(windowStart).toList(growable: false),
-      centerMessages: messages
-          .sublist(windowStart, windowEnd)
-          .toList(growable: false),
-      afterMessages: messages.skip(windowEnd).toList(growable: false),
+      beforeMessages: messages.take(targetIndex).toList(growable: false),
+      centerMessages: <ConversationMessageV2>[targetMessage],
+      afterMessages: messages.skip(targetIndex + 1).toList(growable: false),
       isLoadingOlder: false,
       isLoadingNewer: false,
       isResolvingJump: false,
       highlightedStableKey: highlightedStableKey,
       centerViewportFraction: centerViewportFraction,
+    );
+    _effectsController.add(
+      TimelineViewportEffect.resetToCenterOrigin(
+        alignment: centerViewportFraction == 0.0
+            ? TimelineViewportAlignment.top
+            : TimelineViewportAlignment.center,
+        highlight: highlightedStableKey != null,
+      ),
     );
   }
 
