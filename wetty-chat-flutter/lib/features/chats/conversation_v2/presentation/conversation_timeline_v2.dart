@@ -1,6 +1,4 @@
-import 'dart:async';
 import 'package:chahua/features/chats/conversation/domain/launch_request.dart';
-import 'package:chahua/features/chats/conversation_v2/application/timeline_viewport_effect.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_view_model.dart';
 import 'package:chahua/features/chats/conversation_v2/application/timeline_viewport_facts.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
@@ -30,7 +28,7 @@ class _ConversationTimelineV2State
   static const double _edgeThreshold = 80;
 
   late ScrollController _scrollController;
-  StreamSubscription<TimelineViewportEffect>? _effectSubscription;
+  int _lastHandledViewportCommandGeneration = 0;
   final GlobalKey _centerSliverKey = GlobalKey();
   final GlobalKey _scrollViewportKey = GlobalKey();
   final Map<String, GlobalKey> _messageKeys = <String, GlobalKey>{};
@@ -43,7 +41,6 @@ class _ConversationTimelineV2State
     super.initState();
     _scrollController = _buildScrollController();
     _scheduleInitializeLaunchRequest();
-    _subscribeToEffects();
   }
 
   @override
@@ -51,7 +48,7 @@ class _ConversationTimelineV2State
     super.didUpdateWidget(oldWidget);
     if (oldWidget.chatId != widget.chatId ||
         oldWidget.threadRootId != widget.threadRootId) {
-      _subscribeToEffects();
+      _lastHandledViewportCommandGeneration = 0;
     }
     if (oldWidget.launchRequest != widget.launchRequest) {
       _scheduleInitializeLaunchRequest();
@@ -62,7 +59,7 @@ class _ConversationTimelineV2State
     final controller = ScrollController(
       initialScrollOffset: initialScrollOffset,
     );
-    controller.addListener(_handleScroll);
+    controller.addListener(_reportViewportFacts);
     return controller;
   }
 
@@ -78,15 +75,8 @@ class _ConversationTimelineV2State
     });
   }
 
-  void _subscribeToEffects() {
-    _effectSubscription?.cancel();
-    _effectSubscription = ref
-        .read(conversationTimelineV2ViewModelProvider(_identity).notifier)
-        .effects
-        .listen(_handleViewportEffect);
-  }
-
-  void _handleScroll() {
+  /// Reports the viewport facts to the view model.
+  void _reportViewportFacts() {
     if (!_scrollController.hasClients) {
       return;
     }
@@ -102,28 +92,35 @@ class _ConversationTimelineV2State
         .onViewportChanged(facts);
   }
 
-  Future<void> _handleViewportEffect(TimelineViewportEffect effect) async {
-    if (effect.resetToCenterOrigin) {
-      await _resetToCenterOrigin();
+  void _consumeViewportCommand(ConversationTimelineV2State state) {
+    final generation = state.viewportCommandGeneration;
+    if (generation <= _lastHandledViewportCommandGeneration) {
       return;
     }
 
-    if (effect.isBottomTarget) {
-      await _scrollToBottom();
+    _lastHandledViewportCommandGeneration = generation;
+    switch (state.viewportCommandKind) {
+      case ConversationTimelineV2ViewportCommandKind.none:
+        return;
+      case ConversationTimelineV2ViewportCommandKind.resetToCenterOrigin:
+        _resetToCenterOrigin();
+        break;
+      case ConversationTimelineV2ViewportCommandKind.scrollToBottom:
+        _scrollToBottom();
+        break;
     }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _reportViewportFacts();
+    });
   }
 
   Future<void> _resetToCenterOrigin() async {
-    if (!_scrollController.hasClients) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _resetToCenterOrigin();
-        }
-      });
+    if (!mounted || !_scrollController.hasClients) {
       return;
     }
 
-    const animateThreshold = 600.0;
+    const animateThreshold = 1200.0;
     final currentOffset = _scrollController.position.pixels;
     final targetOffset = 0.0;
     final distance = (currentOffset - targetOffset).abs();
@@ -141,12 +138,7 @@ class _ConversationTimelineV2State
   }
 
   Future<void> _scrollToBottom() async {
-    if (!_scrollController.hasClients) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _scrollToBottom();
-        }
-      });
+    if (!mounted || !_scrollController.hasClients) {
       return;
     }
 
@@ -159,8 +151,7 @@ class _ConversationTimelineV2State
 
   @override
   void dispose() {
-    _effectSubscription?.cancel();
-    _scrollController.removeListener(_handleScroll);
+    _scrollController.removeListener(_reportViewportFacts);
     _scrollController.dispose();
     super.dispose();
   }
@@ -175,6 +166,15 @@ class _ConversationTimelineV2State
       loading: () => const Center(child: CupertinoActivityIndicator()),
       error: (error, _) => Center(child: Text('error: $error')),
       data: (state) {
+        debugPrint(
+          "beforeSlice: ${state.beforeMessages.map((e) => e.stableKey).join(", ")}",
+        );
+        debugPrint(
+          "afterSlice: ${state.afterMessages.map((e) => e.stableKey).join(", ")}",
+        );
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _consumeViewportCommand(state);
+        });
         final allMessages = _flattenMessages(state);
         final beforeMessages = state.beforeMessages.reversed.toList(
           growable: false,

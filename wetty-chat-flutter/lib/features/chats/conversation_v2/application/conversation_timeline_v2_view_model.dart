@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:chahua/features/chats/conversation/domain/conversation_message.dart';
 import 'package:chahua/features/chats/conversation/domain/launch_request.dart';
-import 'package:chahua/features/chats/conversation_v2/application/timeline_viewport_effect.dart';
 import 'package:chahua/features/chats/conversation_v2/application/timeline_viewport_facts.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
@@ -12,6 +11,12 @@ typedef ConversationTimelineV2Identity = ({
   String chatId,
   String? threadRootId,
 });
+
+enum ConversationTimelineV2ViewportCommandKind {
+  none,
+  resetToCenterOrigin,
+  scrollToBottom,
+}
 
 typedef ConversationTimelineV2State = ({
   List<ConversationMessageV2> beforeMessages,
@@ -23,6 +28,8 @@ typedef ConversationTimelineV2State = ({
   bool isResolvingJump,
   String? highlightedStableKey,
   double centerViewportFraction,
+  ConversationTimelineV2ViewportCommandKind viewportCommandKind,
+  int viewportCommandGeneration,
 });
 
 class ConversationTimelineV2ViewModel
@@ -33,21 +40,17 @@ class ConversationTimelineV2ViewModel
 
   final ConversationTimelineV2Identity identity;
   LaunchRequest? _initialLaunchRequest;
-  final StreamController<TimelineViewportEffect> _effectsController =
-      StreamController<TimelineViewportEffect>.broadcast();
   late DateTime _baseNow;
   late List<ConversationMessageV2> _fakeHistory;
   bool _isLoadingOlder = false;
   bool _isLoadingNewer = false;
+  TimelineViewportFacts? _latestViewportFacts;
+  int _viewportCommandGeneration = 0;
 
   ConversationTimelineV2ViewModel(this.identity);
 
-  Stream<TimelineViewportEffect> get effects => _effectsController.stream;
-
   @override
   Future<ConversationTimelineV2State> build() async {
-    ref.onDispose(_effectsController.close);
-
     _baseNow = DateTime.now().toUtc();
     _fakeHistory = List<ConversationMessageV2>.generate(
       _fakeHistoryCount,
@@ -78,6 +81,8 @@ class ConversationTimelineV2ViewModel
   }
 
   void onViewportChanged(TimelineViewportFacts facts) {
+    _latestViewportFacts = facts;
+
     final currentState = state.asData?.value;
     if (currentState == null) {
       return;
@@ -97,8 +102,10 @@ class ConversationTimelineV2ViewModel
       isResolvingJump: false,
       highlightedStableKey: null,
       centerViewportFraction: 1.0,
+      viewportCommandKind:
+          ConversationTimelineV2ViewportCommandKind.resetToCenterOrigin,
+      viewportCommandGeneration: ++_viewportCommandGeneration,
     );
-    _effectsController.add(const TimelineViewportEffect.resetToCenterOrigin());
   }
 
   void jumpToMessage(String stableKey) {
@@ -180,31 +187,22 @@ class ConversationTimelineV2ViewModel
     final newMessage = _fakeMessage(nextSequence);
     _fakeHistory = [..._fakeHistory, newMessage];
 
-    if (_isLiveEdgeState(currentState)) {
-      _updateState(
-        beforeMessages: [...currentState.beforeMessages, newMessage],
-        afterMessages: const <ConversationMessageV2>[],
-        canLoadOlder: currentState.canLoadOlder,
-        canLoadNewer: false,
-        isLoadingOlder: currentState.isLoadingOlder,
-        isLoadingNewer: currentState.isLoadingNewer,
-        isResolvingJump: currentState.isResolvingJump,
-        highlightedStableKey: null,
-        centerViewportFraction: currentState.centerViewportFraction,
-      );
-      return;
-    }
-
     _updateState(
       beforeMessages: currentState.beforeMessages,
       afterMessages: [...currentState.afterMessages, newMessage],
       canLoadOlder: currentState.canLoadOlder,
-      canLoadNewer: true,
+      canLoadNewer: currentState.canLoadNewer,
       isLoadingOlder: currentState.isLoadingOlder,
       isLoadingNewer: currentState.isLoadingNewer,
       isResolvingJump: currentState.isResolvingJump,
       highlightedStableKey: currentState.highlightedStableKey,
       centerViewportFraction: currentState.centerViewportFraction,
+      viewportCommandKind: _latestViewportFacts?.isNearBottom ?? false
+          ? ConversationTimelineV2ViewportCommandKind.scrollToBottom
+          : ConversationTimelineV2ViewportCommandKind.none,
+      viewportCommandGeneration: _latestViewportFacts?.isNearBottom ?? false
+          ? ++_viewportCommandGeneration
+          : currentState.viewportCommandGeneration,
     );
   }
 
@@ -225,6 +223,8 @@ class ConversationTimelineV2ViewModel
       isResolvingJump: currentState.isResolvingJump,
       highlightedStableKey: currentState.highlightedStableKey,
       centerViewportFraction: currentState.centerViewportFraction,
+      viewportCommandKind: currentState.viewportCommandKind,
+      viewportCommandGeneration: currentState.viewportCommandGeneration,
     );
 
     try {
@@ -264,6 +264,8 @@ class ConversationTimelineV2ViewModel
         isResolvingJump: latestState.isResolvingJump,
         highlightedStableKey: latestState.highlightedStableKey,
         centerViewportFraction: latestState.centerViewportFraction,
+        viewportCommandKind: latestState.viewportCommandKind,
+        viewportCommandGeneration: latestState.viewportCommandGeneration,
       );
     } finally {
       _isLoadingOlder = false;
@@ -287,6 +289,8 @@ class ConversationTimelineV2ViewModel
       isResolvingJump: currentState.isResolvingJump,
       highlightedStableKey: currentState.highlightedStableKey,
       centerViewportFraction: currentState.centerViewportFraction,
+      viewportCommandKind: currentState.viewportCommandKind,
+      viewportCommandGeneration: currentState.viewportCommandGeneration,
     );
 
     try {
@@ -312,6 +316,8 @@ class ConversationTimelineV2ViewModel
         isResolvingJump: latestState.isResolvingJump,
         highlightedStableKey: latestState.highlightedStableKey,
         centerViewportFraction: latestState.centerViewportFraction,
+        viewportCommandKind: latestState.viewportCommandKind,
+        viewportCommandGeneration: latestState.viewportCommandGeneration,
       );
     } finally {
       _isLoadingNewer = false;
@@ -328,6 +334,8 @@ class ConversationTimelineV2ViewModel
     required bool isResolvingJump,
     required String? highlightedStableKey,
     required double centerViewportFraction,
+    required ConversationTimelineV2ViewportCommandKind viewportCommandKind,
+    required int viewportCommandGeneration,
   }) {
     state = AsyncData((
       beforeMessages: beforeMessages,
@@ -339,6 +347,8 @@ class ConversationTimelineV2ViewModel
       isResolvingJump: isResolvingJump,
       highlightedStableKey: highlightedStableKey,
       centerViewportFraction: centerViewportFraction,
+      viewportCommandKind: viewportCommandKind,
+      viewportCommandGeneration: viewportCommandGeneration,
     ));
   }
 
@@ -350,8 +360,7 @@ class ConversationTimelineV2ViewModel
       return;
     }
 
-    if (!_isLiveEdgeState(currentState) &&
-        facts.isNearBottom &&
+    if (facts.isNearBottom &&
         currentState.canLoadNewer &&
         !currentState.isLoadingNewer) {
       unawaited(loadNewer());
@@ -392,16 +401,9 @@ class ConversationTimelineV2ViewModel
       isResolvingJump: false,
       highlightedStableKey: highlightedStableKey,
       centerViewportFraction: centerViewportFraction,
-    );
-    _effectsController.add(
-      TimelineViewportEffect.resetToCenterOrigin(
-        alignment: centerViewportFraction == 0.0
-            ? TimelineViewportAlignment.top
-            : centerViewportFraction == 1.0
-            ? TimelineViewportAlignment.bottom
-            : TimelineViewportAlignment.center,
-        highlight: highlightedStableKey != null,
-      ),
+      viewportCommandKind:
+          ConversationTimelineV2ViewportCommandKind.resetToCenterOrigin,
+      viewportCommandGeneration: ++_viewportCommandGeneration,
     );
   }
 
@@ -454,6 +456,8 @@ class ConversationTimelineV2ViewModel
       isResolvingJump: isResolvingJump,
       highlightedStableKey: currentState.highlightedStableKey,
       centerViewportFraction: currentState.centerViewportFraction,
+      viewportCommandKind: currentState.viewportCommandKind,
+      viewportCommandGeneration: currentState.viewportCommandGeneration,
     );
   }
 
@@ -485,6 +489,8 @@ class ConversationTimelineV2ViewModel
       isResolvingJump: false,
       highlightedStableKey: null,
       centerViewportFraction: 0.5,
+      viewportCommandKind: ConversationTimelineV2ViewportCommandKind.none,
+      viewportCommandGeneration: _viewportCommandGeneration,
     );
   }
 
@@ -519,10 +525,6 @@ class ConversationTimelineV2ViewModel
       return index >= 0 ? index : _fakeHistory.length - 1;
     }
     return _fakeHistory.length - 1;
-  }
-
-  bool _isLiveEdgeState(ConversationTimelineV2State state) {
-    return state.afterMessages.isEmpty && state.centerViewportFraction == 1.0;
   }
 
   int _messageSequence(ConversationMessageV2 message) {
