@@ -179,6 +179,7 @@ class _ConversationTimelineV2State
         final beforeMessages = state.beforeMessages.reversed.toList(
           growable: false,
         );
+        final centerKind = state.centerKind;
         final centerMessage = state.centerMessage;
         final afterMessages = state.afterMessages;
         final centerViewportFraction = state.centerViewportFraction;
@@ -258,15 +259,15 @@ class _ConversationTimelineV2State
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
-                  'Mode: ${state.mode.name} | Center: ${centerMessage.stableKey}'
+                  'Mode: ${state.mode.name} | Center: ${centerKind.name}:${centerMessage.stableKey}'
                   ' @ ${centerViewportFraction.toStringAsFixed(2)}',
                 ),
               ),
-            if (centerMessage == null)
+            if (centerKind == ConversationTimelineV2CenterKind.liveEdge)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
-                  'Mode: ${state.mode.name} | Center: live-edge placeholder'
+                  'Mode: ${state.mode.name} | Center: live-edge'
                   ' @ ${centerViewportFraction.toStringAsFixed(2)}',
                 ),
               ),
@@ -288,6 +289,7 @@ class _ConversationTimelineV2State
                       key: _centerSliverKey,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       sliver: _buildCenterSliver(
+                        centerKind,
                         centerMessage,
                         highlightedStableKey: state.highlightedStableKey,
                       ),
@@ -316,76 +318,37 @@ class _ConversationTimelineV2State
       itemCount: messages.length,
       itemBuilder: (context, index) {
         final message = messages[index];
-        final isHighlighted = message.stableKey == highlightedStableKey;
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: index == messages.length - 1 ? 0 : 12,
-          ),
-          child: DecoratedBox(
-            decoration: isHighlighted
-                ? BoxDecoration(
-                    border: Border.all(
-                      color: CupertinoColors.activeBlue,
-                      width: 1.5,
-                    ),
-                    borderRadius: BorderRadius.circular(14),
-                  )
-                : const BoxDecoration(),
-            child: Padding(
-              padding: isHighlighted
-                  ? const EdgeInsets.all(2)
-                  : EdgeInsets.zero,
-              child: KeyedSubtree(
-                key: _keyForMessage(message),
-                child: MessageRowV2(message: message),
-              ),
-            ),
+        return KeyedSubtree(
+          key: _keyForMessage(message),
+          child: MessageRowV2(
+            message: message,
+            isHighlighted: message.stableKey == highlightedStableKey,
           ),
         );
       },
     );
   }
 
-  Widget _buildMessageRow(
-    ConversationMessageV2 message, {
-    required bool isHighlighted,
-    bool addBottomPadding = false,
-  }) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: addBottomPadding ? 12 : 0),
-      child: DecoratedBox(
-        decoration: isHighlighted
-            ? BoxDecoration(
-                border: Border.all(
-                  color: CupertinoColors.activeBlue,
-                  width: 1.5,
-                ),
-                borderRadius: BorderRadius.circular(14),
-              )
-            : const BoxDecoration(),
-        child: Padding(
-          padding: isHighlighted ? const EdgeInsets.all(2) : EdgeInsets.zero,
-          child: KeyedSubtree(
-            key: _keyForMessage(message),
-            child: MessageRowV2(message: message),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildCenterSliver(
+    ConversationTimelineV2CenterKind centerKind,
     ConversationMessageV2? centerMessage, {
     String? highlightedStableKey,
   }) {
+    if (centerKind == ConversationTimelineV2CenterKind.liveEdge) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+
     if (centerMessage == null) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
 
     return SliverToBoxAdapter(
-      child: _buildMessageRow(
-        centerMessage,
-        isHighlighted: centerMessage.stableKey == highlightedStableKey,
+      child: KeyedSubtree(
+        key: _keyForMessage(centerMessage),
+        child: MessageRowV2(
+          message: centerMessage,
+          isHighlighted: centerMessage.stableKey == highlightedStableKey,
+        ),
       ),
     );
   }

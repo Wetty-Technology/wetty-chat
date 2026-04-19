@@ -14,8 +14,11 @@ typedef ConversationTimelineV2Identity = ({
 
 enum ConversationTimelineV2Mode { live, anchored }
 
+enum ConversationTimelineV2CenterKind { message, liveEdge }
+
 typedef ConversationTimelineV2State = ({
   ConversationTimelineV2Mode mode,
+  ConversationTimelineV2CenterKind centerKind,
   List<ConversationMessageV2> beforeMessages,
   ConversationMessageV2? centerMessage,
   List<ConversationMessageV2> afterMessages,
@@ -57,6 +60,7 @@ class ConversationTimelineV2ViewModel
 
     return (
       mode: ConversationTimelineV2Mode.anchored,
+      centerKind: ConversationTimelineV2CenterKind.message,
       beforeMessages: initialMessages
           .take(initialCenterIndex)
           .toList(growable: false),
@@ -101,6 +105,7 @@ class ConversationTimelineV2ViewModel
     final currentMessages = _allMessages;
     _updateState(
       mode: ConversationTimelineV2Mode.live,
+      centerKind: ConversationTimelineV2CenterKind.liveEdge,
       beforeMessages: currentMessages,
       centerMessage: null,
       afterMessages: const <ConversationMessageV2>[],
@@ -124,12 +129,8 @@ class ConversationTimelineV2ViewModel
       (message) => message.stableKey == stableKey,
     );
 
-    if (targetIndex < 0) {
-      _setResolvingJump(currentState, isResolvingJump: true);
-      return;
-    }
-
-    _activateSingleMessageCenter(
+    _jumpToCachedOrResolve(
+      currentState,
       messages,
       targetIndex,
       highlightedStableKey: stableKey,
@@ -148,15 +149,13 @@ class ConversationTimelineV2ViewModel
       (message) => message.serverMessageId == messageId,
     );
 
-    if (targetIndex < 0) {
-      _setResolvingJump(currentState, isResolvingJump: true);
-      return;
-    }
-
-    _activateSingleMessageCenter(
+    _jumpToCachedOrResolve(
+      currentState,
       messages,
       targetIndex,
-      highlightedStableKey: highlight ? messages[targetIndex].stableKey : null,
+      highlightedStableKey: targetIndex >= 0 && highlight
+          ? messages[targetIndex].stableKey
+          : null,
       centerViewportFraction: 0.5,
     );
   }
@@ -179,7 +178,8 @@ class ConversationTimelineV2ViewModel
       return;
     }
 
-    _activateSingleMessageCenter(
+    _jumpToCachedOrResolve(
+      currentState,
       messages,
       unreadIndex,
       highlightedStableKey: messages[unreadIndex].stableKey,
@@ -196,6 +196,7 @@ class ConversationTimelineV2ViewModel
 
     _updateState(
       mode: currentState.mode,
+      centerKind: currentState.centerKind,
       beforeMessages: currentState.beforeMessages,
       centerMessage: currentState.centerMessage,
       afterMessages: currentState.afterMessages,
@@ -220,6 +221,7 @@ class ConversationTimelineV2ViewModel
 
       _updateState(
         mode: latestState.mode,
+        centerKind: latestState.centerKind,
         beforeMessages: [...olderMessages, ...latestState.beforeMessages],
         centerMessage: latestState.centerMessage,
         afterMessages: latestState.afterMessages,
@@ -243,6 +245,7 @@ class ConversationTimelineV2ViewModel
 
     _updateState(
       mode: currentState.mode,
+      centerKind: currentState.centerKind,
       beforeMessages: currentState.beforeMessages,
       centerMessage: currentState.centerMessage,
       afterMessages: currentState.afterMessages,
@@ -267,6 +270,7 @@ class ConversationTimelineV2ViewModel
 
       _updateState(
         mode: latestState.mode,
+        centerKind: latestState.centerKind,
         beforeMessages: latestState.beforeMessages,
         centerMessage: latestState.centerMessage,
         afterMessages: [...latestState.afterMessages, ...newerMessages],
@@ -283,6 +287,7 @@ class ConversationTimelineV2ViewModel
 
   void _updateState({
     required ConversationTimelineV2Mode mode,
+    required ConversationTimelineV2CenterKind centerKind,
     required List<ConversationMessageV2> beforeMessages,
     required ConversationMessageV2? centerMessage,
     required List<ConversationMessageV2> afterMessages,
@@ -294,6 +299,7 @@ class ConversationTimelineV2ViewModel
   }) {
     state = AsyncData((
       mode: mode,
+      centerKind: centerKind,
       beforeMessages: beforeMessages,
       centerMessage: centerMessage,
       afterMessages: afterMessages,
@@ -309,7 +315,8 @@ class ConversationTimelineV2ViewModel
     ConversationTimelineV2State currentState,
     TimelineViewportFacts facts,
   ) {
-    if (currentState.mode != ConversationTimelineV2Mode.anchored) {
+    if (currentState.mode != ConversationTimelineV2Mode.anchored ||
+        currentState.isResolvingJump) {
       return;
     }
 
@@ -349,6 +356,7 @@ class ConversationTimelineV2ViewModel
 
     _updateState(
       mode: ConversationTimelineV2Mode.anchored,
+      centerKind: ConversationTimelineV2CenterKind.message,
       beforeMessages: messages.take(targetIndex).toList(growable: false),
       centerMessage: targetMessage,
       afterMessages: messages.skip(targetIndex + 1).toList(growable: false),
@@ -368,12 +376,51 @@ class ConversationTimelineV2ViewModel
     );
   }
 
+  void _jumpToCachedOrResolve(
+    ConversationTimelineV2State currentState,
+    List<ConversationMessageV2> messages,
+    int targetIndex, {
+    required String? highlightedStableKey,
+    required double centerViewportFraction,
+  }) {
+    if (!_hasCachedAnchorContext(messages, targetIndex)) {
+      _beginResolvingJump(currentState);
+      return;
+    }
+
+    _activateSingleMessageCenter(
+      messages,
+      targetIndex,
+      highlightedStableKey: highlightedStableKey,
+      centerViewportFraction: centerViewportFraction,
+    );
+  }
+
+  bool _hasCachedAnchorContext(
+    List<ConversationMessageV2> messages,
+    int targetIndex,
+  ) {
+    if (targetIndex < 0) {
+      return false;
+    }
+
+    // For now, "cached jump" means the target is present in the flattened
+    // in-memory slice. Later we can tighten this with a surrounding-context
+    // threshold and route sparse hits into the resolving path.
+    return targetIndex < messages.length;
+  }
+
+  void _beginResolvingJump(ConversationTimelineV2State currentState) {
+    _setResolvingJump(currentState, isResolvingJump: true);
+  }
+
   void _setResolvingJump(
     ConversationTimelineV2State currentState, {
     required bool isResolvingJump,
   }) {
     _updateState(
       mode: currentState.mode,
+      centerKind: currentState.centerKind,
       beforeMessages: currentState.beforeMessages,
       centerMessage: currentState.centerMessage,
       afterMessages: currentState.afterMessages,
