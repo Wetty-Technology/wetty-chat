@@ -259,7 +259,7 @@ class _ConversationTimelineV2State
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
-                  'Mode: ${state.mode.name} | Center: ${centerKind.name}:${centerMessage.stableKey}'
+                  'Center: ${centerKind.name}:${centerMessage.stableKey}'
                   ' @ ${centerViewportFraction.toStringAsFixed(2)}',
                 ),
               ),
@@ -267,7 +267,7 @@ class _ConversationTimelineV2State
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
-                  'Mode: ${state.mode.name} | Center: live-edge'
+                  'Center: live-edge'
                   ' @ ${centerViewportFraction.toStringAsFixed(2)}',
                 ),
               ),
