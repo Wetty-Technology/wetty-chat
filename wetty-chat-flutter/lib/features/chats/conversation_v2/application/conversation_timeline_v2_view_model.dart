@@ -32,40 +32,40 @@ typedef ConversationTimelineV2State = ({
   double centerViewportFraction,
   ConversationTimelineV2ViewportCommandKind viewportCommandKind,
   int viewportCommandGeneration,
+  bool isBootstrapping,
 });
 
 class ConversationTimelineV2ViewModel
-    extends AsyncNotifier<ConversationTimelineV2State> {
+    extends Notifier<ConversationTimelineV2State> {
   static const int _initialLoadedWindowSize = 50;
 
   final ConversationTimelineV2Identity identity;
   LaunchRequest? _initialLaunchRequest;
   late FakeConversationTimelineV2Repository _repository;
   int _viewportCommandGeneration = 0;
+  TimelineViewportFacts? _latestViewportFacts;
+  bool _scrollToBottomOnNextLatestUpdate = false;
+  bool _bootstrapStarted = false;
+  int? _splitAfterServerMessageId;
 
   ConversationTimelineV2ViewModel(this.identity);
 
   @override
-  Future<ConversationTimelineV2State> build() async {
+  ConversationTimelineV2State build() {
     _repository = ref.read(
       fakeConversationTimelineV2RepositoryProvider(identity),
     );
-    await _repository.ensureLatestSegmentLoaded(
-      limit: _initialLoadedWindowSize,
-    );
-    ref.watch(conversationTimelineV2LatestActiveSegmentProvider(identity));
-    final latestSegment = ref.read(
+    final latestSegment = ref.watch(
       conversationTimelineV2LatestActiveSegmentProvider(identity),
     );
-    if (latestSegment == null) {
-      throw StateError('Latest active segment was not available after load');
+    if (!_bootstrapStarted) {
+      _bootstrapStarted = true;
+      unawaited(_bootstrapLatestSegment());
     }
-    return _stateFromActiveSegment(
-      latestSegment,
-      centerViewportFraction: 1.0,
-      viewportCommandKind: ConversationTimelineV2ViewportCommandKind.none,
-      viewportCommandGeneration: _viewportCommandGeneration,
-    );
+    if (latestSegment != null) {
+      return _stateFromLatestSegment(latestSegment);
+    }
+    return _loadingState();
   }
 
   void initialize(LaunchRequest launchRequest) {
@@ -85,6 +85,7 @@ class ConversationTimelineV2ViewModel
   }
 
   void onViewportChanged(TimelineViewportFacts facts) {
+    _latestViewportFacts = facts;
     // TODO(codex): Re-enable viewport-driven expansion once the repository can
     // expand the active segment before/after against the canonical store.
     assert(facts.isNearTop == facts.isNearTop);
@@ -100,14 +101,15 @@ class ConversationTimelineV2ViewModel
     if (latestSegment == null) {
       return;
     }
-    state = AsyncData(
-      _stateFromActiveSegment(
-        latestSegment,
-        centerViewportFraction: 1.0,
-        viewportCommandKind:
-            ConversationTimelineV2ViewportCommandKind.resetToCenterOrigin,
-        viewportCommandGeneration: ++_viewportCommandGeneration,
-      ),
+    _splitAfterServerMessageId =
+        latestSegment.orderedMessages.last.serverMessageId;
+    state = _stateFromActiveSegment(
+      latestSegment,
+      centerViewportFraction: 1.0,
+      viewportCommandKind:
+          ConversationTimelineV2ViewportCommandKind.resetToCenterOrigin,
+      viewportCommandGeneration: ++_viewportCommandGeneration,
+      isBootstrapping: false,
     );
   }
 
@@ -125,8 +127,50 @@ class ConversationTimelineV2ViewModel
     _markRepositoryTodo('jumpToUnread(lastReadMessageId: $lastReadMessageId)');
   }
 
-  void addMessage() {
-    _markRepositoryTodo('addMessage');
+  Future<void> addMessage() async {
+    _scrollToBottomOnNextLatestUpdate =
+        _latestViewportFacts?.isNearBottom ?? false;
+    await _repository.addLatestFakeMessage();
+  }
+
+  Future<void> _bootstrapLatestSegment() async {
+    try {
+      await _repository.ensureLatestSegmentLoaded(
+        limit: _initialLoadedWindowSize,
+      );
+      final latestSegment = ref.read(
+        conversationTimelineV2LatestActiveSegmentProvider(identity),
+      );
+      if (latestSegment == null) {
+        debugPrint('bootstrapLatestSegment: latest segment missing after load');
+        state = _loadingState(isBootstrapping: false);
+        return;
+      }
+      state = _stateFromLatestSegment(latestSegment);
+    } catch (error) {
+      debugPrint('bootstrapLatestSegment error: $error');
+      state = _loadingState(isBootstrapping: false);
+    }
+  }
+
+  ConversationTimelineV2State _stateFromLatestSegment(
+    ConversationTimelineV2ActiveSegment segment,
+  ) {
+    final shouldScrollToBottom = _scrollToBottomOnNextLatestUpdate;
+    final viewportCommandKind = shouldScrollToBottom
+        ? ConversationTimelineV2ViewportCommandKind.scrollToBottom
+        : ConversationTimelineV2ViewportCommandKind.none;
+    final viewportCommandGeneration = shouldScrollToBottom
+        ? ++_viewportCommandGeneration
+        : _viewportCommandGeneration;
+    _scrollToBottomOnNextLatestUpdate = false;
+    return _stateFromActiveSegment(
+      segment,
+      centerViewportFraction: 1.0,
+      viewportCommandKind: viewportCommandKind,
+      viewportCommandGeneration: viewportCommandGeneration,
+      isBootstrapping: false,
+    );
   }
 
   Future<void> loadOlder() async {
@@ -142,10 +186,33 @@ class ConversationTimelineV2ViewModel
     required double centerViewportFraction,
     required ConversationTimelineV2ViewportCommandKind viewportCommandKind,
     required int viewportCommandGeneration,
+    required bool isBootstrapping,
   }) {
+    if (segment.orderedMessages.isNotEmpty &&
+        _splitAfterServerMessageId == null) {
+      _splitAfterServerMessageId = segment.orderedMessages.last.serverMessageId;
+    }
+    final splitAfterServerMessageId = _splitAfterServerMessageId;
+    final beforeMessages = <ConversationMessageV2>[];
+    final afterMessages = <ConversationMessageV2>[];
+
+    if (splitAfterServerMessageId == null) {
+      beforeMessages.addAll(segment.orderedMessages);
+    } else {
+      for (final message in segment.orderedMessages) {
+        final serverMessageId = message.serverMessageId;
+        if (serverMessageId != null &&
+            serverMessageId > splitAfterServerMessageId) {
+          afterMessages.add(message);
+        } else {
+          beforeMessages.add(message);
+        }
+      }
+    }
+
     return (
-      beforeMessages: segment.orderedMessages,
-      afterMessages: const <ConversationMessageV2>[],
+      beforeMessages: beforeMessages,
+      afterMessages: afterMessages,
       canLoadOlder: segment.canLoadBefore,
       canLoadNewer: segment.canLoadAfter,
       isLoadingOlder: false,
@@ -155,6 +222,24 @@ class ConversationTimelineV2ViewModel
       centerViewportFraction: centerViewportFraction,
       viewportCommandKind: viewportCommandKind,
       viewportCommandGeneration: viewportCommandGeneration,
+      isBootstrapping: isBootstrapping,
+    );
+  }
+
+  ConversationTimelineV2State _loadingState({bool isBootstrapping = true}) {
+    return (
+      beforeMessages: const <ConversationMessageV2>[],
+      afterMessages: const <ConversationMessageV2>[],
+      canLoadOlder: false,
+      canLoadNewer: false,
+      isLoadingOlder: false,
+      isLoadingNewer: false,
+      isResolvingJump: false,
+      highlightedStableKey: null,
+      centerViewportFraction: 1.0,
+      viewportCommandKind: ConversationTimelineV2ViewportCommandKind.none,
+      viewportCommandGeneration: _viewportCommandGeneration,
+      isBootstrapping: isBootstrapping,
     );
   }
 
@@ -172,7 +257,7 @@ class ConversationTimelineV2ViewModel
 }
 
 final conversationTimelineV2ViewModelProvider =
-    AsyncNotifierProvider.family<
+    NotifierProvider.family<
       ConversationTimelineV2ViewModel,
       ConversationTimelineV2State,
       ConversationTimelineV2Identity

@@ -4,6 +4,7 @@ import 'package:chahua/features/chats/conversation_v2/application/conversation_t
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_canonical_scope.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class FakeConversationTimelineV2Repository {
@@ -29,10 +30,34 @@ class FakeConversationTimelineV2Repository {
         growable: false,
       ),
     );
+    debugPrint('ensureLatestSegmentLoaded starting build');
+    await Future<void>.delayed(const Duration(milliseconds: 1000));
+    debugPrint('ensureLatestSegmentLoaded building done');
     await Future<void>.microtask(() {
       ref
           .read(conversationTimelineV2MessageStoreProvider.notifier)
           .insertLatest(identity, latestSegment);
+    });
+  }
+
+  Future<void> addLatestFakeMessage() async {
+    final existingScope = ref.read(
+      conversationTimelineV2MessageStoreProvider,
+    )[identity];
+    final nextServerMessageId = existingScope?.segments.isNotEmpty ?? false
+        ? existingScope!.segments.last.lastServerMessageId + 1
+        : 1;
+    final nextSequence = nextServerMessageId - 1;
+    final nextMessage = _buildMessage(
+      identity,
+      sequence: nextSequence,
+      baseNow: _baseNow,
+    );
+
+    await Future<void>.microtask(() {
+      ref
+          .read(conversationTimelineV2MessageStoreProvider.notifier)
+          .insertLatestMessage(identity, nextMessage);
     });
   }
 

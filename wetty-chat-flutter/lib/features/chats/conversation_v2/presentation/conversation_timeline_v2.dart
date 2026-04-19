@@ -158,153 +158,122 @@ class _ConversationTimelineV2State
 
   @override
   Widget build(BuildContext context) {
-    final stateAsync = ref.watch(
-      conversationTimelineV2ViewModelProvider(_identity),
+    final state = ref.watch(conversationTimelineV2ViewModelProvider(_identity));
+
+    if (state.isBootstrapping) {
+      return const Center(child: CupertinoActivityIndicator());
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _consumeViewportCommand(state);
+    });
+    final allMessages = _flattenMessages(state);
+    final beforeMessages = state.beforeMessages.reversed.toList(
+      growable: false,
     );
+    final afterMessages = state.afterMessages;
+    final centerViewportFraction = state.centerViewportFraction;
 
-    return stateAsync.when(
-      loading: () => const Center(child: CupertinoActivityIndicator()),
-      error: (error, _) => Center(child: Text('error: $error')),
-      data: (state) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _consumeViewportCommand(state);
-        });
-        final allMessages = _flattenMessages(state);
-        final beforeMessages = state.beforeMessages.reversed.toList(
-          growable: false,
-        );
-        final afterMessages = state.afterMessages;
-        final centerViewportFraction = state.centerViewportFraction;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Wrap(
+          alignment: WrapAlignment.end,
+          spacing: 8,
+          runSpacing: 0,
           children: [
-            Wrap(
-              alignment: WrapAlignment.end,
-              spacing: 8,
-              runSpacing: 0,
-              children: [
-                CupertinoButton(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  onPressed: () => ref
-                      .read(
-                        conversationTimelineV2ViewModelProvider(
-                          _identity,
-                        ).notifier,
-                      )
-                      .jumpToMessage('client:missing-message'),
-                  child: const Text('missing'),
-                ),
-                CupertinoButton(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  onPressed: () => ref
-                      .read(
-                        conversationTimelineV2ViewModelProvider(
-                          _identity,
-                        ).notifier,
-                      )
-                      .jumpToMessage(allMessages[10].stableKey),
-                  child: const Text('#10'),
-                ),
-                CupertinoButton(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  onPressed: () => ref
-                      .read(
-                        conversationTimelineV2ViewModelProvider(
-                          _identity,
-                        ).notifier,
-                      )
-                      .jumpToUnread(25),
-                  child: const Text('unread 25'),
-                ),
-                CupertinoButton(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  onPressed: () => ref
-                      .read(
-                        conversationTimelineV2ViewModelProvider(
-                          _identity,
-                        ).notifier,
-                      )
-                      .jumpToLatest(),
-                  child: const Text('Jump To Latest'),
-                ),
-                CupertinoButton(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  onPressed: () => ref
-                      .read(
-                        conversationTimelineV2ViewModelProvider(
-                          _identity,
-                        ).notifier,
-                      )
-                      .addMessage(),
-                  child: const Text('Add Message'),
-                ),
-              ],
+            CupertinoButton(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              onPressed: () => ref
+                  .read(
+                    conversationTimelineV2ViewModelProvider(_identity).notifier,
+                  )
+                  .jumpToMessage('client:missing-message'),
+              child: const Text('missing'),
             ),
-            if (state.isResolvingJump)
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: Text('Resolving jump target...'),
-              ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                'Seam @ ${centerViewportFraction.toStringAsFixed(2)}'
-                ' | before=${state.beforeMessages.length}'
-                ' after=${state.afterMessages.length}',
-              ),
+            CupertinoButton(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              onPressed: () => ref
+                  .read(
+                    conversationTimelineV2ViewModelProvider(_identity).notifier,
+                  )
+                  .jumpToMessage(allMessages[10].stableKey),
+              child: const Text('#10'),
             ),
-            Expanded(
-              child: KeyedSubtree(
-                key: _scrollViewportKey,
-                child: CustomScrollView(
-                  center: _centerSliverKey,
-                  anchor: centerViewportFraction,
-                  controller: _scrollController,
-                  slivers: [
-                    const SliverPadding(padding: EdgeInsets.only(top: 8)),
-                    if (beforeMessages.isNotEmpty)
-                      SliverPadding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        sliver: _buildMessageSliver(beforeMessages),
-                      ),
-                    SliverPadding(
-                      key: _centerSliverKey,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      sliver: const SliverToBoxAdapter(
-                        child: SizedBox.shrink(),
-                      ),
-                    ),
-                    if (afterMessages.isNotEmpty)
-                      SliverPadding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        sliver: _buildMessageSliver(
-                          afterMessages,
-                          highlightedStableKey: state.highlightedStableKey,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
+            CupertinoButton(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              onPressed: () => ref
+                  .read(
+                    conversationTimelineV2ViewModelProvider(_identity).notifier,
+                  )
+                  .jumpToUnread(25),
+              child: const Text('unread 25'),
+            ),
+            CupertinoButton(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              onPressed: () => ref
+                  .read(
+                    conversationTimelineV2ViewModelProvider(_identity).notifier,
+                  )
+                  .jumpToLatest(),
+              child: const Text('Jump To Latest'),
+            ),
+            CupertinoButton(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              onPressed: () => ref
+                  .read(
+                    conversationTimelineV2ViewModelProvider(_identity).notifier,
+                  )
+                  .addMessage(),
+              child: const Text('Add Message'),
             ),
           ],
-        );
-      },
+        ),
+        if (state.isResolvingJump)
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Text('Resolving jump target...'),
+          ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            'Seam @ ${centerViewportFraction.toStringAsFixed(2)}'
+            ' | before=${state.beforeMessages.length}'
+            ' after=${state.afterMessages.length}',
+          ),
+        ),
+        Expanded(
+          child: KeyedSubtree(
+            key: _scrollViewportKey,
+            child: CustomScrollView(
+              center: _centerSliverKey,
+              anchor: centerViewportFraction,
+              controller: _scrollController,
+              slivers: [
+                const SliverPadding(padding: EdgeInsets.only(top: 8)),
+                if (beforeMessages.isNotEmpty)
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    sliver: _buildMessageSliver(beforeMessages),
+                  ),
+                SliverPadding(
+                  key: _centerSliverKey,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: const SliverToBoxAdapter(child: SizedBox.shrink()),
+                ),
+                if (afterMessages.isNotEmpty)
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    sliver: _buildMessageSliver(
+                      afterMessages,
+                      highlightedStableKey: state.highlightedStableKey,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
