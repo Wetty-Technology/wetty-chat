@@ -1,4 +1,5 @@
 import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_view_model.dart';
+import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_active_segment.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_canonical_scope.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -108,6 +109,49 @@ class ConversationTimelineV2MessageStore
     );
 
     putScope(identity, (segments: segments, hasLatestSegment: true));
+  }
+
+  void insertLatestMessage(
+    ConversationTimelineV2Identity identity,
+    ConversationMessageV2 message,
+  ) {
+    final serverMessageId = message.serverMessageId;
+    assert(
+      serverMessageId != null,
+      'insertLatestMessage requires a server-backed message',
+    );
+
+    final existingScope = scopeFor(identity);
+    final existingSegments =
+        existingScope?.segments ??
+        const <ConversationTimelineV2CanonicalSegment>[];
+
+    if (existingScope?.hasLatestSegment ?? false) {
+      final latestSegment = existingSegments.last;
+      assert(
+        serverMessageId! > latestSegment.lastServerMessageId,
+        'insertLatestMessage requires the new message to be newer than the current latest tail',
+      );
+      final updatedLatestSegment = ConversationTimelineV2CanonicalSegment(
+        orderedMessages: [...latestSegment.orderedMessages, message],
+      );
+      putScope(identity, (
+        segments: [
+          ...existingSegments.take(existingSegments.length - 1),
+          updatedLatestSegment,
+        ],
+        hasLatestSegment: true,
+      ));
+      return;
+    }
+
+    putScope(identity, (
+      segments: [
+        ...existingSegments,
+        ConversationTimelineV2CanonicalSegment(orderedMessages: [message]),
+      ],
+      hasLatestSegment: true,
+    ));
   }
 
   List<ConversationTimelineV2CanonicalSegment> _normalizeBeforeAnchorSegments(

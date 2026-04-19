@@ -678,6 +678,81 @@ void main() {
         expect(scope.hasLatestSegment, true);
       });
     });
+
+    group('insertLatestMessage', () {
+      test('creates a singleton latest segment in an empty scope', () {
+        // Tests the base append case: a single newest message should bootstrap
+        // the latest tail when nothing is cached yet.
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final store = container.read(
+          conversationTimelineV2MessageStoreProvider.notifier,
+        );
+
+        store.insertLatestMessage(_identity, _message(7));
+
+        final scope = container.read(
+          conversationTimelineV2MessageStoreProvider,
+        )[_identity]!;
+        expect(_segmentIds(scope.segments), [
+          [7],
+        ]);
+        expect(scope.hasLatestSegment, true);
+      });
+
+      test('creates a latest segment when only historical segments exist', () {
+        // Tests that historical cached slices remain intact, and the store can
+        // still start tracking a latest tail by appending a singleton segment.
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final store = container.read(
+          conversationTimelineV2MessageStoreProvider.notifier,
+        );
+
+        store.putScope(
+          _identity,
+          _scope([_segment(1, 3), _segment(10, 12)], hasLatestSegment: false),
+        );
+
+        store.insertLatestMessage(_identity, _message(15));
+
+        final scope = container.read(
+          conversationTimelineV2MessageStoreProvider,
+        )[_identity]!;
+        expect(_segmentIds(scope.segments), [
+          [1, 2, 3],
+          [10, 11, 12],
+          [15],
+        ]);
+        expect(scope.hasLatestSegment, true);
+      });
+
+      test('appends the message to the current latest segment', () {
+        // Tests the steady-state append path: a new newest message extends the
+        // tracked latest tail instead of creating another segment.
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final store = container.read(
+          conversationTimelineV2MessageStoreProvider.notifier,
+        );
+
+        store.putScope(
+          _identity,
+          _scope([_segment(1, 3), _segment(10, 12)], hasLatestSegment: true),
+        );
+
+        store.insertLatestMessage(_identity, _message(13));
+
+        final scope = container.read(
+          conversationTimelineV2MessageStoreProvider,
+        )[_identity]!;
+        expect(_segmentIds(scope.segments), [
+          [1, 2, 3],
+          [10, 11, 12, 13],
+        ]);
+        expect(scope.hasLatestSegment, true);
+      });
+    });
   });
 }
 
