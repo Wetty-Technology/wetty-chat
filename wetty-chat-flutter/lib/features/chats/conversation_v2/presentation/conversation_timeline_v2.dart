@@ -179,7 +179,7 @@ class _ConversationTimelineV2State
         final beforeMessages = state.beforeMessages.reversed.toList(
           growable: false,
         );
-        final centerMessages = state.centerMessages;
+        final centerMessage = state.centerMessage;
         final afterMessages = state.afterMessages;
         final centerViewportFraction = state.centerViewportFraction;
 
@@ -254,11 +254,19 @@ class _ConversationTimelineV2State
                 padding: EdgeInsets.symmetric(horizontal: 16),
                 child: Text('Resolving jump target...'),
               ),
-            if (centerMessages.isNotEmpty)
+            if (centerMessage != null)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
-                  'Mode: ${state.mode.name} | Center: ${centerMessages.first.stableKey}'
+                  'Mode: ${state.mode.name} | Center: ${centerMessage.stableKey}'
+                  ' @ ${centerViewportFraction.toStringAsFixed(2)}',
+                ),
+              ),
+            if (centerMessage == null)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'Mode: ${state.mode.name} | Center: live-edge placeholder'
                   ' @ ${centerViewportFraction.toStringAsFixed(2)}',
                 ),
               ),
@@ -279,8 +287,8 @@ class _ConversationTimelineV2State
                     SliverPadding(
                       key: _centerSliverKey,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      sliver: _buildMessageSliver(
-                        centerMessages,
+                      sliver: _buildCenterSliver(
+                        centerMessage,
                         highlightedStableKey: state.highlightedStableKey,
                       ),
                     ),
@@ -338,6 +346,50 @@ class _ConversationTimelineV2State
     );
   }
 
+  Widget _buildMessageRow(
+    ConversationMessageV2 message, {
+    required bool isHighlighted,
+    bool addBottomPadding = false,
+  }) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: addBottomPadding ? 12 : 0),
+      child: DecoratedBox(
+        decoration: isHighlighted
+            ? BoxDecoration(
+                border: Border.all(
+                  color: CupertinoColors.activeBlue,
+                  width: 1.5,
+                ),
+                borderRadius: BorderRadius.circular(14),
+              )
+            : const BoxDecoration(),
+        child: Padding(
+          padding: isHighlighted ? const EdgeInsets.all(2) : EdgeInsets.zero,
+          child: KeyedSubtree(
+            key: _keyForMessage(message),
+            child: MessageRowV2(message: message),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCenterSliver(
+    ConversationMessageV2? centerMessage, {
+    String? highlightedStableKey,
+  }) {
+    if (centerMessage == null) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+
+    return SliverToBoxAdapter(
+      child: _buildMessageRow(
+        centerMessage,
+        isHighlighted: centerMessage.stableKey == highlightedStableKey,
+      ),
+    );
+  }
+
   GlobalKey _keyForMessage(ConversationMessageV2 message) {
     return _messageKeys.putIfAbsent(message.stableKey, GlobalKey.new);
   }
@@ -347,7 +399,7 @@ class _ConversationTimelineV2State
   ) {
     return <ConversationMessageV2>[
       ...state.beforeMessages,
-      ...state.centerMessages,
+      if (state.centerMessage != null) state.centerMessage!,
       ...state.afterMessages,
     ];
   }

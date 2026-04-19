@@ -17,7 +17,7 @@ enum ConversationTimelineV2Mode { live, anchored }
 typedef ConversationTimelineV2State = ({
   ConversationTimelineV2Mode mode,
   List<ConversationMessageV2> beforeMessages,
-  List<ConversationMessageV2> centerMessages,
+  ConversationMessageV2? centerMessage,
   List<ConversationMessageV2> afterMessages,
   bool isLoadingOlder,
   bool isLoadingNewer,
@@ -53,17 +53,22 @@ class ConversationTimelineV2ViewModel
       (index) => _fakeMessage(index),
       growable: false,
     );
+    const initialCenterIndex = 25;
 
     return (
       mode: ConversationTimelineV2Mode.anchored,
-      beforeMessages: const <ConversationMessageV2>[],
-      centerMessages: initialMessages,
-      afterMessages: const <ConversationMessageV2>[],
+      beforeMessages: initialMessages
+          .take(initialCenterIndex)
+          .toList(growable: false),
+      centerMessage: initialMessages[initialCenterIndex],
+      afterMessages: initialMessages
+          .skip(initialCenterIndex + 1)
+          .toList(growable: false),
       isLoadingOlder: false,
       isLoadingNewer: false,
       isResolvingJump: false,
       highlightedStableKey: null,
-      centerViewportFraction: 0.0,
+      centerViewportFraction: 0.5,
     );
   }
 
@@ -93,18 +98,19 @@ class ConversationTimelineV2ViewModel
   }
 
   void jumpToLatest() {
+    final currentMessages = _allMessages;
     _updateState(
       mode: ConversationTimelineV2Mode.live,
-      beforeMessages: const <ConversationMessageV2>[],
-      centerMessages: _allMessages,
+      beforeMessages: currentMessages,
+      centerMessage: null,
       afterMessages: const <ConversationMessageV2>[],
       isLoadingOlder: false,
       isLoadingNewer: false,
       isResolvingJump: false,
       highlightedStableKey: null,
-      centerViewportFraction: 0.0,
+      centerViewportFraction: 1.0,
     );
-    _effectsController.add(const TimelineViewportEffect.revealBottom());
+    _effectsController.add(const TimelineViewportEffect.resetToCenterOrigin());
   }
 
   void jumpToMessage(String stableKey) {
@@ -191,7 +197,7 @@ class ConversationTimelineV2ViewModel
     _updateState(
       mode: currentState.mode,
       beforeMessages: currentState.beforeMessages,
-      centerMessages: currentState.centerMessages,
+      centerMessage: currentState.centerMessage,
       afterMessages: currentState.afterMessages,
       isLoadingOlder: true,
       isLoadingNewer: currentState.isLoadingNewer,
@@ -215,7 +221,7 @@ class ConversationTimelineV2ViewModel
       _updateState(
         mode: latestState.mode,
         beforeMessages: [...olderMessages, ...latestState.beforeMessages],
-        centerMessages: latestState.centerMessages,
+        centerMessage: latestState.centerMessage,
         afterMessages: latestState.afterMessages,
         isLoadingOlder: false,
         isLoadingNewer: latestState.isLoadingNewer,
@@ -238,7 +244,7 @@ class ConversationTimelineV2ViewModel
     _updateState(
       mode: currentState.mode,
       beforeMessages: currentState.beforeMessages,
-      centerMessages: currentState.centerMessages,
+      centerMessage: currentState.centerMessage,
       afterMessages: currentState.afterMessages,
       isLoadingOlder: currentState.isLoadingOlder,
       isLoadingNewer: true,
@@ -262,7 +268,7 @@ class ConversationTimelineV2ViewModel
       _updateState(
         mode: latestState.mode,
         beforeMessages: latestState.beforeMessages,
-        centerMessages: latestState.centerMessages,
+        centerMessage: latestState.centerMessage,
         afterMessages: [...latestState.afterMessages, ...newerMessages],
         isLoadingOlder: latestState.isLoadingOlder,
         isLoadingNewer: false,
@@ -278,7 +284,7 @@ class ConversationTimelineV2ViewModel
   void _updateState({
     required ConversationTimelineV2Mode mode,
     required List<ConversationMessageV2> beforeMessages,
-    required List<ConversationMessageV2> centerMessages,
+    required ConversationMessageV2? centerMessage,
     required List<ConversationMessageV2> afterMessages,
     required bool isLoadingOlder,
     required bool isLoadingNewer,
@@ -289,7 +295,7 @@ class ConversationTimelineV2ViewModel
     state = AsyncData((
       mode: mode,
       beforeMessages: beforeMessages,
-      centerMessages: centerMessages,
+      centerMessage: centerMessage,
       afterMessages: afterMessages,
       isLoadingOlder: isLoadingOlder,
       isLoadingNewer: isLoadingNewer,
@@ -328,7 +334,7 @@ class ConversationTimelineV2ViewModel
   ) {
     return <ConversationMessageV2>[
       ...state.beforeMessages,
-      ...state.centerMessages,
+      if (state.centerMessage != null) state.centerMessage!,
       ...state.afterMessages,
     ];
   }
@@ -344,7 +350,7 @@ class ConversationTimelineV2ViewModel
     _updateState(
       mode: ConversationTimelineV2Mode.anchored,
       beforeMessages: messages.take(targetIndex).toList(growable: false),
-      centerMessages: <ConversationMessageV2>[targetMessage],
+      centerMessage: targetMessage,
       afterMessages: messages.skip(targetIndex + 1).toList(growable: false),
       isLoadingOlder: false,
       isLoadingNewer: false,
@@ -369,7 +375,7 @@ class ConversationTimelineV2ViewModel
     _updateState(
       mode: currentState.mode,
       beforeMessages: currentState.beforeMessages,
-      centerMessages: currentState.centerMessages,
+      centerMessage: currentState.centerMessage,
       afterMessages: currentState.afterMessages,
       isLoadingOlder: currentState.isLoadingOlder,
       isLoadingNewer: currentState.isLoadingNewer,
