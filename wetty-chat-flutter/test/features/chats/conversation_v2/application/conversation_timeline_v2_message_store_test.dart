@@ -62,7 +62,7 @@ void main() {
           conversationTimelineV2MessageStoreProvider.notifier,
         );
 
-        store.putScope(_identity, (segments: [_segment(1, 5)]));
+        store.putScope(_identity, _scope([_segment(1, 5)]));
 
         store.insertBeforeAnchor(_identity, 5, _segment(3, 4));
 
@@ -84,9 +84,7 @@ void main() {
           conversationTimelineV2MessageStoreProvider.notifier,
         );
 
-        store.putScope(_identity, (
-          segments: [_segment(1, 2), _segment(5, 10)],
-        ));
+        store.putScope(_identity, _scope([_segment(1, 2), _segment(5, 10)]));
 
         store.insertBeforeAnchor(_identity, 8, _segment(6, 7));
 
@@ -109,7 +107,7 @@ void main() {
           conversationTimelineV2MessageStoreProvider.notifier,
         );
 
-        store.putScope(_identity, (segments: [_segment(1, 2), _segment(5, 6)]));
+        store.putScope(_identity, _scope([_segment(1, 2), _segment(5, 6)]));
 
         store.insertBeforeAnchor(_identity, 6, _segment(3, 4));
 
@@ -131,7 +129,7 @@ void main() {
           conversationTimelineV2MessageStoreProvider.notifier,
         );
 
-        store.putScope(_identity, (segments: [_segment(1, 2), _segment(5, 6)]));
+        store.putScope(_identity, _scope([_segment(1, 2), _segment(5, 6)]));
 
         store.insertBeforeAnchor(_identity, 5, _segment(3, 4));
 
@@ -155,7 +153,7 @@ void main() {
             conversationTimelineV2MessageStoreProvider.notifier,
           );
 
-          store.putScope(_identity, (segments: [_segment(7, 8)]));
+          store.putScope(_identity, _scope([_segment(7, 8)]));
 
           store.insertBeforeAnchor(_identity, 7, _segment(1, 4));
 
@@ -178,7 +176,7 @@ void main() {
           conversationTimelineV2MessageStoreProvider.notifier,
         );
 
-        store.putScope(_identity, (segments: [_segment(1, 3), _segment(4, 6)]));
+        store.putScope(_identity, _scope([_segment(1, 3), _segment(4, 6)]));
 
         store.insertBeforeAnchor(_identity, 5, _segment(3, 4));
 
@@ -197,9 +195,10 @@ void main() {
           conversationTimelineV2MessageStoreProvider.notifier,
         );
 
-        store.putScope(_identity, (
-          segments: [_segment(1, 3), _segment(4, 6), _segment(7, 9)],
-        ));
+        store.putScope(
+          _identity,
+          _scope([_segment(1, 3), _segment(4, 6), _segment(7, 9)]),
+        );
 
         store.insertBeforeAnchor(_identity, 8, _segment(2, 7));
 
@@ -243,7 +242,7 @@ void main() {
           conversationTimelineV2MessageStoreProvider.notifier,
         );
 
-        store.putScope(_identity, (segments: [_segment(1, 5)]));
+        store.putScope(_identity, _scope([_segment(1, 5)]));
 
         store.insertAfterAnchor(_identity, 2, _segment(3, 4));
 
@@ -265,9 +264,7 @@ void main() {
           conversationTimelineV2MessageStoreProvider.notifier,
         );
 
-        store.putScope(_identity, (
-          segments: [_segment(1, 6), _segment(9, 10)],
-        ));
+        store.putScope(_identity, _scope([_segment(1, 6), _segment(9, 10)]));
 
         store.insertAfterAnchor(_identity, 3, _segment(4, 5));
 
@@ -291,7 +288,7 @@ void main() {
           conversationTimelineV2MessageStoreProvider.notifier,
         );
 
-        store.putScope(_identity, (segments: [_segment(1, 2), _segment(5, 6)]));
+        store.putScope(_identity, _scope([_segment(1, 2), _segment(5, 6)]));
 
         store.insertAfterAnchor(_identity, 1, _segment(3, 4));
 
@@ -316,9 +313,7 @@ void main() {
             conversationTimelineV2MessageStoreProvider.notifier,
           );
 
-          store.putScope(_identity, (
-            segments: [_segment(1, 2), _segment(5, 6)],
-          ));
+          store.putScope(_identity, _scope([_segment(1, 2), _segment(5, 6)]));
 
           store.insertAfterAnchor(_identity, 2, _segment(3, 4));
 
@@ -344,7 +339,7 @@ void main() {
             conversationTimelineV2MessageStoreProvider.notifier,
           );
 
-          store.putScope(_identity, (segments: [_segment(1, 2)]));
+          store.putScope(_identity, _scope([_segment(1, 2)]));
 
           store.insertAfterAnchor(_identity, 2, _segment(3, 4));
 
@@ -368,7 +363,7 @@ void main() {
           conversationTimelineV2MessageStoreProvider.notifier,
         );
 
-        store.putScope(_identity, (segments: [_segment(1, 3), _segment(4, 6)]));
+        store.putScope(_identity, _scope([_segment(1, 3), _segment(4, 6)]));
 
         store.insertAfterAnchor(_identity, 2, _segment(3, 4));
 
@@ -412,7 +407,7 @@ void main() {
           conversationTimelineV2MessageStoreProvider.notifier,
         );
 
-        store.putScope(_identity, (segments: [_segment(1, 5)]));
+        store.putScope(_identity, _scope([_segment(1, 5)]));
 
         store.insertAround(_identity, _segment(3, 4));
 
@@ -437,9 +432,7 @@ void main() {
             conversationTimelineV2MessageStoreProvider.notifier,
           );
 
-          store.putScope(_identity, (
-            segments: [_segment(1, 2), _segment(5, 6)],
-          ));
+          store.putScope(_identity, _scope([_segment(1, 2), _segment(5, 6)]));
 
           store.insertAround(_identity, _segment(3, 4));
 
@@ -463,7 +456,7 @@ void main() {
           conversationTimelineV2MessageStoreProvider.notifier,
         );
 
-        store.putScope(_identity, (segments: [_segment(1, 2), _segment(7, 8)]));
+        store.putScope(_identity, _scope([_segment(1, 2), _segment(7, 8)]));
 
         store.insertAround(_identity, _segment(4, 5));
 
@@ -487,7 +480,7 @@ void main() {
           conversationTimelineV2MessageStoreProvider.notifier,
         );
 
-        store.putScope(_identity, (segments: [_segment(1, 3), _segment(4, 6)]));
+        store.putScope(_identity, _scope([_segment(1, 3), _segment(4, 6)]));
 
         store.insertAround(_identity, _segment(3, 4));
 
@@ -511,7 +504,7 @@ void main() {
           conversationTimelineV2MessageStoreProvider.notifier,
         );
 
-        store.putScope(_identity, (segments: [_segment(1, 3), _segment(4, 6)]));
+        store.putScope(_identity, _scope([_segment(1, 3), _segment(4, 6)]));
 
         store.insertAround(_identity, _segment(1, 10));
 
@@ -521,6 +514,168 @@ void main() {
         expect(_segmentIds(segments), [
           [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         ]);
+      });
+    });
+
+    group('insertLatest', () {
+      test('inserts the incoming segment into an empty scope', () {
+        // Tests the base case: when nothing is cached yet, a latest fetch
+        // becomes the first cached segment and is marked as the latest segment.
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final store = container.read(
+          conversationTimelineV2MessageStoreProvider.notifier,
+        );
+
+        store.insertLatest(_identity, _segment(3, 4));
+
+        final scope = container.read(
+          conversationTimelineV2MessageStoreProvider,
+        )[_identity]!;
+        expect(_segmentIds(scope.segments), [
+          [3, 4],
+        ]);
+        expect(scope.hasLatestSegment, true);
+      });
+
+      test('splits a segment that overlaps the incoming range', () {
+        // Tests that latest insertion uses the same replacement rules as
+        // around-insertion while pointing the latest marker at the fresh slice.
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final store = container.read(
+          conversationTimelineV2MessageStoreProvider.notifier,
+        );
+
+        store.putScope(_identity, _scope([_segment(1, 5)]));
+
+        store.insertLatest(_identity, _segment(3, 4));
+
+        final scope = container.read(
+          conversationTimelineV2MessageStoreProvider,
+        )[_identity]!;
+        expect(_segmentIds(scope.segments), [
+          [1, 2],
+          [3, 4],
+        ]);
+        expect(scope.hasLatestSegment, true);
+      });
+
+      test('push new segment at end', () {
+        // Tests that latest insertion uses the same replacement rules as
+        // around-insertion while pointing the latest marker at the fresh slice.
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final store = container.read(
+          conversationTimelineV2MessageStoreProvider.notifier,
+        );
+
+        store.putScope(_identity, _scope([_segment(1, 5)]));
+
+        store.insertLatest(_identity, _segment(7, 10));
+
+        final scope = container.read(
+          conversationTimelineV2MessageStoreProvider,
+        )[_identity]!;
+        expect(_segmentIds(scope.segments), [
+          [1, 2, 3, 4, 5],
+          [7, 8, 9, 10],
+        ]);
+        expect(scope.hasLatestSegment, true);
+      });
+
+      test(
+        'keeps discontiguous segments on both sides of the refreshed range',
+        () {
+          // Tests that untouched cached segments remain around the fresh latest
+          // slice while the latest marker points at the inserted segment.
+          final container = ProviderContainer();
+          addTearDown(container.dispose);
+          final store = container.read(
+            conversationTimelineV2MessageStoreProvider.notifier,
+          );
+
+          store.putScope(_identity, _scope([_segment(1, 2), _segment(5, 6)]));
+
+          store.insertLatest(_identity, _segment(3, 4));
+
+          final scope = container.read(
+            conversationTimelineV2MessageStoreProvider,
+          )[_identity]!;
+          expect(_segmentIds(scope.segments), [
+            [1, 2],
+            [3, 4],
+          ]);
+          expect(scope.hasLatestSegment, true);
+        },
+      );
+
+      test('inserts between discontiguous cached segments without overlap', () {
+        // Tests that a latest segment with no overlap is inserted in order and
+        // becomes the explicitly tracked latest segment.
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final store = container.read(
+          conversationTimelineV2MessageStoreProvider.notifier,
+        );
+
+        store.putScope(_identity, _scope([_segment(1, 2), _segment(7, 8)]));
+
+        store.insertLatest(_identity, _segment(4, 5));
+
+        final scope = container.read(
+          conversationTimelineV2MessageStoreProvider,
+        )[_identity]!;
+        expect(_segmentIds(scope.segments), [
+          [1, 2],
+          [4, 5],
+        ]);
+        expect(scope.hasLatestSegment, true);
+      });
+
+      test('replaces overlapping ranges across multiple cached segments', () {
+        // Tests that a latest segment can bridge multiple cached segments and
+        // the latest marker follows the merged fresh range.
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final store = container.read(
+          conversationTimelineV2MessageStoreProvider.notifier,
+        );
+
+        store.putScope(_identity, _scope([_segment(1, 3), _segment(4, 6)]));
+
+        store.insertLatest(_identity, _segment(3, 4));
+
+        final scope = container.read(
+          conversationTimelineV2MessageStoreProvider,
+        )[_identity]!;
+        expect(_segmentIds(scope.segments), [
+          [1, 2],
+          [3, 4],
+        ]);
+        expect(scope.hasLatestSegment, true);
+      });
+
+      test('replaces entire segments', () {
+        // Tests that a latest insertion can replace the whole cached span and
+        // still leaves the latest marker pointing at the single merged segment.
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final store = container.read(
+          conversationTimelineV2MessageStoreProvider.notifier,
+        );
+
+        store.putScope(_identity, _scope([_segment(1, 3), _segment(4, 6)]));
+
+        store.insertLatest(_identity, _segment(1, 10));
+
+        final scope = container.read(
+          conversationTimelineV2MessageStoreProvider,
+        )[_identity]!;
+        expect(_segmentIds(scope.segments), [
+          [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        ]);
+        expect(scope.hasLatestSegment, true);
       });
     });
   });
@@ -548,4 +703,11 @@ List<List<int>> _segmentIds(
     for (final segment in segments)
       [for (final message in segment.orderedMessages) message.serverMessageId!],
   ];
+}
+
+ConversationTimelineV2CanonicalScope _scope(
+  List<ConversationTimelineV2CanonicalSegment> segments, {
+  bool hasLatestSegment = false,
+}) {
+  return (segments: segments, hasLatestSegment: hasLatestSegment);
 }

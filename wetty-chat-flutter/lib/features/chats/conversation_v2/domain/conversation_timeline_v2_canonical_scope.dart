@@ -100,4 +100,5 @@ class ConversationTimelineV2CanonicalSegment {
 
 typedef ConversationTimelineV2CanonicalScope = ({
   List<ConversationTimelineV2CanonicalSegment> segments,
+  bool hasLatestSegment,
 });

@@ -166,12 +166,6 @@ class _ConversationTimelineV2State
       loading: () => const Center(child: CupertinoActivityIndicator()),
       error: (error, _) => Center(child: Text('error: $error')),
       data: (state) {
-        debugPrint(
-          "beforeSlice: ${state.beforeMessages.map((e) => e.stableKey).join(", ")}",
-        );
-        debugPrint(
-          "afterSlice: ${state.afterMessages.map((e) => e.stableKey).join(", ")}",
-        );
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _consumeViewportCommand(state);
         });

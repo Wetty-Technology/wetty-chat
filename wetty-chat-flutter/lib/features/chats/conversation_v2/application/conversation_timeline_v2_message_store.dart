@@ -1,4 +1,5 @@
 import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_view_model.dart';
+import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_active_segment.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_canonical_scope.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -49,7 +50,10 @@ class ConversationTimelineV2MessageStore
       anchorServerMessageId: anchorServerMessageId,
     );
 
-    putScope(identity, (segments: segments));
+    putScope(identity, (
+      segments: segments,
+      hasLatestSegment: existingScope?.hasLatestSegment ?? false,
+    ));
   }
 
   void insertAfterAnchor(
@@ -69,7 +73,10 @@ class ConversationTimelineV2MessageStore
       anchorServerMessageId: anchorServerMessageId,
     );
 
-    putScope(identity, (segments: segments));
+    putScope(identity, (
+      segments: segments,
+      hasLatestSegment: existingScope?.hasLatestSegment ?? false,
+    ));
   }
 
   void insertAround(
@@ -83,7 +90,24 @@ class ConversationTimelineV2MessageStore
       incoming: segment,
     );
 
-    putScope(identity, (segments: segments));
+    putScope(identity, (
+      segments: segments,
+      hasLatestSegment: existingScope?.hasLatestSegment ?? false,
+    ));
+  }
+
+  void insertLatest(
+    ConversationTimelineV2Identity identity,
+    ConversationTimelineV2CanonicalSegment segment,
+  ) {
+    final existingScope = scopeFor(identity);
+    final segments = _normalizeLatestSegments(
+      existingScope?.segments ??
+          const <ConversationTimelineV2CanonicalSegment>[],
+      incoming: segment,
+    );
+
+    putScope(identity, (segments: segments, hasLatestSegment: true));
   }
 
   List<ConversationTimelineV2CanonicalSegment> _normalizeBeforeAnchorSegments(
@@ -227,6 +251,40 @@ class ConversationTimelineV2MessageStore
     return result;
   }
 
+  List<ConversationTimelineV2CanonicalSegment> _normalizeLatestSegments(
+    List<ConversationTimelineV2CanonicalSegment> existingSegments, {
+    required ConversationTimelineV2CanonicalSegment incoming,
+  }) {
+    final incomingStartId = incoming.firstServerMessageId;
+
+    final result = <ConversationTimelineV2CanonicalSegment>[];
+    var insertedIncoming = false;
+
+    for (final existing in existingSegments) {
+      if (insertedIncoming) {
+        continue;
+      }
+
+      if (existing.endsBeforeServerMessageId(incomingStartId)) {
+        result.add(existing);
+        continue;
+      }
+
+      final prefix = existing.messagesBefore(incomingStartId);
+      if (prefix != null) {
+        result.add(prefix);
+      }
+      result.add(incoming);
+      insertedIncoming = true;
+    }
+
+    if (!insertedIncoming) {
+      result.add(incoming);
+    }
+
+    return result;
+  }
+
   ConversationTimelineV2CanonicalSegment _concatenateSegments(
     ConversationTimelineV2CanonicalSegment left,
     ConversationTimelineV2CanonicalSegment? right,
@@ -246,3 +304,25 @@ final conversationTimelineV2MessageStoreProvider =
       ConversationTimelineV2MessageStore,
       ConversationTimelineV2MessageStoreState
     >(ConversationTimelineV2MessageStore.new);
+
+final conversationTimelineV2LatestActiveSegmentProvider =
+    Provider.family<
+      ConversationTimelineV2ActiveSegment?,
+      ConversationTimelineV2Identity
+    >((ref, identity) {
+      final scope = ref.watch(
+        conversationTimelineV2MessageStoreProvider.select(
+          (state) => state[identity],
+        ),
+      );
+      if (scope == null || scope.segments.isEmpty || !scope.hasLatestSegment) {
+        return null;
+      }
+
+      final latestSegment = scope.segments.last;
+      return (
+        orderedMessages: latestSegment.orderedMessages,
+        canLoadBefore: true,
+        canLoadAfter: false,
+      );
+    });
