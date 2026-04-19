@@ -46,6 +46,7 @@ class ConversationTimelineV2ViewModel
   TimelineViewportFacts? _latestViewportFacts;
   bool _scrollToBottomOnNextLatestUpdate = false;
   bool _bootstrapStarted = false;
+  bool _isLoadingOlder = false;
   int? _splitAfterServerMessageId;
 
   ConversationTimelineV2ViewModel(this.identity);
@@ -60,7 +61,9 @@ class ConversationTimelineV2ViewModel
     );
     if (!_bootstrapStarted) {
       _bootstrapStarted = true;
-      unawaited(_bootstrapLatestSegment());
+      Future<void>.microtask(() async {
+        await _bootstrapLatestSegment();
+      });
     }
     if (latestSegment != null) {
       return _stateFromLatestSegment(latestSegment);
@@ -86,9 +89,12 @@ class ConversationTimelineV2ViewModel
 
   void onViewportChanged(TimelineViewportFacts facts) {
     _latestViewportFacts = facts;
-    // TODO(codex): Re-enable viewport-driven expansion once the repository can
-    // expand the active segment before/after against the canonical store.
-    assert(facts.isNearTop == facts.isNearTop);
+    if (facts.isNearTop &&
+        state.canLoadOlder &&
+        !state.isLoadingOlder &&
+        !state.isBootstrapping) {
+      unawaited(loadOlder());
+    }
   }
 
   Future<void> jumpToLatest() async {
@@ -174,7 +180,33 @@ class ConversationTimelineV2ViewModel
   }
 
   Future<void> loadOlder() async {
-    _markRepositoryTodo('loadOlder');
+    if (_isLoadingOlder || state.isBootstrapping || !state.canLoadOlder) {
+      return;
+    }
+
+    final latestSegment = ref.read(
+      conversationTimelineV2LatestActiveSegmentProvider(identity),
+    );
+    if (latestSegment == null || latestSegment.orderedMessages.isEmpty) {
+      return;
+    }
+    final anchorServerMessageId =
+        latestSegment.orderedMessages.first.serverMessageId!;
+
+    _isLoadingOlder = true;
+    state = _stateFromLatestSegment(latestSegment);
+
+    try {
+      await _repository.loadOlderBeforeAnchor(anchorServerMessageId, limit: 20);
+    } finally {
+      _isLoadingOlder = false;
+      final refreshedSegment = ref.read(
+        conversationTimelineV2LatestActiveSegmentProvider(identity),
+      );
+      if (refreshedSegment != null) {
+        state = _stateFromLatestSegment(refreshedSegment);
+      }
+    }
   }
 
   Future<void> loadNewer() async {
@@ -200,9 +232,8 @@ class ConversationTimelineV2ViewModel
       beforeMessages.addAll(segment.orderedMessages);
     } else {
       for (final message in segment.orderedMessages) {
-        final serverMessageId = message.serverMessageId;
-        if (serverMessageId != null &&
-            serverMessageId > splitAfterServerMessageId) {
+        final serverMessageId = message.serverMessageId!;
+        if (serverMessageId > splitAfterServerMessageId) {
           afterMessages.add(message);
         } else {
           beforeMessages.add(message);
@@ -215,7 +246,7 @@ class ConversationTimelineV2ViewModel
       afterMessages: afterMessages,
       canLoadOlder: segment.canLoadBefore,
       canLoadNewer: segment.canLoadAfter,
-      isLoadingOlder: false,
+      isLoadingOlder: _isLoadingOlder,
       isLoadingNewer: false,
       isResolvingJump: false,
       highlightedStableKey: null,

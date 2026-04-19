@@ -4,7 +4,6 @@ import 'package:chahua/features/chats/conversation_v2/application/conversation_t
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_canonical_scope.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class FakeConversationTimelineV2Repository {
@@ -30,14 +29,28 @@ class FakeConversationTimelineV2Repository {
         growable: false,
       ),
     );
-    debugPrint('ensureLatestSegmentLoaded starting build');
-    await Future<void>.delayed(const Duration(milliseconds: 1000));
-    debugPrint('ensureLatestSegmentLoaded building done');
-    await Future<void>.microtask(() {
-      ref
-          .read(conversationTimelineV2MessageStoreProvider.notifier)
-          .insertLatest(identity, latestSegment);
-    });
+
+    ref
+        .read(conversationTimelineV2MessageStoreProvider.notifier)
+        .insertLatest(identity, latestSegment);
+  }
+
+  Future<void> loadOlderBeforeAnchor(
+    int anchorServerMessageId, {
+    required int limit,
+  }) async {
+    final firstOlderServerMessageId = anchorServerMessageId - limit;
+    final olderSegment = ConversationTimelineV2CanonicalSegment(
+      orderedMessages: List<ConversationMessageV2>.generate(limit, (index) {
+        final serverMessageId = firstOlderServerMessageId + index;
+        final sequence = serverMessageId - 1;
+        return _buildMessage(identity, sequence: sequence, baseNow: _baseNow);
+      }, growable: false),
+    );
+
+    ref
+        .read(conversationTimelineV2MessageStoreProvider.notifier)
+        .insertBeforeAnchor(identity, anchorServerMessageId, olderSegment);
   }
 
   Future<void> addLatestFakeMessage() async {
@@ -54,11 +67,9 @@ class FakeConversationTimelineV2Repository {
       baseNow: _baseNow,
     );
 
-    await Future<void>.microtask(() {
-      ref
-          .read(conversationTimelineV2MessageStoreProvider.notifier)
-          .insertLatestMessage(identity, nextMessage);
-    });
+    ref
+        .read(conversationTimelineV2MessageStoreProvider.notifier)
+        .insertLatestMessage(identity, nextMessage);
   }
 
   ConversationMessageV2 _buildMessage(
