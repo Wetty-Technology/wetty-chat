@@ -42,7 +42,7 @@ class _ConversationTimelineV2State
   void initState() {
     super.initState();
     _scrollController = _buildScrollController();
-    // _scheduleInitializeLaunchRequest();
+    _scheduleInitializeLaunchRequest();
     _subscribeToEffects();
   }
 
@@ -179,8 +179,6 @@ class _ConversationTimelineV2State
         final beforeMessages = state.beforeMessages.reversed.toList(
           growable: false,
         );
-        final centerKind = state.centerKind;
-        final centerMessage = state.centerMessage;
         final afterMessages = state.afterMessages;
         final centerViewportFraction = state.centerViewportFraction;
 
@@ -248,6 +246,20 @@ class _ConversationTimelineV2State
                       .jumpToLatest(),
                   child: const Text('Jump To Latest'),
                 ),
+                CupertinoButton(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  onPressed: () => ref
+                      .read(
+                        conversationTimelineV2ViewModelProvider(
+                          _identity,
+                        ).notifier,
+                      )
+                      .addMessage(),
+                  child: const Text('Add Message'),
+                ),
               ],
             ),
             if (state.isResolvingJump)
@@ -255,22 +267,14 @@ class _ConversationTimelineV2State
                 padding: EdgeInsets.symmetric(horizontal: 16),
                 child: Text('Resolving jump target...'),
               ),
-            if (centerMessage != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  'Center: ${centerKind.name}:${centerMessage.stableKey}'
-                  ' @ ${centerViewportFraction.toStringAsFixed(2)}',
-                ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'Seam @ ${centerViewportFraction.toStringAsFixed(2)}'
+                ' | before=${state.beforeMessages.length}'
+                ' after=${state.afterMessages.length}',
               ),
-            if (centerKind == ConversationTimelineV2CenterKind.liveEdge)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  'Center: live-edge'
-                  ' @ ${centerViewportFraction.toStringAsFixed(2)}',
-                ),
-              ),
+            ),
             Expanded(
               child: KeyedSubtree(
                 key: _scrollViewportKey,
@@ -288,18 +292,18 @@ class _ConversationTimelineV2State
                     SliverPadding(
                       key: _centerSliverKey,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      sliver: _buildCenterSliver(
-                        centerKind,
-                        centerMessage,
-                        highlightedStableKey: state.highlightedStableKey,
+                      sliver: const SliverToBoxAdapter(
+                        child: SizedBox.shrink(),
                       ),
                     ),
                     if (afterMessages.isNotEmpty)
                       SliverPadding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
-                        sliver: _buildMessageSliver(afterMessages),
+                        sliver: _buildMessageSliver(
+                          afterMessages,
+                          highlightedStableKey: state.highlightedStableKey,
+                        ),
                       ),
-                    const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
                   ],
                 ),
               ),
@@ -329,30 +333,6 @@ class _ConversationTimelineV2State
     );
   }
 
-  Widget _buildCenterSliver(
-    ConversationTimelineV2CenterKind centerKind,
-    ConversationMessageV2? centerMessage, {
-    String? highlightedStableKey,
-  }) {
-    if (centerKind == ConversationTimelineV2CenterKind.liveEdge) {
-      return const SliverToBoxAdapter(child: SizedBox.shrink());
-    }
-
-    if (centerMessage == null) {
-      return const SliverToBoxAdapter(child: SizedBox.shrink());
-    }
-
-    return SliverToBoxAdapter(
-      child: KeyedSubtree(
-        key: _keyForMessage(centerMessage),
-        child: MessageRowV2(
-          message: centerMessage,
-          isHighlighted: centerMessage.stableKey == highlightedStableKey,
-        ),
-      ),
-    );
-  }
-
   GlobalKey _keyForMessage(ConversationMessageV2 message) {
     return _messageKeys.putIfAbsent(message.stableKey, GlobalKey.new);
   }
@@ -362,7 +342,6 @@ class _ConversationTimelineV2State
   ) {
     return <ConversationMessageV2>[
       ...state.beforeMessages,
-      if (state.centerMessage != null) state.centerMessage!,
       ...state.afterMessages,
     ];
   }

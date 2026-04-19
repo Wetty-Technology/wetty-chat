@@ -1,23 +1,20 @@
 import 'dart:async';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:chahua/features/chats/conversation/domain/launch_request.dart';
+
 import 'package:chahua/features/chats/conversation/domain/conversation_message.dart';
-import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
-import 'package:chahua/features/chats/conversation_v2/application/timeline_viewport_facts.dart';
+import 'package:chahua/features/chats/conversation/domain/launch_request.dart';
 import 'package:chahua/features/chats/conversation_v2/application/timeline_viewport_effect.dart';
+import 'package:chahua/features/chats/conversation_v2/application/timeline_viewport_facts.dart';
+import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 typedef ConversationTimelineV2Identity = ({
   String chatId,
   String? threadRootId,
 });
 
-enum ConversationTimelineV2CenterKind { message, liveEdge }
-
 typedef ConversationTimelineV2State = ({
-  ConversationTimelineV2CenterKind centerKind,
   List<ConversationMessageV2> beforeMessages,
-  ConversationMessageV2? centerMessage,
   List<ConversationMessageV2> afterMessages,
   bool canLoadOlder,
   bool canLoadNewer,
@@ -91,9 +88,7 @@ class ConversationTimelineV2ViewModel
 
   void jumpToLatest() {
     _updateState(
-      centerKind: ConversationTimelineV2CenterKind.liveEdge,
       beforeMessages: _latestWindow,
-      centerMessage: null,
       afterMessages: const <ConversationMessageV2>[],
       canLoadOlder: _latestWindowStartIndex > 0,
       canLoadNewer: false,
@@ -175,6 +170,44 @@ class ConversationTimelineV2ViewModel
     );
   }
 
+  void addMessage() {
+    final currentState = state.asData?.value;
+    if (currentState == null) {
+      return;
+    }
+
+    final nextSequence = _messageSequence(_fakeHistory.last) + 1;
+    final newMessage = _fakeMessage(nextSequence);
+    _fakeHistory = [..._fakeHistory, newMessage];
+
+    if (_isLiveEdgeState(currentState)) {
+      _updateState(
+        beforeMessages: [...currentState.beforeMessages, newMessage],
+        afterMessages: const <ConversationMessageV2>[],
+        canLoadOlder: currentState.canLoadOlder,
+        canLoadNewer: false,
+        isLoadingOlder: currentState.isLoadingOlder,
+        isLoadingNewer: currentState.isLoadingNewer,
+        isResolvingJump: currentState.isResolvingJump,
+        highlightedStableKey: null,
+        centerViewportFraction: currentState.centerViewportFraction,
+      );
+      return;
+    }
+
+    _updateState(
+      beforeMessages: currentState.beforeMessages,
+      afterMessages: [...currentState.afterMessages, newMessage],
+      canLoadOlder: currentState.canLoadOlder,
+      canLoadNewer: true,
+      isLoadingOlder: currentState.isLoadingOlder,
+      isLoadingNewer: currentState.isLoadingNewer,
+      isResolvingJump: currentState.isResolvingJump,
+      highlightedStableKey: currentState.highlightedStableKey,
+      centerViewportFraction: currentState.centerViewportFraction,
+    );
+  }
+
   Future<void> loadOlder() async {
     final currentState = state.asData?.value;
     if (currentState == null || _isLoadingOlder) {
@@ -183,9 +216,7 @@ class ConversationTimelineV2ViewModel
     _isLoadingOlder = true;
 
     _updateState(
-      centerKind: currentState.centerKind,
       beforeMessages: currentState.beforeMessages,
-      centerMessage: currentState.centerMessage,
       afterMessages: currentState.afterMessages,
       canLoadOlder: currentState.canLoadOlder,
       canLoadNewer: currentState.canLoadNewer,
@@ -204,7 +235,6 @@ class ConversationTimelineV2ViewModel
 
       final startIndex = _loadedStartIndex(latestState);
       final List<ConversationMessageV2> olderMessages;
-      final bool canLoadOlder;
 
       if (startIndex > 0) {
         final newStartIndex = (startIndex - _fakePageSize).clamp(
@@ -212,26 +242,22 @@ class ConversationTimelineV2ViewModel
           _fakeHistory.length,
         );
         olderMessages = _fakeHistory.sublist(newStartIndex, startIndex);
-        canLoadOlder = true;
       } else {
         final earliestLoadedMessage = latestState.beforeMessages.isNotEmpty
             ? latestState.beforeMessages.first
-            : latestState.centerMessage!;
+            : latestState.afterMessages.first;
         final earliestSequence = _messageSequence(earliestLoadedMessage);
         olderMessages = List<ConversationMessageV2>.generate(
           _fakePageSize,
           (index) => _fakeMessage(earliestSequence - _fakePageSize + index),
           growable: false,
         );
-        canLoadOlder = true;
       }
 
       _updateState(
-        centerKind: latestState.centerKind,
         beforeMessages: [...olderMessages, ...latestState.beforeMessages],
-        centerMessage: latestState.centerMessage,
         afterMessages: latestState.afterMessages,
-        canLoadOlder: canLoadOlder,
+        canLoadOlder: true,
         canLoadNewer: latestState.canLoadNewer,
         isLoadingOlder: false,
         isLoadingNewer: latestState.isLoadingNewer,
@@ -252,9 +278,7 @@ class ConversationTimelineV2ViewModel
     _isLoadingNewer = true;
 
     _updateState(
-      centerKind: currentState.centerKind,
       beforeMessages: currentState.beforeMessages,
-      centerMessage: currentState.centerMessage,
       afterMessages: currentState.afterMessages,
       canLoadOlder: currentState.canLoadOlder,
       canLoadNewer: currentState.canLoadNewer,
@@ -279,9 +303,7 @@ class ConversationTimelineV2ViewModel
       final newerMessages = _fakeHistory.sublist(endIndex + 1, newEndExclusive);
 
       _updateState(
-        centerKind: latestState.centerKind,
         beforeMessages: latestState.beforeMessages,
-        centerMessage: latestState.centerMessage,
         afterMessages: [...latestState.afterMessages, ...newerMessages],
         canLoadOlder: latestState.canLoadOlder,
         canLoadNewer: newEndExclusive < _fakeHistory.length,
@@ -297,9 +319,7 @@ class ConversationTimelineV2ViewModel
   }
 
   void _updateState({
-    required ConversationTimelineV2CenterKind centerKind,
     required List<ConversationMessageV2> beforeMessages,
-    required ConversationMessageV2? centerMessage,
     required List<ConversationMessageV2> afterMessages,
     required bool canLoadOlder,
     required bool canLoadNewer,
@@ -310,9 +330,7 @@ class ConversationTimelineV2ViewModel
     required double centerViewportFraction,
   }) {
     state = AsyncData((
-      centerKind: centerKind,
       beforeMessages: beforeMessages,
-      centerMessage: centerMessage,
       afterMessages: afterMessages,
       canLoadOlder: canLoadOlder,
       canLoadNewer: canLoadNewer,
@@ -332,7 +350,7 @@ class ConversationTimelineV2ViewModel
       return;
     }
 
-    if (currentState.centerKind == ConversationTimelineV2CenterKind.message &&
+    if (!_isLiveEdgeState(currentState) &&
         facts.isNearBottom &&
         currentState.canLoadNewer &&
         !currentState.isLoadingNewer) {
@@ -351,12 +369,11 @@ class ConversationTimelineV2ViewModel
   ) {
     return <ConversationMessageV2>[
       ...state.beforeMessages,
-      if (state.centerMessage != null) state.centerMessage!,
       ...state.afterMessages,
     ];
   }
 
-  void _activateSingleMessageCenter(
+  void _activateTargetAfterCenter(
     List<ConversationMessageV2> messages,
     int targetIndex, {
     required String? highlightedStableKey,
@@ -366,10 +383,8 @@ class ConversationTimelineV2ViewModel
     final historyIndex = _fakeHistory.indexOf(targetMessage);
 
     _updateState(
-      centerKind: ConversationTimelineV2CenterKind.message,
       beforeMessages: messages.take(targetIndex).toList(growable: false),
-      centerMessage: targetMessage,
-      afterMessages: messages.skip(targetIndex + 1).toList(growable: false),
+      afterMessages: messages.skip(targetIndex).toList(growable: false),
       canLoadOlder: true,
       canLoadNewer: historyIndex >= 0 && historyIndex < _fakeHistory.length - 1,
       isLoadingOlder: false,
@@ -382,6 +397,8 @@ class ConversationTimelineV2ViewModel
       TimelineViewportEffect.resetToCenterOrigin(
         alignment: centerViewportFraction == 0.0
             ? TimelineViewportAlignment.top
+            : centerViewportFraction == 1.0
+            ? TimelineViewportAlignment.bottom
             : TimelineViewportAlignment.center,
         highlight: highlightedStableKey != null,
       ),
@@ -400,7 +417,7 @@ class ConversationTimelineV2ViewModel
       return;
     }
 
-    _activateSingleMessageCenter(
+    _activateTargetAfterCenter(
       messages,
       targetIndex,
       highlightedStableKey: highlightedStableKey,
@@ -416,9 +433,6 @@ class ConversationTimelineV2ViewModel
       return false;
     }
 
-    // For now, "cached jump" means the target is present in the flattened
-    // in-memory slice. Later we can tighten this with a surrounding-context
-    // threshold and route sparse hits into the resolving path.
     return targetIndex < messages.length;
   }
 
@@ -431,9 +445,7 @@ class ConversationTimelineV2ViewModel
     required bool isResolvingJump,
   }) {
     _updateState(
-      centerKind: currentState.centerKind,
       beforeMessages: currentState.beforeMessages,
-      centerMessage: currentState.centerMessage,
       afterMessages: currentState.afterMessages,
       canLoadOlder: currentState.canLoadOlder,
       canLoadNewer: currentState.canLoadNewer,
@@ -464,10 +476,8 @@ class ConversationTimelineV2ViewModel
     );
 
     return (
-      centerKind: ConversationTimelineV2CenterKind.message,
       beforeMessages: _fakeHistory.sublist(correctedStartIndex, historyIndex),
-      centerMessage: _fakeHistory[historyIndex],
-      afterMessages: _fakeHistory.sublist(historyIndex + 1, endExclusive),
+      afterMessages: _fakeHistory.sublist(historyIndex, endExclusive),
       canLoadOlder: true,
       canLoadNewer: endExclusive < _fakeHistory.length,
       isLoadingOlder: false,
@@ -492,10 +502,6 @@ class ConversationTimelineV2ViewModel
       final index = _fakeHistory.indexOf(state.beforeMessages.first);
       return index >= 0 ? index : 0;
     }
-    if (state.centerMessage != null) {
-      final index = _fakeHistory.indexOf(state.centerMessage!);
-      return index >= 0 ? index : 0;
-    }
     if (state.afterMessages.isNotEmpty) {
       final index = _fakeHistory.indexOf(state.afterMessages.first);
       return index >= 0 ? index : 0;
@@ -505,15 +511,18 @@ class ConversationTimelineV2ViewModel
 
   int _loadedEndIndex(ConversationTimelineV2State state) {
     if (state.afterMessages.isNotEmpty) {
-      return _fakeHistory.indexOf(state.afterMessages.last);
-    }
-    if (state.centerMessage != null) {
-      return _fakeHistory.indexOf(state.centerMessage!);
+      final index = _fakeHistory.indexOf(state.afterMessages.last);
+      return index >= 0 ? index : _fakeHistory.length - 1;
     }
     if (state.beforeMessages.isNotEmpty) {
-      return _fakeHistory.indexOf(state.beforeMessages.last);
+      final index = _fakeHistory.indexOf(state.beforeMessages.last);
+      return index >= 0 ? index : _fakeHistory.length - 1;
     }
     return _fakeHistory.length - 1;
+  }
+
+  bool _isLiveEdgeState(ConversationTimelineV2State state) {
+    return state.afterMessages.isEmpty && state.centerViewportFraction == 1.0;
   }
 
   int _messageSequence(ConversationMessageV2 message) {
