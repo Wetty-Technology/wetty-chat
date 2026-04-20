@@ -5,7 +5,6 @@ import 'package:chahua/features/chats/conversation_v2/application/conversation_t
 import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_state.dart';
 import 'package:chahua/features/chats/conversation_v2/application/timeline_viewport_facts.dart';
 import 'package:chahua/features/chats/conversation_v2/data/conversation_timeline_v2_repository.dart';
-import 'package:chahua/features/chats/conversation_v2/data/conversation_timeline_v2_repository_impl.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_active_segment.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_identity.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
