@@ -37,3 +37,41 @@
   padding: 16px;
   color: var(--ion-color-medium);
 }
+
+.subtitleToolbar {
+  --padding-top: 0;
+  --padding-bottom: 0;
+  height: auto !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0;
+  padding-top: 8px;
+  position: relative !important;
+  overflow: visible !important;
+  line-height: normal;
+
+  /* ionic wrappers */
+  :global(.toolbar-title-default),
+  :global(.toolbar-title),
+  & > div {
+    overflow: visible !important;
+    white-space: normal !important;
+    height: auto !important;
+  }
+}
+
+.subtitle {
+  margin-top: 2px;
+  padding: 0;
+  font-size: 12px;
+  color: var(--ion-color-medium);
+  display: block;
+  text-align: center;
+}
+
+.subtitleText {
+  font-weight: 500;
+  margin-right: 6px;
+  font-size: 12px;
+}

@@ -43,6 +43,15 @@ msgstr "[Deleted]"
 #~ msgid "[Voice message]"
 #~ msgstr "[Voice message]"
 
+#: src/pages/chat-thread/chat-members.tsx
+#~ msgid "{0, plural, =1 {{1}} other {{2}}}"
+#~ msgstr "{0, plural, =1 {{1}} other {{2}}}"
+
+#. placeholder {0}: members.length
+#: src/pages/chat-thread/chat-members.tsx
+msgid "{0, plural, =1 {member} other {members}}"
+msgstr "{0, plural, =1 {member} other {members}}"
+
 #: src/components/chat/settings/ChatMuteSettingItem.tsx
 msgid "1 day"
 msgstr "1 day"
@@ -75,6 +84,10 @@ msgstr "A new version of the app is available!"
 #: src/pages/settings.tsx
 msgid "About"
 msgstr "About"
+
+#: src/components/chat/profiles/UserProfileModal.tsx
+msgid "Action failed"
+msgstr "Action failed"
 
 #: src/components/chat/compose/AddStickerModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
@@ -203,10 +216,10 @@ msgstr "Blocked"
 #: src/components/chat/compose/StickerPicker.tsx
 #: src/components/chat/pins/PinBanner.tsx
 #: src/components/chat/pins/PinListModal.tsx
+#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/components/chat/settings/ChatMuteSettingItem.tsx
 #: src/components/chat/settings/ChatMuteSettingItem.tsx
 #: src/components/chat/settings/ShareInviteModal.tsx
-#: src/pages/chat-thread/chat-members.tsx
 #: src/pages/chat-thread/chat-members.tsx
 #: src/pages/chat-thread/chat-members.tsx
 #: src/pages/chat-thread/chat-members.tsx
@@ -407,6 +420,7 @@ msgctxt "sticker pack"
 msgid "Delete"
 msgstr "Delete"
 
+#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Delete all messages"
 msgstr "Delete all messages"
@@ -415,6 +429,7 @@ msgstr "Delete all messages"
 msgid "Delete Message"
 msgstr "Delete Message"
 
+#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Delete messages from last 24 hours"
 msgstr "Delete messages from last 24 hours"
@@ -435,19 +450,22 @@ msgstr "Delete recording"
 msgid "Delete this sticker pack? Stickers will stay available elsewhere, but this pack and its contents list will be removed."
 msgstr "Delete this sticker pack? Stickers will stay available elsewhere, but this pack and its contents list will be removed."
 
+#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Demote"
 msgstr "Demote"
 
+#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Demote {displayName} to member?"
 msgstr "Demote {displayName} to member?"
 
+#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Demote Member"
 msgstr "Demote Member"
 
-#: src/pages/chat-thread/chat-members.tsx
+#: src/components/chat/profiles/UserProfileModal.tsx
 msgid "Demote to Member"
 msgstr "Demote to Member"
 
@@ -882,6 +900,7 @@ msgstr "Join via Code"
 msgid "Joining…"
 msgstr "Joining…"
 
+#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Keep messages"
 msgstr "Keep messages"
@@ -917,6 +936,7 @@ msgid "Loading invite…"
 msgstr "Loading invite…"
 
 #: src/components/chat/compose/StickerPreviewModal.tsx
+#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/components/chat/reactions/ReactionDetailsModal.tsx
 #: src/components/chat/reactions/ReactionDetailsModal.tsx
 #: src/pages/chat-thread/chat-thread.tsx
@@ -950,6 +970,7 @@ msgstr "Member"
 msgid "Member added"
 msgstr "Member added"
 
+#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Member demoted"
 msgstr "Member demoted"
@@ -958,18 +979,22 @@ msgstr "Member demoted"
 msgid "Member Group"
 msgstr "Member Group"
 
+#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Member promoted"
 msgstr "Member promoted"
 
+#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Member removed"
 msgstr "Member removed"
 
+#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Member removed, deleting all messages..."
 msgstr "Member removed, deleting all messages..."
 
+#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Member removed, deleting recent messages..."
 msgstr "Member removed, deleting recent messages..."
@@ -1275,19 +1300,22 @@ msgstr "Previous image"
 msgid "Private"
 msgstr "Private"
 
+#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Promote"
 msgstr "Promote"
 
+#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Promote {displayName} to admin?"
 msgstr "Promote {displayName} to admin?"
 
+#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Promote Member"
 msgstr "Promote Member"
 
-#: src/pages/chat-thread/chat-members.tsx
+#: src/components/chat/profiles/UserProfileModal.tsx
 msgid "Promote to Admin"
 msgstr "Promote to Admin"
 
@@ -1349,6 +1377,7 @@ msgstr "Recording is too short."
 msgid "Release to save"
 msgstr "Release to save"
 
+#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 #: src/pages/settings/sticker-pack-detail.tsx
 msgid "Remove"
@@ -1359,22 +1388,23 @@ msgstr "Remove"
 msgid "Remove {0}"
 msgstr "Remove {0}"
 
-#: src/pages/chat-thread/chat-members.tsx
-msgid "Remove {displayName} from this group?"
-msgstr "Remove {displayName} from this group?"
-
 #: src/components/chat/profiles/UserProfileModal.tsx
 msgid "Remove {displayName} from {chatLabel}?"
 msgstr "Remove {displayName} from {chatLabel}?"
+
+#: src/pages/chat-thread/chat-members.tsx
+msgid "Remove {displayName} from this group?"
+msgstr "Remove {displayName} from this group?"
 
 #: src/components/chat/compose/StickerPicker.tsx
 msgid "Remove from Favorites"
 msgstr "Remove from Favorites"
 
-#: src/pages/chat-thread/chat-members.tsx
+#: src/components/chat/profiles/UserProfileModal.tsx
 msgid "Remove from Group"
 msgstr "Remove from Group"
 
+#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Remove Member"
 msgstr "Remove Member"
@@ -1597,6 +1627,10 @@ msgstr "Targeted"
 #: src/pages/join-chat.tsx
 msgid "The invite code entered is not valid."
 msgstr "The invite code entered is not valid."
+
+#: src/components/chat/profiles/UserProfileModal.tsx
+msgid "this group"
+msgstr "this group"
 
 #: src/components/invites/InvitePreviewCard.tsx
 msgid "This invite is invalid or has expired."
