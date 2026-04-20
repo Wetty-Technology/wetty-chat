@@ -34,6 +34,18 @@ class ConversationTimelineV2MessageStore
         };
   }
 
+  void markReachedOldest(ConversationTimelineV2Identity identity) {
+    final existingScope = scopeFor(identity);
+    if (existingScope == null) {
+      return;
+    }
+    putScope(identity, (
+      segments: existingScope.segments,
+      hasLatestSegment: existingScope.hasLatestSegment,
+      hasReachedOldest: true,
+    ));
+  }
+
   void insertBeforeAnchor(
     ConversationTimelineV2Identity identity,
     int anchorServerMessageId,
@@ -54,6 +66,7 @@ class ConversationTimelineV2MessageStore
     putScope(identity, (
       segments: segments,
       hasLatestSegment: existingScope?.hasLatestSegment ?? false,
+      hasReachedOldest: existingScope?.hasReachedOldest ?? false,
     ));
   }
 
@@ -77,6 +90,7 @@ class ConversationTimelineV2MessageStore
     putScope(identity, (
       segments: segments,
       hasLatestSegment: existingScope?.hasLatestSegment ?? false,
+      hasReachedOldest: existingScope?.hasReachedOldest ?? false,
     ));
   }
 
@@ -94,6 +108,7 @@ class ConversationTimelineV2MessageStore
     putScope(identity, (
       segments: segments,
       hasLatestSegment: existingScope?.hasLatestSegment ?? false,
+      hasReachedOldest: existingScope?.hasReachedOldest ?? false,
     ));
   }
 
@@ -108,7 +123,11 @@ class ConversationTimelineV2MessageStore
       incoming: segment,
     );
 
-    putScope(identity, (segments: segments, hasLatestSegment: true));
+    putScope(identity, (
+      segments: segments,
+      hasLatestSegment: true,
+      hasReachedOldest: existingScope?.hasReachedOldest ?? false,
+    ));
   }
 
   void insertLatestMessage(
@@ -141,6 +160,7 @@ class ConversationTimelineV2MessageStore
           updatedLatestSegment,
         ],
         hasLatestSegment: true,
+        hasReachedOldest: existingScope?.hasReachedOldest ?? false,
       ));
       return;
     }
@@ -151,6 +171,7 @@ class ConversationTimelineV2MessageStore
         ConversationTimelineV2CanonicalSegment(orderedMessages: [message]),
       ],
       hasLatestSegment: true,
+      hasReachedOldest: existingScope?.hasReachedOldest ?? false,
     ));
   }
 
@@ -408,10 +429,11 @@ ConversationTimelineV2ActiveSegment _activeSegmentForScopeSegment(
 }) {
   final isLatestSegment =
       scope.hasLatestSegment && selectedIndex == scope.segments.length - 1;
+  final isFirstSegment = selectedIndex == 0;
 
   return (
     orderedMessages: selectedSegment.orderedMessages,
-    canLoadBefore: true,
+    canLoadBefore: !isFirstSegment || !scope.hasReachedOldest,
     canLoadAfter: !isLatestSegment,
   );
 }

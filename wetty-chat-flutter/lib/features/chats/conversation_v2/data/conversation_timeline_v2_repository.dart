@@ -38,6 +38,7 @@ class ConversationTimelineV2Repository {
           .putScope(identity, (
             segments: const <ConversationTimelineV2CanonicalSegment>[],
             hasLatestSegment: true,
+            hasReachedOldest: true,
           ));
       return;
     }
@@ -86,19 +87,24 @@ class ConversationTimelineV2Repository {
           max: limit,
         );
 
-    if (response.messages.isNotEmpty) {
+    if (response.messages.isEmpty) {
       ref
           .read(conversationTimelineV2MessageStoreProvider.notifier)
-          .insertBeforeAnchor(
-            identity,
-            anchorServerMessageId,
-            ConversationTimelineV2CanonicalSegment(
-              orderedMessages: response.messages
-                  .map(ConversationMessageV2.fromMessageItemDto)
-                  .toList(growable: false),
-            ),
-          );
+          .markReachedOldest(identity);
+      return;
     }
+
+    ref
+        .read(conversationTimelineV2MessageStoreProvider.notifier)
+        .insertBeforeAnchor(
+          identity,
+          anchorServerMessageId,
+          ConversationTimelineV2CanonicalSegment(
+            orderedMessages: response.messages
+                .map(ConversationMessageV2.fromMessageItemDto)
+                .toList(growable: false),
+          ),
+        );
   }
 
   Future<void> _loadNewerAfterAnchor(

@@ -783,6 +783,11 @@ List<List<int>> _segmentIds(
 ConversationTimelineV2CanonicalScope _scope(
   List<ConversationTimelineV2CanonicalSegment> segments, {
   bool hasLatestSegment = false,
+  bool hasReachedOldest = false,
 }) {
-  return (segments: segments, hasLatestSegment: hasLatestSegment);
+  return (
+    segments: segments,
+    hasLatestSegment: hasLatestSegment,
+    hasReachedOldest: hasReachedOldest,
+  );
 }
