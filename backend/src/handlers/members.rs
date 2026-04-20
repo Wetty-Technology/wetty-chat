@@ -286,6 +286,32 @@ async fn post_add_member(
         .values(&new_membership)
         .execute(conn)?;
 
+    let target_username = profile
+        .and_then(|p| p.username.clone())
+        .unwrap_or_else(|| "Someone".to_string());
+
+    if let Ok(send_result) = crate::handlers::chats::send_prepared_message(
+        conn,
+        &state,
+        crate::handlers::chats::PreparedMessageSend {
+            chat_id,
+            sender_uid: uid,
+            message: Some(format!("added {}", target_username)),
+            message_type: crate::models::MessageType::System,
+            sticker_id: None,
+            reply_to_id: None,
+            reply_root_id: None,
+            client_generated_id: uuid::Uuid::new_v4().to_string(),
+            attachment_ids: vec![],
+            update_group_last_message: true,
+            publish_immediately: true,
+        },
+    )
+    .await
+    {
+        send_result.side_effects.fire(&state);
+    }
+
     let avatar_url = lookup_user_avatars(&state, &[body.uid])
         .remove(&body.uid)
         .flatten();
@@ -359,6 +385,12 @@ async fn delete_remove_member(
         return Err(AppError::NotFound("Member not found"));
     };
 
+    let target_username = crate::services::user::lookup_user_profiles(conn, &[target_uid])
+        .ok()
+        .and_then(|mut profiles| profiles.remove(&target_uid))
+        .and_then(|p| p.username)
+        .unwrap_or_else(|| "Someone".to_string());
+
     if matches!(target_role, GroupRole::Admin) {
         let admin_count = group_membership::table
             .filter(
@@ -380,6 +412,34 @@ async fn delete_remove_member(
         group_membership::table.filter(gm_dsl::chat_id.eq(chat_id).and(gm_dsl::uid.eq(target_uid))),
     )
     .execute(conn)?;
+
+    let (sys_sender_uid, sys_msg) = if is_admin_removing_other {
+        (uid, format!("removed {}", target_username))
+    } else {
+        (target_uid, "left the chat".to_string())
+    };
+
+    if let Ok(send_result) = crate::handlers::chats::send_prepared_message(
+        conn,
+        &state,
+        crate::handlers::chats::PreparedMessageSend {
+            chat_id,
+            sender_uid: sys_sender_uid,
+            message: Some(sys_msg),
+            message_type: crate::models::MessageType::System,
+            sticker_id: None,
+            reply_to_id: None,
+            reply_root_id: None,
+            client_generated_id: uuid::Uuid::new_v4().to_string(),
+            attachment_ids: vec![],
+            update_group_last_message: true,
+            publish_immediately: true,
+        },
+    )
+    .await
+    {
+        send_result.side_effects.fire(&state);
+    }
 
     // Enqueue bulk message deletion if requested (only when admin removes someone else)
     if is_admin_removing_other {

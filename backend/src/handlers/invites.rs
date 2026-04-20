@@ -855,6 +855,28 @@ async fn post_redeem_invite(
         }
     };
 
+    if let Ok(send_result) = crate::handlers::chats::send_prepared_message(
+        conn,
+        &state,
+        crate::handlers::chats::PreparedMessageSend {
+            chat_id,
+            sender_uid: uid,
+            message: Some("joined the chat".to_string()),
+            message_type: crate::models::MessageType::System,
+            sticker_id: None,
+            reply_to_id: None,
+            reply_root_id: None,
+            client_generated_id: uuid::Uuid::new_v4().to_string(),
+            attachment_ids: vec![],
+            update_group_last_message: true,
+            publish_immediately: true,
+        },
+    )
+    .await
+    {
+        send_result.side_effects.fire(&state);
+    }
+
     let chat = load_group_info(conn, &state, chat_id, uid)?;
     Ok(Json(RedeemInviteResponse { chat }))
 }
