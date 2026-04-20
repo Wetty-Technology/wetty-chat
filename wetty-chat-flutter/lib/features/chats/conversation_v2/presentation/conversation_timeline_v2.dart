@@ -1,10 +1,13 @@
 import 'package:chahua/features/chats/conversation/domain/launch_request.dart';
+import 'package:chahua/features/chats/conversation/presentation/message_row.dart';
+import 'package:chahua/features/chats/conversation/presentation/system_message_row.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_state.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_view_model.dart';
 import 'package:chahua/features/chats/conversation_v2/application/timeline_viewport_facts.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_identity.dart';
-import 'package:chahua/features/chats/conversation_v2/presentation/message_bubble/message_row_v2.dart';
+import 'package:chahua/features/chats/conversation_v2/presentation/conversation_message_v2_legacy_adapter.dart';
+import 'package:chahua/core/settings/app_settings_store.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -164,6 +167,7 @@ class _ConversationTimelineV2State
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(conversationTimelineV2ViewModelProvider(_identity));
+    final settings = ref.watch(appSettingsProvider);
 
     if (state.isBootstrapping) {
       return const Center(child: CupertinoActivityIndicator());
@@ -229,22 +233,19 @@ class _ConversationTimelineV2State
               slivers: [
                 const SliverPadding(padding: EdgeInsets.only(top: 8)),
                 if (beforeMessages.isNotEmpty)
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    sliver: _buildMessageSliver(beforeMessages),
+                  _buildMessageSliver(
+                    beforeMessages,
+                    chatMessageFontSize: settings.fontSize,
                   ),
-                SliverPadding(
+                SliverToBoxAdapter(
                   key: _centerSliverKey,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  sliver: const SliverToBoxAdapter(child: SizedBox.shrink()),
+                  child: SizedBox.shrink(),
                 ),
                 if (afterMessages.isNotEmpty)
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    sliver: _buildMessageSliver(
-                      afterMessages,
-                      highlightedStableKey: state.highlightedStableKey,
-                    ),
+                  _buildMessageSliver(
+                    afterMessages,
+                    chatMessageFontSize: settings.fontSize,
+                    highlightedStableKey: state.highlightedStableKey,
                   ),
               ],
             ),
@@ -256,21 +257,78 @@ class _ConversationTimelineV2State
 
   SliverList _buildMessageSliver(
     List<ConversationMessageV2> messages, {
+    required double chatMessageFontSize,
     String? highlightedStableKey,
   }) {
     return SliverList.builder(
       itemCount: messages.length,
       itemBuilder: (context, index) {
         final message = messages[index];
+        final legacyMessage = adaptConversationMessageV2ToLegacy(
+          message,
+          identity: _identity,
+        );
+        final showSenderName = _shouldShowSenderName(messages, index);
+        final showAvatar = _shouldShowAvatar(messages, index);
+        final showThreadIndicator =
+            message.threadInfo != null && message.threadInfo!.replyCount > 0;
         return KeyedSubtree(
           key: _keyForMessage(message),
-          child: MessageRowV2(
-            message: message,
-            isHighlighted: message.stableKey == highlightedStableKey,
-          ),
+          child: message.content is SystemMessageContent
+              ? SystemMessageRow(message: legacyMessage)
+              : MessageRow(
+                  message: legacyMessage,
+                  chatMessageFontSize: chatMessageFontSize,
+                  isHighlighted: message.stableKey == highlightedStableKey,
+                  onTapReply: message.replyToMessage != null
+                      ? () => ref
+                            .read(
+                              conversationTimelineV2ViewModelProvider(
+                                _identity,
+                              ).notifier,
+                            )
+                            .jumpToMessageServerId(
+                              message.replyToMessage!.id,
+                              highlight: true,
+                            )
+                      : null,
+                  onOpenThread: showThreadIndicator ? () {} : null,
+                  showSenderName: showSenderName,
+                  showAvatar: showAvatar,
+                ),
         );
       },
     );
+  }
+
+  bool _shouldShowSenderName(List<ConversationMessageV2> messages, int index) {
+    final message = messages[index];
+    if (message.content is SystemMessageContent) {
+      return false;
+    }
+    if (index == 0) {
+      return true;
+    }
+    final previousMessage = messages[index - 1];
+    if (previousMessage.content is SystemMessageContent) {
+      return true;
+    }
+    return previousMessage.sender.uid != message.sender.uid;
+  }
+
+  bool _shouldShowAvatar(List<ConversationMessageV2> messages, int index) {
+    final message = messages[index];
+    if (message.content is SystemMessageContent) {
+      return false;
+    }
+    if (index == messages.length - 1) {
+      return true;
+    }
+    final nextMessage = messages[index + 1];
+    if (nextMessage.content is SystemMessageContent) {
+      return true;
+    }
+    return nextMessage.sender.uid != message.sender.uid;
   }
 
   GlobalKey _keyForMessage(ConversationMessageV2 message) {
