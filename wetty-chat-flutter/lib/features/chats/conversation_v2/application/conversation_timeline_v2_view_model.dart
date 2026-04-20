@@ -16,7 +16,6 @@ class ConversationTimelineV2ViewModel
     extends Notifier<ConversationTimelineV2State> {
   // Mostly temproary, we will remove these later
   static const int _initialLoadedWindowSize = 50;
-  static const int _farHistoryTargetServerMessageId = -1000;
 
   /// Identity (ChatID, threadID) for this VM
   final ConversationTimelineV2Identity identity;
@@ -38,9 +37,6 @@ class ConversationTimelineV2ViewModel
     centerViewportFraction: 1.0,
     kind: ConversationTimelineV2ViewportCommandKind.none,
   );
-
-  /// Latest viewport facts from the scroll controller
-  TimelineViewportFacts? _latestViewportFacts;
 
   /// Make sure to use `_setActiveSegmentMode` instead of assigning directly
   /// to avoid forgetting `ref.invalidateSelf()`.
@@ -87,8 +83,6 @@ class ConversationTimelineV2ViewModel
   }
 
   void onViewportChanged(TimelineViewportFacts facts) {
-    _latestViewportFacts = facts;
-
     if (state.isBootstrapping) {
       return;
     }
@@ -132,31 +126,6 @@ class ConversationTimelineV2ViewModel
 
   void jumpToUnread(int lastReadMessageId) {
     _markRepositoryTodo('jumpToUnread(lastReadMessageId: $lastReadMessageId)');
-  }
-
-  Future<void> jumpToFarHistory() async {
-    await _repository.refreshAroundServerMessageId(
-      _farHistoryTargetServerMessageId,
-      limit: _initialLoadedWindowSize,
-    );
-    _setActiveSegmentMode(
-      const ConversationTimelineV2ActiveSegmentMode.around(
-        _farHistoryTargetServerMessageId,
-      ),
-    );
-    _highlightedServerMessageId = _farHistoryTargetServerMessageId;
-    _pendingViewportCommand = _viewportCommandForCurrentMode(
-      ConversationTimelineV2ViewportCommandKind.resetToCenterOrigin,
-    );
-  }
-
-  Future<void> addMessage() async {
-    if (_latestViewportFacts?.isNearBottom ?? false) {
-      _pendingViewportCommand = _viewportCommandForCurrentMode(
-        ConversationTimelineV2ViewportCommandKind.scrollToBottom,
-      );
-    }
-    await _repository.addLatestFakeMessage();
   }
 
   Future<void> _bootstrapLatestSegment() async {

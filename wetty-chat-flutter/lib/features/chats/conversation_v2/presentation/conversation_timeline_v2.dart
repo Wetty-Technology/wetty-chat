@@ -198,26 +198,8 @@ class _ConversationTimelineV2State
                   .read(
                     conversationTimelineV2ViewModelProvider(_identity).notifier,
                   )
-                  .jumpToFarHistory(),
-              child: const Text('Jump Far History'),
-            ),
-            CupertinoButton(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              onPressed: () => ref
-                  .read(
-                    conversationTimelineV2ViewModelProvider(_identity).notifier,
-                  )
                   .jumpToLatest(),
               child: const Text('Jump To Latest'),
-            ),
-            CupertinoButton(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              onPressed: () => ref
-                  .read(
-                    conversationTimelineV2ViewModelProvider(_identity).notifier,
-                  )
-                  .addMessage(),
-              child: const Text('Add Message'),
             ),
           ],
         ),

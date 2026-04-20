@@ -7,16 +7,13 @@ import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeli
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'conversation_timeline_v2_repository.dart';
-import 'fake_conversation_timeline_v2_repository.dart';
 
 class ConversationTimelineV2RepositoryImpl
     implements ConversationTimelineV2Repository {
-  ConversationTimelineV2RepositoryImpl(this.ref, this.identity)
-    : _fallback = FakeConversationTimelineV2Repository(ref, identity);
+  ConversationTimelineV2RepositoryImpl(this.ref, this.identity);
 
   final Ref ref;
   final ConversationTimelineV2Identity identity;
-  final FakeConversationTimelineV2Repository _fallback;
 
   ConversationScope get _scope => identity.threadRootId == null
       ? ConversationScope.chat(chatId: identity.chatId)
@@ -38,7 +35,14 @@ class ConversationTimelineV2RepositoryImpl
         .read(messageApiServiceProvider)
         .fetchConversationMessages(_scope, max: limit);
 
+    // If the response is empty, means we are at latest but there is just simply no message
     if (response.messages.isEmpty) {
+      ref
+          .read(conversationTimelineV2MessageStoreProvider.notifier)
+          .putScope(identity, (
+            segments: const <ConversationTimelineV2CanonicalSegment>[],
+            hasLatestSegment: true,
+          ));
       return;
     }
 
@@ -58,7 +62,7 @@ class ConversationTimelineV2RepositoryImpl
     int anchorServerMessageId, {
     required int limit,
   }) {
-    return _fallback.loadOlderBeforeAnchor(anchorServerMessageId, limit: limit);
+    return _loadOlderBeforeAnchor(anchorServerMessageId, limit: limit);
   }
 
   @override
@@ -66,7 +70,7 @@ class ConversationTimelineV2RepositoryImpl
     int anchorServerMessageId, {
     required int limit,
   }) {
-    return _fallback.loadNewerAfterAnchor(anchorServerMessageId, limit: limit);
+    return _loadNewerAfterAnchor(anchorServerMessageId, limit: limit);
   }
 
   @override
@@ -74,15 +78,96 @@ class ConversationTimelineV2RepositoryImpl
     int targetServerMessageId, {
     required int limit,
   }) {
-    return _fallback.refreshAroundServerMessageId(
-      targetServerMessageId,
-      limit: limit,
-    );
+    return _refreshAroundServerMessageId(targetServerMessageId, limit: limit);
   }
 
-  @override
-  Future<void> addLatestFakeMessage() {
-    return _fallback.addLatestFakeMessage();
+  Future<void> _loadOlderBeforeAnchor(
+    int anchorServerMessageId, {
+    required int limit,
+  }) async {
+    final response = await ref
+        .read(messageApiServiceProvider)
+        .fetchConversationMessages(
+          _scope,
+          before: anchorServerMessageId,
+          max: limit,
+        );
+
+    if (response.messages.isNotEmpty) {
+      ref
+          .read(conversationTimelineV2MessageStoreProvider.notifier)
+          .insertBeforeAnchor(
+            identity,
+            anchorServerMessageId,
+            ConversationTimelineV2CanonicalSegment(
+              orderedMessages: response.messages
+                  .map(ConversationMessageV2.fromMessageItemDto)
+                  .toList(growable: false),
+            ),
+          );
+    }
+  }
+
+  Future<void> _loadNewerAfterAnchor(
+    int anchorServerMessageId, {
+    required int limit,
+  }) async {
+    final response = await ref
+        .read(messageApiServiceProvider)
+        .fetchConversationMessages(
+          _scope,
+          after: anchorServerMessageId,
+          max: limit,
+        );
+
+    if (response.messages.isNotEmpty) {
+      ref
+          .read(conversationTimelineV2MessageStoreProvider.notifier)
+          .insertAfterAnchor(
+            identity,
+            anchorServerMessageId,
+            ConversationTimelineV2CanonicalSegment(
+              orderedMessages: response.messages
+                  .map(ConversationMessageV2.fromMessageItemDto)
+                  .toList(growable: false),
+            ),
+          );
+    }
+  }
+
+  Future<void> _refreshAroundServerMessageId(
+    int targetServerMessageId, {
+    required int limit,
+  }) async {
+    final response = await ref
+        .read(messageApiServiceProvider)
+        .fetchConversationMessages(
+          _scope,
+          around: targetServerMessageId,
+          max: limit,
+        );
+
+    if (response.messages.isEmpty) {
+      return;
+    }
+
+    final containsTarget = response.messages.any(
+      (message) => message.id == targetServerMessageId,
+    );
+    if (!containsTarget) {
+      return;
+    }
+
+    ref
+        .read(conversationTimelineV2MessageStoreProvider.notifier)
+        .insertAround(
+          identity,
+          ConversationTimelineV2CanonicalSegment(
+            orderedMessages: response.messages
+                .map(ConversationMessageV2.fromMessageItemDto)
+                .toList(growable: false),
+          ),
+        );
   }
 }
 

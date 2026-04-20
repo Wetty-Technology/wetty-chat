@@ -15,6 +15,4 @@ abstract class ConversationTimelineV2Repository {
     int targetServerMessageId, {
     required int limit,
   });
-
-  Future<void> addLatestFakeMessage();
 }
