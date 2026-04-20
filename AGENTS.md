@@ -6,13 +6,10 @@ wetty-chat is a chat application targeting ~20k users / ~10k messages per day. I
 The project is relatively large and complex, so use subagents to explore the project
 unless you know for sure there are limited files to look and you know which ones.
 
-## Planning
-If the user is asking you to implement a feature or fix some bug, then before making
-changes always produce at least a high level overview of what you want to change.
-It should at least cover:
-    - What is the problem
-    - What is the change you want to put in at a high level
-    - Is this a quick patch to get the problem resolved or the best design given our requirements
+## Explicit confirmation
+If you are planning a large change (more than 50 lines) you should review your plan with the user
+and only execute the edit after given explicit permission to proceed. This applies to fixing
+bugs as well, you should explain what the problem is & what the proposed fix is before making edit
 
 ## Project Layout
 
