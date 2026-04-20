@@ -29,6 +29,8 @@ class ConversationTimelineV2ViewModel
 
   bool _bootstrapStarted = false;
   int? _highlightedServerMessageId;
+  TimelineViewportFacts? _latestViewportFacts;
+  int? _lastRenderedTailServerMessageId;
 
   /// Generation of the viewport command, incremented on each issuance
   int _viewportCommandGeneration = 0;
@@ -86,6 +88,8 @@ class ConversationTimelineV2ViewModel
   }
 
   void onViewportChanged(TimelineViewportFacts facts) {
+    _latestViewportFacts = facts;
+
     if (state.isBootstrapping) {
       return;
     }
@@ -232,9 +236,24 @@ class ConversationTimelineV2ViewModel
         }
       }
     }
+    final currentTailServerMessageId = segment.orderedMessages.isEmpty
+        ? null
+        : segment.orderedMessages.last.serverMessageId;
+    if (segment.isLatestSlice &&
+        (_latestViewportFacts?.isNearBottom ?? false) &&
+        _pendingViewportCommand.kind ==
+            ConversationTimelineV2ViewportCommandKind.none &&
+        _lastRenderedTailServerMessageId != null &&
+        currentTailServerMessageId != null &&
+        currentTailServerMessageId > _lastRenderedTailServerMessageId!) {
+      _pendingViewportCommand = _viewportCommandForCurrentMode(
+        ConversationTimelineV2ViewportCommandKind.scrollToBottom,
+      );
+    }
     final viewportCommand = _takePendingViewportCommand(
       hasMessages: segment.orderedMessages.isNotEmpty,
     );
+    _lastRenderedTailServerMessageId = currentTailServerMessageId;
 
     return ConversationTimelineV2State(
       beforeMessages: beforeMessages,

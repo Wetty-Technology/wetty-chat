@@ -39,4 +39,5 @@ typedef ConversationTimelineV2ActiveSegment = ({
   List<ConversationMessageV2> orderedMessages,
   bool canLoadBefore,
   bool canLoadAfter,
+  bool isLatestSlice,
 });

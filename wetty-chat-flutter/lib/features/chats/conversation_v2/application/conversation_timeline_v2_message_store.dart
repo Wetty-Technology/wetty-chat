@@ -435,5 +435,6 @@ ConversationTimelineV2ActiveSegment _activeSegmentForScopeSegment(
     orderedMessages: selectedSegment.orderedMessages,
     canLoadBefore: !isFirstSegment || !scope.hasReachedOldest,
     canLoadAfter: !isLatestSegment,
+    isLatestSlice: isLatestSegment,
   );
 }
