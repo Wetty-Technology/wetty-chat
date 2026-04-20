@@ -216,7 +216,7 @@ return $default(_that.beforeMessages,_that.afterMessages,_that.canLoadOlder,_tha
 
 
 class _ConversationTimelineV2State implements ConversationTimelineV2State {
-  const _ConversationTimelineV2State({final  List<ConversationMessageV2> beforeMessages = const <ConversationMessageV2>[], final  List<ConversationMessageV2> afterMessages = const <ConversationMessageV2>[], this.canLoadOlder = false, this.canLoadNewer = false, this.isLoadingOlder = false, this.isLoadingNewer = false, this.isResolvingJump = false, this.highlightedStableKey, this.viewportCommand = const (centerViewportFraction: 1.0, kind: ConversationTimelineV2ViewportCommandKind.none), this.viewportCommandGeneration = 0, this.isBootstrapping = true}): _beforeMessages = beforeMessages,_afterMessages = afterMessages;
+  const _ConversationTimelineV2State({final  List<ConversationMessageV2> beforeMessages = const <ConversationMessageV2>[], final  List<ConversationMessageV2> afterMessages = const <ConversationMessageV2>[], this.canLoadOlder = false, this.canLoadNewer = false, this.isLoadingOlder = false, this.isLoadingNewer = false, this.isResolvingJump = false, this.highlightedStableKey, this.viewportCommand = const (kind: ConversationTimelineV2ViewportCommandKind.none, placement: ConversationTimelineV2ViewportPlacement.bottomPreferred), this.viewportCommandGeneration = 0, this.isBootstrapping = true}): _beforeMessages = beforeMessages,_afterMessages = afterMessages;
   
 
  final  List<ConversationMessageV2> _beforeMessages;

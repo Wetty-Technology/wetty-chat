@@ -7,7 +7,23 @@ import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeli
 import 'package:chahua/features/chats/conversation_v2/presentation/message_bubble/message_row_v2.dart';
 import 'package:chahua/core/settings/app_settings_store.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+@visibleForTesting
+double resolveTopPreferredAnchorAlignment({
+  required double afterExtent,
+  required double viewportExtent,
+}) {
+  if (viewportExtent <= 0) {
+    return 0;
+  }
+  final visibleFractionBelowAnchor = (afterExtent / viewportExtent).clamp(
+    0.0,
+    1.0,
+  );
+  return 1.0 - visibleFractionBelowAnchor;
+}
 
 class ConversationTimelineV2 extends ConsumerStatefulWidget {
   const ConversationTimelineV2({
@@ -35,6 +51,10 @@ class _ConversationTimelineV2State
   final GlobalKey _centerSliverKey = GlobalKey();
   final GlobalKey _scrollViewportKey = GlobalKey();
   final Map<String, GlobalKey> _messageKeys = <String, GlobalKey>{};
+  bool _isMeasureScheduled = false;
+  double _topPreferredAnchorAlignment = 0;
+  bool _isTopPreferredAnchorResolved = false;
+  int _lastMeasuredTopPreferredGeneration = 0;
 
   ConversationTimelineV2Identity get _identity =>
       (chatId: widget.chatId, threadRootId: widget.threadRootId);
@@ -47,6 +67,46 @@ class _ConversationTimelineV2State
       'initState: identity=$_identity, launchRequest=${widget.launchRequest}',
     );
     _scheduleInitializeLaunchRequest();
+  }
+
+  void _scheduleTopPreferredMeasurement() {
+    if (_isMeasureScheduled) {
+      return;
+    }
+    _isMeasureScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _isMeasureScheduled = false;
+      if (!mounted) {
+        return;
+      }
+
+      final renderObject = _centerSliverKey.currentContext?.findRenderObject();
+      if (renderObject is! RenderSliver) {
+        return;
+      }
+      final afterExtent = renderObject.geometry?.scrollExtent;
+      final viewportExtent = _scrollController.hasClients
+          ? _scrollController.position.viewportDimension
+          : context.size?.height;
+      if (afterExtent == null ||
+          viewportExtent == null ||
+          viewportExtent <= 0) {
+        return;
+      }
+
+      final nextAlignment = resolveTopPreferredAnchorAlignment(
+        afterExtent: afterExtent,
+        viewportExtent: viewportExtent,
+      );
+      if ((nextAlignment - _topPreferredAnchorAlignment).abs() < 0.001 &&
+          _isTopPreferredAnchorResolved) {
+        return;
+      }
+      setState(() {
+        _topPreferredAnchorAlignment = nextAlignment;
+        _isTopPreferredAnchorResolved = true;
+      });
+    });
   }
 
   @override
@@ -171,15 +231,36 @@ class _ConversationTimelineV2State
       return const Center(child: CupertinoActivityIndicator());
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _consumeViewportCommand(state);
-    });
+    final placement = state.viewportCommand.placement;
+
+    // If we need to execute a viewport command, schedule it to be executed in the next frame.
+    // as well as clear the top preferred anchor measurement.
+    if (state.viewportCommandGeneration >
+        _lastHandledViewportCommandGeneration) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _consumeViewportCommand(state);
+      });
+
+      if (placement == ConversationTimelineV2ViewportPlacement.topPreferred) {
+        _scheduleTopPreferredMeasurement();
+      }
+      _isTopPreferredAnchorResolved = false;
+    }
+
+    final centerViewportFraction =
+        placement == ConversationTimelineV2ViewportPlacement.bottomPreferred
+        ? 1.0
+        : _topPreferredAnchorAlignment;
+    final shouldHideUntilMeasured =
+        placement == ConversationTimelineV2ViewportPlacement.topPreferred &&
+        !_isTopPreferredAnchorResolved;
+
     final beforeMessages = state.beforeMessages.reversed.toList(
       growable: false,
     );
     final afterMessages = state.afterMessages;
-    final centerViewportFraction = state.viewportCommand.centerViewportFraction;
 
+    // Actually build the main content
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -208,6 +289,8 @@ class _ConversationTimelineV2State
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
             'Seam @ ${centerViewportFraction.toStringAsFixed(2)}'
+            ' (${placement.name})'
+            ' gen: ${state.viewportCommandGeneration}'
             ' | before=${state.beforeMessages.length}'
             ' after=${state.afterMessages.length}',
           ),
@@ -215,28 +298,33 @@ class _ConversationTimelineV2State
         Expanded(
           child: KeyedSubtree(
             key: _scrollViewportKey,
-            child: CustomScrollView(
-              center: _centerSliverKey,
-              anchor: centerViewportFraction,
-              controller: _scrollController,
-              slivers: [
-                const SliverPadding(padding: EdgeInsets.only(top: 8)),
-                if (beforeMessages.isNotEmpty)
-                  _buildMessageSliver(
-                    beforeMessages,
-                    chatMessageFontSize: settings.fontSize,
-                  ),
-                SliverToBoxAdapter(
-                  key: _centerSliverKey,
-                  child: SizedBox.shrink(),
-                ),
-                if (afterMessages.isNotEmpty)
-                  _buildMessageSliver(
-                    afterMessages,
-                    chatMessageFontSize: settings.fontSize,
-                    highlightedStableKey: state.highlightedStableKey,
-                  ),
-              ],
+            child: Opacity(
+              opacity: shouldHideUntilMeasured ? 0 : 1,
+              child: CustomScrollView(
+                center: _centerSliverKey,
+                anchor: centerViewportFraction,
+                controller: _scrollController,
+                slivers: [
+                  const SliverPadding(padding: EdgeInsets.only(top: 8)),
+                  if (beforeMessages.isNotEmpty)
+                    _buildMessageSliver(
+                      beforeMessages,
+                      chatMessageFontSize: settings.fontSize,
+                    ),
+                  if (afterMessages.isNotEmpty)
+                    _buildMessageSliver(
+                      afterMessages,
+                      key: _centerSliverKey,
+                      chatMessageFontSize: settings.fontSize,
+                      highlightedStableKey: state.highlightedStableKey,
+                    )
+                  else
+                    SliverToBoxAdapter(
+                      key: _centerSliverKey,
+                      child: const SizedBox.shrink(),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -246,6 +334,7 @@ class _ConversationTimelineV2State
 
   SliverList _buildMessageSliver(
     List<ConversationMessageV2> messages, {
+    Key? key,
     required double chatMessageFontSize,
     String? highlightedStableKey,
   }) {
@@ -253,6 +342,7 @@ class _ConversationTimelineV2State
       conversationTimelineV2ViewModelProvider(_identity).notifier,
     );
     return SliverList.builder(
+      key: key,
       itemCount: messages.length,
       itemBuilder: (context, index) {
         final message = messages[index];

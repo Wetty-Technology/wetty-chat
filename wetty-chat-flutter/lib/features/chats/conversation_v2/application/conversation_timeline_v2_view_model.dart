@@ -34,10 +34,7 @@ class ConversationTimelineV2ViewModel
 
   /// Generation of the viewport command, incremented on each issuance
   int _viewportCommandGeneration = 0;
-  ConversationTimelineV2ViewportCommand _pendingViewportCommand = (
-    centerViewportFraction: 1.0,
-    kind: ConversationTimelineV2ViewportCommandKind.none,
-  );
+  ConversationTimelineV2ViewportCommand? _pendingViewportCommand;
 
   /// Make sure to use `_setActiveSegmentMode` instead of assigning directly
   /// to avoid forgetting `ref.invalidateSelf()`.
@@ -109,8 +106,9 @@ class ConversationTimelineV2ViewModel
     _setActiveSegmentMode(
       const ConversationTimelineV2ActiveSegmentMode.latest(),
     );
-    _pendingViewportCommand = _viewportCommandForCurrentMode(
-      ConversationTimelineV2ViewportCommandKind.resetToCenterOrigin,
+    _pendingViewportCommand = _viewportCommand(
+      kind: ConversationTimelineV2ViewportCommandKind.resetToCenterOrigin,
+      placement: ConversationTimelineV2ViewportPlacement.bottomPreferred,
     );
     _highlightedServerMessageId = null;
   }
@@ -131,8 +129,9 @@ class ConversationTimelineV2ViewModel
     );
     _setActiveSegmentMode(aroundMode);
     _highlightedServerMessageId = highlight ? messageId : null;
-    _pendingViewportCommand = _viewportCommandForCurrentMode(
-      ConversationTimelineV2ViewportCommandKind.resetToCenterOrigin,
+    _pendingViewportCommand = _viewportCommand(
+      kind: ConversationTimelineV2ViewportCommandKind.resetToCenterOrigin,
+      placement: ConversationTimelineV2ViewportPlacement.topPreferred,
     );
   }
 
@@ -241,13 +240,12 @@ class ConversationTimelineV2ViewModel
         : segment.orderedMessages.last.serverMessageId;
     if (segment.isLatestSlice &&
         (_latestViewportFacts?.isNearBottom ?? false) &&
-        _pendingViewportCommand.kind ==
-            ConversationTimelineV2ViewportCommandKind.none &&
         _lastRenderedTailServerMessageId != null &&
         currentTailServerMessageId != null &&
         currentTailServerMessageId > _lastRenderedTailServerMessageId!) {
-      _pendingViewportCommand = _viewportCommandForCurrentMode(
-        ConversationTimelineV2ViewportCommandKind.scrollToBottom,
+      _pendingViewportCommand = _viewportCommand(
+        kind: ConversationTimelineV2ViewportCommandKind.scrollToBottom,
+        placement: ConversationTimelineV2ViewportPlacement.bottomPreferred,
       );
     }
     final viewportCommand = _takePendingViewportCommand(
@@ -264,48 +262,36 @@ class ConversationTimelineV2ViewModel
       isLoadingNewer: isLoadingNewer ?? state.isLoadingNewer,
       isResolvingJump: false,
       highlightedStableKey: highlightedStableKey,
-      viewportCommand: viewportCommand.command,
-      viewportCommandGeneration: viewportCommand.generation,
+      viewportCommand: viewportCommand?.command ?? state.viewportCommand,
+      viewportCommandGeneration:
+          viewportCommand?.generation ?? state.viewportCommandGeneration,
       isBootstrapping: false,
     );
   }
 
-  ({ConversationTimelineV2ViewportCommand command, int generation})
+  ({ConversationTimelineV2ViewportCommand command, int generation})?
   _takePendingViewportCommand({required bool hasMessages}) {
-    if (!hasMessages) {
-      return (
-        command: _viewportCommandForCurrentMode(
-          ConversationTimelineV2ViewportCommandKind.none,
-        ),
-        generation: _viewportCommandGeneration,
-      );
+    // We can execute a pending viewport command if we have messages.
+    if ((_pendingViewportCommand != null) && hasMessages) {
+      final command = _pendingViewportCommand!;
+      _pendingViewportCommand = null;
+      return (command: command, generation: ++_viewportCommandGeneration);
     }
-
-    final generation =
-        _pendingViewportCommand.kind !=
-            ConversationTimelineV2ViewportCommandKind.none
-        ? ++_viewportCommandGeneration
-        : _viewportCommandGeneration;
-    final command = _pendingViewportCommand;
-    _pendingViewportCommand = _viewportCommandForCurrentMode(
-      ConversationTimelineV2ViewportCommandKind.none,
-    );
-    return (command: command, generation: generation);
+    return null;
   }
 
-  ConversationTimelineV2ViewportCommand _viewportCommandForCurrentMode(
-    ConversationTimelineV2ViewportCommandKind kind,
-  ) {
-    return (
-      centerViewportFraction: _activeSegmentMode.isLatest ? 1.0 : 0.0,
-      kind: kind,
-    );
+  ConversationTimelineV2ViewportCommand _viewportCommand({
+    required ConversationTimelineV2ViewportCommandKind kind,
+    required ConversationTimelineV2ViewportPlacement placement,
+  }) {
+    return (kind: kind, placement: placement);
   }
 
   ConversationTimelineV2State _loadingState({bool isBootstrapping = true}) {
     return ConversationTimelineV2State(
-      viewportCommand: _viewportCommandForCurrentMode(
-        ConversationTimelineV2ViewportCommandKind.none,
+      viewportCommand: _viewportCommand(
+        kind: ConversationTimelineV2ViewportCommandKind.none,
+        placement: ConversationTimelineV2ViewportPlacement.bottomPreferred,
       ),
       viewportCommandGeneration: _viewportCommandGeneration,
       isBootstrapping: isBootstrapping,

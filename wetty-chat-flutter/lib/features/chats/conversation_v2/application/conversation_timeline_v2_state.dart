@@ -9,9 +9,14 @@ enum ConversationTimelineV2ViewportCommandKind {
   scrollToBottom,
 }
 
+enum ConversationTimelineV2ViewportPlacement {
+  bottomPreferred,
+  topPreferred,
+}
+
 typedef ConversationTimelineV2ViewportCommand = ({
-  double centerViewportFraction,
   ConversationTimelineV2ViewportCommandKind kind,
+  ConversationTimelineV2ViewportPlacement placement,
 });
 
 @freezed
@@ -28,8 +33,8 @@ abstract class ConversationTimelineV2State with _$ConversationTimelineV2State {
     @Default(false) bool isResolvingJump,
     String? highlightedStableKey,
     @Default((
-      centerViewportFraction: 1.0,
       kind: ConversationTimelineV2ViewportCommandKind.none,
+      placement: ConversationTimelineV2ViewportPlacement.bottomPreferred,
     ))
     ConversationTimelineV2ViewportCommand viewportCommand,
     @Default(0) int viewportCommandGeneration,
