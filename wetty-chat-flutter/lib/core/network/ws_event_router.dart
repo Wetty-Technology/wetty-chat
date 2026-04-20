@@ -1,11 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 
-import '../../features/chats/conversation/data/conversation_repository.dart';
-import '../../features/chats/conversation/domain/conversation_scope.dart';
-import '../../features/chats/conversation/application/conversation_realtime_registry.dart';
+import '../../features/chats/conversation_v2/application/conversation_timeline_v2_realtime_applier.dart';
 import '../../features/chats/list/data/chat_repository.dart';
-import '../../features/chats/message_domain/domain/message_domain.dart';
 import '../../features/chats/threads/data/thread_repository.dart';
 import '../../features/stickers/data/sticker_pack_order_store.dart';
 import '../api/models/websocket_api_models.dart';
@@ -84,70 +81,17 @@ final _wsEventDeduplicatorProvider = Provider<_WsEventDeduplicator>((ref) {
 final wsEventRouterProvider = Provider<void>((ref) {
   StreamSubscription<ApiWsEvent>? subscription;
 
-  void applyConversationCacheEvent(ApiWsEvent event) {
+  void applyConversationV2RealtimeEvent(ApiWsEvent event) {
     switch (event) {
       case MessageCreatedWsEvent(:final payload):
-      case MessageUpdatedWsEvent(:final payload):
-      case MessageDeletedWsEvent(:final payload):
-        final store = ref.read(messageDomainStoreProvider);
-        final scopes = <ConversationScope>{
-          ...store.cachedScopesForMessageId(payload.id),
-        };
-        if (payload.replyRootId case final int replyRootId) {
-          scopes.add(
-            ConversationScope.thread(
-              chatId: payload.chatId.toString(),
-              threadRootId: replyRootId.toString(),
-            ),
-          );
-        } else {
-          scopes.add(ConversationScope.chat(chatId: payload.chatId.toString()));
-        }
-
-        for (final scope in scopes) {
-          if (!store.hasCachedWindowForScope(scope)) {
-            continue;
-          }
-          ref.read(conversationRepositoryProvider(scope)).applyRealtimeEvent(
-            event,
-          );
-        }
-        return;
-      case ReactionUpdatedWsEvent(:final payload):
-        final store = ref.read(messageDomainStoreProvider);
-        for (final scope in store.cachedScopesForMessageId(payload.messageId)) {
-          if (!store.hasCachedWindowForScope(scope)) {
-            continue;
-          }
-          ref.read(conversationRepositoryProvider(scope)).applyRealtimeEvent(
-            event,
-          );
-        }
-        return;
-      case ThreadUpdatedWsEvent(:final payload):
-        final store = ref.read(messageDomainStoreProvider);
-        if (
-            !store.hasCachedThreadWindow(
-              chatId: payload.chatId.toString(),
-              threadRootId: payload.threadRootId,
-            )) {
-          return;
-        }
         ref
-            .read(
-              conversationRepositoryProvider(
-                ConversationScope.thread(
-                  chatId: payload.chatId.toString(),
-                  threadRootId: payload.threadRootId.toString(),
-                ),
-              ),
-            )
-            .applyThreadSummaryUpdate(
-              threadRootId: payload.threadRootId,
-              replyCount: payload.replyCount,
-              lastReplyAt: payload.lastReplyAt,
-            );
+            .read(conversationTimelineV2RealtimeApplierProvider)
+            .applyCreatedMessage(payload);
         return;
+      case MessageUpdatedWsEvent():
+      case MessageDeletedWsEvent():
+      case ReactionUpdatedWsEvent():
+      case ThreadUpdatedWsEvent():
       case StickerPackOrderUpdatedWsEvent():
       case PongWsEvent():
         return;
@@ -204,19 +148,7 @@ final wsEventRouterProvider = Provider<void>((ref) {
       if (!ref.read(_wsEventDeduplicatorProvider).shouldHandle(event)) {
         return;
       }
-      applyConversationCacheEvent(event);
-      switch (event) {
-        case MessageCreatedWsEvent():
-        case MessageUpdatedWsEvent():
-        case MessageDeletedWsEvent():
-        case ReactionUpdatedWsEvent():
-          ref.read(conversationRealtimeRegistryProvider).dispatch(event);
-          break;
-        case ThreadUpdatedWsEvent():
-        case StickerPackOrderUpdatedWsEvent():
-        case PongWsEvent():
-          break;
-      }
+      applyConversationV2RealtimeEvent(event);
       applyListProjectionEvent(event);
       applyAuxiliaryEvent(event);
     });

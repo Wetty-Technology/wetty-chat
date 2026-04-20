@@ -145,7 +145,7 @@ class ConversationTimelineV2MessageStore
         existingScope?.segments ??
         const <ConversationTimelineV2CanonicalSegment>[];
 
-    if (existingScope?.hasLatestSegment ?? false) {
+    if ((existingScope?.hasLatestSegment ?? false) && existingSegments.isNotEmpty) {
       final latestSegment = existingSegments.last;
       assert(
         serverMessageId! > latestSegment.lastServerMessageId,
