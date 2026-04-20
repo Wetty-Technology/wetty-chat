@@ -19,15 +19,6 @@ msgstr ""
 msgid "[Deleted]"
 msgstr "[已刪除]"
 
-#: src/pages/chat-thread/chat-members.tsx
-#~ msgid "{0, plural, =1 {{1}} other {{2}}}"
-#~ msgstr ""
-
-#. placeholder {0}: members.length
-#: src/pages/chat-thread/chat-members.tsx
-msgid "{0, plural, =1 {member} other {members}}"
-msgstr "{0, plural, other {名成員}}"
-
 #: src/components/chat/settings/ChatMuteSettingItem.tsx
 msgid "1 day"
 msgstr "1 天"
@@ -60,10 +51,6 @@ msgstr "發現新版本！"
 #: src/pages/settings.tsx
 msgid "About"
 msgstr "關於"
-
-#: src/components/chat/profiles/UserProfileModal.tsx
-msgid "Action failed"
-msgstr ""
 
 #: src/components/chat/compose/AddStickerModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
@@ -192,10 +179,10 @@ msgstr "已封鎖"
 #: src/components/chat/compose/StickerPicker.tsx
 #: src/components/chat/pins/PinBanner.tsx
 #: src/components/chat/pins/PinListModal.tsx
-#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/components/chat/settings/ChatMuteSettingItem.tsx
 #: src/components/chat/settings/ChatMuteSettingItem.tsx
 #: src/components/chat/settings/ShareInviteModal.tsx
+#: src/pages/chat-thread/chat-members.tsx
 #: src/pages/chat-thread/chat-members.tsx
 #: src/pages/chat-thread/chat-members.tsx
 #: src/pages/chat-thread/chat-members.tsx
@@ -376,7 +363,6 @@ msgctxt "sticker pack"
 msgid "Delete"
 msgstr "刪除"
 
-#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Delete all messages"
 msgstr "刪除所有訊息"
@@ -385,7 +371,6 @@ msgstr "刪除所有訊息"
 msgid "Delete Message"
 msgstr "收回訊息"
 
-#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Delete messages from last 24 hours"
 msgstr "刪除最近 24 小時的訊息"
@@ -406,22 +391,19 @@ msgstr "刪除錄音"
 msgid "Delete this sticker pack? Stickers will stay available elsewhere, but this pack and its contents list will be removed."
 msgstr "要刪除這個表情包嗎？表情本身會保留，但這個表情包及其中的收錄關係將被移除。"
 
-#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Demote"
 msgstr "降級"
 
-#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Demote {displayName} to member?"
 msgstr "將 {displayName} 降級為普通成員？"
 
-#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Demote Member"
 msgstr "降級成員"
 
-#: src/components/chat/profiles/UserProfileModal.tsx
+#: src/pages/chat-thread/chat-members.tsx
 msgid "Demote to Member"
 msgstr "降級為成員"
 
@@ -851,7 +833,6 @@ msgstr "透過邀請碼加入"
 msgid "Joining…"
 msgstr "正在加入…"
 
-#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Keep messages"
 msgstr "保留訊息"
@@ -887,7 +868,6 @@ msgid "Loading invite…"
 msgstr "正在載入邀請…"
 
 #: src/components/chat/compose/StickerPreviewModal.tsx
-#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/components/chat/reactions/ReactionDetailsModal.tsx
 #: src/components/chat/reactions/ReactionDetailsModal.tsx
 #: src/pages/chat-thread/chat-thread.tsx
@@ -921,7 +901,6 @@ msgstr "成員"
 msgid "Member added"
 msgstr "成員已新增"
 
-#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Member demoted"
 msgstr "成員已降級"
@@ -930,22 +909,18 @@ msgstr "成員已降級"
 msgid "Member Group"
 msgstr "成員群組"
 
-#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Member promoted"
 msgstr "成員已升級"
 
-#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Member removed"
 msgstr "成員已移除"
 
-#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Member removed, deleting all messages..."
 msgstr "成員已移除，正在刪除所有訊息..."
 
-#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Member removed, deleting recent messages..."
 msgstr "成員已移除，正在刪除最近的訊息..."
@@ -1239,22 +1214,19 @@ msgstr "上一張圖片"
 msgid "Private"
 msgstr "私密"
 
-#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Promote"
 msgstr "升級"
 
-#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Promote {displayName} to admin?"
 msgstr "將 {displayName} 升級為管理員？"
 
-#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Promote Member"
 msgstr "升級成員"
 
-#: src/components/chat/profiles/UserProfileModal.tsx
+#: src/pages/chat-thread/chat-members.tsx
 msgid "Promote to Admin"
 msgstr "升級為管理員"
 
@@ -1316,7 +1288,6 @@ msgstr "錄音時間太短。"
 msgid "Release to save"
 msgstr "鬆開保存"
 
-#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 #: src/pages/settings/sticker-pack-detail.tsx
 msgid "Remove"
@@ -1327,23 +1298,22 @@ msgstr "移除"
 msgid "Remove {0}"
 msgstr "移除 {0}"
 
-#: src/components/chat/profiles/UserProfileModal.tsx
-msgid "Remove {displayName} from {chatLabel}?"
-msgstr "將 {displayName} 從 {chatLabel} 中移除？"
-
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Remove {displayName} from this group?"
 msgstr "將 {displayName} 從該群組中移除？"
+
+#: src/components/chat/profiles/UserProfileModal.tsx
+msgid "Remove {displayName} from {chatLabel}?"
+msgstr "將 {displayName} 從 {chatLabel} 中移除？"
 
 #: src/components/chat/compose/StickerPicker.tsx
 msgid "Remove from Favorites"
 msgstr "從收藏移除"
 
-#: src/components/chat/profiles/UserProfileModal.tsx
+#: src/pages/chat-thread/chat-members.tsx
 msgid "Remove from Group"
 msgstr "從群組中移除"
 
-#: src/components/chat/profiles/UserProfileModal.tsx
 #: src/pages/chat-thread/chat-members.tsx
 msgid "Remove Member"
 msgstr "移除成員"
@@ -1562,10 +1532,6 @@ msgstr "定向"
 #: src/pages/join-chat.tsx
 msgid "The invite code entered is not valid."
 msgstr "輸入的邀請碼無效。"
-
-#: src/components/chat/profiles/UserProfileModal.tsx
-msgid "this group"
-msgstr ""
 
 #: src/components/invites/InvitePreviewCard.tsx
 msgid "This invite is invalid or has expired."

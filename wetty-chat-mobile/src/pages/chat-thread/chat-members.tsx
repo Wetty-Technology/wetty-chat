@@ -14,7 +14,7 @@ import {
 } from '@ionic/react';
 import { useParams } from 'react-router-dom';
 import { t } from '@lingui/core/macro';
-import { Plural, Trans } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
 import {
   addMember,
   getMembers,
@@ -39,7 +39,15 @@ const SEARCH_DEBOUNCE_MS = 250;
 
 function mergeMembers(existing: MemberResponse[], incoming: MemberResponse[]): MemberResponse[] {
   const seen = new Set(existing.map((member) => member.uid));
-  return [...existing, ...incoming.filter((m) => !seen.has(m.uid))];
+  const next = [...existing];
+
+  for (const member of incoming) {
+    if (seen.has(member.uid)) continue;
+    seen.add(member.uid);
+    next.push(member);
+  }
+
+  return next;
 }
 
 interface ChatMembersCoreProps {
@@ -52,8 +60,16 @@ interface MemberSearchState {
   mode: MemberSearchMode;
 }
 
+function normalizeSearchInput(value: string): string {
+  return value.trim();
+}
+
 function getSearchKey(search: MemberSearchState | null): string {
-  return search ? `${search.mode}:${search.q}` : 'browse';
+  if (!search) {
+    return 'browse';
+  }
+
+  return `${search.mode}:${search.q}`;
 }
 
 export default function ChatMembersCore({ chatId: propChatId, backAction }: ChatMembersCoreProps) {
@@ -102,7 +118,7 @@ export default function ChatMembersCore({ chatId: propChatId, backAction }: Chat
   }, []);
 
   useEffect(() => {
-    const trimmed = searchText.trim();
+    const trimmed = normalizeSearchInput(searchText);
     const timeoutId = window.setTimeout(() => {
       updateActiveSearch(
         trimmed
@@ -118,7 +134,7 @@ export default function ChatMembersCore({ chatId: propChatId, backAction }: Chat
   }, [searchText, updateActiveSearch]);
 
   const submitSearch = useCallback(() => {
-    const trimmed = searchText.trim();
+    const trimmed = normalizeSearchInput(searchText);
     updateActiveSearch(
       trimmed
         ? {
@@ -355,20 +371,8 @@ export default function ChatMembersCore({ chatId: propChatId, backAction }: Chat
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">{backAction && <BackButton action={backAction} />}</IonButtons>
-          <IonTitle className={styles.subtitleToolbar}>
-            <div>
-              <Trans>Group Members</Trans>
-            </div>
-            <div className={styles.subtitle}>
-              {initialLoading ? (
-                <IonSpinner />
-              ) : (
-                <>
-                  <span className={styles.subtitleText}>{members.length}</span>
-                  <Plural value={members.length} _1="member" other="members" />
-                </>
-              )}
-            </div>
+          <IonTitle>
+            <Trans>Group Members</Trans>
           </IonTitle>
         </IonToolbar>
         <IonToolbar>
