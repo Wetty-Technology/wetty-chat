@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:chahua/features/chats/conversation/domain/launch_request.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_message_store.dart';
+import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_state.dart';
 import 'package:chahua/features/chats/conversation_v2/application/timeline_viewport_facts.dart';
 import 'package:chahua/features/chats/conversation_v2/data/fake_conversation_timeline_v2_repository.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_active_segment.dart';
@@ -14,25 +15,10 @@ typedef ConversationTimelineV2Identity = ({
   String? threadRootId,
 });
 
-enum ConversationTimelineV2ViewportCommandKind {
-  none,
-  resetToCenterOrigin,
-  scrollToBottom,
-}
-
-typedef ConversationTimelineV2State = ({
-  List<ConversationMessageV2> beforeMessages,
-  List<ConversationMessageV2> afterMessages,
-  bool canLoadOlder,
-  bool canLoadNewer,
-  bool isLoadingOlder,
-  bool isLoadingNewer,
-  bool isResolvingJump,
-  String? highlightedStableKey,
+typedef ConversationTimelineV2ViewportCommand = ({
   double centerViewportFraction,
-  ConversationTimelineV2ViewportCommandKind viewportCommandKind,
-  int viewportCommandGeneration,
-  bool isBootstrapping,
+  int generation,
+  ConversationTimelineV2ViewportCommandKind kind,
 });
 
 class ConversationTimelineV2ViewModel
@@ -48,10 +34,10 @@ class ConversationTimelineV2ViewModel
   bool _scrollToBottomOnNextLatestUpdate = false;
   bool _resetToCenterOriginOnNextActiveSegmentUpdate = false;
   bool _bootstrapStarted = false;
-  bool _isLoadingOlder = false;
-  int? _splitAfterServerMessageId;
   int? _highlightedServerMessageId;
-  // ignore: prefer_final_fields
+
+  /// Make sure to use `_setActiveSegmentMode` instead of assigning directly
+  /// to avoid forgetting `ref.invalidateSelf()`.
   ConversationTimelineV2ActiveSegmentMode _activeSegmentMode =
       const ConversationTimelineV2ActiveSegmentMode.latest();
 
@@ -107,7 +93,9 @@ class ConversationTimelineV2ViewModel
   }
 
   Future<void> jumpToLatest() async {
-    _activeSegmentMode = const ConversationTimelineV2ActiveSegmentMode.latest();
+    _setActiveSegmentMode(
+      const ConversationTimelineV2ActiveSegmentMode.latest(),
+    );
     _resetToCenterOriginOnNextActiveSegmentUpdate = true;
     _highlightedServerMessageId = null;
     await _repository.ensureLatestSegmentLoaded(
@@ -122,9 +110,10 @@ class ConversationTimelineV2ViewModel
     if (latestSegment == null) {
       return;
     }
-    _splitAfterServerMessageId =
-        latestSegment.orderedMessages.last.serverMessageId;
-    ref.invalidateSelf();
+    _activeSegmentMode = ConversationTimelineV2ActiveSegmentMode.latest(
+      latestSplitAfterServerMessageId:
+          latestSegment.orderedMessages.last.serverMessageId,
+    );
   }
 
   void jumpToMessage(String stableKey) {
@@ -146,13 +135,13 @@ class ConversationTimelineV2ViewModel
       _farHistoryTargetServerMessageId,
       limit: _initialLoadedWindowSize,
     );
-    _activeSegmentMode = const ConversationTimelineV2ActiveSegmentMode.around(
-      _farHistoryTargetServerMessageId,
+    _setActiveSegmentMode(
+      const ConversationTimelineV2ActiveSegmentMode.around(
+        _farHistoryTargetServerMessageId,
+      ),
     );
-    _splitAfterServerMessageId = _farHistoryTargetServerMessageId - 1;
     _highlightedServerMessageId = _farHistoryTargetServerMessageId;
     _resetToCenterOriginOnNextActiveSegmentUpdate = true;
-    ref.invalidateSelf();
   }
 
   Future<void> addMessage() async {
@@ -185,7 +174,7 @@ class ConversationTimelineV2ViewModel
   }
 
   Future<void> loadOlder() async {
-    if (_isLoadingOlder || state.isBootstrapping || !state.canLoadOlder) {
+    if (state.isLoadingOlder || state.isBootstrapping || !state.canLoadOlder) {
       return;
     }
 
@@ -201,13 +190,11 @@ class ConversationTimelineV2ViewModel
     final anchorServerMessageId =
         latestSegment.orderedMessages.first.serverMessageId!;
 
-    _isLoadingOlder = true;
-    state = _stateFromActiveSegment(latestSegment);
+    state = _stateFromActiveSegment(latestSegment, isLoadingOlder: true);
 
     try {
       await _repository.loadOlderBeforeAnchor(anchorServerMessageId, limit: 20);
     } finally {
-      _isLoadingOlder = false;
       final refreshedSegment = ref.read(
         conversationTimelineV2ActiveSegmentProvider((
           identity: identity,
@@ -215,7 +202,12 @@ class ConversationTimelineV2ViewModel
         )),
       );
       if (refreshedSegment != null) {
-        state = _stateFromActiveSegment(refreshedSegment);
+        state = _stateFromActiveSegment(
+          refreshedSegment,
+          isLoadingOlder: false,
+        );
+      } else {
+        state = state.copyWith(isLoadingOlder: false);
       }
     }
   }
@@ -225,14 +217,19 @@ class ConversationTimelineV2ViewModel
   }
 
   ConversationTimelineV2State _stateFromActiveSegment(
-    ConversationTimelineV2ActiveSegment segment,
-  ) {
+    ConversationTimelineV2ActiveSegment segment, {
+    bool? isLoadingOlder,
+  }) {
     if (_activeSegmentMode.isLatest &&
         segment.orderedMessages.isNotEmpty &&
-        _splitAfterServerMessageId == null) {
-      _splitAfterServerMessageId = segment.orderedMessages.last.serverMessageId;
+        _activeSegmentMode.splitAfterServerMessageId == null) {
+      _activeSegmentMode = ConversationTimelineV2ActiveSegmentMode.latest(
+        latestSplitAfterServerMessageId:
+            segment.orderedMessages.last.serverMessageId,
+      );
     }
-    final splitAfterServerMessageId = _effectiveSplitAfterServerMessageId();
+    final splitAfterServerMessageId =
+        _activeSegmentMode.splitAfterServerMessageId;
     final beforeMessages = <ConversationMessageV2>[];
     final afterMessages = <ConversationMessageV2>[];
 
@@ -259,12 +256,12 @@ class ConversationTimelineV2ViewModel
     }
     final viewportCommand = _takePendingViewportCommand();
 
-    return (
+    return ConversationTimelineV2State(
       beforeMessages: beforeMessages,
       afterMessages: afterMessages,
       canLoadOlder: segment.canLoadBefore,
       canLoadNewer: segment.canLoadAfter,
-      isLoadingOlder: _isLoadingOlder,
+      isLoadingOlder: isLoadingOlder ?? state.isLoadingOlder,
       isLoadingNewer: false,
       isResolvingJump: false,
       highlightedStableKey: highlightedStableKey,
@@ -275,20 +272,7 @@ class ConversationTimelineV2ViewModel
     );
   }
 
-  int? _effectiveSplitAfterServerMessageId() {
-    final targetServerMessageId = _activeSegmentMode.targetServerMessageId;
-    if (targetServerMessageId != null) {
-      return targetServerMessageId - 1;
-    }
-    return _splitAfterServerMessageId;
-  }
-
-  ({
-    double centerViewportFraction,
-    int generation,
-    ConversationTimelineV2ViewportCommandKind kind,
-  })
-  _takePendingViewportCommand() {
+  ConversationTimelineV2ViewportCommand _takePendingViewportCommand() {
     final shouldResetToCenterOrigin =
         _resetToCenterOriginOnNextActiveSegmentUpdate;
     final shouldScrollToBottom =
@@ -312,20 +296,19 @@ class ConversationTimelineV2ViewModel
   }
 
   ConversationTimelineV2State _loadingState({bool isBootstrapping = true}) {
-    return (
-      beforeMessages: const <ConversationMessageV2>[],
-      afterMessages: const <ConversationMessageV2>[],
-      canLoadOlder: false,
-      canLoadNewer: false,
-      isLoadingOlder: false,
-      isLoadingNewer: false,
-      isResolvingJump: false,
-      highlightedStableKey: null,
-      centerViewportFraction: 1.0,
-      viewportCommandKind: ConversationTimelineV2ViewportCommandKind.none,
+    return ConversationTimelineV2State(
       viewportCommandGeneration: _viewportCommandGeneration,
       isBootstrapping: isBootstrapping,
     );
+  }
+
+  /// Updates the active segment selection and invalidates this notifier so
+  /// build() re-subscribes to the matching active-segment provider. Command
+  /// paths should always use this helper instead of assigning `_activeSegmentMode`
+  /// directly, to avoid forgetting `ref.invalidateSelf()`.
+  void _setActiveSegmentMode(ConversationTimelineV2ActiveSegmentMode mode) {
+    _activeSegmentMode = mode;
+    ref.invalidateSelf();
   }
 
   void _markRepositoryTodo(String operation) {
