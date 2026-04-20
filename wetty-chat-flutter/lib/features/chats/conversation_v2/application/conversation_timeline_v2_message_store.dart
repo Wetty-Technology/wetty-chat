@@ -374,10 +374,10 @@ final conversationTimelineV2ActiveSegmentProvider =
         }
 
         final latestSegment = scope.segments.last;
-        return (
-          orderedMessages: latestSegment.orderedMessages,
-          canLoadBefore: true,
-          canLoadAfter: false,
+        return _activeSegmentForScopeSegment(
+          scope,
+          latestSegment,
+          selectedIndex: scope.segments.length - 1,
         );
       }
 
@@ -386,16 +386,32 @@ final conversationTimelineV2ActiveSegmentProvider =
         return null;
       }
 
-      for (final segment in scope.segments) {
+      for (var index = 0; index < scope.segments.length; index++) {
+        final segment = scope.segments[index];
         if (segment.firstServerMessageId <= targetServerMessageId &&
             segment.lastServerMessageId >= targetServerMessageId) {
-          return (
-            orderedMessages: segment.orderedMessages,
-            canLoadBefore: true,
-            canLoadAfter: true,
+          return _activeSegmentForScopeSegment(
+            scope,
+            segment,
+            selectedIndex: index,
           );
         }
       }
 
       return null;
     });
+
+ConversationTimelineV2ActiveSegment _activeSegmentForScopeSegment(
+  ConversationTimelineV2CanonicalScope scope,
+  ConversationTimelineV2CanonicalSegment selectedSegment, {
+  required int selectedIndex,
+}) {
+  final isLatestSegment =
+      scope.hasLatestSegment && selectedIndex == scope.segments.length - 1;
+
+  return (
+    orderedMessages: selectedSegment.orderedMessages,
+    canLoadBefore: true,
+    canLoadAfter: !isLatestSegment,
+  );
+}
