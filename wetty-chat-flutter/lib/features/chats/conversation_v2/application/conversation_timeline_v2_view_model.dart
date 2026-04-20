@@ -99,6 +99,9 @@ class ConversationTimelineV2ViewModel
   }
 
   Future<void> jumpToLatest() async {
+    unawaited(
+      _repository.refreshLatestSegment(limit: _initialLoadedWindowSize),
+    );
     _setActiveSegmentMode(
       const ConversationTimelineV2ActiveSegmentMode.latest(),
     );
@@ -106,24 +109,26 @@ class ConversationTimelineV2ViewModel
       ConversationTimelineV2ViewportCommandKind.resetToCenterOrigin,
     );
     _highlightedServerMessageId = null;
-    await _repository.refreshLatestSegment(limit: _initialLoadedWindowSize);
-    final latestSegment = _activeSegment;
-    if (latestSegment == null) {
-      return;
-    }
-    _activeSegmentMode = ConversationTimelineV2ActiveSegmentMode.latest(
-      latestSplitAfterServerMessageId:
-          latestSegment.orderedMessages.last.serverMessageId,
+  }
+
+  Future<void> jumpToMessageServerId(
+    int messageId, {
+    bool highlight = true,
+  }) async {
+    unawaited(
+      _repository.refreshAroundServerMessageId(
+        messageId,
+        limit: _initialLoadedWindowSize,
+      ),
     );
-  }
 
-  void jumpToMessage(String stableKey) {
-    _markRepositoryTodo('jumpToMessage(stableKey: $stableKey)');
-  }
-
-  void jumpToMessageServerId(int messageId, {bool highlight = true}) {
-    _markRepositoryTodo(
-      'jumpToMessageServerId(messageId: $messageId, highlight: $highlight)',
+    final aroundMode = ConversationTimelineV2ActiveSegmentMode.around(
+      messageId,
+    );
+    _setActiveSegmentMode(aroundMode);
+    _highlightedServerMessageId = highlight ? messageId : null;
+    _pendingViewportCommand = _viewportCommandForCurrentMode(
+      ConversationTimelineV2ViewportCommandKind.resetToCenterOrigin,
     );
   }
 

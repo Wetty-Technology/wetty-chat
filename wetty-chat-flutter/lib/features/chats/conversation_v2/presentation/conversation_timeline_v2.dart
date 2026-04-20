@@ -194,15 +194,6 @@ class _ConversationTimelineV2State
                   .read(
                     conversationTimelineV2ViewModelProvider(_identity).notifier,
                   )
-                  .jumpToMessage('client:missing-message'),
-              child: const Text('missing'),
-            ),
-            CupertinoButton(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              onPressed: () => ref
-                  .read(
-                    conversationTimelineV2ViewModelProvider(_identity).notifier,
-                  )
                   .jumpToLatest(),
               child: const Text('Jump To Latest'),
             ),
@@ -258,6 +249,9 @@ class _ConversationTimelineV2State
     required double chatMessageFontSize,
     String? highlightedStableKey,
   }) {
+    final vmNotifier = ref.read(
+      conversationTimelineV2ViewModelProvider(_identity).notifier,
+    );
     return SliverList.builder(
       itemCount: messages.length,
       itemBuilder: (context, index) {
@@ -267,28 +261,26 @@ class _ConversationTimelineV2State
         return KeyedSubtree(
           key: _keyForMessage(message),
           child: MessageRowV2(
-                  message: message,
-                  chatMessageFontSize: chatMessageFontSize,
-                  isHighlighted: message.stableKey == highlightedStableKey,
-                  showSenderName: showSenderName,
-                  showAvatar: showAvatar,
-                  onTapReply: message.replyToMessage != null
-                      ? () => ref
-                            .read(
-                              conversationTimelineV2ViewModelProvider(
-                                _identity,
-                              ).notifier,
-                            )
-                            .jumpToMessageServerId(
-                              message.replyToMessage!.id,
-                              highlight: true,
-                            )
-                      : null,
-                  onOpenThread: message.threadInfo != null &&
-                          message.threadInfo!.replyCount > 0
-                      ? () {}
-                      : null,
-                ),
+            message: message,
+            chatMessageFontSize: chatMessageFontSize,
+            isHighlighted: message.stableKey == highlightedStableKey,
+            showSenderName: showSenderName,
+            showAvatar: showAvatar,
+            onTapReply: message.replyToMessage != null
+                ? () => vmNotifier.jumpToMessageServerId(
+                    message.replyToMessage!.id,
+                    highlight: true,
+                  )
+                : null,
+            onOpenThread:
+                message.threadInfo != null && message.threadInfo!.replyCount > 0
+                ? () {
+                    debugPrint(
+                      'onOpenThread: ${message.threadInfo?.replyCount}',
+                    );
+                  }
+                : null,
+          ),
         );
       },
     );
