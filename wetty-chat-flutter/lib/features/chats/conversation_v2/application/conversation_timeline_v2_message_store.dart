@@ -175,6 +175,120 @@ class ConversationTimelineV2MessageStore
     ));
   }
 
+  void applyCreatedMessage(
+    ConversationTimelineV2Identity identity,
+    ConversationMessageV2 message,
+  ) {
+    insertLatestMessage(identity, message);
+  }
+
+  bool replaceServerMessage(
+    ConversationTimelineV2Identity identity,
+    ConversationMessageV2 message,
+  ) {
+    final serverMessageId = message.serverMessageId;
+    assert(
+      serverMessageId != null,
+      'replaceServerMessage requires a server-backed message',
+    );
+
+    final existingScope = scopeFor(identity);
+    if (existingScope == null) {
+      return false;
+    }
+
+    var replaced = false;
+    final segments = existingScope.segments
+        .map((segment) {
+          var segmentReplaced = false;
+          final updatedMessages = segment.orderedMessages
+              .map((existingMessage) {
+                if (existingMessage.serverMessageId != serverMessageId) {
+                  return existingMessage;
+                }
+                replaced = true;
+                segmentReplaced = true;
+                return message;
+              })
+              .toList(growable: false);
+          return segmentReplaced
+              ? ConversationTimelineV2CanonicalSegment(
+                  orderedMessages: updatedMessages,
+                )
+              : segment;
+        })
+        .toList(growable: false);
+
+    if (!replaced) {
+      return false;
+    }
+
+    putScope(identity, (
+      segments: segments,
+      hasLatestSegment: existingScope.hasLatestSegment,
+      hasReachedOldest: existingScope.hasReachedOldest,
+    ));
+    return true;
+  }
+
+  bool applyUpdatedMessage(
+    ConversationTimelineV2Identity identity,
+    ConversationMessageV2 message,
+  ) {
+    return replaceServerMessage(identity, message);
+  }
+
+  bool removeServerMessage(
+    ConversationTimelineV2Identity identity,
+    int serverMessageId,
+  ) {
+    final existingScope = scopeFor(identity);
+    if (existingScope == null) {
+      return false;
+    }
+
+    var removed = false;
+    final segments = existingScope.segments
+        .expand((segment) {
+          final remainingMessages = segment.orderedMessages
+              .where((message) {
+                final keep = message.serverMessageId != serverMessageId;
+                if (!keep) {
+                  removed = true;
+                }
+                return keep;
+              })
+              .toList(growable: false);
+          if (remainingMessages.isEmpty) {
+            return const <ConversationTimelineV2CanonicalSegment>[];
+          }
+          return <ConversationTimelineV2CanonicalSegment>[
+            ConversationTimelineV2CanonicalSegment(
+              orderedMessages: remainingMessages,
+            ),
+          ];
+        })
+        .toList(growable: false);
+
+    if (!removed) {
+      return false;
+    }
+
+    putScope(identity, (
+      segments: segments,
+      hasLatestSegment: existingScope.hasLatestSegment,
+      hasReachedOldest: existingScope.hasReachedOldest,
+    ));
+    return true;
+  }
+
+  bool applyDeletedMessage(
+    ConversationTimelineV2Identity identity,
+    int serverMessageId,
+  ) {
+    return removeServerMessage(identity, serverMessageId);
+  }
+
   List<ConversationTimelineV2CanonicalSegment> _normalizeBeforeAnchorSegments(
     List<ConversationTimelineV2CanonicalSegment> existingSegments, {
     required ConversationTimelineV2CanonicalSegment incoming,

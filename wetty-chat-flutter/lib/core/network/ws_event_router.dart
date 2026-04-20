@@ -81,23 +81,6 @@ final _wsEventDeduplicatorProvider = Provider<_WsEventDeduplicator>((ref) {
 final wsEventRouterProvider = Provider<void>((ref) {
   StreamSubscription<ApiWsEvent>? subscription;
 
-  void applyConversationV2RealtimeEvent(ApiWsEvent event) {
-    switch (event) {
-      case MessageCreatedWsEvent(:final payload):
-        ref
-            .read(conversationTimelineV2RealtimeApplierProvider)
-            .applyCreatedMessage(payload);
-        return;
-      case MessageUpdatedWsEvent():
-      case MessageDeletedWsEvent():
-      case ReactionUpdatedWsEvent():
-      case ThreadUpdatedWsEvent():
-      case StickerPackOrderUpdatedWsEvent():
-      case PongWsEvent():
-        return;
-    }
-  }
-
   void applyListProjectionEvent(ApiWsEvent event) {
     switch (event) {
       case MessageCreatedWsEvent():
@@ -148,7 +131,7 @@ final wsEventRouterProvider = Provider<void>((ref) {
       if (!ref.read(_wsEventDeduplicatorProvider).shouldHandle(event)) {
         return;
       }
-      applyConversationV2RealtimeEvent(event);
+      ref.read(conversationTimelineV2RealtimeApplierProvider).apply(event);
       applyListProjectionEvent(event);
       applyAuxiliaryEvent(event);
     });
