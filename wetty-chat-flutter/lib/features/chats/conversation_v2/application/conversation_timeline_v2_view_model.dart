@@ -60,7 +60,11 @@ class ConversationTimelineV2ViewModel
       });
     }
     if (_activeSegment != null) {
-      return _stateFromActiveSegment(_activeSegment!);
+      return _stateFromActiveSegment(
+        _activeSegment!,
+        isLoadingNewer: false,
+        isLoadingOlder: false,
+      );
     }
     return _loadingState();
   }

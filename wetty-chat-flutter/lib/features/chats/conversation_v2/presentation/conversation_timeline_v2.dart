@@ -42,6 +42,9 @@ class _ConversationTimelineV2State
   void initState() {
     super.initState();
     _scrollController = _buildScrollController();
+    debugPrint(
+      'initState: identity=$_identity, launchRequest=${widget.launchRequest}',
+    );
     _scheduleInitializeLaunchRequest();
   }
 
