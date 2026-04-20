@@ -53,6 +53,24 @@ class FakeConversationTimelineV2Repository {
         .insertBeforeAnchor(identity, anchorServerMessageId, olderSegment);
   }
 
+  Future<void> loadNewerAfterAnchor(
+    int anchorServerMessageId, {
+    required int limit,
+  }) async {
+    final firstNewerServerMessageId = anchorServerMessageId + 1;
+    final newerSegment = ConversationTimelineV2CanonicalSegment(
+      orderedMessages: List<ConversationMessageV2>.generate(limit, (index) {
+        final serverMessageId = firstNewerServerMessageId + index;
+        final sequence = serverMessageId - 1;
+        return _buildMessage(identity, sequence: sequence, baseNow: _baseNow);
+      }, growable: false),
+    );
+
+    ref
+        .read(conversationTimelineV2MessageStoreProvider.notifier)
+        .insertAfterAnchor(identity, anchorServerMessageId, newerSegment);
+  }
+
   Future<void> refreshAroundServerMessageId(
     int targetServerMessageId, {
     required int limit,

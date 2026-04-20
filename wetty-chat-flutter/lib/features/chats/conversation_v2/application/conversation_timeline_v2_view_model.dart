@@ -17,20 +17,33 @@ typedef ConversationTimelineV2Identity = ({
 
 class ConversationTimelineV2ViewModel
     extends Notifier<ConversationTimelineV2State> {
+  // Mostly temproary, we will remove these later
   static const int _initialLoadedWindowSize = 50;
   static const int _farHistoryTargetServerMessageId = -1000;
 
+  /// Identity (ChatID, threadID) for this VM
   final ConversationTimelineV2Identity identity;
-  LaunchRequest? _initialLaunchRequest;
+
+  /// Repository for this VM
   late FakeConversationTimelineV2Repository _repository;
+
+  LaunchRequest? _initialLaunchRequest;
+
+  /// Active segment containing the messages and some metadata
+  ConversationTimelineV2ActiveSegment? _activeSegment;
+
+  bool _bootstrapStarted = false;
+  int? _highlightedServerMessageId;
+
+  /// Generation of the viewport command, incremented on each issuance
   int _viewportCommandGeneration = 0;
-  TimelineViewportFacts? _latestViewportFacts;
   ConversationTimelineV2ViewportCommand _pendingViewportCommand = (
     centerViewportFraction: 1.0,
     kind: ConversationTimelineV2ViewportCommandKind.none,
   );
-  bool _bootstrapStarted = false;
-  int? _highlightedServerMessageId;
+
+  /// Latest viewport facts from the scroll controller
+  TimelineViewportFacts? _latestViewportFacts;
 
   /// Make sure to use `_setActiveSegmentMode` instead of assigning directly
   /// to avoid forgetting `ref.invalidateSelf()`.
@@ -44,7 +57,7 @@ class ConversationTimelineV2ViewModel
     _repository = ref.read(
       fakeConversationTimelineV2RepositoryProvider(identity),
     );
-    final activeSegment = ref.watch(
+    _activeSegment = ref.watch(
       conversationTimelineV2ActiveSegmentProvider((
         identity: identity,
         mode: _activeSegmentMode,
@@ -56,8 +69,8 @@ class ConversationTimelineV2ViewModel
         await _bootstrapLatestSegment();
       });
     }
-    if (activeSegment != null) {
-      return _stateFromActiveSegment(activeSegment);
+    if (_activeSegment != null) {
+      return _stateFromActiveSegment(_activeSegment!);
     }
     return _loadingState();
   }
@@ -80,11 +93,16 @@ class ConversationTimelineV2ViewModel
 
   void onViewportChanged(TimelineViewportFacts facts) {
     _latestViewportFacts = facts;
-    if (facts.isNearTop &&
-        state.canLoadOlder &&
-        !state.isLoadingOlder &&
-        !state.isBootstrapping) {
+
+    if (state.isBootstrapping) {
+      return;
+    }
+
+    if (facts.isNearTop && state.canLoadOlder && !state.isLoadingOlder) {
       unawaited(loadOlder());
+    }
+    if (facts.isNearBottom && state.canLoadNewer && !state.isLoadingNewer) {
+      unawaited(loadNewer());
     }
   }
 
@@ -99,12 +117,7 @@ class ConversationTimelineV2ViewModel
     await _repository.ensureLatestSegmentLoaded(
       limit: _initialLoadedWindowSize,
     );
-    final latestSegment = ref.read(
-      conversationTimelineV2ActiveSegmentProvider((
-        identity: identity,
-        mode: const ConversationTimelineV2ActiveSegmentMode.latest(),
-      )),
-    );
+    final latestSegment = _activeSegment;
     if (latestSegment == null) {
       return;
     }
@@ -158,12 +171,7 @@ class ConversationTimelineV2ViewModel
       await _repository.ensureLatestSegmentLoaded(
         limit: _initialLoadedWindowSize,
       );
-      final latestSegment = ref.read(
-        conversationTimelineV2ActiveSegmentProvider((
-          identity: identity,
-          mode: _activeSegmentMode,
-        )),
-      );
+      final latestSegment = _activeSegment;
       if (latestSegment == null) {
         debugPrint('bootstrapLatestSegment: latest segment missing after load');
         state = _loadingState(isBootstrapping: false);
@@ -181,47 +189,46 @@ class ConversationTimelineV2ViewModel
       return;
     }
 
-    final latestSegment = ref.read(
-      conversationTimelineV2ActiveSegmentProvider((
-        identity: identity,
-        mode: _activeSegmentMode,
-      )),
-    );
-    if (latestSegment == null || latestSegment.orderedMessages.isEmpty) {
+    if (_activeSegment == null || _activeSegment!.orderedMessages.isEmpty) {
       return;
     }
-    final anchorServerMessageId =
-        latestSegment.orderedMessages.first.serverMessageId!;
 
-    state = _stateFromActiveSegment(latestSegment, isLoadingOlder: true);
+    final anchorServerMessageId =
+        _activeSegment!.orderedMessages.first.serverMessageId!;
+
+    state = state.copyWith(isLoadingOlder: true);
 
     try {
       await _repository.loadOlderBeforeAnchor(anchorServerMessageId, limit: 20);
     } finally {
-      final refreshedSegment = ref.read(
-        conversationTimelineV2ActiveSegmentProvider((
-          identity: identity,
-          mode: _activeSegmentMode,
-        )),
-      );
-      if (refreshedSegment != null) {
-        state = _stateFromActiveSegment(
-          refreshedSegment,
-          isLoadingOlder: false,
-        );
-      } else {
-        state = state.copyWith(isLoadingOlder: false);
-      }
+      state = state.copyWith(isLoadingOlder: false);
     }
   }
 
   Future<void> loadNewer() async {
-    _markRepositoryTodo('loadNewer');
+    if (state.isLoadingNewer || state.isBootstrapping || !state.canLoadNewer) {
+      return;
+    }
+
+    if (_activeSegment == null || _activeSegment!.orderedMessages.isEmpty) {
+      return;
+    }
+    final anchorServerMessageId =
+        _activeSegment!.orderedMessages.last.serverMessageId!;
+
+    state = state.copyWith(isLoadingNewer: true);
+
+    try {
+      await _repository.loadNewerAfterAnchor(anchorServerMessageId, limit: 20);
+    } finally {
+      state = state.copyWith(isLoadingNewer: false);
+    }
   }
 
   ConversationTimelineV2State _stateFromActiveSegment(
     ConversationTimelineV2ActiveSegment segment, {
     bool? isLoadingOlder,
+    bool? isLoadingNewer,
   }) {
     if (_activeSegmentMode.isLatest &&
         segment.orderedMessages.isNotEmpty &&
@@ -267,7 +274,7 @@ class ConversationTimelineV2ViewModel
       canLoadOlder: segment.canLoadBefore,
       canLoadNewer: segment.canLoadAfter,
       isLoadingOlder: isLoadingOlder ?? state.isLoadingOlder,
-      isLoadingNewer: false,
+      isLoadingNewer: isLoadingNewer ?? state.isLoadingNewer,
       isResolvingJump: false,
       highlightedStableKey: highlightedStableKey,
       viewportCommand: viewportCommand.command,
