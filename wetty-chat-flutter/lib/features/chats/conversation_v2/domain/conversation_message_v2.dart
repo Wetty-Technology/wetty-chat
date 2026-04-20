@@ -1,4 +1,6 @@
 import 'package:chahua/features/chats/conversation/domain/conversation_message.dart';
+import 'package:chahua/core/api/models/messages_api_models.dart';
+import 'package:chahua/features/chats/models/message_api_mapper.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
 
 class ConversationMessageV2 {
@@ -15,6 +17,38 @@ class ConversationMessageV2 {
     this.threadInfo,
     this.deliveryState = ConversationDeliveryState.sent,
   });
+
+  factory ConversationMessageV2.fromMessageItemDto(MessageItemDto dto) {
+    final attachments = dto.attachments
+        .map((attachment) => attachment.toDomain())
+        .toList(growable: false);
+    final mentions = dto.mentions
+        .map((mention) => mention.toDomain())
+        .toList(growable: false);
+    final sticker = dto.sticker?.toDomain();
+
+    return ConversationMessageV2(
+      serverMessageId: dto.id,
+      clientGeneratedId: dto.clientGeneratedId,
+      sender: dto.sender.toDomain(),
+      createdAt: dto.createdAt,
+      isEdited: dto.isEdited,
+      isDeleted: dto.isDeleted,
+      replyToMessage: dto.replyToMessage?.toDomain(),
+      reactions: dto.reactions
+          .map((reaction) => reaction.toDomain())
+          .toList(growable: false),
+      threadInfo: dto.threadInfo?.toDomain(),
+      deliveryState: ConversationDeliveryState.confirmed,
+      content: _contentFromMessageItemDto(
+        messageType: dto.messageType,
+        message: dto.message,
+        sticker: sticker,
+        attachments: attachments,
+        mentions: mentions,
+      ),
+    );
+  }
 
   final int? serverMessageId;
   final String clientGeneratedId;
@@ -37,6 +71,39 @@ class ConversationMessageV2 {
     }
     throw StateError('ConversationMessageV2 has no stable identity');
   }
+}
+
+MessageContent _contentFromMessageItemDto({
+  required String messageType,
+  required String? message,
+  required StickerSummary? sticker,
+  required List<AttachmentItem> attachments,
+  required List<MentionInfo> mentions,
+}) {
+  if (messageType == 'system') {
+    return SystemMessageContent(text: message ?? '');
+  }
+  if (messageType == 'sticker' && sticker != null) {
+    return StickerMessageContent(sticker: sticker);
+  }
+  if (messageType == 'invite') {
+    return InviteMessageContent(text: message, mentions: mentions);
+  }
+  if (attachments.length == 1 && attachments.single.isAudio) {
+    return AudioMessageContent(
+      audio: attachments.single,
+      text: message,
+      mentions: mentions,
+    );
+  }
+  if (attachments.isNotEmpty) {
+    return FileMessageContent(
+      text: message,
+      attachments: attachments,
+      mentions: mentions,
+    );
+  }
+  return TextMessageContent(text: message ?? '', mentions: mentions);
 }
 
 sealed class MessageContent {

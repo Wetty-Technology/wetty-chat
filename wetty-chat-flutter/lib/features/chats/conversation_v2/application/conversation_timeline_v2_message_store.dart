@@ -1,7 +1,7 @@
-import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_view_model.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_active_segment.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_canonical_scope.dart';
+import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_identity.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 typedef ConversationTimelineV2MessageStoreState =

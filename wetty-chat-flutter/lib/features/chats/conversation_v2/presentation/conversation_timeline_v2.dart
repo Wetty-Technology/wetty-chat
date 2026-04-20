@@ -3,6 +3,7 @@ import 'package:chahua/features/chats/conversation_v2/application/conversation_t
 import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_view_model.dart';
 import 'package:chahua/features/chats/conversation_v2/application/timeline_viewport_facts.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
+import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_identity.dart';
 import 'package:chahua/features/chats/conversation_v2/presentation/message_bubble/message_row_v2.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

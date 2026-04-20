@@ -1,12 +1,15 @@
 import 'package:chahua/features/chats/conversation/domain/conversation_message.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_message_store.dart';
-import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_view_model.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_canonical_scope.dart';
+import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_identity.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class FakeConversationTimelineV2Repository {
+import 'conversation_timeline_v2_repository.dart';
+
+class FakeConversationTimelineV2Repository
+    implements ConversationTimelineV2Repository {
   FakeConversationTimelineV2Repository(this.ref, this.identity)
     : _baseNow = DateTime.now().toUtc();
 
@@ -14,7 +17,8 @@ class FakeConversationTimelineV2Repository {
   final ConversationTimelineV2Identity identity;
   final DateTime _baseNow;
 
-  Future<void> ensureLatestSegmentLoaded({required int limit}) async {
+  @override
+  Future<void> refreshLatestSegment({required int limit}) async {
     final existingScope = ref.read(
       conversationTimelineV2MessageStoreProvider,
     )[identity];
@@ -35,6 +39,7 @@ class FakeConversationTimelineV2Repository {
         .insertLatest(identity, latestSegment);
   }
 
+  @override
   Future<void> loadOlderBeforeAnchor(
     int anchorServerMessageId, {
     required int limit,
@@ -53,6 +58,7 @@ class FakeConversationTimelineV2Repository {
         .insertBeforeAnchor(identity, anchorServerMessageId, olderSegment);
   }
 
+  @override
   Future<void> loadNewerAfterAnchor(
     int anchorServerMessageId, {
     required int limit,
@@ -71,6 +77,7 @@ class FakeConversationTimelineV2Repository {
         .insertAfterAnchor(identity, anchorServerMessageId, newerSegment);
   }
 
+  @override
   Future<void> refreshAroundServerMessageId(
     int targetServerMessageId, {
     required int limit,
@@ -90,6 +97,7 @@ class FakeConversationTimelineV2Repository {
         .insertAround(identity, aroundSegment);
   }
 
+  @override
   Future<void> addLatestFakeMessage() async {
     final existingScope = ref.read(
       conversationTimelineV2MessageStoreProvider,

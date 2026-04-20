@@ -4,16 +4,13 @@ import 'package:chahua/features/chats/conversation/domain/launch_request.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_message_store.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_state.dart';
 import 'package:chahua/features/chats/conversation_v2/application/timeline_viewport_facts.dart';
-import 'package:chahua/features/chats/conversation_v2/data/fake_conversation_timeline_v2_repository.dart';
+import 'package:chahua/features/chats/conversation_v2/data/conversation_timeline_v2_repository.dart';
+import 'package:chahua/features/chats/conversation_v2/data/conversation_timeline_v2_repository_impl.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_active_segment.dart';
+import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_identity.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-typedef ConversationTimelineV2Identity = ({
-  String chatId,
-  String? threadRootId,
-});
 
 class ConversationTimelineV2ViewModel
     extends Notifier<ConversationTimelineV2State> {
@@ -25,7 +22,7 @@ class ConversationTimelineV2ViewModel
   final ConversationTimelineV2Identity identity;
 
   /// Repository for this VM
-  late FakeConversationTimelineV2Repository _repository;
+  late ConversationTimelineV2Repository _repository;
 
   LaunchRequest? _initialLaunchRequest;
 
@@ -54,9 +51,7 @@ class ConversationTimelineV2ViewModel
 
   @override
   ConversationTimelineV2State build() {
-    _repository = ref.read(
-      fakeConversationTimelineV2RepositoryProvider(identity),
-    );
+    _repository = ref.read(conversationTimelineV2RepositoryProvider(identity));
     _activeSegment = ref.watch(
       conversationTimelineV2ActiveSegmentProvider((
         identity: identity,
@@ -114,9 +109,7 @@ class ConversationTimelineV2ViewModel
       ConversationTimelineV2ViewportCommandKind.resetToCenterOrigin,
     );
     _highlightedServerMessageId = null;
-    await _repository.ensureLatestSegmentLoaded(
-      limit: _initialLoadedWindowSize,
-    );
+    await _repository.refreshLatestSegment(limit: _initialLoadedWindowSize);
     final latestSegment = _activeSegment;
     if (latestSegment == null) {
       return;
@@ -168,9 +161,7 @@ class ConversationTimelineV2ViewModel
 
   Future<void> _bootstrapLatestSegment() async {
     try {
-      await _repository.ensureLatestSegmentLoaded(
-        limit: _initialLoadedWindowSize,
-      );
+      await _repository.refreshLatestSegment(limit: _initialLoadedWindowSize);
       final latestSegment = _activeSegment;
       if (latestSegment == null) {
         debugPrint('bootstrapLatestSegment: latest segment missing after load');
