@@ -15,12 +15,6 @@ typedef ConversationTimelineV2Identity = ({
   String? threadRootId,
 });
 
-typedef ConversationTimelineV2ViewportCommand = ({
-  double centerViewportFraction,
-  int generation,
-  ConversationTimelineV2ViewportCommandKind kind,
-});
-
 class ConversationTimelineV2ViewModel
     extends Notifier<ConversationTimelineV2State> {
   static const int _initialLoadedWindowSize = 50;
@@ -31,8 +25,10 @@ class ConversationTimelineV2ViewModel
   late FakeConversationTimelineV2Repository _repository;
   int _viewportCommandGeneration = 0;
   TimelineViewportFacts? _latestViewportFacts;
-  bool _scrollToBottomOnNextLatestUpdate = false;
-  bool _resetToCenterOriginOnNextActiveSegmentUpdate = false;
+  ConversationTimelineV2ViewportCommand _pendingViewportCommand = (
+    centerViewportFraction: 1.0,
+    kind: ConversationTimelineV2ViewportCommandKind.none,
+  );
   bool _bootstrapStarted = false;
   int? _highlightedServerMessageId;
 
@@ -96,7 +92,9 @@ class ConversationTimelineV2ViewModel
     _setActiveSegmentMode(
       const ConversationTimelineV2ActiveSegmentMode.latest(),
     );
-    _resetToCenterOriginOnNextActiveSegmentUpdate = true;
+    _pendingViewportCommand = _viewportCommandForCurrentMode(
+      ConversationTimelineV2ViewportCommandKind.resetToCenterOrigin,
+    );
     _highlightedServerMessageId = null;
     await _repository.ensureLatestSegmentLoaded(
       limit: _initialLoadedWindowSize,
@@ -141,12 +139,17 @@ class ConversationTimelineV2ViewModel
       ),
     );
     _highlightedServerMessageId = _farHistoryTargetServerMessageId;
-    _resetToCenterOriginOnNextActiveSegmentUpdate = true;
+    _pendingViewportCommand = _viewportCommandForCurrentMode(
+      ConversationTimelineV2ViewportCommandKind.resetToCenterOrigin,
+    );
   }
 
   Future<void> addMessage() async {
-    _scrollToBottomOnNextLatestUpdate =
-        _latestViewportFacts?.isNearBottom ?? false;
+    if (_latestViewportFacts?.isNearBottom ?? false) {
+      _pendingViewportCommand = _viewportCommandForCurrentMode(
+        ConversationTimelineV2ViewportCommandKind.scrollToBottom,
+      );
+    }
     await _repository.addLatestFakeMessage();
   }
 
@@ -254,7 +257,9 @@ class ConversationTimelineV2ViewModel
         }
       }
     }
-    final viewportCommand = _takePendingViewportCommand();
+    final viewportCommand = _takePendingViewportCommand(
+      hasMessages: segment.orderedMessages.isNotEmpty,
+    );
 
     return ConversationTimelineV2State(
       beforeMessages: beforeMessages,
@@ -265,38 +270,49 @@ class ConversationTimelineV2ViewModel
       isLoadingNewer: false,
       isResolvingJump: false,
       highlightedStableKey: highlightedStableKey,
-      centerViewportFraction: viewportCommand.centerViewportFraction,
-      viewportCommandKind: viewportCommand.kind,
+      viewportCommand: viewportCommand.command,
       viewportCommandGeneration: viewportCommand.generation,
       isBootstrapping: false,
     );
   }
 
-  ConversationTimelineV2ViewportCommand _takePendingViewportCommand() {
-    final shouldResetToCenterOrigin =
-        _resetToCenterOriginOnNextActiveSegmentUpdate;
-    final shouldScrollToBottom =
-        !shouldResetToCenterOrigin && _scrollToBottomOnNextLatestUpdate;
-    final kind = shouldResetToCenterOrigin
-        ? ConversationTimelineV2ViewportCommandKind.resetToCenterOrigin
-        : shouldScrollToBottom
-        ? ConversationTimelineV2ViewportCommandKind.scrollToBottom
-        : ConversationTimelineV2ViewportCommandKind.none;
-    final generation = shouldResetToCenterOrigin || shouldScrollToBottom
+  ({ConversationTimelineV2ViewportCommand command, int generation})
+  _takePendingViewportCommand({required bool hasMessages}) {
+    if (!hasMessages) {
+      return (
+        command: _viewportCommandForCurrentMode(
+          ConversationTimelineV2ViewportCommandKind.none,
+        ),
+        generation: _viewportCommandGeneration,
+      );
+    }
+
+    final generation =
+        _pendingViewportCommand.kind !=
+            ConversationTimelineV2ViewportCommandKind.none
         ? ++_viewportCommandGeneration
         : _viewportCommandGeneration;
-    final centerViewportFraction = _activeSegmentMode.isLatest ? 1.0 : 0.0;
-    _resetToCenterOriginOnNextActiveSegmentUpdate = false;
-    _scrollToBottomOnNextLatestUpdate = false;
+    final command = _pendingViewportCommand;
+    _pendingViewportCommand = _viewportCommandForCurrentMode(
+      ConversationTimelineV2ViewportCommandKind.none,
+    );
+    return (command: command, generation: generation);
+  }
+
+  ConversationTimelineV2ViewportCommand _viewportCommandForCurrentMode(
+    ConversationTimelineV2ViewportCommandKind kind,
+  ) {
     return (
-      centerViewportFraction: centerViewportFraction,
-      generation: generation,
+      centerViewportFraction: _activeSegmentMode.isLatest ? 1.0 : 0.0,
       kind: kind,
     );
   }
 
   ConversationTimelineV2State _loadingState({bool isBootstrapping = true}) {
     return ConversationTimelineV2State(
+      viewportCommand: _viewportCommandForCurrentMode(
+        ConversationTimelineV2ViewportCommandKind.none,
+      ),
       viewportCommandGeneration: _viewportCommandGeneration,
       isBootstrapping: isBootstrapping,
     );

@@ -100,7 +100,7 @@ class _ConversationTimelineV2State
     }
 
     _lastHandledViewportCommandGeneration = generation;
-    switch (state.viewportCommandKind) {
+    switch (state.viewportCommand.kind) {
       case ConversationTimelineV2ViewportCommandKind.none:
         return;
       case ConversationTimelineV2ViewportCommandKind.resetToCenterOrigin:
@@ -172,7 +172,7 @@ class _ConversationTimelineV2State
       growable: false,
     );
     final afterMessages = state.afterMessages;
-    final centerViewportFraction = state.centerViewportFraction;
+    final centerViewportFraction = state.viewportCommand.centerViewportFraction;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
