@@ -35,6 +35,10 @@ class ConversationTimelineV2ViewModel
   /// Generation of the viewport command, incremented on each issuance
   int _viewportCommandGeneration = 0;
   ConversationTimelineV2ViewportCommand? _pendingViewportCommand;
+  ConversationTimelineV2ViewportCommand _lastViewportCommand = const (
+    kind: ConversationTimelineV2ViewportCommandKind.none,
+    placement: ConversationTimelineV2ViewportPlacement.bottomPreferred,
+  );
 
   /// Make sure to use `_setActiveSegmentMode` instead of assigning directly
   /// to avoid forgetting `ref.invalidateSelf()`.
@@ -106,7 +110,7 @@ class ConversationTimelineV2ViewModel
     _setActiveSegmentMode(
       const ConversationTimelineV2ActiveSegmentMode.latest(),
     );
-    _pendingViewportCommand = _viewportCommand(
+    _issueViewportCommand(
       kind: ConversationTimelineV2ViewportCommandKind.resetToCenterOrigin,
       placement: ConversationTimelineV2ViewportPlacement.bottomPreferred,
     );
@@ -129,7 +133,7 @@ class ConversationTimelineV2ViewModel
     );
     _setActiveSegmentMode(aroundMode);
     _highlightedServerMessageId = highlight ? messageId : null;
-    _pendingViewportCommand = _viewportCommand(
+    _issueViewportCommand(
       kind: ConversationTimelineV2ViewportCommandKind.resetToCenterOrigin,
       placement: ConversationTimelineV2ViewportPlacement.topPreferred,
     );
@@ -243,7 +247,7 @@ class ConversationTimelineV2ViewModel
         _lastRenderedTailServerMessageId != null &&
         currentTailServerMessageId != null &&
         currentTailServerMessageId > _lastRenderedTailServerMessageId!) {
-      _pendingViewportCommand = _viewportCommand(
+      _issueViewportCommand(
         kind: ConversationTimelineV2ViewportCommandKind.scrollToBottom,
         placement: ConversationTimelineV2ViewportPlacement.bottomPreferred,
       );
@@ -262,9 +266,9 @@ class ConversationTimelineV2ViewModel
       isLoadingNewer: isLoadingNewer ?? state.isLoadingNewer,
       isResolvingJump: false,
       highlightedStableKey: highlightedStableKey,
-      viewportCommand: viewportCommand?.command ?? state.viewportCommand,
+      viewportCommand: viewportCommand?.command ?? _lastViewportCommand,
       viewportCommandGeneration:
-          viewportCommand?.generation ?? state.viewportCommandGeneration,
+          viewportCommand?.generation ?? _viewportCommandGeneration,
       isBootstrapping: false,
     );
   }
@@ -285,6 +289,16 @@ class ConversationTimelineV2ViewModel
     required ConversationTimelineV2ViewportPlacement placement,
   }) {
     return (kind: kind, placement: placement);
+  }
+
+  void _issueViewportCommand({
+    required ConversationTimelineV2ViewportCommandKind kind,
+    required ConversationTimelineV2ViewportPlacement placement,
+  }) {
+    final command = _viewportCommand(kind: kind, placement: placement);
+    _pendingViewportCommand = command;
+    _lastViewportCommand = command;
+    ++_viewportCommandGeneration;
   }
 
   ConversationTimelineV2State _loadingState({bool isBootstrapping = true}) {

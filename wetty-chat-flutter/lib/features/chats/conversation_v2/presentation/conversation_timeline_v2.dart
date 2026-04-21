@@ -49,12 +49,11 @@ class _ConversationTimelineV2State
   late ScrollController _scrollController;
   int _lastHandledViewportCommandGeneration = 0;
   final GlobalKey _centerSliverKey = GlobalKey();
-  final GlobalKey _scrollViewportKey = GlobalKey();
   final Map<String, GlobalKey> _messageKeys = <String, GlobalKey>{};
   bool _isMeasureScheduled = false;
   double _topPreferredAnchorAlignment = 0;
   bool _isTopPreferredAnchorResolved = false;
-  int _lastMeasuredTopPreferredGeneration = 0;
+  UniqueKey _scrollViewKey = UniqueKey();
 
   ConversationTimelineV2Identity get _identity =>
       (chatId: widget.chatId, threadRootId: widget.threadRootId);
@@ -62,10 +61,8 @@ class _ConversationTimelineV2State
   @override
   void initState() {
     super.initState();
-    _scrollController = _buildScrollController();
-    debugPrint(
-      'initState: identity=$_identity, launchRequest=${widget.launchRequest}',
-    );
+    _scrollController = ScrollController();
+    _scrollController.addListener(_reportViewportFacts);
     _scheduleInitializeLaunchRequest();
   }
 
@@ -74,6 +71,8 @@ class _ConversationTimelineV2State
       return;
     }
     _isMeasureScheduled = true;
+
+    _isTopPreferredAnchorResolved = false;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _isMeasureScheduled = false;
       if (!mounted) {
@@ -112,6 +111,7 @@ class _ConversationTimelineV2State
   @override
   void didUpdateWidget(covariant ConversationTimelineV2 oldWidget) {
     super.didUpdateWidget(oldWidget);
+    debugPrint('didUpdateWidget: ConversationTimelinV2');
     if (oldWidget.chatId != widget.chatId ||
         oldWidget.threadRootId != widget.threadRootId) {
       _lastHandledViewportCommandGeneration = 0;
@@ -119,14 +119,6 @@ class _ConversationTimelineV2State
     if (oldWidget.launchRequest != widget.launchRequest) {
       _scheduleInitializeLaunchRequest();
     }
-  }
-
-  ScrollController _buildScrollController({double initialScrollOffset = 0}) {
-    final controller = ScrollController(
-      initialScrollOffset: initialScrollOffset,
-    );
-    controller.addListener(_reportViewportFacts);
-    return controller;
   }
 
   void _scheduleInitializeLaunchRequest() {
@@ -158,6 +150,7 @@ class _ConversationTimelineV2State
         .onViewportChanged(facts);
   }
 
+  /// This method is meant to be called by the build method synchronously,
   void _consumeViewportCommand(ConversationTimelineV2State state) {
     final generation = state.viewportCommandGeneration;
     if (generation <= _lastHandledViewportCommandGeneration) {
@@ -165,42 +158,31 @@ class _ConversationTimelineV2State
     }
 
     _lastHandledViewportCommandGeneration = generation;
+
+    // If we are here, we have a new viewport command to execute.
+
     switch (state.viewportCommand.kind) {
       case ConversationTimelineV2ViewportCommandKind.none:
-        return;
+        // Nothing to do
+        break;
       case ConversationTimelineV2ViewportCommandKind.resetToCenterOrigin:
-        _resetToCenterOrigin();
+        // There are two cases for this, for now we are not caring, just forcing a new scrollable.
+        _scrollViewKey = UniqueKey();
+        if (state.viewportCommand.placement ==
+            ConversationTimelineV2ViewportPlacement.topPreferred) {
+          _scheduleTopPreferredMeasurement();
+        }
         break;
       case ConversationTimelineV2ViewportCommandKind.scrollToBottom:
-        _scrollToBottom();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _scrollToBottom();
+        });
         break;
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _reportViewportFacts();
     });
-  }
-
-  Future<void> _resetToCenterOrigin() async {
-    if (!mounted || !_scrollController.hasClients) {
-      return;
-    }
-
-    const animateThreshold = 1200.0;
-    final currentOffset = _scrollController.position.pixels;
-    final targetOffset = 0.0;
-    final distance = (currentOffset - targetOffset).abs();
-
-    if (distance <= animateThreshold) {
-      await _scrollController.animateTo(
-        targetOffset,
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-      );
-      return;
-    }
-
-    _scrollController.jumpTo(targetOffset);
   }
 
   Future<void> _scrollToBottom() async {
@@ -237,20 +219,13 @@ class _ConversationTimelineV2State
     // as well as clear the top preferred anchor measurement.
     if (state.viewportCommandGeneration >
         _lastHandledViewportCommandGeneration) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _consumeViewportCommand(state);
-      });
-
-      if (placement == ConversationTimelineV2ViewportPlacement.topPreferred) {
-        _scheduleTopPreferredMeasurement();
-      }
-      _isTopPreferredAnchorResolved = false;
+      _consumeViewportCommand(state);
     }
 
     final centerViewportFraction =
         placement == ConversationTimelineV2ViewportPlacement.bottomPreferred
         ? 1.0
-        : _topPreferredAnchorAlignment;
+        : (_isTopPreferredAnchorResolved ? _topPreferredAnchorAlignment : 0.0);
     final shouldHideUntilMeasured =
         placement == ConversationTimelineV2ViewportPlacement.topPreferred &&
         !_isTopPreferredAnchorResolved;
@@ -296,35 +271,33 @@ class _ConversationTimelineV2State
           ),
         ),
         Expanded(
-          child: KeyedSubtree(
-            key: _scrollViewportKey,
-            child: Opacity(
-              opacity: shouldHideUntilMeasured ? 0 : 1,
-              child: CustomScrollView(
-                center: _centerSliverKey,
-                anchor: centerViewportFraction,
-                controller: _scrollController,
-                slivers: [
-                  const SliverPadding(padding: EdgeInsets.only(top: 8)),
-                  if (beforeMessages.isNotEmpty)
-                    _buildMessageSliver(
-                      beforeMessages,
-                      chatMessageFontSize: settings.fontSize,
-                    ),
-                  if (afterMessages.isNotEmpty)
-                    _buildMessageSliver(
-                      afterMessages,
-                      key: _centerSliverKey,
-                      chatMessageFontSize: settings.fontSize,
-                      highlightedStableKey: state.highlightedStableKey,
-                    )
-                  else
-                    SliverToBoxAdapter(
-                      key: _centerSliverKey,
-                      child: const SizedBox.shrink(),
-                    ),
-                ],
-              ),
+          child: Opacity(
+            opacity: shouldHideUntilMeasured ? 0 : 1,
+            child: CustomScrollView(
+              key: _scrollViewKey,
+              center: _centerSliverKey,
+              anchor: centerViewportFraction,
+              controller: _scrollController,
+              slivers: [
+                const SliverPadding(padding: EdgeInsets.only(top: 8)),
+                if (beforeMessages.isNotEmpty)
+                  _buildMessageSliver(
+                    beforeMessages,
+                    chatMessageFontSize: settings.fontSize,
+                  ),
+                if (afterMessages.isNotEmpty)
+                  _buildMessageSliver(
+                    afterMessages,
+                    key: _centerSliverKey,
+                    chatMessageFontSize: settings.fontSize,
+                    highlightedStableKey: state.highlightedStableKey,
+                  )
+                else
+                  SliverToBoxAdapter(
+                    key: _centerSliverKey,
+                    child: const SizedBox.shrink(),
+                  ),
+              ],
             ),
           ),
         ),
