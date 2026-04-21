@@ -35,11 +35,13 @@ class ConversationTimelineV2Repository {
     if (response.messages.isEmpty) {
       ref
           .read(conversationTimelineV2MessageStoreProvider.notifier)
-          .putScope(identity, (
-            segments: const <ConversationTimelineV2CanonicalSegment>[],
-            hasLatestSegment: true,
-            hasReachedOldest: true,
-          ));
+          .putScope(
+            identity,
+            const ConversationTimelineV2CanonicalScope(
+              hasLatestSegment: true,
+              hasReachedOldest: true,
+            ),
+          );
       return;
     }
 

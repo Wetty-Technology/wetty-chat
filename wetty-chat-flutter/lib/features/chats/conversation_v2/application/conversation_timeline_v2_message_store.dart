@@ -39,11 +39,7 @@ class ConversationTimelineV2MessageStore
     if (existingScope == null) {
       return;
     }
-    putScope(identity, (
-      segments: existingScope.segments,
-      hasLatestSegment: existingScope.hasLatestSegment,
-      hasReachedOldest: true,
-    ));
+    putScope(identity, existingScope.copyWith(hasReachedOldest: true));
   }
 
   void insertBeforeAnchor(
@@ -63,11 +59,12 @@ class ConversationTimelineV2MessageStore
       anchorServerMessageId: anchorServerMessageId,
     );
 
-    putScope(identity, (
-      segments: segments,
-      hasLatestSegment: existingScope?.hasLatestSegment ?? false,
-      hasReachedOldest: existingScope?.hasReachedOldest ?? false,
-    ));
+    putScope(
+      identity,
+      (existingScope ?? const ConversationTimelineV2CanonicalScope()).copyWith(
+        segments: segments,
+      ),
+    );
   }
 
   void insertAfterAnchor(
@@ -87,11 +84,12 @@ class ConversationTimelineV2MessageStore
       anchorServerMessageId: anchorServerMessageId,
     );
 
-    putScope(identity, (
-      segments: segments,
-      hasLatestSegment: existingScope?.hasLatestSegment ?? false,
-      hasReachedOldest: existingScope?.hasReachedOldest ?? false,
-    ));
+    putScope(
+      identity,
+      (existingScope ?? const ConversationTimelineV2CanonicalScope()).copyWith(
+        segments: segments,
+      ),
+    );
   }
 
   void insertAround(
@@ -105,11 +103,12 @@ class ConversationTimelineV2MessageStore
       incoming: segment,
     );
 
-    putScope(identity, (
-      segments: segments,
-      hasLatestSegment: existingScope?.hasLatestSegment ?? false,
-      hasReachedOldest: existingScope?.hasReachedOldest ?? false,
-    ));
+    putScope(
+      identity,
+      (existingScope ?? const ConversationTimelineV2CanonicalScope()).copyWith(
+        segments: segments,
+      ),
+    );
   }
 
   void insertLatest(
@@ -123,73 +122,115 @@ class ConversationTimelineV2MessageStore
       incoming: segment,
     );
 
-    putScope(identity, (
-      segments: segments,
-      hasLatestSegment: true,
-      hasReachedOldest: existingScope?.hasReachedOldest ?? false,
-    ));
+    putScope(
+      identity,
+      (existingScope ?? const ConversationTimelineV2CanonicalScope()).copyWith(
+        segments: segments,
+        hasLatestSegment: true,
+      ),
+    );
   }
 
-  void insertLatestMessage(
+  void newMessage(
     ConversationTimelineV2Identity identity,
     ConversationMessageV2 message,
   ) {
-    final serverMessageId = message.serverMessageId;
-    assert(
-      serverMessageId != null,
-      'insertLatestMessage requires a server-backed message',
-    );
+    if (message.serverMessageId == null) {
+      _newOptimisticMessage(identity, message);
+      return;
+    }
+    _newServerBackedMessage(identity, message);
+  }
 
+  void _newServerBackedMessage(
+    ConversationTimelineV2Identity identity,
+    ConversationMessageV2 message,
+  ) {
     final existingScope = scopeFor(identity);
-    final existingSegments =
-        existingScope?.segments ??
-        const <ConversationTimelineV2CanonicalSegment>[];
-
-    if ((existingScope?.hasLatestSegment ?? false) && existingSegments.isNotEmpty) {
-      final latestSegment = existingSegments.last;
-      assert(
-        serverMessageId! > latestSegment.lastServerMessageId,
-        'insertLatestMessage requires the new message to be newer than the current latest tail',
-      );
-      final updatedLatestSegment = ConversationTimelineV2CanonicalSegment(
-        orderedMessages: [...latestSegment.orderedMessages, message],
-      );
-      putScope(identity, (
-        segments: [
-          ...existingSegments.take(existingSegments.length - 1),
-          updatedLatestSegment,
-        ],
-        hasLatestSegment: true,
-        hasReachedOldest: existingScope?.hasReachedOldest ?? false,
-      ));
+    if (existingScope == null || !existingScope.hasLatestSegment) {
       return;
     }
 
-    putScope(identity, (
-      segments: [
-        ...existingSegments,
-        ConversationTimelineV2CanonicalSegment(orderedMessages: [message]),
-      ],
-      hasLatestSegment: true,
-      hasReachedOldest: existingScope?.hasReachedOldest ?? false,
-    ));
+    final optimisticMessages = existingScope.optimisticMessages
+        .where((item) => item.clientGeneratedId != message.clientGeneratedId)
+        .toList(growable: false);
+    final latestSegment = existingScope.segments.isEmpty
+        ? null
+        : existingScope.segments.last;
+    if (latestSegment == null) {
+      return;
+    }
+
+    final updatedLatestMessages = _mergeLatestMessages(
+      latestSegment.orderedMessages,
+      message,
+    );
+
+    putScope(
+      identity,
+      existingScope.copyWith(
+        optimisticMessages: optimisticMessages,
+        segments: [
+          ...existingScope.segments.take(existingScope.segments.length - 1),
+          ConversationTimelineV2CanonicalSegment(
+            orderedMessages: updatedLatestMessages,
+          ),
+        ],
+        hasLatestSegment: true,
+      ),
+    );
   }
 
-  void applyCreatedMessage(
+  void _newOptimisticMessage(
     ConversationTimelineV2Identity identity,
     ConversationMessageV2 message,
   ) {
-    insertLatestMessage(identity, message);
+    assert(
+      message.serverMessageId == null,
+      '_newOptimisticMessage requires a local-only message',
+    );
+
+    final existingScope = scopeFor(identity);
+    final optimisticMessages =
+        (existingScope?.optimisticMessages ?? const <ConversationMessageV2>[])
+            .toList(growable: true);
+
+    for (var index = 0; index < optimisticMessages.length; index++) {
+      if (optimisticMessages[index].clientGeneratedId !=
+          message.clientGeneratedId) {
+        continue;
+      }
+      optimisticMessages[index] = message;
+      putScope(
+        identity,
+        (existingScope ?? const ConversationTimelineV2CanonicalScope())
+            .copyWith(
+              hasLatestSegment: true,
+              optimisticMessages: optimisticMessages.toList(growable: false),
+            ),
+      );
+      return;
+    }
+
+    optimisticMessages.add(message);
+
+    putScope(
+      identity,
+      (existingScope ?? const ConversationTimelineV2CanonicalScope()).copyWith(
+        hasLatestSegment: true,
+        optimisticMessages: optimisticMessages.toList(growable: false),
+      ),
+    );
   }
 
-  bool replaceServerMessage(
+  bool updateMessage(
     ConversationTimelineV2Identity identity,
     ConversationMessageV2 message,
   ) {
     final serverMessageId = message.serverMessageId;
     assert(
       serverMessageId != null,
-      'replaceServerMessage requires a server-backed message',
+      'updateMessage requires a server-backed message',
     );
 
     final existingScope = scopeFor(identity);
@@ -223,22 +264,11 @@ class ConversationTimelineV2MessageStore
       return false;
     }
 
-    putScope(identity, (
-      segments: segments,
-      hasLatestSegment: existingScope.hasLatestSegment,
-      hasReachedOldest: existingScope.hasReachedOldest,
-    ));
+    putScope(identity, existingScope.copyWith(segments: segments));
     return true;
   }
 
-  bool applyUpdatedMessage(
-    ConversationTimelineV2Identity identity,
-    ConversationMessageV2 message,
-  ) {
-    return replaceServerMessage(identity, message);
-  }
-
-  bool removeServerMessage(
+  bool deleteMessage(
     ConversationTimelineV2Identity identity,
     int serverMessageId,
   ) {
@@ -274,19 +304,49 @@ class ConversationTimelineV2MessageStore
       return false;
     }
 
-    putScope(identity, (
-      segments: segments,
-      hasLatestSegment: existingScope.hasLatestSegment,
-      hasReachedOldest: existingScope.hasReachedOldest,
-    ));
+    putScope(identity, existingScope.copyWith(segments: segments));
     return true;
   }
 
-  bool applyDeletedMessage(
-    ConversationTimelineV2Identity identity,
-    int serverMessageId,
+  List<ConversationMessageV2> _mergeLatestMessages(
+    List<ConversationMessageV2> existingMessages,
+    ConversationMessageV2 incoming,
   ) {
-    return removeServerMessage(identity, serverMessageId);
+    final incomingServerMessageId = incoming.serverMessageId;
+    assert(
+      incomingServerMessageId != null,
+      '_mergeLatestMessages requires a server-backed message',
+    );
+    if (incomingServerMessageId == null) {
+      return existingMessages;
+    }
+
+    final updated = existingMessages.toList(growable: true);
+
+    for (var index = updated.length - 1; index >= 0; index--) {
+      final current = updated[index];
+      final currentServerMessageId = current.serverMessageId;
+      assert(
+        currentServerMessageId != null,
+        '_mergeLatestMessages only operates on server-backed latest messages',
+      );
+      if (currentServerMessageId == null) {
+        continue;
+      }
+
+      if (currentServerMessageId == incomingServerMessageId) {
+        updated[index] = incoming;
+        return updated.toList(growable: false);
+      }
+
+      if (currentServerMessageId < incomingServerMessageId) {
+        updated.insert(index + 1, incoming);
+        return updated.toList(growable: false);
+      }
+    }
+
+    updated.insert(0, incoming);
+    return updated.toList(growable: false);
   }
 
   List<ConversationTimelineV2CanonicalSegment> _normalizeBeforeAnchorSegments(
@@ -499,13 +559,25 @@ final conversationTimelineV2ActiveSegmentProvider =
           (state) => state[args.identity],
         ),
       );
-      if (scope == null || scope.segments.isEmpty) {
+      if (scope == null) {
         return null;
       }
 
       if (args.mode.isLatest) {
         if (!scope.hasLatestSegment) {
           return null;
+        }
+
+        if (scope.segments.isEmpty) {
+          if (scope.optimisticMessages.isEmpty) {
+            return null;
+          }
+          return (
+            orderedMessages: scope.optimisticMessages,
+            canLoadBefore: !scope.hasReachedOldest,
+            canLoadAfter: false,
+            isLatestSlice: true,
+          );
         }
 
         final latestSegment = scope.segments.last;
@@ -544,11 +616,41 @@ ConversationTimelineV2ActiveSegment _activeSegmentForScopeSegment(
   final isLatestSegment =
       scope.hasLatestSegment && selectedIndex == scope.segments.length - 1;
   final isFirstSegment = selectedIndex == 0;
+  final orderedMessages = isLatestSegment
+      ? _mergeLatestSliceMessages(
+          selectedSegment.orderedMessages,
+          scope.optimisticMessages,
+        )
+      : selectedSegment.orderedMessages;
 
   return (
-    orderedMessages: selectedSegment.orderedMessages,
+    orderedMessages: orderedMessages,
     canLoadBefore: !isFirstSegment || !scope.hasReachedOldest,
     canLoadAfter: !isLatestSegment,
     isLatestSlice: isLatestSegment,
   );
+}
+
+List<ConversationMessageV2> _mergeLatestSliceMessages(
+  List<ConversationMessageV2> canonicalMessages,
+  List<ConversationMessageV2> optimisticMessages,
+) {
+  if (optimisticMessages.isEmpty) {
+    return canonicalMessages;
+  }
+
+  final canonicalClientIds = canonicalMessages
+      .map((message) => message.clientGeneratedId)
+      .where((clientGeneratedId) => clientGeneratedId.isNotEmpty)
+      .toSet();
+  final mergedOptimisticMessages = optimisticMessages
+      .where(
+        (message) => !canonicalClientIds.contains(message.clientGeneratedId),
+      )
+      .toList(growable: false);
+  if (mergedOptimisticMessages.isEmpty) {
+    return canonicalMessages;
+  }
+
+  return [...canonicalMessages, ...mergedOptimisticMessages];
 }

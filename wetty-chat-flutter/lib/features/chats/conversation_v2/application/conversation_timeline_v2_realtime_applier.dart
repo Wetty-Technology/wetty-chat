@@ -13,13 +13,13 @@ class ConversationTimelineV2RealtimeApplier {
   void apply(ApiWsEvent event) {
     switch (event) {
       case MessageCreatedWsEvent(:final payload):
-        _applyCreatedMessage(payload);
+        _newMessage(payload);
         return;
       case MessageUpdatedWsEvent(:final payload):
-        _replaceExistingMessage(payload);
+        _updateMessage(payload);
         return;
       case MessageDeletedWsEvent(:final payload):
-        _removeExistingMessage(payload);
+        _deleteMessage(payload);
         return;
       case ReactionUpdatedWsEvent():
       case ThreadUpdatedWsEvent():
@@ -29,8 +29,9 @@ class ConversationTimelineV2RealtimeApplier {
     }
   }
 
-  void _applyCreatedMessage(MessageItemDto payload) {
+  void _newMessage(MessageItemDto payload) {
     final scopes = ref.read(conversationTimelineV2MessageStoreProvider);
+    final message = ConversationMessageV2.fromMessageItemDto(payload);
 
     for (final entry in scopes.entries) {
       final identity = entry.key;
@@ -50,14 +51,11 @@ class ConversationTimelineV2RealtimeApplier {
 
       ref
           .read(conversationTimelineV2MessageStoreProvider.notifier)
-          .applyCreatedMessage(
-            identity,
-            ConversationMessageV2.fromMessageItemDto(payload),
-          );
+          .newMessage(identity, message);
     }
   }
 
-  void _replaceExistingMessage(MessageItemDto payload) {
+  void _updateMessage(MessageItemDto payload) {
     final scopes = ref.read(conversationTimelineV2MessageStoreProvider);
     final message = ConversationMessageV2.fromMessageItemDto(payload);
 
@@ -70,11 +68,11 @@ class ConversationTimelineV2RealtimeApplier {
 
       ref
           .read(conversationTimelineV2MessageStoreProvider.notifier)
-          .applyUpdatedMessage(identity, message);
+          .updateMessage(identity, message);
     }
   }
 
-  void _removeExistingMessage(MessageItemDto payload) {
+  void _deleteMessage(MessageItemDto payload) {
     final scopes = ref.read(conversationTimelineV2MessageStoreProvider);
 
     for (final entry in scopes.entries) {
@@ -86,7 +84,7 @@ class ConversationTimelineV2RealtimeApplier {
 
       ref
           .read(conversationTimelineV2MessageStoreProvider.notifier)
-          .applyDeletedMessage(identity, payload.id);
+          .deleteMessage(identity, payload.id);
     }
   }
 

@@ -1,6 +1,4 @@
 import 'package:chahua/app/theme/style_config.dart';
-import 'package:chahua/features/chats/conversation/domain/conversation_message.dart'
-    show ConversationDeliveryState;
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:flutter/cupertino.dart';
 

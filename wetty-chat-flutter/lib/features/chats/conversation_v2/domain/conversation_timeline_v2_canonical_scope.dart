@@ -1,4 +1,7 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
+
+part 'conversation_timeline_v2_canonical_scope.freezed.dart';
 
 /// A canonical segment is a contiguous range of messages that are sorted by server message id.
 class ConversationTimelineV2CanonicalSegment {
@@ -98,8 +101,15 @@ class ConversationTimelineV2CanonicalSegment {
   }
 }
 
-typedef ConversationTimelineV2CanonicalScope = ({
-  List<ConversationTimelineV2CanonicalSegment> segments,
-  bool hasLatestSegment,
-  bool hasReachedOldest,
-});
+@freezed
+abstract class ConversationTimelineV2CanonicalScope
+    with _$ConversationTimelineV2CanonicalScope {
+  const factory ConversationTimelineV2CanonicalScope({
+    @Default(<ConversationTimelineV2CanonicalSegment>[])
+    List<ConversationTimelineV2CanonicalSegment> segments,
+    @Default(false) bool hasLatestSegment,
+    @Default(false) bool hasReachedOldest,
+    @Default(<ConversationMessageV2>[])
+    List<ConversationMessageV2> optimisticMessages,
+  }) = _ConversationTimelineV2CanonicalScope;
+}

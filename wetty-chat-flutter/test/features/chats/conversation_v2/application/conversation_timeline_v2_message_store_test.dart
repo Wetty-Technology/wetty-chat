@@ -1,4 +1,5 @@
 import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_message_store.dart';
+import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_active_segment.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_canonical_scope.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
@@ -679,53 +680,55 @@ void main() {
       });
     });
 
-    group('insertLatestMessage', () {
-      test('creates a singleton latest segment in an empty scope', () {
-        // Tests the base append case: a single newest message should bootstrap
-        // the latest tail when nothing is cached yet.
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        final store = container.read(
-          conversationTimelineV2MessageStoreProvider.notifier,
-        );
+    group('newMessage', () {
+      test(
+        'ignores a server-backed message when no latest scope is loaded',
+        () {
+          // Tests the new-message merge contract: server-backed messages only
+          // merge into an already loaded latest slice.
+          final container = ProviderContainer();
+          addTearDown(container.dispose);
+          final store = container.read(
+            conversationTimelineV2MessageStoreProvider.notifier,
+          );
 
-        store.insertLatestMessage(_identity, _message(7));
+          store.newMessage(_identity, _message(7));
 
-        final scope = container.read(
-          conversationTimelineV2MessageStoreProvider,
-        )[_identity]!;
-        expect(_segmentIds(scope.segments), [
-          [7],
-        ]);
-        expect(scope.hasLatestSegment, true);
-      });
+          final scope = container.read(
+            conversationTimelineV2MessageStoreProvider,
+          )[_identity];
+          expect(scope, isNull);
+        },
+      );
 
-      test('creates a latest segment when only historical segments exist', () {
-        // Tests that historical cached slices remain intact, and the store can
-        // still start tracking a latest tail by appending a singleton segment.
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        final store = container.read(
-          conversationTimelineV2MessageStoreProvider.notifier,
-        );
+      test(
+        'ignores a server-backed message when only historical segments exist',
+        () {
+          // Tests that a created server message does not synthesize a latest
+          // slice when the store is only holding historical ranges.
+          final container = ProviderContainer();
+          addTearDown(container.dispose);
+          final store = container.read(
+            conversationTimelineV2MessageStoreProvider.notifier,
+          );
 
-        store.putScope(
-          _identity,
-          _scope([_segment(1, 3), _segment(10, 12)], hasLatestSegment: false),
-        );
+          store.putScope(
+            _identity,
+            _scope([_segment(1, 3), _segment(10, 12)], hasLatestSegment: false),
+          );
 
-        store.insertLatestMessage(_identity, _message(15));
+          store.newMessage(_identity, _message(15));
 
-        final scope = container.read(
-          conversationTimelineV2MessageStoreProvider,
-        )[_identity]!;
-        expect(_segmentIds(scope.segments), [
-          [1, 2, 3],
-          [10, 11, 12],
-          [15],
-        ]);
-        expect(scope.hasLatestSegment, true);
-      });
+          final scope = container.read(
+            conversationTimelineV2MessageStoreProvider,
+          )[_identity]!;
+          expect(_segmentIds(scope.segments), [
+            [1, 2, 3],
+            [10, 11, 12],
+          ]);
+          expect(scope.hasLatestSegment, false);
+        },
+      );
 
       test('appends the message to the current latest segment', () {
         // Tests the steady-state append path: a new newest message extends the
@@ -741,7 +744,7 @@ void main() {
           _scope([_segment(1, 3), _segment(10, 12)], hasLatestSegment: true),
         );
 
-        store.insertLatestMessage(_identity, _message(13));
+        store.newMessage(_identity, _message(13));
 
         final scope = container.read(
           conversationTimelineV2MessageStoreProvider,
@@ -752,6 +755,283 @@ void main() {
         ]);
         expect(scope.hasLatestSegment, true);
       });
+
+      test('replaces an existing latest message with the same server id', () {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final store = container.read(
+          conversationTimelineV2MessageStoreProvider.notifier,
+        );
+
+        store.putScope(
+          _identity,
+          _scope([_segment(10, 12)], hasLatestSegment: true),
+        );
+
+        store.newMessage(_identity, _messageWithCustomText(11, 'updated-11'));
+
+        final latestMessages = container
+            .read(conversationTimelineV2MessageStoreProvider)[_identity]!
+            .segments
+            .last
+            .orderedMessages;
+        expect(latestMessages.map((message) => _messageText(message)), [
+          'message-10',
+          'updated-11',
+          'message-12',
+        ]);
+      });
+
+      test(
+        'inserts a server-backed message into the middle of the latest segment',
+        () {
+          final container = ProviderContainer();
+          addTearDown(container.dispose);
+          final store = container.read(
+            conversationTimelineV2MessageStoreProvider.notifier,
+          );
+
+          store.putScope(
+            _identity,
+            _scope([
+              ConversationTimelineV2CanonicalSegment(
+                orderedMessages: [_message(10), _message(12)],
+              ),
+            ], hasLatestSegment: true),
+          );
+
+          store.newMessage(_identity, _message(11));
+
+          final scope = container.read(
+            conversationTimelineV2MessageStoreProvider,
+          )[_identity]!;
+          expect(_segmentIds(scope.segments), [
+            [10, 11, 12],
+          ]);
+        },
+      );
+
+      test(
+        'inserts a server-backed message at the front of the latest segment when needed',
+        () {
+          final container = ProviderContainer();
+          addTearDown(container.dispose);
+          final store = container.read(
+            conversationTimelineV2MessageStoreProvider.notifier,
+          );
+
+          store.putScope(
+            _identity,
+            _scope([
+              ConversationTimelineV2CanonicalSegment(
+                orderedMessages: [_message(11), _message(12)],
+              ),
+            ], hasLatestSegment: true),
+          );
+
+          store.newMessage(_identity, _message(10));
+
+          final scope = container.read(
+            conversationTimelineV2MessageStoreProvider,
+          )[_identity]!;
+          expect(_segmentIds(scope.segments), [
+            [10, 11, 12],
+          ]);
+        },
+      );
+    });
+
+    group('optimistic messages', () {
+      test('stores optimistic messages alongside canonical segments', () {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final store = container.read(
+          conversationTimelineV2MessageStoreProvider.notifier,
+        );
+
+        store.putScope(
+          _identity,
+          _scope([_segment(1, 3)], hasLatestSegment: true),
+        );
+
+        store.newMessage(_identity, _optimisticMessage('client-4'));
+
+        final scope = container.read(
+          conversationTimelineV2MessageStoreProvider,
+        )[_identity]!;
+        expect(_segmentIds(scope.segments), [
+          [1, 2, 3],
+        ]);
+        expect(
+          scope.optimisticMessages.map((message) => message.clientGeneratedId),
+          ['client-4'],
+        );
+      });
+
+      test('replaces an existing optimistic message in place', () {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final store = container.read(
+          conversationTimelineV2MessageStoreProvider.notifier,
+        );
+
+        store.putScope(
+          _identity,
+          _scope(
+            [_segment(1, 3)],
+            hasLatestSegment: true,
+            optimisticMessages: [_optimisticMessage('client-4')],
+          ),
+        );
+
+        store.newMessage(
+          _identity,
+          _optimisticMessage('client-4', text: 'optimistic-updated'),
+        );
+
+        final optimisticMessages = container
+            .read(conversationTimelineV2MessageStoreProvider)[_identity]!
+            .optimisticMessages;
+        expect(optimisticMessages, hasLength(1));
+        expect(_messageText(optimisticMessages.single), 'optimistic-updated');
+      });
+
+      test(
+        'returns latest slice with canonical tail plus optimistic messages',
+        () {
+          final container = ProviderContainer();
+          addTearDown(container.dispose);
+          final store = container.read(
+            conversationTimelineV2MessageStoreProvider.notifier,
+          );
+
+          store.putScope(
+            _identity,
+            _scope(
+              [_segment(1, 3)],
+              hasLatestSegment: true,
+              optimisticMessages: [_optimisticMessage('client-4')],
+            ),
+          );
+
+          final activeSegment = container.read(
+            conversationTimelineV2ActiveSegmentProvider((
+              identity: _identity,
+              mode: const ConversationTimelineV2ActiveSegmentMode.latest(),
+            )),
+          )!;
+
+          expect(
+            activeSegment.orderedMessages.map((message) => message.stableKey),
+            [
+              'client:client-1',
+              'client:client-2',
+              'client:client-3',
+              'client:client-4',
+            ],
+          );
+          expect(activeSegment.isLatestSlice, true);
+        },
+      );
+
+      test('does not inject optimistic messages into non-latest slices', () {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final store = container.read(
+          conversationTimelineV2MessageStoreProvider.notifier,
+        );
+
+        store.putScope(
+          _identity,
+          _scope(
+            [_segment(1, 3), _segment(10, 12)],
+            hasLatestSegment: true,
+            optimisticMessages: [_optimisticMessage('client-13')],
+          ),
+        );
+
+        final activeSegment = container.read(
+          conversationTimelineV2ActiveSegmentProvider((
+            identity: _identity,
+            mode: const ConversationTimelineV2ActiveSegmentMode.around(2),
+          )),
+        )!;
+
+        expect(
+          activeSegment.orderedMessages.map(
+            (message) => message.serverMessageId,
+          ),
+          [1, 2, 3],
+        );
+      });
+
+      test(
+        'dedupes optimistic messages when canonical latest already contains the same clientGeneratedId',
+        () {
+          final container = ProviderContainer();
+          addTearDown(container.dispose);
+          final store = container.read(
+            conversationTimelineV2MessageStoreProvider.notifier,
+          );
+
+          store.putScope(
+            _identity,
+            _scope(
+              [
+                ConversationTimelineV2CanonicalSegment(
+                  orderedMessages: [_message(1), _message(2), _message(3)],
+                ),
+              ],
+              hasLatestSegment: true,
+              optimisticMessages: [_optimisticMessage('client-3')],
+            ),
+          );
+
+          final activeSegment = container.read(
+            conversationTimelineV2ActiveSegmentProvider((
+              identity: _identity,
+              mode: const ConversationTimelineV2ActiveSegmentMode.latest(),
+            )),
+          )!;
+
+          expect(
+            activeSegment.orderedMessages.map(
+              (message) => message.clientGeneratedId,
+            ),
+            ['client-1', 'client-2', 'client-3'],
+          );
+        },
+      );
+
+      test(
+        'reconciles an optimistic message into canonical latest messages',
+        () {
+          final container = ProviderContainer();
+          addTearDown(container.dispose);
+          final store = container.read(
+            conversationTimelineV2MessageStoreProvider.notifier,
+          );
+
+          store.putScope(
+            _identity,
+            _scope(
+              [_segment(1, 3)],
+              hasLatestSegment: true,
+              optimisticMessages: [_optimisticMessage('client-4')],
+            ),
+          );
+
+          store.newMessage(_identity, _message(4));
+
+          final scope = container.read(
+            conversationTimelineV2MessageStoreProvider,
+          )[_identity]!;
+          expect(_segmentIds(scope.segments), [
+            [1, 2, 3, 4],
+          ]);
+          expect(scope.optimisticMessages, isEmpty);
+        },
+      );
     });
   });
 }
@@ -763,12 +1043,54 @@ ConversationTimelineV2CanonicalSegment _segment(int start, int end) {
 }
 
 ConversationMessageV2 _message(int? serverMessageId) {
+  return _messageWithText(
+    serverMessageId,
+    'client-${serverMessageId ?? 'missing'}',
+    'message-$serverMessageId',
+  );
+}
+
+ConversationMessageV2 _messageWithCustomText(
+  int? serverMessageId,
+  String text,
+) {
+  return _messageWithText(
+    serverMessageId,
+    'client-${serverMessageId ?? 'missing'}',
+    text,
+  );
+}
+
+ConversationMessageV2 _messageWithText(
+  int? serverMessageId,
+  String clientGeneratedId,
+  String text,
+) {
   return ConversationMessageV2(
     serverMessageId: serverMessageId,
-    clientGeneratedId: 'client-${serverMessageId ?? 'missing'}',
+    clientGeneratedId: clientGeneratedId,
     sender: _sender,
-    content: TextMessageContent(text: 'message-$serverMessageId'),
+    content: TextMessageContent(text: text),
   );
+}
+
+ConversationMessageV2 _optimisticMessage(
+  String clientGeneratedId, {
+  String? text,
+}) {
+  return ConversationMessageV2(
+    clientGeneratedId: clientGeneratedId,
+    sender: _sender,
+    content: TextMessageContent(text: text ?? 'optimistic-$clientGeneratedId'),
+    deliveryState: ConversationDeliveryState.sending,
+  );
+}
+
+String _messageText(ConversationMessageV2 message) {
+  return switch (message.content) {
+    TextMessageContent(:final text) => text,
+    _ => throw StateError('Expected text content in test message'),
+  };
 }
 
 List<List<int>> _segmentIds(
@@ -784,10 +1106,12 @@ ConversationTimelineV2CanonicalScope _scope(
   List<ConversationTimelineV2CanonicalSegment> segments, {
   bool hasLatestSegment = false,
   bool hasReachedOldest = false,
+  List<ConversationMessageV2> optimisticMessages = const [],
 }) {
-  return (
+  return ConversationTimelineV2CanonicalScope(
     segments: segments,
     hasLatestSegment: hasLatestSegment,
     hasReachedOldest: hasReachedOldest,
+    optimisticMessages: optimisticMessages,
   );
 }

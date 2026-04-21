@@ -1,18 +1,13 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../conversation_v2/domain/conversation_message_v2.dart'
+    show ConversationDeliveryState;
+export '../../conversation_v2/domain/conversation_message_v2.dart'
+    show ConversationDeliveryState;
 import '../../models/message_models.dart';
 import 'conversation_scope.dart';
 
 part 'conversation_message.freezed.dart';
-
-enum ConversationDeliveryState {
-  sending,
-  sent,
-  confirmed,
-  failed,
-  editing,
-  deleting,
-}
 
 @freezed
 abstract class ConversationMessage with _$ConversationMessage {

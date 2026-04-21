@@ -1,7 +1,15 @@
-import 'package:chahua/features/chats/conversation/domain/conversation_message.dart';
 import 'package:chahua/core/api/models/messages_api_models.dart';
 import 'package:chahua/features/chats/models/message_api_mapper.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
+
+enum ConversationDeliveryState {
+  sending,
+  sent,
+  confirmed,
+  failed,
+  editing,
+  deleting,
+}
 
 class ConversationMessageV2 {
   const ConversationMessageV2({
