@@ -70,6 +70,34 @@ class ConversationMessageV2 {
   final ConversationDeliveryState deliveryState;
   final MessageContent content;
 
+  ConversationMessageV2 copyWith({
+    int? serverMessageId,
+    String? clientGeneratedId,
+    Sender? sender,
+    DateTime? createdAt,
+    bool? isEdited,
+    bool? isDeleted,
+    ReplyToMessage? replyToMessage,
+    List<ReactionSummary>? reactions,
+    ThreadInfo? threadInfo,
+    ConversationDeliveryState? deliveryState,
+    MessageContent? content,
+  }) {
+    return ConversationMessageV2(
+      serverMessageId: serverMessageId ?? this.serverMessageId,
+      clientGeneratedId: clientGeneratedId ?? this.clientGeneratedId,
+      sender: sender ?? this.sender,
+      createdAt: createdAt ?? this.createdAt,
+      isEdited: isEdited ?? this.isEdited,
+      isDeleted: isDeleted ?? this.isDeleted,
+      replyToMessage: replyToMessage ?? this.replyToMessage,
+      reactions: reactions ?? this.reactions,
+      threadInfo: threadInfo ?? this.threadInfo,
+      deliveryState: deliveryState ?? this.deliveryState,
+      content: content ?? this.content,
+    );
+  }
+
   String get stableKey {
     if (clientGeneratedId.isNotEmpty) {
       return 'client:$clientGeneratedId';

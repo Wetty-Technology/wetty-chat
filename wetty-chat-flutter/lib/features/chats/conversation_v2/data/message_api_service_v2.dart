@@ -69,6 +69,22 @@ class MessageApiServiceV2 {
     );
     return MessageItemDto.fromJson(response.data!);
   }
+
+  Future<MessageItemDto> editMessage(
+    String chatId,
+    int messageId,
+    String newText, {
+    List<String> attachmentIds = const <String>[],
+  }) async {
+    final response = await _dio.patch<Map<String, dynamic>>(
+      '/chats/$chatId/messages/$messageId',
+      data: EditMessageRequestDto(
+        message: newText,
+        attachmentIds: attachmentIds,
+      ).toJson(),
+    );
+    return MessageItemDto.fromJson(response.data!);
+  }
 }
 
 final messageApiServiceV2Provider = Provider<MessageApiServiceV2>((ref) {

@@ -12,15 +12,14 @@ import 'package:voice_message/voice_message.dart';
 
 import 'package:chahua/core/network/dio_client.dart';
 import 'package:chahua/core/session/dev_session_store.dart';
-import 'package:chahua/features/chats/conversation/domain/conversation_message.dart';
 import 'package:chahua/features/chats/conversation/data/attachment_service.dart';
 import 'package:chahua/features/chats/conversation/data/audio_recorder_service.dart';
 import 'package:chahua/features/chats/conversation/data/audio_waveform_cache_service.dart';
-import 'package:chahua/features/chats/conversation/data/conversation_repository.dart';
-import 'package:chahua/features/chats/conversation/domain/conversation_scope.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_draft_store.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_local_mutation_registry.dart';
+import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_message_store.dart';
 import 'package:chahua/features/chats/conversation_v2/data/attachment_picker_service.dart';
+import 'package:chahua/features/chats/conversation_v2/data/message_api_service_v2.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_identity.dart';
 import 'package:chahua/features/chats/conversation_v2/data/conversation_timeline_v2_repository.dart';
@@ -221,13 +220,13 @@ class ComposerIdle extends ConversationComposerMode {
 class ComposerReplying extends ConversationComposerMode {
   const ComposerReplying(this.message);
 
-  final ConversationMessage message;
+  final ConversationMessageV2 message;
 }
 
 class ComposerEditing extends ConversationComposerMode {
   const ComposerEditing(this.message);
 
-  final ConversationMessage message;
+  final ConversationMessageV2 message;
 }
 
 class _ComposerSendRequest {
@@ -338,36 +337,33 @@ class ConversationComposerViewModel
 
   ConversationComposerViewModel(this.arg);
 
-  late final ConversationRepository _repository;
   late final ConversationTimelineV2Repository _timelineRepository;
+  late final ConversationTimelineV2MessageStore _messageStore;
   late final ConversationDraftStore _draftStore;
   late final AttachmentService _attachmentService;
   late final AttachmentPickerService _pickerService;
   late final AudioRecorderService _audioRecorderService;
   late final AudioWaveformCacheService _audioWaveformCacheService;
+  late final MessageApiServiceV2 _messageApiService;
   late final ConversationLocalMutationRegistry _localMutationRegistry;
-  late final ConversationScope _scope;
   Timer? _audioDurationTimer;
   DateTime? _audioRecordingStartedAt;
   bool _cancelPendingAudioStart = false;
 
   @override
   ConversationComposerState build() {
-    _scope = arg.threadRootId == null
-        ? ConversationScope.chat(chatId: arg.chatId)
-        : ConversationScope.thread(
-            chatId: arg.chatId,
-            threadRootId: arg.threadRootId!,
-          );
-    _repository = ref.read(conversationRepositoryProvider(_scope));
     _timelineRepository = ref.read(
       conversationTimelineV2RepositoryProvider(arg),
+    );
+    _messageStore = ref.read(
+      conversationTimelineV2MessageStoreProvider.notifier,
     );
     _draftStore = ref.read(conversationDraftProvider);
     _attachmentService = ref.read(attachmentServiceProvider);
     _pickerService = ref.read(attachmentPickerServiceProvider);
     _audioRecorderService = ref.read(audioRecorderServiceProvider);
     _audioWaveformCacheService = ref.read(audioWaveformCacheServiceProvider);
+    _messageApiService = ref.read(messageApiServiceV2Provider);
     _localMutationRegistry = ref.read(
       conversationLocalMutationRegistryProvider,
     );
@@ -391,7 +387,7 @@ class ConversationComposerViewModel
     await _draftStore.setDraft(arg, value);
   }
 
-  void beginReply(ConversationMessage message) {
+  void beginReply(ConversationMessageV2 message) {
     state = state.copyWith(
       mode: ComposerReplying(message),
       attachments: const <ComposerAttachment>[],
@@ -400,13 +396,13 @@ class ConversationComposerViewModel
     );
   }
 
-  void beginEdit(ConversationMessage message) {
+  void beginEdit(ConversationMessageV2 message) {
     final savedDraftBeforeEdit = state.isEditing
         ? state.savedDraftBeforeEdit
         : state.draft;
     state = state.copyWith(
       mode: ComposerEditing(message),
-      draft: message.message ?? '',
+      draft: _messageTextFor(message.content) ?? '',
       attachments: const <ComposerAttachment>[],
       audioDraft: null,
       savedDraftBeforeEdit: savedDraftBeforeEdit,
@@ -513,10 +509,18 @@ class ConversationComposerViewModel
       if (attachmentIds.isNotEmpty) {
         throw Exception('Editing messages does not support attachments');
       }
-      final messageId = mode.message.serverMessageId!;
-      final originalMessage = mode.message;
+      final messageId = mode.message.serverMessageId;
+      if (messageId == null) {
+        throw Exception('Editing requires a server-backed message');
+      }
+      final originalMessage =
+          _messageStore.messageForServerMessageId(arg, messageId) ??
+          mode.message;
       final savedDraftBeforeEdit = state.savedDraftBeforeEdit;
-      _repository.beginOptimisticEdit(messageId, trimmed);
+      _messageStore.updateMessage(
+        arg,
+        _optimisticallyEditedMessage(originalMessage, trimmed),
+      );
       _dispatchLocalMutation(ConversationLocalMutationKind.updated);
       state = state.copyWith(
         draft: '',
@@ -1037,17 +1041,17 @@ class ConversationComposerViewModel
       }
       return ReplyToMessage(
         id: serverMessageId,
-        message: message.message,
-        messageType: message.messageType,
-        sticker: message.sticker,
+        message: _messageTextFor(message.content),
+        messageType: _messageTypeFor(message.content),
+        sticker: _stickerFor(message.content),
         sender: message.sender,
         isDeleted: message.isDeleted,
-        attachments: message.attachments,
+        attachments: _attachmentsFor(message.content),
         reactions: message.reactions,
-        firstAttachmentKind: message.attachments.isEmpty
+        firstAttachmentKind: _attachmentsFor(message.content).isEmpty
             ? null
-            : message.attachments.first.kind,
-        mentions: message.mentions,
+            : _attachmentsFor(message.content).first.kind,
+        mentions: _mentionsFor(message.content),
       );
     }
     return null;
@@ -1056,11 +1060,14 @@ class ConversationComposerViewModel
   Future<void> _commitEditInBackground({
     required int messageId,
     required String newText,
-    required ConversationMessage originalMessage,
+    required ConversationMessageV2 originalMessage,
     required String? savedDraftBeforeEdit,
   }) async {
     try {
-      await _repository.commitEdit(messageId, newText);
+      final updatedMessage = ConversationMessageV2.fromMessageItemDto(
+        await _messageApiService.editMessage(arg.chatId, messageId, newText),
+      );
+      _messageStore.updateMessage(arg, updatedMessage);
       _dispatchLocalMutation(ConversationLocalMutationKind.updated);
     } catch (error, stackTrace) {
       developer.log(
@@ -1069,7 +1076,7 @@ class ConversationComposerViewModel
         error: error,
         stackTrace: stackTrace,
       );
-      _repository.rollbackEdit(messageId);
+      _messageStore.updateMessage(arg, originalMessage);
       _dispatchLocalMutation(ConversationLocalMutationKind.updated);
       state = state.copyWith(
         draft: newText,
@@ -1088,7 +1095,7 @@ class ConversationComposerViewModel
 
   String _newClientGeneratedId() {
     final currentUserId = ref.read(authSessionProvider).currentUserId;
-    return '${DateTime.now().microsecondsSinceEpoch}-$currentUserId-${_scope.storageKey}';
+    return '${DateTime.now().microsecondsSinceEpoch}-$currentUserId-${_storageKeyFor(arg)}';
   }
 
   String _consumeNextClientGeneratedId() {
@@ -1122,6 +1129,98 @@ class ConversationComposerViewModel
       ConversationLocalMutation(identity: arg, kind: kind),
     );
   }
+}
+
+String _storageKeyFor(ConversationIdentity identity) {
+  final threadRootId = identity.threadRootId;
+  if (threadRootId == null) {
+    return identity.chatId;
+  }
+  return '${identity.chatId}::thread::$threadRootId';
+}
+
+ConversationMessageV2 _optimisticallyEditedMessage(
+  ConversationMessageV2 message,
+  String newText,
+) {
+  return message.copyWith(
+    isEdited: true,
+    deliveryState: ConversationDeliveryState.editing,
+    content: _editedContent(message.content, newText),
+  );
+}
+
+MessageContent _editedContent(MessageContent content, String newText) {
+  return switch (content) {
+    TextMessageContent(:final mentions) => TextMessageContent(
+      text: newText,
+      mentions: mentions,
+    ),
+    AudioMessageContent(:final audio, :final mentions) => AudioMessageContent(
+      audio: audio,
+      text: newText,
+      mentions: mentions,
+    ),
+    FileMessageContent(:final attachments, :final mentions) =>
+      FileMessageContent(
+        text: newText,
+        attachments: attachments,
+        mentions: mentions,
+      ),
+    InviteMessageContent(:final mentions) => InviteMessageContent(
+      text: newText,
+      mentions: mentions,
+    ),
+    StickerMessageContent() => content,
+    SystemMessageContent() => content,
+  };
+}
+
+String? _messageTextFor(MessageContent content) {
+  return switch (content) {
+    TextMessageContent(:final text) => text,
+    AudioMessageContent(:final text) => text,
+    FileMessageContent(:final text) => text,
+    InviteMessageContent(:final text) => text,
+    SystemMessageContent(:final text) => text,
+    StickerMessageContent() => null,
+  };
+}
+
+String _messageTypeFor(MessageContent content) {
+  return switch (content) {
+    TextMessageContent() => 'text',
+    AudioMessageContent() => 'audio',
+    FileMessageContent() => 'text',
+    InviteMessageContent() => 'invite',
+    StickerMessageContent() => 'sticker',
+    SystemMessageContent() => 'system',
+  };
+}
+
+StickerSummary? _stickerFor(MessageContent content) {
+  return switch (content) {
+    StickerMessageContent(:final sticker) => sticker,
+    _ => null,
+  };
+}
+
+List<AttachmentItem> _attachmentsFor(MessageContent content) {
+  return switch (content) {
+    AudioMessageContent(:final audio) => [audio],
+    FileMessageContent(:final attachments) => attachments,
+    _ => const <AttachmentItem>[],
+  };
+}
+
+List<MentionInfo> _mentionsFor(MessageContent content) {
+  return switch (content) {
+    TextMessageContent(:final mentions) => mentions,
+    AudioMessageContent(:final mentions) => mentions,
+    FileMessageContent(:final mentions) => mentions,
+    InviteMessageContent(:final mentions) => mentions,
+    _ => const <MentionInfo>[],
+  };
 }
 
 final attachmentServiceProvider = Provider<AttachmentService>((ref) {

@@ -6,8 +6,9 @@ import 'package:flutter/material.dart' show CircularProgressIndicator;
 
 import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/features/chats/conversation_v2/data/attachment_picker_service.dart';
-import 'package:chahua/features/chats/conversation/domain/conversation_message.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_composer_view_model.dart';
+import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
+import 'package:chahua/features/chats/models/message_models.dart';
 import 'package:chahua/features/chats/conversation_v2/presentation/compose/composer_audio_controls.dart';
 import 'package:chahua/features/chats/conversation_v2/presentation/compose/composer_content_row.dart';
 import 'package:chahua/features/chats/models/message_preview_formatter.dart';
@@ -104,19 +105,67 @@ class ComposerPreviewBar extends StatelessWidget {
     };
   }
 
-  String _formatMessagePreview(ConversationMessage message) {
+  String _formatMessagePreview(ConversationMessageV2 message) {
+    final attachments = _previewAttachmentsFor(message.content);
     return formatMessagePreview(
-      message: message.message,
-      messageType: message.messageType,
-      sticker: message.sticker,
-      attachments: message.attachments,
-      firstAttachmentKind: message.attachments.isNotEmpty
-          ? message.attachments.first.kind
+      message: _previewTextFor(message.content),
+      messageType: _previewMessageTypeFor(message.content),
+      sticker: _previewStickerFor(message.content),
+      attachments: attachments,
+      firstAttachmentKind: attachments.isNotEmpty
+          ? attachments.first.kind
           : null,
       isDeleted: message.isDeleted,
-      mentions: message.mentions,
+      mentions: _previewMentionsFor(message.content),
     );
   }
+}
+
+String? _previewTextFor(MessageContent content) {
+  return switch (content) {
+    TextMessageContent(:final text) => text,
+    AudioMessageContent(:final text) => text,
+    FileMessageContent(:final text) => text,
+    InviteMessageContent(:final text) => text,
+    SystemMessageContent(:final text) => text,
+    StickerMessageContent() => null,
+  };
+}
+
+String _previewMessageTypeFor(MessageContent content) {
+  return switch (content) {
+    TextMessageContent() => 'text',
+    AudioMessageContent() => 'audio',
+    FileMessageContent() => 'text',
+    InviteMessageContent() => 'invite',
+    StickerMessageContent() => 'sticker',
+    SystemMessageContent() => 'system',
+  };
+}
+
+StickerSummary? _previewStickerFor(MessageContent content) {
+  return switch (content) {
+    StickerMessageContent(:final sticker) => sticker,
+    _ => null,
+  };
+}
+
+List<AttachmentItem> _previewAttachmentsFor(MessageContent content) {
+  return switch (content) {
+    AudioMessageContent(:final audio) => [audio],
+    FileMessageContent(:final attachments) => attachments,
+    _ => const <AttachmentItem>[],
+  };
+}
+
+List<MentionInfo> _previewMentionsFor(MessageContent content) {
+  return switch (content) {
+    TextMessageContent(:final mentions) => mentions,
+    AudioMessageContent(:final mentions) => mentions,
+    FileMessageContent(:final mentions) => mentions,
+    InviteMessageContent(:final mentions) => mentions,
+    _ => const <MentionInfo>[],
+  };
 }
 
 class _PreviewBar extends StatelessWidget {

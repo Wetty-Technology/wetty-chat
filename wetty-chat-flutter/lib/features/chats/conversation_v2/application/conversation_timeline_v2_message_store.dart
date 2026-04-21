@@ -20,6 +20,32 @@ class ConversationTimelineV2MessageStore
     return state[identity];
   }
 
+  ConversationMessageV2? messageForServerMessageId(
+    ConversationIdentity identity,
+    int serverMessageId,
+  ) {
+    final existingScope = scopeFor(identity);
+    if (existingScope == null) {
+      return null;
+    }
+
+    for (final segment in existingScope.segments) {
+      for (final message in segment.orderedMessages) {
+        if (message.serverMessageId == serverMessageId) {
+          return message;
+        }
+      }
+    }
+
+    for (final message in existingScope.optimisticMessages) {
+      if (message.serverMessageId == serverMessageId) {
+        return message;
+      }
+    }
+
+    return null;
+  }
+
   void putScope(
     ConversationIdentity identity,
     ConversationTimelineV2CanonicalScope scope,

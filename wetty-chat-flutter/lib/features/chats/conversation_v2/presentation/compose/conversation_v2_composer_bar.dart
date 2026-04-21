@@ -7,7 +7,9 @@ import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_composer_view_model.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_view_model.dart';
 import 'package:chahua/features/chats/conversation_v2/data/attachment_picker_service.dart';
+import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_identity.dart';
+import 'package:chahua/features/chats/models/message_models.dart';
 import 'package:chahua/features/chats/conversation_v2/presentation/compose/composer_attachment_menu.dart';
 import 'package:chahua/features/chats/conversation_v2/presentation/compose/composer_audio_controls.dart';
 import 'package:chahua/features/chats/conversation_v2/presentation/compose/composer_input_area.dart';
@@ -289,8 +291,21 @@ class _ConversationV2ComposerBarState
     }
 
     final hydrated = hydrateComposerMentions(
-      mode.message.message ?? '',
-      mode.message.mentions,
+      switch (mode.message.content) {
+        TextMessageContent(:final text) => text,
+        AudioMessageContent(:final text) => text ?? '',
+        FileMessageContent(:final text) => text ?? '',
+        InviteMessageContent(:final text) => text ?? '',
+        SystemMessageContent(:final text) => text,
+        StickerMessageContent() => '',
+      },
+      switch (mode.message.content) {
+        TextMessageContent(:final mentions) => mentions,
+        AudioMessageContent(:final mentions) => mentions,
+        FileMessageContent(:final mentions) => mentions,
+        InviteMessageContent(:final mentions) => mentions,
+        _ => const <MentionInfo>[],
+      },
     );
     _textController.value = TextEditingValue(
       text: hydrated.text,
