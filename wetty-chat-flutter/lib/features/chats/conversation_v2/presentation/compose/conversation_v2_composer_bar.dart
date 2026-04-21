@@ -85,12 +85,12 @@ class _ConversationV2ComposerBarState
 
   /// Without an optimistic-send path in v2 yet, a freshly sent message only
   /// becomes visible once the server WS echo reaches the realtime applier.
-  /// Jump to latest so the user is positioned on the tail segment where it
-  /// will land.
+  /// Ask the VM to follow the latest tail — a no-op when the user is already
+  /// there, so we don't double up with the WS-triggered scrollToBottom.
   void _onMessageSent() {
     ref
         .read(conversationTimelineV2ViewModelProvider(widget.identity).notifier)
-        .jumpToLatest();
+        .followLatestTailIfNeeded();
   }
 
   void _resetAudioGestureState() {

@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:chahua/features/chats/conversation/domain/launch_request.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_state.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_view_model.dart';
@@ -156,6 +158,10 @@ class _ConversationTimelineV2State
     if (generation <= _lastHandledViewportCommandGeneration) {
       return;
     }
+
+    log(
+      'consumeViewportCommand: generation=$generation, kind=${state.viewportCommand.kind}, placement=${state.viewportCommand.placement}',
+    );
 
     _lastHandledViewportCommandGeneration = generation;
 

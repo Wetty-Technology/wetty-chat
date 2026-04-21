@@ -117,6 +117,19 @@ class ConversationTimelineV2ViewModel
     _highlightedServerMessageId = null;
   }
 
+  /// Ensures the viewport is anchored to the tail of the latest segment.
+  /// No-op when the user is already on the latest slice near the bottom —
+  /// the realtime applier's auto-scroll will handle surfacing the echo.
+  void followLatestTailIfNeeded() {
+    final isFollowingTail =
+        (_activeSegment?.isLatestSlice ?? false) &&
+        (_latestViewportFacts?.isNearBottom ?? false);
+    if (isFollowingTail) {
+      return;
+    }
+    unawaited(jumpToLatest());
+  }
+
   Future<void> jumpToMessageServerId(
     int messageId, {
     bool highlight = true,
