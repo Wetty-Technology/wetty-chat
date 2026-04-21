@@ -1,6 +1,5 @@
-import 'package:chahua/features/chats/conversation/data/message_api_service.dart';
-import 'package:chahua/features/chats/conversation/domain/conversation_scope.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_message_store.dart';
+import 'package:chahua/features/chats/conversation_v2/data/message_api_service_v2.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_canonical_scope.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_identity.dart';
@@ -11,13 +10,6 @@ class ConversationTimelineV2Repository {
 
   final Ref ref;
   final ConversationIdentity identity;
-
-  ConversationScope get _scope => identity.threadRootId == null
-      ? ConversationScope.chat(chatId: identity.chatId)
-      : ConversationScope.thread(
-          chatId: identity.chatId,
-          threadRootId: identity.threadRootId!,
-        );
 
   ConversationTimelineV2MessageStore get _store =>
       ref.read(conversationTimelineV2MessageStoreProvider.notifier);
@@ -36,9 +28,9 @@ class ConversationTimelineV2Repository {
     // later retry/discard actions.
     // Send the message to the server.
     await ref
-        .read(messageApiServiceProvider)
+        .read(messageApiServiceV2Provider)
         .sendConversationMessage(
-          _scope,
+          identity,
           _textFor(optimisticMessage),
           messageType: _messageTypeFor(optimisticMessage),
           replyToId: optimisticMessage.replyToMessage?.id,
@@ -86,8 +78,8 @@ class ConversationTimelineV2Repository {
     }
 
     final response = await ref
-        .read(messageApiServiceProvider)
-        .fetchConversationMessages(_scope, max: limit);
+        .read(messageApiServiceV2Provider)
+        .fetchConversationMessages(identity, max: limit);
 
     // If the response is empty, means we are at latest but there is just simply no message
     if (response.messages.isEmpty) {
@@ -140,9 +132,9 @@ class ConversationTimelineV2Repository {
     required int limit,
   }) async {
     final response = await ref
-        .read(messageApiServiceProvider)
+        .read(messageApiServiceV2Provider)
         .fetchConversationMessages(
-          _scope,
+          identity,
           before: anchorServerMessageId,
           max: limit,
         );
@@ -172,9 +164,9 @@ class ConversationTimelineV2Repository {
     required int limit,
   }) async {
     final response = await ref
-        .read(messageApiServiceProvider)
+        .read(messageApiServiceV2Provider)
         .fetchConversationMessages(
-          _scope,
+          identity,
           after: anchorServerMessageId,
           max: limit,
         );
@@ -199,9 +191,9 @@ class ConversationTimelineV2Repository {
     required int limit,
   }) async {
     final response = await ref
-        .read(messageApiServiceProvider)
+        .read(messageApiServiceV2Provider)
         .fetchConversationMessages(
-          _scope,
+          identity,
           around: targetServerMessageId,
           max: limit,
         );
