@@ -1118,6 +1118,9 @@ class ConversationComposerViewModel
   }
 
   Future<void> delete(ConversationMessage message) async {
+    // TODO(conversation_v2): delete/retry/discard for failed messages still
+    // use copied v1 repository flows below. Replace these with v2-owned
+    // optimistic mutation handling, then remove the copied paths.
     final messageId = message.serverMessageId;
     if (messageId == null) {
       _repository.discardFailedMessage(message);

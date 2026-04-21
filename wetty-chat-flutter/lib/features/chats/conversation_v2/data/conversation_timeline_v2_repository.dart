@@ -31,6 +31,9 @@ class ConversationTimelineV2Repository {
     // Optimistically insert the message into the timeline.
     _store.newMessage(identity, optimisticMessage);
 
+    // TODO(conversation_v2): catch POST failures here, mark the optimistic
+    // row as failed in the v2 store, and keep the same clientGeneratedId for
+    // later retry/discard actions.
     // Send the message to the server.
     await ref
         .read(messageApiServiceProvider)
