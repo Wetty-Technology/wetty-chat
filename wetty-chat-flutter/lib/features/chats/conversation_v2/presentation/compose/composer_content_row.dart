@@ -19,8 +19,8 @@ class ComposerContentRow extends StatelessWidget {
     required this.onDraftChanged,
     required this.onSend,
     required this.onDeleteAudioDraft,
-    required this.onToggleStickerPicker,
-    required this.isStickerPickerOpen,
+    this.onToggleStickerPicker,
+    this.isStickerPickerOpen = false,
     this.onTextFieldTap,
   });
 
@@ -33,7 +33,7 @@ class ComposerContentRow extends StatelessWidget {
   final ValueChanged<String> onDraftChanged;
   final Future<void> Function() onSend;
   final Future<void> Function() onDeleteAudioDraft;
-  final VoidCallback onToggleStickerPicker;
+  final VoidCallback? onToggleStickerPicker;
   final bool isStickerPickerOpen;
   final VoidCallback? onTextFieldTap;
 
@@ -55,7 +55,8 @@ class ComposerContentRow extends StatelessWidget {
         draft.phase == ComposerAudioDraftPhase.uploading;
   }
 
-  bool get _showStickerButton => composer.audioDraft == null;
+  bool get _showStickerButton =>
+      composer.audioDraft == null && onToggleStickerPicker != null;
 
   @override
   Widget build(BuildContext context) {

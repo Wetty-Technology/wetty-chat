@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_composer_view_model.dart';
-import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_view_model.dart';
 import 'package:chahua/features/chats/conversation_v2/data/attachment_picker_service.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_identity.dart';
@@ -19,16 +18,19 @@ import 'package:chahua/features/groups/members/data/group_member_models.dart';
 import 'package:chahua/features/groups/members/data/group_member_repository.dart';
 import 'package:chahua/l10n/app_localizations.dart';
 
-/// V2 copy of [ConversationComposerBar].
-///
-/// Callbacks that v2 does not yet support (sticker picker toggling, custom
-/// `onMessageSent` hooks) are stubbed in-widget rather than exposed on the
-/// public API. Once v2 grows its own optimistic send path and sticker picker
-/// wiring, those stubs become the replacement surface.
 class ConversationV2ComposerBar extends ConsumerStatefulWidget {
-  const ConversationV2ComposerBar({super.key, required this.identity});
+  const ConversationV2ComposerBar({
+    super.key,
+    required this.identity,
+    this.onMessageSent,
+    this.onToggleStickerPicker,
+    this.isStickerPickerOpen = false,
+  });
 
   final ConversationIdentity identity;
+  final Future<void> Function()? onMessageSent;
+  final VoidCallback? onToggleStickerPicker;
+  final bool isStickerPickerOpen;
 
   @override
   ConsumerState<ConversationV2ComposerBar> createState() =>
@@ -44,13 +46,6 @@ class _ConversationV2ComposerBarState
   static const double _audioGestureTargetGap = 18;
   static const int _mentionLimit = 8;
   static const Duration _mentionDebounceDuration = Duration(milliseconds: 250);
-
-  // TODO(v2): wire these to the real v2 sticker picker once it lands. For now
-  // the composer behaves as if the picker is always closed.
-  static const bool _isStickerPickerOpen = false;
-  void _onToggleStickerPicker() {
-    // Stubbed: v2 does not yet host a sticker picker.
-  }
 
   final ScrollController _inputScrollController = ScrollController();
   final TextEditingController _textController = TextEditingController();
@@ -73,16 +68,6 @@ class _ConversationV2ComposerBarState
   String _mentionQuery = '';
   List<GroupMember> _mentionResults = const <GroupMember>[];
   List<ComposerMentionEntry> _mentionEntries = const <ComposerMentionEntry>[];
-
-  /// Without an optimistic-send path in v2 yet, a freshly sent message only
-  /// becomes visible once the server WS echo reaches the realtime applier.
-  /// Ask the VM to follow the latest tail — a no-op when the user is already
-  /// there, so we don't double up with the WS-triggered scrollToBottom.
-  void _onMessageSent() {
-    ref
-        .read(conversationTimelineV2ViewModelProvider(widget.identity).notifier)
-        .followLatestTailIfNeeded();
-  }
 
   void _resetAudioGestureState() {
     _activeAudioPointerId = null;
@@ -397,7 +382,7 @@ class _ConversationV2ComposerBarState
           _clearMentionState(clearEntries: true);
         });
       }
-      _onMessageSent();
+      await widget.onMessageSent?.call();
     } catch (error) {
       if (mounted) {
         _showErrorDialog('$error');
@@ -412,7 +397,7 @@ class _ConversationV2ComposerBarState
     try {
       await composerNotifier.sendRecordedAudio();
       _closeAttachmentMenu();
-      _onMessageSent();
+      await widget.onMessageSent?.call();
     } on ComposerAudioException catch (error) {
       if (mounted) {
         _showErrorDialog(_audioErrorMessage(error));
@@ -445,7 +430,7 @@ class _ConversationV2ComposerBarState
     if (_isAttachmentPanelOpen) {
       _closeAttachmentMenu();
     }
-    _onToggleStickerPicker();
+    widget.onToggleStickerPicker?.call();
   }
 
   void _toggleAttachmentPanel() {
@@ -453,8 +438,8 @@ class _ConversationV2ComposerBarState
       _closeAttachmentMenu();
       return;
     }
-    if (_isStickerPickerOpen) {
-      _onToggleStickerPicker();
+    if (widget.isStickerPickerOpen) {
+      widget.onToggleStickerPicker?.call();
     }
     _openAttachmentMenu();
   }
@@ -574,8 +559,8 @@ class _ConversationV2ComposerBarState
     if (_activeAudioPointerId != null) {
       return;
     }
-    if (_isStickerPickerOpen) {
-      _onToggleStickerPicker();
+    if (widget.isStickerPickerOpen) {
+      widget.onToggleStickerPicker?.call();
     }
     if (_isAttachmentPanelOpen) {
       _closeAttachmentMenu();
@@ -842,7 +827,8 @@ class _ConversationV2ComposerBarState
                                         .cancelAudioRecording();
                                   },
                                   onToggleStickerPicker: _toggleStickerPicker,
-                                  isStickerPickerOpen: _isStickerPickerOpen,
+                                  isStickerPickerOpen:
+                                      widget.isStickerPickerOpen,
                                   onDraftChanged: (value) {
                                     unawaited(
                                       ref

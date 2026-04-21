@@ -28,8 +28,8 @@ class ComposerInputArea extends StatelessWidget {
     required this.onRemoveAttachment,
     required this.onRetryAttachment,
     required this.onDeleteAudioDraft,
-    required this.onToggleStickerPicker,
-    required this.isStickerPickerOpen,
+    this.onToggleStickerPicker,
+    this.isStickerPickerOpen = false,
   });
 
   final ConversationComposerState composer;
@@ -43,7 +43,7 @@ class ComposerInputArea extends StatelessWidget {
   final ValueChanged<String> onRemoveAttachment;
   final Future<void> Function(String localId) onRetryAttachment;
   final Future<void> Function() onDeleteAudioDraft;
-  final VoidCallback onToggleStickerPicker;
+  final VoidCallback? onToggleStickerPicker;
   final bool isStickerPickerOpen;
 
   @override
