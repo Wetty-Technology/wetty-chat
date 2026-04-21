@@ -10,7 +10,7 @@ import '../../../../core/network/api_config.dart';
 import '../../../../shared/presentation/app_avatar.dart';
 import '../../models/message_models.dart';
 import '../domain/conversation_message.dart';
-import 'attachment_viewer_request.dart';
+import '../../conversation_v2/presentation/attachment_viewer_request.dart';
 import 'message_bubble/message_bubble.dart';
 import 'message_bubble/message_bubble_presentation.dart';
 import 'message_bubble/message_render_spec.dart';

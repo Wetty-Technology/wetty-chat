@@ -1,4 +1,3 @@
-import '../domain/conversation_message.dart';
 import '../../models/message_models.dart';
 
 enum AttachmentViewerMediaKind { image, video }
@@ -51,10 +50,11 @@ String attachmentViewerHeroTag({
 }
 
 AttachmentViewerRequest? buildAttachmentViewerRequest({
-  required ConversationMessage message,
+  required String messageStableKey,
+  required List<AttachmentItem> attachments,
   required AttachmentItem tappedAttachment,
 }) {
-  final mediaAttachments = message.attachments
+  final mediaAttachments = attachments
       .where(
         (attachment) =>
             attachment.url.isNotEmpty &&
@@ -80,7 +80,7 @@ AttachmentViewerRequest? buildAttachmentViewerRequest({
           (attachment) => AttachmentViewerItem(
             attachment: attachment,
             heroTag: attachmentViewerHeroTag(
-              messageStableKey: message.stableKey,
+              messageStableKey: messageStableKey,
               attachment: attachment,
             ),
             mediaKind: attachment.isVideo

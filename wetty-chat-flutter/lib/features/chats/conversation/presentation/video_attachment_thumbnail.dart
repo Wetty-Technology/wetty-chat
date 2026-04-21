@@ -2,7 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/message_models.dart';
-import '../data/video_thumbnail_service.dart';
+import '../../conversation_v2/data/video_thumbnail_service.dart';
 
 class VideoAttachmentThumbnail extends ConsumerWidget {
   const VideoAttachmentThumbnail({

@@ -3,7 +3,7 @@ import 'package:flutter/cupertino.dart';
 import '../../domain/conversation_message.dart';
 import '../../../../../app/theme/style_config.dart';
 import '../../../models/message_models.dart';
-import '../attachment_viewer_request.dart';
+import '../../../conversation_v2/presentation/attachment_viewer_request.dart';
 import 'message_bubble_content.dart';
 import 'message_bubble_presentation.dart';
 import 'message_render_spec.dart';

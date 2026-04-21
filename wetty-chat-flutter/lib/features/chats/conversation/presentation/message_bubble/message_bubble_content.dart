@@ -3,7 +3,7 @@ import '../../domain/conversation_message.dart';
 import '../../../../../app/theme/style_config.dart';
 import '../../../models/message_models.dart';
 import '../../../models/message_preview_formatter.dart';
-import '../attachment_viewer_request.dart';
+import '../../../conversation_v2/presentation/attachment_viewer_request.dart';
 import '../message_attachment_previews.dart';
 import '../video_popup_player.dart';
 import 'linkified_message_text.dart';
@@ -261,7 +261,8 @@ class MessageBubbleContent extends StatelessWidget {
     required double maxAttachmentWidth,
   }) {
     final viewerRequest = buildAttachmentViewerRequest(
-      message: message,
+      messageStableKey: message.stableKey,
+      attachments: message.attachments,
       tappedAttachment: attachment,
     );
 
