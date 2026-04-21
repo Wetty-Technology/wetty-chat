@@ -4,24 +4,20 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:chahua/app/theme/style_config.dart';
-import 'package:chahua/features/chats/conversation/application/conversation_composer_view_model.dart';
 import 'package:chahua/features/chats/conversation/data/attachment_picker_service.dart';
-import 'package:chahua/features/chats/conversation/domain/conversation_scope.dart';
-import 'package:chahua/features/chats/conversation/presentation/compose/composer_attachment_menu.dart';
-import 'package:chahua/features/chats/conversation/presentation/compose/composer_audio_controls.dart';
-import 'package:chahua/features/chats/conversation/presentation/compose/composer_input_area.dart';
-import 'package:chahua/features/chats/conversation/presentation/compose/composer_mention_autocomplete.dart';
-import 'package:chahua/features/chats/conversation/presentation/compose/composer_mentions.dart';
+import 'package:chahua/features/chats/conversation_v2/application/conversation_composer_view_model.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_view_model.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_identity.dart';
+import 'package:chahua/features/chats/conversation_v2/presentation/compose/composer_attachment_menu.dart';
+import 'package:chahua/features/chats/conversation_v2/presentation/compose/composer_audio_controls.dart';
+import 'package:chahua/features/chats/conversation_v2/presentation/compose/composer_input_area.dart';
+import 'package:chahua/features/chats/conversation_v2/presentation/compose/composer_mention_autocomplete.dart';
+import 'package:chahua/features/chats/conversation_v2/presentation/compose/composer_mentions.dart';
 import 'package:chahua/features/groups/members/data/group_member_models.dart';
 import 'package:chahua/features/groups/members/data/group_member_repository.dart';
 import 'package:chahua/l10n/app_localizations.dart';
 
-/// V2 copy of [ConversationComposerBar]. Routes send through the v1 composer
-/// view model (which performs optimistic send into the v1 message store), and
-/// relies on the v2 WebSocket applier to surface the echoed message in the v2
-/// timeline.
+/// V2 copy of [ConversationComposerBar].
 ///
 /// Callbacks that v2 does not yet support (sticker picker toggling, custom
 /// `onMessageSent` hooks) are stubbed in-widget rather than exposed on the
@@ -75,13 +71,6 @@ class _ConversationV2ComposerBarState
   String _mentionQuery = '';
   List<GroupMember> _mentionResults = const <GroupMember>[];
   List<ComposerMentionEntry> _mentionEntries = const <ComposerMentionEntry>[];
-
-  ConversationScope get _scope => widget.identity.threadRootId == null
-      ? ConversationScope.chat(chatId: widget.identity.chatId)
-      : ConversationScope.thread(
-          chatId: widget.identity.chatId,
-          threadRootId: widget.identity.threadRootId!,
-        );
 
   /// Without an optimistic-send path in v2 yet, a freshly sent message only
   /// becomes visible once the server WS echo reaches the realtime applier.
@@ -284,7 +273,7 @@ class _ConversationV2ComposerBarState
     });
 
     await ref
-        .read(conversationComposerViewModelProvider(_scope).notifier)
+        .read(conversationComposerViewModelProvider(widget.identity).notifier)
         .updateDraft(nextText);
   }
 
@@ -315,7 +304,7 @@ class _ConversationV2ComposerBarState
       _clearMentionState(closeSuggestions: true, clearQuery: true);
     });
     await ref
-        .read(conversationComposerViewModelProvider(_scope).notifier)
+        .read(conversationComposerViewModelProvider(widget.identity).notifier)
         .updateDraft(hydrated.text);
   }
 
@@ -325,7 +314,7 @@ class _ConversationV2ComposerBarState
     _textController.addListener(_handleTextControllerChanged);
     _inputFocusNode.addListener(_handleInputFocusChanged);
     _composerSubscription = ref.listenManual<ConversationComposerState>(
-      conversationComposerViewModelProvider(_scope),
+      conversationComposerViewModelProvider(widget.identity),
       (previous, next) {
         _syncControllerText(next.draft);
         if (_isAttachmentPanelOpen &&
@@ -370,9 +359,11 @@ class _ConversationV2ComposerBarState
   }
 
   Future<void> _sendMessage() async {
-    final composer = ref.read(conversationComposerViewModelProvider(_scope));
+    final composer = ref.read(
+      conversationComposerViewModelProvider(widget.identity),
+    );
     final composerNotifier = ref.read(
-      conversationComposerViewModelProvider(_scope).notifier,
+      conversationComposerViewModelProvider(widget.identity).notifier,
     );
     if (composer.isEditing && composer.attachments.isNotEmpty) {
       _showErrorDialog('Editing does not support attachments yet.');
@@ -401,7 +392,7 @@ class _ConversationV2ComposerBarState
 
   Future<void> _sendRecordedAudio() async {
     final composerNotifier = ref.read(
-      conversationComposerViewModelProvider(_scope).notifier,
+      conversationComposerViewModelProvider(widget.identity).notifier,
     );
     try {
       await composerNotifier.sendRecordedAudio();
@@ -421,7 +412,7 @@ class _ConversationV2ComposerBarState
   Future<void> _pickAttachments(ComposerAttachmentSource source) async {
     try {
       final message = await ref
-          .read(conversationComposerViewModelProvider(_scope).notifier)
+          .read(conversationComposerViewModelProvider(widget.identity).notifier)
           .pickAndQueueAttachments(source);
       _closeAttachmentMenu();
       if (!mounted || message == null) {
@@ -582,7 +573,7 @@ class _ConversationV2ComposerBarState
     });
     try {
       await ref
-          .read(conversationComposerViewModelProvider(_scope).notifier)
+          .read(conversationComposerViewModelProvider(widget.identity).notifier)
           .startAudioRecording();
     } on ComposerAudioException catch (error) {
       _resetAudioGestureState();
@@ -645,7 +636,7 @@ class _ConversationV2ComposerBarState
 
   Future<void> _finalizeAudioGesture(ComposerAudioSnapPosition position) async {
     final composerNotifier = ref.read(
-      conversationComposerViewModelProvider(_scope).notifier,
+      conversationComposerViewModelProvider(widget.identity).notifier,
     );
     try {
       switch (position) {
@@ -706,7 +697,9 @@ class _ConversationV2ComposerBarState
 
   @override
   Widget build(BuildContext context) {
-    final composer = ref.watch(conversationComposerViewModelProvider(_scope));
+    final composer = ref.watch(
+      conversationComposerViewModelProvider(widget.identity),
+    );
     final colors = context.appColors;
     final selectionLocked = composer.isAtAttachmentLimit;
     final canAttach =
@@ -785,7 +778,7 @@ class _ConversationV2ComposerBarState
                             onClearMode: () {
                               final notifier = ref.read(
                                 conversationComposerViewModelProvider(
-                                  _scope,
+                                  widget.identity,
                                 ).notifier,
                               );
                               if (composer.mode is ComposerEditing) {
@@ -810,7 +803,7 @@ class _ConversationV2ComposerBarState
                                     ref
                                         .read(
                                           conversationComposerViewModelProvider(
-                                            _scope,
+                                            widget.identity,
                                           ).notifier,
                                         )
                                         .removeAttachment(localId);
@@ -819,7 +812,7 @@ class _ConversationV2ComposerBarState
                                     return ref
                                         .read(
                                           conversationComposerViewModelProvider(
-                                            _scope,
+                                            widget.identity,
                                           ).notifier,
                                         )
                                         .retryAttachment(localId);
@@ -828,7 +821,7 @@ class _ConversationV2ComposerBarState
                                     return ref
                                         .read(
                                           conversationComposerViewModelProvider(
-                                            _scope,
+                                            widget.identity,
                                           ).notifier,
                                         )
                                         .cancelAudioRecording();
@@ -840,7 +833,7 @@ class _ConversationV2ComposerBarState
                                       ref
                                           .read(
                                             conversationComposerViewModelProvider(
-                                              _scope,
+                                              widget.identity,
                                             ).notifier,
                                           )
                                           .updateDraft(value),
