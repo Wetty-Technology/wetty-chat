@@ -23,7 +23,7 @@ class ConversationMessageV2 {
     this.replyToMessage,
     this.reactions = const <ReactionSummary>[],
     this.threadInfo,
-    this.deliveryState = ConversationDeliveryState.sent,
+    this.deliveryState = ConversationDeliveryState.confirmed,
   });
 
   factory ConversationMessageV2.fromMessageItemDto(MessageItemDto dto) {

@@ -1117,51 +1117,6 @@ class ConversationComposerViewModel
     }
   }
 
-  Future<void> delete(ConversationMessage message) async {
-    // TODO(conversation_v2): delete/retry/discard for failed messages still
-    // use copied v1 repository flows below. Replace these with v2-owned
-    // optimistic mutation handling, then remove the copied paths.
-    final messageId = message.serverMessageId;
-    if (messageId == null) {
-      _repository.discardFailedMessage(message);
-      _dispatchLocalMutation(ConversationLocalMutationKind.removed);
-      return;
-    }
-    _repository.beginOptimisticDelete(messageId);
-    _dispatchLocalMutation(ConversationLocalMutationKind.removed);
-    try {
-      await _repository.commitDelete(messageId);
-      _dispatchLocalMutation(ConversationLocalMutationKind.removed);
-    } catch (_) {
-      _repository.rollbackDelete(messageId);
-      _dispatchLocalMutation(ConversationLocalMutationKind.updated);
-      rethrow;
-    }
-  }
-
-  Future<void> retryFailedMessage(ConversationMessage message) async {
-    final optimistic = _repository.restartFailedSend(message);
-    _dispatchLocalMutation(ConversationLocalMutationKind.updated);
-    try {
-      await _repository.commitSend(
-        clientGeneratedId: optimistic.clientGeneratedId,
-        text: optimistic.message ?? '',
-        messageType: optimistic.messageType,
-        attachmentIds: optimistic.attachments.map((item) => item.id).toList(),
-        replyToId: optimistic.replyRootId,
-      );
-    } catch (_) {
-      _repository.markSendFailed(optimistic.clientGeneratedId);
-      _dispatchLocalMutation(ConversationLocalMutationKind.updated);
-      rethrow;
-    }
-  }
-
-  Future<void> discardFailedMessage(ConversationMessage message) async {
-    _repository.discardFailedMessage(message);
-    _dispatchLocalMutation(ConversationLocalMutationKind.removed);
-  }
-
   void _dispatchLocalMutation(ConversationLocalMutationKind kind) {
     _localMutationRegistry.dispatch(
       ConversationLocalMutation(scope: _scope, kind: kind),
