@@ -13,16 +13,16 @@ import 'package:voice_message/voice_message.dart';
 import 'package:chahua/core/network/dio_client.dart';
 import 'package:chahua/core/session/dev_session_store.dart';
 import 'package:chahua/features/chats/conversation/domain/conversation_message.dart';
-import 'package:chahua/features/chats/conversation/data/attachment_picker_service.dart';
 import 'package:chahua/features/chats/conversation/data/attachment_service.dart';
 import 'package:chahua/features/chats/conversation/data/audio_recorder_service.dart';
 import 'package:chahua/features/chats/conversation/data/audio_waveform_cache_service.dart';
 import 'package:chahua/features/chats/conversation/data/conversation_repository.dart';
 import 'package:chahua/features/chats/conversation/domain/conversation_scope.dart';
+import 'package:chahua/features/chats/conversation_v2/application/conversation_draft_store.dart';
+import 'package:chahua/features/chats/conversation_v2/application/conversation_local_mutation_registry.dart';
+import 'package:chahua/features/chats/conversation_v2/data/attachment_picker_service.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_identity.dart';
-import 'package:chahua/features/chats/conversation/application/conversation_local_mutation_registry.dart';
-import 'package:chahua/features/chats/conversation/application/conversation_draft_store.dart';
 import 'package:chahua/features/chats/conversation_v2/data/conversation_timeline_v2_repository.dart';
 
 const int composerMaxAttachments =
@@ -375,7 +375,7 @@ class ConversationComposerViewModel
       _audioDurationTimer?.cancel();
       unawaited(_audioRecorderService.dispose());
     });
-    final draft = _draftStore.getDraft(_scope) ?? '';
+    final draft = _draftStore.getDraft(arg) ?? '';
     return ConversationComposerState(
       draft: draft,
       mode: const ComposerIdle(),
@@ -388,7 +388,7 @@ class ConversationComposerViewModel
 
   Future<void> updateDraft(String value) async {
     state = state.copyWith(draft: value);
-    await _draftStore.setDraft(_scope, value);
+    await _draftStore.setDraft(arg, value);
   }
 
   void beginReply(ConversationMessage message) {
@@ -428,10 +428,10 @@ class ConversationComposerViewModel
       savedDraftBeforeEdit: null,
     );
     if (restoredDraft.trim().isEmpty) {
-      await _draftStore.clearDraft(_scope);
+      await _draftStore.clearDraft(arg);
       return;
     }
-    await _draftStore.setDraft(_scope, restoredDraft);
+    await _draftStore.setDraft(arg, restoredDraft);
   }
 
   Future<String?> pickAndQueueAttachments(
@@ -525,7 +525,7 @@ class ConversationComposerViewModel
         audioDraft: null,
         savedDraftBeforeEdit: null,
       );
-      await _draftStore.clearDraft(_scope);
+      await _draftStore.clearDraft(arg);
       unawaited(
         _commitEditInBackground(
           messageId: messageId,
@@ -1006,7 +1006,7 @@ class ConversationComposerViewModel
       audioDraft: null,
       savedDraftBeforeEdit: null,
     );
-    await _draftStore.clearDraft(_scope);
+    await _draftStore.clearDraft(arg);
     await sendFuture;
   }
 
@@ -1079,9 +1079,9 @@ class ConversationComposerViewModel
         savedDraftBeforeEdit: savedDraftBeforeEdit,
       );
       if (newText.trim().isEmpty) {
-        await _draftStore.clearDraft(_scope);
+        await _draftStore.clearDraft(arg);
       } else {
-        await _draftStore.setDraft(_scope, newText);
+        await _draftStore.setDraft(arg, newText);
       }
     }
   }
@@ -1119,7 +1119,7 @@ class ConversationComposerViewModel
 
   void _dispatchLocalMutation(ConversationLocalMutationKind kind) {
     _localMutationRegistry.dispatch(
-      ConversationLocalMutation(scope: _scope, kind: kind),
+      ConversationLocalMutation(identity: arg, kind: kind),
     );
   }
 }

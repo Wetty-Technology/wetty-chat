@@ -5,7 +5,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart' show CircularProgressIndicator;
 
 import 'package:chahua/app/theme/style_config.dart';
-import 'package:chahua/features/chats/conversation/data/attachment_picker_service.dart';
+import 'package:chahua/features/chats/conversation_v2/data/attachment_picker_service.dart';
 import 'package:chahua/features/chats/conversation/domain/conversation_message.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_composer_view_model.dart';
 import 'package:chahua/features/chats/conversation_v2/presentation/compose/composer_audio_controls.dart';

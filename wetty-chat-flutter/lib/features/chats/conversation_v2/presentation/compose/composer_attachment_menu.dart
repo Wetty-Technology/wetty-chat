@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 
-import 'package:chahua/features/chats/conversation/data/attachment_picker_service.dart';
+import 'package:chahua/features/chats/conversation_v2/data/attachment_picker_service.dart';
 import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/l10n/app_localizations.dart';
 

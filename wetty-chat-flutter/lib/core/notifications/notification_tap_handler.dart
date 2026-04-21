@@ -4,7 +4,7 @@ import 'dart:developer' as developer;
 import 'package:go_router/go_router.dart';
 
 import '../../app/routing/route_names.dart';
-import '../../features/chats/conversation/domain/launch_request.dart';
+import '../../features/chats/conversation_v2/domain/launch_request.dart';
 import 'apns_channel.dart';
 
 /// Handles push notification taps by navigating to the relevant chat or thread.

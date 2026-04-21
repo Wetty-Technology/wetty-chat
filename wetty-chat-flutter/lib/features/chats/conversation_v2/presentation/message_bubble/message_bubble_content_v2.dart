@@ -1,13 +1,13 @@
 import 'package:chahua/app/theme/style_config.dart';
-import 'package:chahua/features/chats/conversation/presentation/message_attachment_previews.dart';
-import 'package:chahua/features/chats/conversation/presentation/message_bubble/linkified_message_text.dart';
-import 'package:chahua/features/chats/conversation/presentation/video_popup_player.dart';
 import 'package:chahua/features/chats/models/message_preview_formatter.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
 import 'package:flutter/cupertino.dart';
 
 import '../../domain/conversation_message_v2.dart';
+import '../message_attachment_previews.dart';
+import '../video_popup_player.dart';
 import 'message_bubble_meta_v2.dart';
+import 'linkified_message_text.dart';
 import 'message_bubble_presentation_v2.dart';
 import 'message_reactions_v2.dart';
 import 'message_render_spec_v2.dart';

@@ -5,9 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../../app/routing/route_names.dart';
 import '../../../chat_timestamp_formatter.dart';
 import '../../../application/chat_inbox_reconciler.dart';
-import '../../../conversation/application/conversation_draft_store.dart';
-import '../../../conversation/domain/conversation_scope.dart';
-import '../../../conversation/domain/launch_request.dart';
+import '../../../conversation_v2/application/conversation_draft_store.dart';
+import '../../../conversation_v2/domain/launch_request.dart';
 import '../../../models/chat_models.dart';
 import '../../../models/message_models.dart';
 import '../../../models/message_preview_formatter.dart';
@@ -247,9 +246,10 @@ class _ChatListRowBuilder extends ConsumerWidget {
         : 'Chat ${chat.id}';
     final dateText = formatChatListTimestamp(context, chat.lastMessageAt);
     final lastMessage = chat.lastMessage;
-    final draftText = ref
-        .read(conversationDraftProvider)
-        .getDraft(ConversationScope.chat(chatId: chat.id));
+    final draftText = ref.read(conversationDraftProvider).getDraft((
+      chatId: chat.id,
+      threadRootId: null,
+    ));
 
     final isMuted =
         chat.mutedUntil != null && chat.mutedUntil!.isAfter(DateTime.now());
