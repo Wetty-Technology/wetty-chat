@@ -1,3 +1,4 @@
+import 'package:chahua/features/chats/list_v2/presentation/chat_list_v2_page.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -114,8 +115,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: AppRoutes.chats,
-                pageBuilder: (context, state) =>
-                    CupertinoPage(key: state.pageKey, child: const ChatPage()),
+                pageBuilder: (context, state) => CupertinoPage(
+                  key: state.pageKey,
+                  child: const ChatListV2Page(),
+                ),
                 routes: [
                   GoRoute(
                     parentNavigatorKey: _rootNavigatorKey,
