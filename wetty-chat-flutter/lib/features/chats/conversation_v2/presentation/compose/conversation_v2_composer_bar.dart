@@ -7,7 +7,7 @@ import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/features/chats/conversation/data/attachment_picker_service.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_composer_view_model.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_view_model.dart';
-import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_identity.dart';
+import 'package:chahua/features/chats/conversation_v2/domain/conversation_identity.dart';
 import 'package:chahua/features/chats/conversation_v2/presentation/compose/composer_attachment_menu.dart';
 import 'package:chahua/features/chats/conversation_v2/presentation/compose/composer_audio_controls.dart';
 import 'package:chahua/features/chats/conversation_v2/presentation/compose/composer_input_area.dart';
@@ -26,7 +26,7 @@ import 'package:chahua/l10n/app_localizations.dart';
 class ConversationV2ComposerBar extends ConsumerStatefulWidget {
   const ConversationV2ComposerBar({super.key, required this.identity});
 
-  final ConversationTimelineV2Identity identity;
+  final ConversationIdentity identity;
 
   @override
   ConsumerState<ConversationV2ComposerBar> createState() =>

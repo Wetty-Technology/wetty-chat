@@ -6,7 +6,7 @@ import 'package:chahua/features/chats/conversation_v2/application/conversation_t
 import 'package:chahua/features/chats/conversation_v2/application/timeline_viewport_facts.dart';
 import 'package:chahua/features/chats/conversation_v2/data/conversation_timeline_v2_repository.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_active_segment.dart';
-import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_identity.dart';
+import 'package:chahua/features/chats/conversation_v2/domain/conversation_identity.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,7 +17,7 @@ class ConversationTimelineV2ViewModel
   static const int _initialLoadedWindowSize = 50;
 
   /// Identity (ChatID, threadID) for this VM
-  final ConversationTimelineV2Identity identity;
+  final ConversationIdentity identity;
 
   /// Repository for this VM
   late ConversationTimelineV2Repository _repository;
@@ -382,5 +382,5 @@ final conversationTimelineV2ViewModelProvider =
     NotifierProvider.family<
       ConversationTimelineV2ViewModel,
       ConversationTimelineV2State,
-      ConversationTimelineV2Identity
+      ConversationIdentity
     >(ConversationTimelineV2ViewModel.new, isAutoDispose: true);

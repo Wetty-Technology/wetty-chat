@@ -2,7 +2,7 @@ import 'package:chahua/core/api/models/messages_api_models.dart';
 import 'package:chahua/core/api/models/websocket_api_models.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_message_store.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
-import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_identity.dart';
+import 'package:chahua/features/chats/conversation_v2/domain/conversation_identity.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class ConversationTimelineV2RealtimeApplier {
@@ -89,7 +89,7 @@ class ConversationTimelineV2RealtimeApplier {
   }
 
   bool _matchesMessagePayload(
-    ConversationTimelineV2Identity identity,
+    ConversationIdentity identity,
     MessageItemDto payload,
   ) {
     if (payload.chatId.toString() != identity.chatId) {

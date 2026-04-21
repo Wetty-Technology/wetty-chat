@@ -20,7 +20,7 @@ import 'package:chahua/features/chats/conversation/data/audio_waveform_cache_ser
 import 'package:chahua/features/chats/conversation/data/conversation_repository.dart';
 import 'package:chahua/features/chats/conversation/domain/conversation_scope.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
-import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_identity.dart';
+import 'package:chahua/features/chats/conversation_v2/domain/conversation_identity.dart';
 import 'package:chahua/features/chats/conversation/application/conversation_local_mutation_registry.dart';
 import 'package:chahua/features/chats/conversation/application/conversation_draft_store.dart';
 import 'package:chahua/features/chats/conversation_v2/data/conversation_timeline_v2_repository.dart';
@@ -334,7 +334,7 @@ class ConversationComposerState {
 
 class ConversationComposerViewModel
     extends Notifier<ConversationComposerState> {
-  final ConversationTimelineV2Identity arg;
+  final ConversationIdentity arg;
 
   ConversationComposerViewModel(this.arg);
 
@@ -1142,7 +1142,7 @@ final conversationComposerViewModelProvider =
     NotifierProvider.family<
       ConversationComposerViewModel,
       ConversationComposerState,
-      ConversationTimelineV2Identity
+      ConversationIdentity
     >(ConversationComposerViewModel.new);
 
 const _sentinel = Object();

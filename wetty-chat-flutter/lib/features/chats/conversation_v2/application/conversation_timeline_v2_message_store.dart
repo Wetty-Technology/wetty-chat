@@ -1,40 +1,36 @@
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_active_segment.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_canonical_scope.dart';
-import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_identity.dart';
+import 'package:chahua/features/chats/conversation_v2/domain/conversation_identity.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 typedef ConversationTimelineV2MessageStoreState =
-    Map<ConversationTimelineV2Identity, ConversationTimelineV2CanonicalScope>;
+    Map<ConversationIdentity, ConversationTimelineV2CanonicalScope>;
 
 class ConversationTimelineV2MessageStore
     extends Notifier<ConversationTimelineV2MessageStoreState> {
   @override
   ConversationTimelineV2MessageStoreState build() {
-    return <
-      ConversationTimelineV2Identity,
-      ConversationTimelineV2CanonicalScope
-    >{};
+    return <ConversationIdentity, ConversationTimelineV2CanonicalScope>{};
   }
 
   ConversationTimelineV2CanonicalScope? scopeFor(
-    ConversationTimelineV2Identity identity,
+    ConversationIdentity identity,
   ) {
     return state[identity];
   }
 
   void putScope(
-    ConversationTimelineV2Identity identity,
+    ConversationIdentity identity,
     ConversationTimelineV2CanonicalScope scope,
   ) {
-    state =
-        <ConversationTimelineV2Identity, ConversationTimelineV2CanonicalScope>{
-          ...state,
-          identity: scope,
-        };
+    state = <ConversationIdentity, ConversationTimelineV2CanonicalScope>{
+      ...state,
+      identity: scope,
+    };
   }
 
-  void markReachedOldest(ConversationTimelineV2Identity identity) {
+  void markReachedOldest(ConversationIdentity identity) {
     final existingScope = scopeFor(identity);
     if (existingScope == null) {
       return;
@@ -43,7 +39,7 @@ class ConversationTimelineV2MessageStore
   }
 
   void insertBeforeAnchor(
-    ConversationTimelineV2Identity identity,
+    ConversationIdentity identity,
     int anchorServerMessageId,
     ConversationTimelineV2CanonicalSegment segment,
   ) {
@@ -68,7 +64,7 @@ class ConversationTimelineV2MessageStore
   }
 
   void insertAfterAnchor(
-    ConversationTimelineV2Identity identity,
+    ConversationIdentity identity,
     int anchorServerMessageId,
     ConversationTimelineV2CanonicalSegment segment,
   ) {
@@ -93,7 +89,7 @@ class ConversationTimelineV2MessageStore
   }
 
   void insertAround(
-    ConversationTimelineV2Identity identity,
+    ConversationIdentity identity,
     ConversationTimelineV2CanonicalSegment segment,
   ) {
     final existingScope = scopeFor(identity);
@@ -112,7 +108,7 @@ class ConversationTimelineV2MessageStore
   }
 
   void insertLatest(
-    ConversationTimelineV2Identity identity,
+    ConversationIdentity identity,
     ConversationTimelineV2CanonicalSegment segment,
   ) {
     final existingScope = scopeFor(identity);
@@ -132,7 +128,7 @@ class ConversationTimelineV2MessageStore
   }
 
   void newMessage(
-    ConversationTimelineV2Identity identity,
+    ConversationIdentity identity,
     ConversationMessageV2 message,
   ) {
     if (message.serverMessageId == null) {
@@ -143,7 +139,7 @@ class ConversationTimelineV2MessageStore
   }
 
   void _newServerBackedMessage(
-    ConversationTimelineV2Identity identity,
+    ConversationIdentity identity,
     ConversationMessageV2 message,
   ) {
     final existingScope = scopeFor(identity);
@@ -182,7 +178,7 @@ class ConversationTimelineV2MessageStore
   }
 
   void _newOptimisticMessage(
-    ConversationTimelineV2Identity identity,
+    ConversationIdentity identity,
     ConversationMessageV2 message,
   ) {
     assert(
@@ -224,7 +220,7 @@ class ConversationTimelineV2MessageStore
   }
 
   bool updateMessage(
-    ConversationTimelineV2Identity identity,
+    ConversationIdentity identity,
     ConversationMessageV2 message,
   ) {
     final serverMessageId = message.serverMessageId;
@@ -268,10 +264,7 @@ class ConversationTimelineV2MessageStore
     return true;
   }
 
-  bool deleteMessage(
-    ConversationTimelineV2Identity identity,
-    int serverMessageId,
-  ) {
+  bool deleteMessage(ConversationIdentity identity, int serverMessageId) {
     final existingScope = scopeFor(identity);
     if (existingScope == null) {
       return false;
@@ -545,7 +538,7 @@ final conversationTimelineV2MessageStoreProvider =
     >(ConversationTimelineV2MessageStore.new);
 
 typedef ConversationTimelineV2ActiveSegmentProviderArgs = ({
-  ConversationTimelineV2Identity identity,
+  ConversationIdentity identity,
   ConversationTimelineV2ActiveSegmentMode mode,
 });
 

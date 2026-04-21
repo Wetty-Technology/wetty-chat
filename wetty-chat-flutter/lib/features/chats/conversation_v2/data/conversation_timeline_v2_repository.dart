@@ -3,14 +3,14 @@ import 'package:chahua/features/chats/conversation/domain/conversation_scope.dar
 import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_message_store.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_canonical_scope.dart';
-import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_identity.dart';
+import 'package:chahua/features/chats/conversation_v2/domain/conversation_identity.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class ConversationTimelineV2Repository {
   ConversationTimelineV2Repository(this.ref, this.identity);
 
   final Ref ref;
-  final ConversationTimelineV2Identity identity;
+  final ConversationIdentity identity;
 
   ConversationScope get _scope => identity.threadRootId == null
       ? ConversationScope.chat(chatId: identity.chatId)
@@ -231,7 +231,6 @@ class ConversationTimelineV2Repository {
 }
 
 final conversationTimelineV2RepositoryProvider =
-    Provider.family<
-      ConversationTimelineV2Repository,
-      ConversationTimelineV2Identity
-    >((ref, identity) => ConversationTimelineV2Repository(ref, identity));
+    Provider.family<ConversationTimelineV2Repository, ConversationIdentity>(
+      (ref, identity) => ConversationTimelineV2Repository(ref, identity),
+    );
