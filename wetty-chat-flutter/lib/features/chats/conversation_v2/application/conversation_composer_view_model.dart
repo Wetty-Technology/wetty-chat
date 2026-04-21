@@ -19,9 +19,11 @@ import 'package:chahua/features/chats/conversation/data/audio_recorder_service.d
 import 'package:chahua/features/chats/conversation/data/audio_waveform_cache_service.dart';
 import 'package:chahua/features/chats/conversation/data/conversation_repository.dart';
 import 'package:chahua/features/chats/conversation/domain/conversation_scope.dart';
+import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_identity.dart';
 import 'package:chahua/features/chats/conversation/application/conversation_local_mutation_registry.dart';
 import 'package:chahua/features/chats/conversation/application/conversation_draft_store.dart';
+import 'package:chahua/features/chats/conversation_v2/data/conversation_timeline_v2_repository.dart';
 
 const int composerMaxAttachments =
     ConversationComposerState.maxAttachmentsPerMessage;
@@ -337,6 +339,7 @@ class ConversationComposerViewModel
   ConversationComposerViewModel(this.arg);
 
   late final ConversationRepository _repository;
+  late final ConversationTimelineV2Repository _timelineRepository;
   late final ConversationDraftStore _draftStore;
   late final AttachmentService _attachmentService;
   late final AttachmentPickerService _pickerService;
@@ -357,6 +360,9 @@ class ConversationComposerViewModel
             threadRootId: arg.threadRootId!,
           );
     _repository = ref.read(conversationRepositoryProvider(_scope));
+    _timelineRepository = ref.read(
+      conversationTimelineV2RepositoryProvider(arg),
+    );
     _draftStore = ref.read(conversationDraftProvider);
     _attachmentService = ref.read(attachmentServiceProvider);
     _pickerService = ref.read(attachmentPickerServiceProvider);
@@ -537,7 +543,7 @@ class ConversationComposerViewModel
         .toList(growable: false);
 
     final currentUserId = ref.read(authSessionProvider).currentUserId;
-    await _sendOptimisticMessage(
+    await _sendMessage(
       _ComposerSendRequest(
         sender: Sender(uid: currentUserId, name: 'You'),
         text: trimmed,
@@ -556,7 +562,7 @@ class ConversationComposerViewModel
     if (stickerId == null) return;
     final currentUserId = ref.read(authSessionProvider).currentUserId;
     final mode = state.mode;
-    await _sendOptimisticMessage(
+    await _sendMessage(
       _ComposerSendRequest(
         sender: Sender(uid: currentUserId, name: 'You'),
         text: '',
@@ -962,7 +968,7 @@ class ConversationComposerViewModel
           duration: uploadDraft.duration,
           samples: uploadDraft.waveformSamples,
         );
-    await _sendOptimisticMessage(
+    await _sendMessage(
       _ComposerSendRequest(
         sender: Sender(uid: currentUserId, name: 'You'),
         text: '',
@@ -978,18 +984,21 @@ class ConversationComposerViewModel
     );
   }
 
-  Future<void> _sendOptimisticMessage(_ComposerSendRequest request) async {
+  /// Perform the core message sending. Realistically it is optimistic send
+  Future<void> _sendMessage(_ComposerSendRequest request) async {
     final clientGeneratedId = _consumeNextClientGeneratedId();
-    _repository.insertOptimisticSend(
-      sender: request.sender,
-      text: request.text,
-      messageType: request.messageType,
-      attachments: request.optimisticAttachments,
+    final optimisticMessage = ConversationMessageV2(
       clientGeneratedId: clientGeneratedId,
-      replyToId: request.replyToId,
-      sticker: request.sticker,
+      sender: request.sender,
+      createdAt: DateTime.now(),
+      replyToMessage: _replyToMessageForMode(state.mode),
+      deliveryState: ConversationDeliveryState.sending,
+      content: _optimisticContent(request),
     );
-    _dispatchLocalMutation(ConversationLocalMutationKind.inserted);
+    final sendFuture = _timelineRepository.sendMessage(
+      optimisticMessage: optimisticMessage,
+      attachmentIds: request.attachmentIds,
+    );
     state = state.copyWith(
       draft: '',
       mode: const ComposerIdle(),
@@ -998,21 +1007,50 @@ class ConversationComposerViewModel
       savedDraftBeforeEdit: null,
     );
     await _draftStore.clearDraft(_scope);
+    await sendFuture;
+  }
 
-    try {
-      await _repository.commitSend(
-        clientGeneratedId: clientGeneratedId,
-        text: request.text,
-        messageType: request.messageType,
-        attachmentIds: request.attachmentIds,
-        replyToId: request.replyToId,
-        stickerId: request.stickerId,
-      );
-    } catch (_) {
-      _repository.markSendFailed(clientGeneratedId);
-      _dispatchLocalMutation(ConversationLocalMutationKind.updated);
-      rethrow;
+  MessageContent _optimisticContent(_ComposerSendRequest request) {
+    if (request.messageType == 'sticker') {
+      return StickerMessageContent(sticker: request.sticker!);
     }
+    if (request.messageType == 'audio') {
+      return AudioMessageContent(
+        audio: request.optimisticAttachments.single,
+        text: request.text,
+      );
+    }
+    if (request.optimisticAttachments.isNotEmpty) {
+      return FileMessageContent(
+        text: request.text,
+        attachments: request.optimisticAttachments,
+      );
+    }
+    return TextMessageContent(text: request.text);
+  }
+
+  ReplyToMessage? _replyToMessageForMode(ConversationComposerMode mode) {
+    if (mode case ComposerReplying(:final message)) {
+      final serverMessageId = message.serverMessageId;
+      if (serverMessageId == null) {
+        return null;
+      }
+      return ReplyToMessage(
+        id: serverMessageId,
+        message: message.message,
+        messageType: message.messageType,
+        sticker: message.sticker,
+        sender: message.sender,
+        isDeleted: message.isDeleted,
+        attachments: message.attachments,
+        reactions: message.reactions,
+        firstAttachmentKind: message.attachments.isEmpty
+            ? null
+            : message.attachments.first.kind,
+        mentions: message.mentions,
+      );
+    }
+    return null;
   }
 
   Future<void> _commitEditInBackground({

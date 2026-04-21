@@ -91,8 +91,11 @@ MessageContent _contentFromMessageItemDto({
   if (messageType == 'system') {
     return SystemMessageContent(text: message ?? '');
   }
-  if (messageType == 'sticker' && sticker != null) {
-    return StickerMessageContent(sticker: sticker);
+  if (messageType == 'sticker') {
+    if (sticker?.id == null) {
+      throw StateError('Sticker messages must include a sticker id');
+    }
+    return StickerMessageContent(sticker: sticker!);
   }
   if (messageType == 'invite') {
     return InviteMessageContent(text: message, mentions: mentions);

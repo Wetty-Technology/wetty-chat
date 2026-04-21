@@ -30,7 +30,7 @@ class ConversationTimelineV2ViewModel
   bool _bootstrapStarted = false;
   int? _highlightedServerMessageId;
   TimelineViewportFacts? _latestViewportFacts;
-  int? _lastRenderedTailServerMessageId;
+  String? _lastRenderedTailStableKey;
 
   /// Generation of the viewport command, incremented on each issuance
   int _viewportCommandGeneration = 0;
@@ -181,8 +181,12 @@ class ConversationTimelineV2ViewModel
       return;
     }
 
-    final anchorServerMessageId =
-        _activeSegment!.orderedMessages.first.serverMessageId!;
+    final anchorServerMessageId = _firstServerMessageId(
+      _activeSegment!.orderedMessages,
+    );
+    if (anchorServerMessageId == null) {
+      return;
+    }
 
     state = state.copyWith(isLoadingOlder: true);
 
@@ -201,8 +205,12 @@ class ConversationTimelineV2ViewModel
     if (_activeSegment == null || _activeSegment!.orderedMessages.isEmpty) {
       return;
     }
-    final anchorServerMessageId =
-        _activeSegment!.orderedMessages.last.serverMessageId!;
+    final anchorServerMessageId = _lastServerMessageId(
+      _activeSegment!.orderedMessages,
+    );
+    if (anchorServerMessageId == null) {
+      return;
+    }
 
     state = state.copyWith(isLoadingNewer: true);
 
@@ -221,9 +229,11 @@ class ConversationTimelineV2ViewModel
     if (_activeSegmentMode.isLatest &&
         segment.orderedMessages.isNotEmpty &&
         _activeSegmentMode.splitAfterServerMessageId == null) {
+      final latestSplitAfterServerMessageId = _lastServerMessageId(
+        segment.orderedMessages,
+      );
       _activeSegmentMode = ConversationTimelineV2ActiveSegmentMode.latest(
-        latestSplitAfterServerMessageId:
-            segment.orderedMessages.last.serverMessageId,
+        latestSplitAfterServerMessageId: latestSplitAfterServerMessageId,
       );
     }
     final splitAfterServerMessageId =
@@ -234,13 +244,14 @@ class ConversationTimelineV2ViewModel
     if (splitAfterServerMessageId == null) {
       beforeMessages.addAll(segment.orderedMessages);
     } else {
-      for (final message in segment.orderedMessages) {
-        final serverMessageId = message.serverMessageId!;
-        if (serverMessageId > splitAfterServerMessageId) {
-          afterMessages.add(message);
-        } else {
-          beforeMessages.add(message);
-        }
+      final splitIndex = segment.orderedMessages.indexWhere(
+        (message) => message.serverMessageId == splitAfterServerMessageId,
+      );
+      if (splitIndex == -1) {
+        beforeMessages.addAll(segment.orderedMessages);
+      } else {
+        beforeMessages.addAll(segment.orderedMessages.take(splitIndex));
+        afterMessages.addAll(segment.orderedMessages.skip(splitIndex));
       }
     }
     String? highlightedStableKey;
@@ -252,14 +263,14 @@ class ConversationTimelineV2ViewModel
         }
       }
     }
-    final currentTailServerMessageId = segment.orderedMessages.isEmpty
+    final currentTailStableKey = segment.orderedMessages.isEmpty
         ? null
-        : segment.orderedMessages.last.serverMessageId;
+        : segment.orderedMessages.last.stableKey;
     if (segment.isLatestSlice &&
         (_latestViewportFacts?.isNearBottom ?? false) &&
-        _lastRenderedTailServerMessageId != null &&
-        currentTailServerMessageId != null &&
-        currentTailServerMessageId > _lastRenderedTailServerMessageId!) {
+        _lastRenderedTailStableKey != null &&
+        currentTailStableKey != null &&
+        currentTailStableKey != _lastRenderedTailStableKey) {
       _issueViewportCommand(
         kind: ConversationTimelineV2ViewportCommandKind.scrollToBottom,
         placement: ConversationTimelineV2ViewportPlacement.bottomPreferred,
@@ -268,7 +279,7 @@ class ConversationTimelineV2ViewModel
     final viewportCommand = _takePendingViewportCommand(
       hasMessages: segment.orderedMessages.isNotEmpty,
     );
-    _lastRenderedTailServerMessageId = currentTailServerMessageId;
+    _lastRenderedTailStableKey = currentTailStableKey;
 
     return ConversationTimelineV2State(
       beforeMessages: beforeMessages,
@@ -293,6 +304,26 @@ class ConversationTimelineV2ViewModel
       final command = _pendingViewportCommand!;
       _pendingViewportCommand = null;
       return (command: command, generation: ++_viewportCommandGeneration);
+    }
+    return null;
+  }
+
+  int? _firstServerMessageId(List<ConversationMessageV2> messages) {
+    for (final message in messages) {
+      final serverMessageId = message.serverMessageId;
+      if (serverMessageId != null) {
+        return serverMessageId;
+      }
+    }
+    return null;
+  }
+
+  int? _lastServerMessageId(List<ConversationMessageV2> messages) {
+    for (final message in messages.reversed) {
+      final serverMessageId = message.serverMessageId;
+      if (serverMessageId != null) {
+        return serverMessageId;
+      }
     }
     return null;
   }

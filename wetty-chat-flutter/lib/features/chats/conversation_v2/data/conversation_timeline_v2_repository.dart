@@ -19,6 +19,61 @@ class ConversationTimelineV2Repository {
           threadRootId: identity.threadRootId!,
         );
 
+  ConversationTimelineV2MessageStore get _store =>
+      ref.read(conversationTimelineV2MessageStoreProvider.notifier);
+
+  Future<void> sendMessage({
+    required ConversationMessageV2 optimisticMessage,
+    // TODO(conversation_v2): remove this once transport can derive uploaded
+    // attachment ids directly from the optimistic message payload.
+    required List<String> attachmentIds,
+  }) async {
+    // Optimistically insert the message into the timeline.
+    _store.newMessage(identity, optimisticMessage);
+
+    // Send the message to the server.
+    await ref
+        .read(messageApiServiceProvider)
+        .sendConversationMessage(
+          _scope,
+          _textFor(optimisticMessage),
+          messageType: _messageTypeFor(optimisticMessage),
+          replyToId: optimisticMessage.replyToMessage?.id,
+          attachmentIds: attachmentIds,
+          clientGeneratedId: optimisticMessage.clientGeneratedId,
+          stickerId: _stickerIdFor(optimisticMessage),
+        );
+  }
+
+  String _messageTypeFor(ConversationMessageV2 message) {
+    return switch (message.content) {
+      TextMessageContent() => 'text',
+      AudioMessageContent() => 'audio',
+      FileMessageContent() => 'text',
+      StickerMessageContent() => 'sticker',
+      InviteMessageContent() => 'invite',
+      SystemMessageContent() => 'system',
+    };
+  }
+
+  String _textFor(ConversationMessageV2 message) {
+    return switch (message.content) {
+      TextMessageContent(:final text) => text,
+      AudioMessageContent(:final text) => text ?? '',
+      FileMessageContent(:final text) => text ?? '',
+      InviteMessageContent(:final text) => text ?? '',
+      SystemMessageContent(:final text) => text,
+      StickerMessageContent() => '',
+    };
+  }
+
+  String? _stickerIdFor(ConversationMessageV2 message) {
+    return switch (message.content) {
+      StickerMessageContent(:final sticker) => sticker.id,
+      _ => null,
+    };
+  }
+
   Future<void> refreshLatestSegment({required int limit}) async {
     final existingScope = ref.read(
       conversationTimelineV2MessageStoreProvider,

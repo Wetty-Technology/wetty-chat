@@ -17,7 +17,7 @@ class ConversationTimelineV2ActiveSegmentMode {
   bool get isLatest => targetServerMessageId == null;
 
   int? get splitAfterServerMessageId =>
-      isLatest ? latestSplitAfterServerMessageId : targetServerMessageId! - 1;
+      isLatest ? latestSplitAfterServerMessageId : targetServerMessageId!;
 
   @override
   bool operator ==(Object other) {
