@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/message_models.dart';
 import '../data/audio_playback_driver.dart';
-import '../data/audio_source_resolver_service.dart';
+import 'package:chahua/features/chats/conversation_v2/data/audio_source_resolver_service.dart';
 
 enum VoiceMessagePlaybackPhase {
   idle,

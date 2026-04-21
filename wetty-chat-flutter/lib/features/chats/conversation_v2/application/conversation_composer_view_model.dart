@@ -12,9 +12,6 @@ import 'package:voice_message/voice_message.dart';
 
 import 'package:chahua/core/network/dio_client.dart';
 import 'package:chahua/core/session/dev_session_store.dart';
-import 'package:chahua/features/chats/conversation/data/attachment_service.dart';
-import 'package:chahua/features/chats/conversation/data/audio_recorder_service.dart';
-import 'package:chahua/features/chats/conversation/data/audio_waveform_cache_service.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_draft_store.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_local_mutation_registry.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_message_store.dart';
@@ -23,6 +20,9 @@ import 'package:chahua/features/chats/conversation_v2/data/message_api_service_v
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_identity.dart';
 import 'package:chahua/features/chats/conversation_v2/data/conversation_timeline_v2_repository.dart';
+import 'package:chahua/features/chats/shared/data/attachment_service.dart';
+import 'package:chahua/features/chats/conversation_v2/data/audio_recorder_service.dart';
+import 'package:chahua/features/chats/conversation_v2/data/audio_waveform_cache_service.dart';
 
 const int composerMaxAttachments =
     ConversationComposerState.maxAttachmentsPerMessage;

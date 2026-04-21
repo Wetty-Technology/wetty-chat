@@ -2,8 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/message_models.dart';
 import '../data/audio_duration_probe_service.dart';
-import '../data/audio_source_resolver_service.dart';
-import '../data/audio_waveform_cache_service.dart';
+import 'package:chahua/features/chats/conversation_v2/data/audio_source_resolver_service.dart';
+import 'package:chahua/features/chats/conversation_v2/data/audio_waveform_cache_service.dart';
 
 class VoiceMessagePresentationData {
   const VoiceMessagePresentationData({

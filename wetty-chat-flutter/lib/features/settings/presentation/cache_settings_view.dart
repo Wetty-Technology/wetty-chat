@@ -8,8 +8,8 @@ import '../../../l10n/app_localizations.dart';
 import '../../chats/conversation/application/voice_message_presentation_provider.dart';
 import '../../chats/conversation/application/voice_message_playback_controller.dart';
 import '../../chats/conversation/data/audio_duration_probe_service.dart';
-import '../../chats/conversation/data/audio_source_resolver_service.dart';
-import '../../chats/conversation/data/audio_waveform_cache_service.dart';
+import 'package:chahua/features/chats/conversation_v2/data/audio_source_resolver_service.dart';
+import 'package:chahua/features/chats/conversation_v2/data/audio_waveform_cache_service.dart';
 
 final mediaCacheUsageProvider = FutureProvider<AppCacheUsageSummary>((ref) {
   log('Recomputing app cache usage', name: 'CacheSettingsPage');

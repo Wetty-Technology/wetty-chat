@@ -6,7 +6,7 @@ import 'package:just_audio/just_audio.dart';
 
 import '../../../../core/cache/media_cache_service.dart';
 import '../../models/message_models.dart';
-import 'audio_source_resolver_service.dart';
+import 'package:chahua/features/chats/conversation_v2/data/audio_source_resolver_service.dart';
 
 class AudioDurationProbeService {
   AudioDurationProbeService(this._mediaCacheService);

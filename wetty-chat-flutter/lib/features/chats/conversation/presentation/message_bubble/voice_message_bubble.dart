@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../app/theme/style_config.dart';
 import '../../application/voice_message_playback_controller.dart';
 import '../../application/voice_message_presentation_provider.dart';
-import '../../data/audio_waveform_cache_service.dart';
+import 'package:chahua/features/chats/conversation_v2/data/audio_waveform_cache_service.dart';
 import '../../domain/conversation_message.dart';
 import '../../../models/message_models.dart';
 import 'message_bubble_meta.dart';

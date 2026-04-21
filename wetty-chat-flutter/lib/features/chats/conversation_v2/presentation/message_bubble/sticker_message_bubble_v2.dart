@@ -1,5 +1,5 @@
 import 'package:chahua/app/theme/style_config.dart';
-import 'package:chahua/features/chats/conversation/presentation/message_bubble/sticker_image_widget.dart';
+import 'package:chahua/features/chats/shared/presentation/sticker_image_widget.dart';
 import 'package:chahua/features/chats/models/message_preview_formatter.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
 import 'package:flutter/cupertino.dart';

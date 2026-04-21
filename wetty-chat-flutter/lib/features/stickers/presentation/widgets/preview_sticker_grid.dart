@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 
 import '../../../../app/theme/style_config.dart';
-import '../../../chats/conversation/presentation/message_bubble/sticker_image_widget.dart';
+import 'package:chahua/features/chats/shared/presentation/sticker_image_widget.dart';
 import '../../../chats/models/message_models.dart';
 import 'sticker_grid_layout.dart';
 

@@ -8,7 +8,7 @@ import 'message_bubble_presentation.dart';
 import 'message_render_spec.dart';
 import 'message_reactions.dart';
 import 'message_thread_indicator.dart';
-import 'sticker_image_widget.dart';
+import 'package:chahua/features/chats/shared/presentation/sticker_image_widget.dart';
 
 class StickerMessageBubble extends StatelessWidget {
   const StickerMessageBubble({
