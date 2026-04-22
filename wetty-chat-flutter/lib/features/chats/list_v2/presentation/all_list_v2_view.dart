@@ -13,7 +13,10 @@ import '../../models/message_preview_formatter.dart';
 import '../../threads/models/thread_models.dart';
 import '../../threads/presentation/thread_list_row.dart';
 import '../application/all_list_v2_models.dart';
+import '../application/all_list_v2_projection.dart';
 import '../application/all_list_v2_view_model.dart';
+import '../application/group_list_v2_view_model.dart';
+import '../application/thread_list_v2_view_model.dart';
 
 class AllListV2View extends ConsumerWidget {
   const AllListV2View({
@@ -27,60 +30,63 @@ class AllListV2View extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncState = ref.watch(allListV2ViewModelProvider);
+    final items = ref.watch(allListV2ItemsProvider);
+    final uiState = ref.watch(allListV2ViewModelProvider);
+    final groupAsync = ref.watch(groupListV2ViewModelProvider);
+    final threadAsync = ref.watch(threadListV2ViewModelProvider);
+    final isInitialLoading =
+        items.isEmpty && groupAsync.isLoading && threadAsync.isLoading;
 
-    return asyncState.when(
-      loading: () => const Center(child: CupertinoActivityIndicator()),
-      error: (error, _) => Center(child: Text(error.toString())),
-      data: (viewState) {
-        if (viewState.errorMessage != null && viewState.items.isEmpty) {
-          return Center(child: Text(viewState.errorMessage!));
-        }
-        if (viewState.items.isEmpty) {
-          return const Center(child: Text('No chats or threads yet'));
-        }
+    if (isInitialLoading) {
+      return const Center(child: CupertinoActivityIndicator());
+    }
 
-        if (supportsPullToRefresh) {
-          return CustomScrollView(
-            controller: scrollController,
-            physics: const AlwaysScrollableScrollPhysics(
-              parent: BouncingScrollPhysics(),
-            ),
-            slivers: [
-              CupertinoSliverRefreshControl(
-                onRefresh: () =>
-                    ref.read(allListV2ViewModelProvider.notifier).refreshAll(),
-              ),
-              SliverList.builder(
-                itemCount: viewState.items.length,
-                itemBuilder: (context, index) =>
-                    _AllListV2Row(item: viewState.items[index]),
-              ),
-              if (viewState.isLoadingMore)
-                const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Center(child: CupertinoActivityIndicator()),
-                  ),
-                ),
-            ],
-          );
-        }
+    if (uiState.errorMessage != null && items.isEmpty) {
+      return Center(child: Text(uiState.errorMessage!));
+    }
 
-        return ListView.builder(
-          controller: scrollController,
-          physics: const AlwaysScrollableScrollPhysics(),
-          itemCount: viewState.items.length + (viewState.isLoadingMore ? 1 : 0),
-          itemBuilder: (context, index) {
-            if (index >= viewState.items.length) {
-              return const Padding(
+    if (items.isEmpty) {
+      return const Center(child: Text('No chats or threads yet'));
+    }
+
+    if (supportsPullToRefresh) {
+      return CustomScrollView(
+        controller: scrollController,
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        slivers: [
+          CupertinoSliverRefreshControl(
+            onRefresh: () =>
+                ref.read(allListV2ViewModelProvider.notifier).refreshAll(),
+          ),
+          SliverList.builder(
+            itemCount: items.length,
+            itemBuilder: (context, index) => _AllListV2Row(item: items[index]),
+          ),
+          if (uiState.isLoadingMore)
+            const SliverToBoxAdapter(
+              child: Padding(
                 padding: EdgeInsets.symmetric(vertical: 16),
                 child: Center(child: CupertinoActivityIndicator()),
-              );
-            }
-            return _AllListV2Row(item: viewState.items[index]);
-          },
-        );
+              ),
+            ),
+        ],
+      );
+    }
+
+    return ListView.builder(
+      controller: scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
+      itemCount: items.length + (uiState.isLoadingMore ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index >= items.length) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(child: CupertinoActivityIndicator()),
+          );
+        }
+        return _AllListV2Row(item: items[index]);
       },
     );
   }

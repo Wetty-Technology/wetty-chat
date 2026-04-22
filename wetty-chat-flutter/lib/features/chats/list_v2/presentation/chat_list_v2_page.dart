@@ -88,10 +88,8 @@ class _ChatListV2PageState extends ConsumerState<ChatListV2Page> {
     }
 
     if (activeTab == ChatListTab.all) {
-      final allState = ref.read(allListV2ViewModelProvider).value;
-      if (allState == null ||
-          allState.isLoadingMore ||
-          (!allState.groupsHasMore && !allState.threadsHasMore)) {
+      final allState = ref.read(allListV2ViewModelProvider);
+      if (allState.isLoadingMore) {
         return;
       }
       ref.read(allListV2ViewModelProvider.notifier).loadMoreAll();
