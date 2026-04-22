@@ -27,9 +27,10 @@ class ThreadDetailV2Page extends StatelessWidget {
     return CupertinoPageScaffold(
       resizeToAvoidBottomInset: false,
       navigationBar: CupertinoNavigationBar(
+        // TODO: Fix this, TheradDetail should take int
         middle: _ThreadDetailTitle(
-          chatId: chatId,
-          threadRootId: threadRootId,
+          chatId: chatId.toString(),
+          threadRootId: threadRootId.toString(),
         ),
       ),
       child: SafeArea(
@@ -44,10 +45,7 @@ class ThreadDetailV2Page extends StatelessWidget {
 }
 
 class _ThreadDetailTitle extends ConsumerWidget {
-  const _ThreadDetailTitle({
-    required this.chatId,
-    required this.threadRootId,
-  });
+  const _ThreadDetailTitle({required this.chatId, required this.threadRootId});
 
   final String chatId;
   final String threadRootId;
