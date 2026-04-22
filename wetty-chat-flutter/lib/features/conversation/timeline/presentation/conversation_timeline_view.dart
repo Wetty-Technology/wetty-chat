@@ -490,19 +490,24 @@ class _ConversationTimelineViewState
             anchor: centerViewportFraction,
             controller: _scrollController,
             slivers: [
+              // Fixed top padding?
               const SliverPadding(padding: EdgeInsets.only(top: 8)),
+
+              // Before slice (if not empty)
               if (beforeMessages.isNotEmpty)
                 _buildMessageSliver(beforeMessages),
+
+              // Center sentinel / seam
+              SliverToBoxAdapter(
+                key: _centerSliverKey,
+                child: const SizedBox.shrink(),
+              ),
+
+              // After slice (if not empty)
               if (afterMessages.isNotEmpty)
                 _buildMessageSliver(
                   afterMessages,
-                  key: _centerSliverKey,
                   highlightedStableKey: state.highlightedStableKey,
-                )
-              else
-                SliverToBoxAdapter(
-                  key: _centerSliverKey,
-                  child: const SizedBox.shrink(),
                 ),
             ],
           ),
