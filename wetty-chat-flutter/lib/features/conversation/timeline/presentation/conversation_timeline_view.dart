@@ -326,34 +326,43 @@ class _ConversationTimelineViewState
     );
   }
 
-  bool _shouldShowSenderName(List<ConversationMessageV2> messages, int index) {
-    final message = messages[index];
-    if (message.content is SystemMessageContent) {
-      return false;
-    }
-    if (index == 0) {
-      return true;
-    }
-    final previousMessage = messages[index - 1];
-    if (previousMessage.content is SystemMessageContent) {
-      return true;
-    }
-    return previousMessage.sender.uid != message.sender.uid;
-  }
+  Map<String, ({bool showSenderName, bool showAvatar})> _buildRowPresentation(
+    List<ConversationMessageV2> orderedMessages,
+  ) {
+    final presentationByStableKey =
+        <String, ({bool showSenderName, bool showAvatar})>{};
 
-  bool _shouldShowAvatar(List<ConversationMessageV2> messages, int index) {
-    final message = messages[index];
-    if (message.content is SystemMessageContent) {
-      return false;
+    for (var index = 0; index < orderedMessages.length; index++) {
+      final message = orderedMessages[index];
+      if (message.content is SystemMessageContent) {
+        presentationByStableKey[message.stableKey] = const (
+          showSenderName: false,
+          showAvatar: false,
+        );
+        continue;
+      }
+
+      final previousMessage = index > 0 ? orderedMessages[index - 1] : null;
+      final nextMessage = index < orderedMessages.length - 1
+          ? orderedMessages[index + 1]
+          : null;
+
+      final showSenderName =
+          previousMessage == null ||
+          previousMessage.content is SystemMessageContent ||
+          previousMessage.sender.uid != message.sender.uid;
+      final showAvatar =
+          nextMessage == null ||
+          nextMessage.content is SystemMessageContent ||
+          nextMessage.sender.uid != message.sender.uid;
+
+      presentationByStableKey[message.stableKey] = (
+        showSenderName: showSenderName,
+        showAvatar: showAvatar,
+      );
     }
-    if (index == messages.length - 1) {
-      return true;
-    }
-    final nextMessage = messages[index + 1];
-    if (nextMessage.content is SystemMessageContent) {
-      return true;
-    }
-    return nextMessage.sender.uid != message.sender.uid;
+
+    return presentationByStableKey;
   }
 
   GlobalKey _keyForMessage(ConversationMessageV2 message) {
@@ -403,6 +412,8 @@ class _ConversationTimelineViewState
   SliverList _buildMessageSliver(
     List<ConversationMessageV2> messages, {
     String? highlightedStableKey,
+    required Map<String, ({bool showSenderName, bool showAvatar})>
+    rowPresentationByStableKey,
   }) {
     final vmNotifier = ref.read(
       conversationTimelineViewModelProvider(_identity).notifier,
@@ -411,15 +422,16 @@ class _ConversationTimelineViewState
       itemCount: messages.length,
       itemBuilder: (context, index) {
         final message = messages[index];
-        final showSenderName = _shouldShowSenderName(messages, index);
-        final showAvatar = _shouldShowAvatar(messages, index);
+        final rowPresentation =
+            rowPresentationByStableKey[message.stableKey] ??
+            const (showSenderName: true, showAvatar: true);
         return KeyedSubtree(
           key: _keyForMessage(message),
           child: MessageRowV2(
             message: message,
             isHighlighted: message.stableKey == highlightedStableKey,
-            showSenderName: showSenderName,
-            showAvatar: showAvatar,
+            showSenderName: rowPresentation.showSenderName,
+            showAvatar: rowPresentation.showAvatar,
             onLongPress: _openMessageOverlay,
             onReply: () => ref
                 .read(conversationComposerViewModelProvider(_identity).notifier)
@@ -471,6 +483,11 @@ class _ConversationTimelineViewState
         placement == ConversationTimelineViewportPlacement.topPreferred &&
         !_isTopPreferredAnchorResolved;
 
+    final orderedMessages = <ConversationMessageV2>[
+      ...state.beforeMessages,
+      ...state.afterMessages,
+    ];
+    final rowPresentationByStableKey = _buildRowPresentation(orderedMessages);
     final beforeMessages = state.beforeMessages.reversed.toList(
       growable: false,
     );
@@ -496,6 +513,7 @@ class _ConversationTimelineViewState
                 _buildMessageSliver(
                   beforeMessages,
                   highlightedStableKey: state.highlightedStableKey,
+                  rowPresentationByStableKey: rowPresentationByStableKey,
                 ),
 
               // Center sentinel / seam
@@ -509,6 +527,7 @@ class _ConversationTimelineViewState
                 _buildMessageSliver(
                   afterMessages,
                   highlightedStableKey: state.highlightedStableKey,
+                  rowPresentationByStableKey: rowPresentationByStableKey,
                 ),
             ],
           ),
