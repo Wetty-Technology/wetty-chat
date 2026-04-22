@@ -91,7 +91,7 @@ class _StickerPickerPanelState extends ConsumerState<StickerPickerPanel> {
           itemBuilder: (context, index) {
             final sticker = stickers[index];
             return _StickerGridCell(
-              key: ValueKey('picker-sticker-${sticker.id ?? index}'),
+              key: ValueKey('picker-sticker-${sticker.id}'),
               sticker: sticker,
               onTap: () {
                 final packId = pickerState.selectedPackId;
@@ -121,7 +121,6 @@ class _StickerPickerPanelState extends ConsumerState<StickerPickerPanel> {
 
   void _onToggleFavorite(StickerSummary sticker) {
     final stickerId = sticker.id;
-    if (stickerId == null) return;
     ref.read(stickerPickerViewModelProvider.notifier).toggleFavorite(stickerId);
   }
 }

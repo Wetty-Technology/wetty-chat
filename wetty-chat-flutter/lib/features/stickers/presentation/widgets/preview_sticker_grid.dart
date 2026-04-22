@@ -46,7 +46,7 @@ class PreviewStickerGrid extends StatelessWidget {
             return GestureDetector(
               onTap: () => onStickerSelected(sticker.id),
               child: Container(
-                key: ValueKey('preview-sticker-${sticker.id ?? index}'),
+                key: ValueKey('preview-sticker-${sticker.id}'),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
                   border: isSelected

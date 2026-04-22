@@ -46,25 +46,13 @@ class ConversationComposeV2State extends ConsumerState<ConversationComposeV2> {
     });
   }
 
-  void _handleStickerSelected(StickerSummary sticker) {
-    if (sticker.id == null) {
-      return;
-    }
-    setState(() {
-      _isStickerPickerOpen = false;
-    });
-    unawaited(_sendSticker(sticker));
-  }
-
   Future<void> _sendSticker(StickerSummary sticker) async {
-    try {
-      await ref
+    unawaited(
+      ref
           .read(conversationComposerViewModelProvider(widget.identity).notifier)
-          .sendSticker(sticker);
-      await widget.onMessageSent?.call();
-    } catch (_) {
-      // Error presentation is handled by the composer state / retry flows.
-    }
+          .sendSticker(sticker),
+    );
+    unawaited(widget.onMessageSent?.call());
   }
 
   @override
@@ -95,7 +83,7 @@ class ConversationComposeV2State extends ConsumerState<ConversationComposeV2> {
               SizedBox(
                 width: double.infinity,
                 child: StickerPickerPanel(
-                  onStickerSelected: _handleStickerSelected,
+                  onStickerSelected: _sendSticker,
                   onClose: dismissTransientUi,
                 ),
               ),

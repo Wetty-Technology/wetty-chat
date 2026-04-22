@@ -841,7 +841,7 @@ as int?,
 /// @nodoc
 mixin _$StickerSummary {
 
- String? get id; StickerMedia? get media; String? get emoji; String? get name; String? get description; DateTime? get createdAt; bool? get isFavorited;
+ String get id; StickerMedia? get media; String? get emoji; String? get name; String? get description; DateTime? get createdAt; bool? get isFavorited;
 /// Create a copy of StickerSummary
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -872,7 +872,7 @@ abstract mixin class $StickerSummaryCopyWith<$Res>  {
   factory $StickerSummaryCopyWith(StickerSummary value, $Res Function(StickerSummary) _then) = _$StickerSummaryCopyWithImpl;
 @useResult
 $Res call({
- String? id, StickerMedia? media, String? emoji, String? name, String? description, DateTime? createdAt, bool? isFavorited
+ String id, StickerMedia? media, String? emoji, String? name, String? description, DateTime? createdAt, bool? isFavorited
 });
 
 
@@ -889,10 +889,10 @@ class _$StickerSummaryCopyWithImpl<$Res>
 
 /// Create a copy of StickerSummary
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? media = freezed,Object? emoji = freezed,Object? name = freezed,Object? description = freezed,Object? createdAt = freezed,Object? isFavorited = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? media = freezed,Object? emoji = freezed,Object? name = freezed,Object? description = freezed,Object? createdAt = freezed,Object? isFavorited = freezed,}) {
   return _then(_self.copyWith(
-id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as String?,media: freezed == media ? _self.media : media // ignore: cast_nullable_to_non_nullable
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,media: freezed == media ? _self.media : media // ignore: cast_nullable_to_non_nullable
 as StickerMedia?,emoji: freezed == emoji ? _self.emoji : emoji // ignore: cast_nullable_to_non_nullable
 as String?,name: freezed == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String?,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
@@ -995,7 +995,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? id,  StickerMedia? media,  String? emoji,  String? name,  String? description,  DateTime? createdAt,  bool? isFavorited)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  StickerMedia? media,  String? emoji,  String? name,  String? description,  DateTime? createdAt,  bool? isFavorited)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _StickerSummary() when $default != null:
 return $default(_that.id,_that.media,_that.emoji,_that.name,_that.description,_that.createdAt,_that.isFavorited);case _:
@@ -1016,7 +1016,7 @@ return $default(_that.id,_that.media,_that.emoji,_that.name,_that.description,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? id,  StickerMedia? media,  String? emoji,  String? name,  String? description,  DateTime? createdAt,  bool? isFavorited)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  StickerMedia? media,  String? emoji,  String? name,  String? description,  DateTime? createdAt,  bool? isFavorited)  $default,) {final _that = this;
 switch (_that) {
 case _StickerSummary():
 return $default(_that.id,_that.media,_that.emoji,_that.name,_that.description,_that.createdAt,_that.isFavorited);case _:
@@ -1036,7 +1036,7 @@ return $default(_that.id,_that.media,_that.emoji,_that.name,_that.description,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? id,  StickerMedia? media,  String? emoji,  String? name,  String? description,  DateTime? createdAt,  bool? isFavorited)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  StickerMedia? media,  String? emoji,  String? name,  String? description,  DateTime? createdAt,  bool? isFavorited)?  $default,) {final _that = this;
 switch (_that) {
 case _StickerSummary() when $default != null:
 return $default(_that.id,_that.media,_that.emoji,_that.name,_that.description,_that.createdAt,_that.isFavorited);case _:
@@ -1051,10 +1051,10 @@ return $default(_that.id,_that.media,_that.emoji,_that.name,_that.description,_t
 
 
 class _StickerSummary implements StickerSummary {
-  const _StickerSummary({this.id, this.media, this.emoji, this.name, this.description, this.createdAt, this.isFavorited});
+  const _StickerSummary({required this.id, this.media, this.emoji, this.name, this.description, this.createdAt, this.isFavorited});
   
 
-@override final  String? id;
+@override final  String id;
 @override final  StickerMedia? media;
 @override final  String? emoji;
 @override final  String? name;
@@ -1092,7 +1092,7 @@ abstract mixin class _$StickerSummaryCopyWith<$Res> implements $StickerSummaryCo
   factory _$StickerSummaryCopyWith(_StickerSummary value, $Res Function(_StickerSummary) _then) = __$StickerSummaryCopyWithImpl;
 @override @useResult
 $Res call({
- String? id, StickerMedia? media, String? emoji, String? name, String? description, DateTime? createdAt, bool? isFavorited
+ String id, StickerMedia? media, String? emoji, String? name, String? description, DateTime? createdAt, bool? isFavorited
 });
 
 
@@ -1109,10 +1109,10 @@ class __$StickerSummaryCopyWithImpl<$Res>
 
 /// Create a copy of StickerSummary
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? media = freezed,Object? emoji = freezed,Object? name = freezed,Object? description = freezed,Object? createdAt = freezed,Object? isFavorited = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? media = freezed,Object? emoji = freezed,Object? name = freezed,Object? description = freezed,Object? createdAt = freezed,Object? isFavorited = freezed,}) {
   return _then(_StickerSummary(
-id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as String?,media: freezed == media ? _self.media : media // ignore: cast_nullable_to_non_nullable
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,media: freezed == media ? _self.media : media // ignore: cast_nullable_to_non_nullable
 as StickerMedia?,emoji: freezed == emoji ? _self.emoji : emoji // ignore: cast_nullable_to_non_nullable
 as String?,name: freezed == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String?,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable

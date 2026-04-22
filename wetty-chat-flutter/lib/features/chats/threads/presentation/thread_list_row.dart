@@ -135,7 +135,10 @@ class ThreadListRow extends StatelessWidget {
       message: lastReply.message,
       messageType: lastReply.messageType,
       sticker: lastReply.stickerEmoji != null
-          ? StickerSummary(emoji: lastReply.stickerEmoji)
+          ? StickerSummary(
+              id: 'thread-preview-${thread.threadRootId}',
+              emoji: lastReply.stickerEmoji,
+            )
           : null,
       firstAttachmentKind: lastReply.firstAttachmentKind,
       isDeleted: lastReply.isDeleted,

@@ -41,7 +41,7 @@ extension StickerPackDetailResponseDtoMapper on StickerPackDetailResponseDto {
 
 extension StickerDetailResponseDtoMapper on StickerDetailResponseDto {
   StickerSummary toStickerSummary() => StickerSummary(
-    id: id,
+    id: id ?? (throw StateError('StickerDetailResponseDto.id is required')),
     media: media?.toDomain(),
     emoji: emoji,
     name: name,

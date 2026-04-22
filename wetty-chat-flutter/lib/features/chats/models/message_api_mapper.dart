@@ -33,7 +33,7 @@ extension StickerMediaDtoMapper on StickerMediaDto {
 
 extension StickerSummaryDtoMapper on StickerSummaryDto {
   StickerSummary toDomain() => StickerSummary(
-    id: id,
+    id: id ?? (throw StateError('StickerSummaryDto.id is required')),
     media: media?.toDomain(),
     emoji: emoji,
     name: name,

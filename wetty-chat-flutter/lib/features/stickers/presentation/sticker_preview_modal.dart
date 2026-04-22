@@ -98,7 +98,8 @@ class _StickerPreviewSheetState extends ConsumerState<_StickerPreviewSheet> {
     final heroSticker = _selectedStickerId != null
         ? state.packStickers.firstWhere(
             (s) => s.id == _selectedStickerId,
-            orElse: () => state.sticker ?? const StickerSummary(),
+            orElse: () =>
+                state.sticker ?? const StickerSummary(id: 'preview-fallback'),
           )
         : state.sticker;
 

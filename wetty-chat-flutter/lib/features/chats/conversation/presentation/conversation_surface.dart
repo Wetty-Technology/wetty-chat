@@ -71,9 +71,6 @@ class _ConversationSurfaceState extends ConsumerState<ConversationSurface> {
   }
 
   void _handleStickerSelected(StickerSummary sticker) {
-    if (sticker.id == null) {
-      return;
-    }
     setState(() {
       _isStickerPickerOpen = false;
     });

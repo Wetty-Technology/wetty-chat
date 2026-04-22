@@ -27,7 +27,7 @@ void main() {
       const preview = ReplyToMessage(
         id: 1,
         messageType: 'sticker',
-        sticker: StickerSummary(emoji: '🙂'),
+        sticker: StickerSummary(id: 'sticker-1', emoji: '🙂'),
         sender: sender,
         isDeleted: false,
       );

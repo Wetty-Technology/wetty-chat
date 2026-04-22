@@ -227,12 +227,10 @@ class _StickerPackDetailPageState extends ConsumerState<StickerPackDetailPage> {
                           final stickerIndex = isOwner ? index - 1 : index;
                           final sticker = stickers[stickerIndex];
                           return StickerGridItem(
-                            key: ValueKey(
-                              'pack-sticker-${sticker.id ?? stickerIndex}',
-                            ),
+                            key: ValueKey('pack-sticker-${sticker.id}'),
                             sticker: sticker,
-                            onTap: isOwner && sticker.id != null
-                                ? () => _confirmRemoveSticker(sticker.id!)
+                            onTap: isOwner
+                                ? () => _confirmRemoveSticker(sticker.id)
                                 : null,
                           );
                         },

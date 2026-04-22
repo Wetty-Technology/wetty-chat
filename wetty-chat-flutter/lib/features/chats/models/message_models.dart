@@ -63,7 +63,7 @@ abstract class StickerMedia with _$StickerMedia {
 @freezed
 abstract class StickerSummary with _$StickerSummary {
   const factory StickerSummary({
-    String? id,
+    required String id,
     StickerMedia? media,
     String? emoji,
     String? name,

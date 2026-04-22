@@ -563,7 +563,6 @@ class ConversationComposerViewModel
 
   Future<void> sendSticker(StickerSummary sticker) async {
     final stickerId = sticker.id;
-    if (stickerId == null) return;
     final currentUserId = ref.read(authSessionProvider).currentUserId;
     final mode = state.mode;
     await _sendMessage(
