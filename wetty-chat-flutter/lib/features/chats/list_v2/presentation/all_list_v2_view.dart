@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/routing/route_names.dart';
 import '../../chat_timestamp_formatter.dart';
-import '../../conversation_v2/domain/launch_request.dart';
+import 'package:chahua/features/conversation/shared/domain/launch_request.dart';
 import '../../list/presentation/widgets/chat_list_row.dart';
 import '../../list/presentation/widgets/swipe_to_action_row.dart';
 import '../../models/chat_models.dart';

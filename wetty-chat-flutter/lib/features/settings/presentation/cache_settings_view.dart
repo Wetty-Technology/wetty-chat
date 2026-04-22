@@ -5,11 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/cache/app_cache_service.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../chats/conversation_v2/application/voice_message_playback_controller_v2.dart';
-import '../../chats/conversation_v2/application/voice_message_presentation_provider_v2.dart';
-import 'package:chahua/features/chats/conversation_v2/data/audio_source_resolver_service.dart';
-import 'package:chahua/features/chats/conversation_v2/data/audio_duration_probe_service.dart';
-import 'package:chahua/features/chats/conversation_v2/data/audio_waveform_cache_service.dart';
+import '../../conversation/timeline/presentation/voice_message_playback_controller_v2.dart';
+import '../../conversation/timeline/presentation/voice_message_presentation_provider_v2.dart';
+import 'package:chahua/features/conversation/media/data/audio_source_resolver_service.dart';
+import 'package:chahua/features/conversation/media/data/audio_duration_probe_service.dart';
+import 'package:chahua/features/conversation/media/data/audio_waveform_cache_service.dart';
 
 final mediaCacheUsageProvider = FutureProvider<AppCacheUsageSummary>((ref) {
   log('Recomputing app cache usage', name: 'CacheSettingsPage');

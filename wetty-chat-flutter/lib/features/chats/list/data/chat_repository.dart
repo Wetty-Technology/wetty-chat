@@ -11,7 +11,7 @@ import '../../list_projection/domain/list_projection_helpers.dart';
 import '../../models/chat_api_mapper.dart';
 import '../../models/chat_models.dart';
 import '../../models/message_api_mapper.dart';
-import '../../conversation_v2/data/message_api_service_v2.dart';
+import 'package:chahua/features/conversation/compose/data/message_api_service_v2.dart';
 import 'chat_api_service.dart';
 
 typedef ChatListState = ({
