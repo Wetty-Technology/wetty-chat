@@ -1,37 +1,39 @@
 import 'package:chahua/app/theme/style_config.dart';
+import 'package:chahua/features/chats/chat_timestamp_formatter.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:flutter/cupertino.dart';
 
 import '../bubble_theme_v2.dart';
 
+const double _statusIconSize = 14;
+const double _statusIconGap = 4;
+
 class MetaFooter extends StatelessWidget {
   const MetaFooter({
     super.key,
     required this.message,
-    required this.theme,
-    required this.isMe,
     this.fontWeight = FontWeight.w400,
   });
 
   final ConversationMessageV2 message;
-  final BubbleThemeV2 theme;
-  final bool isMe;
   final FontWeight fontWeight;
 
   @override
   Widget build(BuildContext context) {
+    final theme = BubbleThemeV2.of(context);
+    final timeText = formatChatMessageTime(context, message.createdAt);
     final showDeliveryStatus =
-        isMe && message.deliveryState != ConversationDeliveryState.failed;
+        theme.isMe && message.deliveryState != ConversationDeliveryState.failed;
     final deliveryIndicator = switch (message.deliveryState) {
       ConversationDeliveryState.sending ||
       ConversationDeliveryState.sent => Icon(
         CupertinoIcons.checkmark_alt_circle,
-        size: BubbleThemeV2.statusIconSize,
+        size: _statusIconSize,
         color: theme.metaColor,
       ),
       ConversationDeliveryState.confirmed => Icon(
         CupertinoIcons.checkmark_alt_circle_fill,
-        size: BubbleThemeV2.statusIconSize,
+        size: _statusIconSize,
         color: theme.metaColor,
       ),
       _ => null,
@@ -55,7 +57,7 @@ class MetaFooter extends StatelessWidget {
             ),
           ),
         Text(
-          theme.timeText,
+          timeText,
           style: appBubbleTextStyle(
             context,
             color: theme.metaColor,
@@ -64,7 +66,7 @@ class MetaFooter extends StatelessWidget {
           ),
         ),
         if (showDeliveryStatus && deliveryIndicator != null) ...[
-          const SizedBox(width: BubbleThemeV2.statusIconGap),
+          const SizedBox(width: _statusIconGap),
           deliveryIndicator,
         ],
       ],

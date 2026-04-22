@@ -3,33 +3,32 @@ import 'package:chahua/features/chats/models/message_models.dart';
 import 'package:chahua/features/chats/models/message_preview_formatter.dart';
 import 'package:flutter/cupertino.dart';
 
+import '../bubble_theme_v2.dart';
+
 enum ReplyQuoteVariant { inBubble, overSticker }
 
 class ReplyQuote extends StatelessWidget {
   const ReplyQuote({
     super.key,
     required this.reply,
-    required this.textColor,
-    required this.isMe,
     this.variant = ReplyQuoteVariant.inBubble,
     this.onTap,
   });
 
   final ReplyToMessage reply;
-  final Color textColor;
-  final bool isMe;
   final ReplyQuoteVariant variant;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    final theme = BubbleThemeV2.of(context);
     final replySender = reply.sender.name ?? 'User ${reply.sender.uid}';
     final (backgroundColor, borderColor) = switch (variant) {
       ReplyQuoteVariant.inBubble => (
-        isMe
+        theme.isMe
             ? CupertinoColors.white.withAlpha(26)
             : CupertinoColors.black.withAlpha(15),
-        isMe
+        theme.isMe
             ? CupertinoColors.white.withAlpha(128)
             : CupertinoColors.activeBlue.resolveFrom(context),
       ),
@@ -58,7 +57,7 @@ class ReplyQuote extends StatelessWidget {
               context,
               fontWeight: FontWeight.w600,
               fontSize: 11,
-              color: textColor.withAlpha(217),
+              color: theme.textColor.withAlpha(217),
             ),
           ),
           Text(
@@ -69,16 +68,17 @@ class ReplyQuote extends StatelessWidget {
               context,
               fontSize: 12,
               fontWeight: FontWeight.w400,
-              color: textColor.withAlpha(179),
+              color: theme.textColor.withAlpha(179),
             ),
           ),
         ],
       ),
     );
 
-    if (onTap == null) {
+    final effectiveOnTap = theme.isInteractive ? onTap : null;
+    if (effectiveOnTap == null) {
       return quote;
     }
-    return GestureDetector(onTap: onTap, child: quote);
+    return GestureDetector(onTap: effectiveOnTap, child: quote);
   }
 }

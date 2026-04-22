@@ -6,9 +6,14 @@ import 'package:flutter/cupertino.dart';
 
 import '../message_long_press_details_v2.dart';
 import '../reply_swipe_action_v2.dart';
-import 'bubble_theme_v2.dart';
-import 'message_bubble_v2.dart';
-import 'system_bubble_v2.dart';
+import 'message_item.dart';
+
+const double _bottomSpacing = 12;
+const double _rowFullHorizontalPadding = 24;
+const double _rowHorizontalPadding = _rowFullHorizontalPadding / 2;
+const double _avatarSlotWidth = 36;
+const double _avatarGap = 8;
+const double _avatarLaneWidth = _avatarSlotWidth + _avatarGap;
 
 class MessageRowV2 extends StatefulWidget {
   const MessageRowV2({
@@ -24,12 +29,6 @@ class MessageRowV2 extends StatefulWidget {
     this.showSenderName = true,
     this.showAvatar = true,
   });
-
-  static const double _bottomSpacing = 12;
-  static const double _rowHorizontalPadding =
-      BubbleThemeV2.rowHorizontalPadding / 2;
-  static const double _avatarLaneWidth =
-      BubbleThemeV2.avatarSlotWidth + BubbleThemeV2.avatarGap;
 
   final ConversationMessageV2 message;
   final double chatMessageFontSize;
@@ -50,7 +49,6 @@ class _MessageRowV2State extends State<MessageRowV2> {
   final GlobalKey _bubbleKey = GlobalKey();
 
   bool get _isMe => widget.message.sender.uid == ApiSession.currentUserId;
-  bool get _isSystem => widget.message.content is SystemMessageContent;
   bool get _canReply =>
       widget.onReply != null &&
       !widget.message.isDeleted &&
@@ -96,39 +94,38 @@ class _MessageRowV2State extends State<MessageRowV2> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isSystem) {
-      return SystemBubbleV2(message: widget.message);
+    final item = MessageItem(
+      key: _bubbleKey,
+      message: widget.message,
+      isMe: _isMe,
+      isInteractive: true,
+      chatMessageFontSize: widget.chatMessageFontSize,
+      showSenderName: widget.showSenderName,
+      onToggleReaction: widget.onToggleReaction,
+      onTapReply: widget.onTapReply,
+      onOpenThread: widget.onOpenThread,
+    );
+
+    if (widget.message.layout == BubbleLayout.centered) {
+      return item;
     }
 
     final avatar = widget.showAvatar
         ? Padding(
-            padding: const EdgeInsets.only(left: BubbleThemeV2.avatarGap),
+            padding: const EdgeInsets.only(left: _avatarGap),
             child: AppAvatar(
               imageUrl: widget.message.sender.avatarUrl,
-              size: BubbleThemeV2.avatarSlotWidth,
+              size: _avatarSlotWidth,
               name: widget.message.sender.name,
             ),
           )
         : const SizedBox.shrink();
 
-    final bubble = KeyedSubtree(
-      key: _bubbleKey,
-      child: MessageBubbleV2(
-        message: widget.message,
-        isMe: _isMe,
-        chatMessageFontSize: widget.chatMessageFontSize,
-        showSenderName: widget.showSenderName,
-        onToggleReaction: widget.onToggleReaction,
-        onTapReply: widget.onTapReply,
-        onOpenThread: widget.onOpenThread,
-      ),
-    );
-
     return GestureDetector(
       onLongPress: _isDesktopPlatform ? null : _handleLongPress,
       onSecondaryTapUp: _isDesktopPlatform ? (_) => _handleLongPress() : null,
       child: Padding(
-        padding: const EdgeInsets.only(bottom: MessageRowV2._bottomSpacing),
+        padding: const EdgeInsets.only(bottom: _bottomSpacing),
         child: ReplySwipeActionV2(
           key: ValueKey(widget.message.stableKey),
           enabled: _canReply,
@@ -149,7 +146,7 @@ class _MessageRowV2State extends State<MessageRowV2> {
                   : EdgeInsets.zero,
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: MessageRowV2._rowHorizontalPadding,
+                  horizontal: _rowHorizontalPadding,
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -158,18 +155,18 @@ class _MessageRowV2State extends State<MessageRowV2> {
                       : MainAxisAlignment.start,
                   children: _isMe
                       ? <Widget>[
-                          Flexible(child: bubble),
-                          const SizedBox(width: MessageRowV2._avatarLaneWidth),
+                          Flexible(child: item),
+                          const SizedBox(width: _avatarLaneWidth),
                         ]
                       : <Widget>[
                           SizedBox(
-                            width: MessageRowV2._avatarLaneWidth,
+                            width: _avatarLaneWidth,
                             child: Align(
                               alignment: Alignment.bottomLeft,
                               child: avatar,
                             ),
                           ),
-                          Flexible(child: bubble),
+                          Flexible(child: item),
                         ],
                 ),
               ),

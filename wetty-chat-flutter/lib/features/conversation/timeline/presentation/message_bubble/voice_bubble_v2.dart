@@ -21,8 +21,6 @@ class VoiceBubbleV2 extends ConsumerStatefulWidget {
   const VoiceBubbleV2({
     super.key,
     required this.message,
-    required this.theme,
-    required this.isMe,
     required this.showSenderName,
     this.onTapReply,
     this.onOpenThread,
@@ -30,8 +28,6 @@ class VoiceBubbleV2 extends ConsumerStatefulWidget {
   });
 
   final ConversationMessageV2 message;
-  final BubbleThemeV2 theme;
-  final bool isMe;
   final bool showSenderName;
   final VoidCallback? onTapReply;
   final VoidCallback? onOpenThread;
@@ -55,17 +51,20 @@ class _VoiceBubbleV2State extends ConsumerState<VoiceBubbleV2> {
     if (attachment == null) {
       return const SizedBox.shrink();
     }
+    final theme = BubbleThemeV2.of(context);
     final presentationAsync = ref.watch(
       voiceMessagePresentationV2Provider(attachment),
     );
 
     return presentationAsync.when(
       loading: () => _buildUnavailable(
+        theme: theme,
         attachment: attachment,
         statusText: 'Preparing audio...',
         icon: const CupertinoActivityIndicator(),
       ),
       error: (_, _) => _buildUnavailable(
+        theme: theme,
         attachment: attachment,
         statusText: 'Audio is not playable.',
         icon: const Icon(
@@ -79,11 +78,13 @@ class _VoiceBubbleV2State extends ConsumerState<VoiceBubbleV2> {
         if (waveform == null) {
           if (data.canPlay) {
             return _buildSlider(
+              theme: theme,
               attachment: attachment,
               resolvedDuration: data.duration,
             );
           }
           return _buildUnavailable(
+            theme: theme,
             attachment: attachment,
             statusText: 'Audio is not playable.',
             icon: const Icon(
@@ -94,6 +95,7 @@ class _VoiceBubbleV2State extends ConsumerState<VoiceBubbleV2> {
           );
         }
         return _buildWaveform(
+          theme: theme,
           attachment: attachment,
           waveform: waveform,
           resolvedDuration: data.duration,
@@ -104,23 +106,26 @@ class _VoiceBubbleV2State extends ConsumerState<VoiceBubbleV2> {
   }
 
   Widget _buildUnavailable({
+    required BubbleThemeV2 theme,
     required AttachmentItem attachment,
     required String statusText,
     required Widget icon,
   }) {
     return _scaffold(
+      theme: theme,
       attachment: attachment,
       width: 220,
       body: VoiceUnavailableView(
         statusText: statusText,
         icon: icon,
-        metaColor: widget.theme.metaColor,
+        metaColor: theme.metaColor,
       ),
       statusRow: null,
     );
   }
 
   Widget _buildWaveform({
+    required BubbleThemeV2 theme,
     required AttachmentItem attachment,
     required AudioWaveformSnapshot waveform,
     required Duration? resolvedDuration,
@@ -151,24 +156,26 @@ class _VoiceBubbleV2State extends ConsumerState<VoiceBubbleV2> {
       duration,
     );
     final waveformWidth = voiceUniformWaveformWidth;
-    final accent = _accentColor(context);
+    final accent = _accentColor(context, theme);
     final secondaryText = phase == VoiceMessagePlaybackPhaseV2.error
         ? playbackState.errorMessage ?? 'Audio playback failed'
         : '${formatVoiceDuration(clampedPosition)} / ${formatVoiceDuration(duration)}';
     final statusTextWidth = _measureStatusTextWidth(
       context,
+      theme,
       secondaryText,
       isError: phase == VoiceMessagePlaybackPhaseV2.error,
     );
-    final metaWidth = widget.theme.timeSpacerWidth;
     final bubbleWidth = voiceBubbleWidth(
       waveformWidth: waveformWidth,
       statusTextWidth: statusTextWidth,
-      metaWidth: metaWidth,
-      maxBubbleWidth: widget.theme.maxBubbleWidth,
+      metaWidth: theme.timeSpacerWidth,
+      maxBubbleWidth: theme.maxBubbleWidth,
     );
+    final effectiveCanPlay = canPlay && theme.isInteractive;
 
     return _scaffold(
+      theme: theme,
       attachment: attachment,
       width: bubbleWidth,
       body: VoiceWaveformView(
@@ -176,11 +183,11 @@ class _VoiceBubbleV2State extends ConsumerState<VoiceBubbleV2> {
         waveform: waveform,
         duration: duration,
         position: clampedPosition,
-        canPlay: canPlay,
+        canPlay: effectiveCanPlay,
         phase: phase,
         accentColor: accent,
-        buttonBackgroundColor: _buttonBackground(context, accent),
-        inactiveWaveformColor: _inactiveWaveformColor(accent),
+        buttonBackgroundColor: _buttonBackground(context, theme, accent),
+        inactiveWaveformColor: _inactiveWaveformColor(theme, accent),
         onTogglePlayback: () => controller.togglePlayback(attachment),
         onSeekPreview: (position) => setState(() => _dragPosition = position),
         onSeekCommit: (position) async {
@@ -191,6 +198,7 @@ class _VoiceBubbleV2State extends ConsumerState<VoiceBubbleV2> {
         dragPosition: _dragPosition,
       ),
       statusRow: _statusRow(
+        theme: theme,
         text: secondaryText,
         isError: phase == VoiceMessagePlaybackPhaseV2.error,
       ),
@@ -198,6 +206,7 @@ class _VoiceBubbleV2State extends ConsumerState<VoiceBubbleV2> {
   }
 
   Widget _buildSlider({
+    required BubbleThemeV2 theme,
     required AttachmentItem attachment,
     required Duration? resolvedDuration,
   }) {
@@ -222,8 +231,8 @@ class _VoiceBubbleV2State extends ConsumerState<VoiceBubbleV2> {
         ? sliderPosition
         : clampDuration(sliderPosition, Duration.zero, duration);
     final waveformWidth = voiceUniformWaveformWidth;
-    final canPlay = attachment.url.isNotEmpty;
-    final accent = _accentColor(context);
+    final canPlay = attachment.url.isNotEmpty && theme.isInteractive;
+    final accent = _accentColor(context, theme);
     final bubbleWidth = voiceBubbleWidthForWaveformWidth(waveformWidth);
     final secondaryText = isActive && phase == VoiceMessagePlaybackPhaseV2.error
         ? playbackState.errorMessage ?? 'Audio playback failed'
@@ -233,6 +242,7 @@ class _VoiceBubbleV2State extends ConsumerState<VoiceBubbleV2> {
       behavior: HitTestBehavior.opaque,
       onTap: canPlay ? () => controller.togglePlayback(attachment) : null,
       child: _scaffold(
+        theme: theme,
         attachment: attachment,
         width: bubbleWidth,
         body: VoiceSliderView(
@@ -243,7 +253,7 @@ class _VoiceBubbleV2State extends ConsumerState<VoiceBubbleV2> {
           isActive: isActive,
           phase: phase,
           accentColor: accent,
-          buttonBackgroundColor: _buttonBackground(context, accent),
+          buttonBackgroundColor: _buttonBackground(context, theme, accent),
           onTogglePlayback: () => controller.togglePlayback(attachment),
           onSeekPreview: (position) =>
               setState(() => _dragPosition = position),
@@ -253,6 +263,7 @@ class _VoiceBubbleV2State extends ConsumerState<VoiceBubbleV2> {
           },
         ),
         statusRow: _statusRow(
+          theme: theme,
           text: secondaryText,
           isError: isActive && phase == VoiceMessagePlaybackPhaseV2.error,
         ),
@@ -261,6 +272,7 @@ class _VoiceBubbleV2State extends ConsumerState<VoiceBubbleV2> {
   }
 
   Widget _scaffold({
+    required BubbleThemeV2 theme,
     required AttachmentItem attachment,
     required double width,
     required Widget body,
@@ -272,12 +284,11 @@ class _VoiceBubbleV2State extends ConsumerState<VoiceBubbleV2> {
     final children = <Widget>[
       if (widget.showSenderName)
         Padding(
-          padding: const EdgeInsets.only(
-            bottom: BubbleThemeV2.senderHeaderBodyGap,
-          ),
+          padding: const EdgeInsets.only(bottom: senderHeaderBodyGap),
           child: SenderHeader(
-            senderName: widget.theme.senderName,
-            textColor: widget.theme.textColor,
+            senderName:
+                widget.message.sender.name ??
+                'User ${widget.message.sender.uid}',
             gender: widget.message.sender.gender,
           ),
         ),
@@ -285,12 +296,7 @@ class _VoiceBubbleV2State extends ConsumerState<VoiceBubbleV2> {
       if (statusRow != null) ...[const SizedBox(height: 6), statusRow],
       if (showThread) ...[
         const SizedBox(height: 4),
-        ThreadIndicator(
-          threadInfo: threadInfo,
-          isMe: widget.isMe,
-          textColor: widget.theme.textColor,
-          onTap: widget.onOpenThread,
-        ),
+        ThreadIndicator(threadInfo: threadInfo, onTap: widget.onOpenThread),
       ],
     ];
 
@@ -298,7 +304,7 @@ class _VoiceBubbleV2State extends ConsumerState<VoiceBubbleV2> {
       width: width,
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       decoration: BoxDecoration(
-        color: widget.theme.bubbleColor,
+        color: theme.bubbleColor,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -313,7 +319,7 @@ class _VoiceBubbleV2State extends ConsumerState<VoiceBubbleV2> {
     }
 
     return Column(
-      crossAxisAlignment: widget.isMe
+      crossAxisAlignment: theme.isMe
           ? CrossAxisAlignment.end
           : CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -322,16 +328,17 @@ class _VoiceBubbleV2State extends ConsumerState<VoiceBubbleV2> {
         const SizedBox(height: 8),
         BubbleReactions(
           reactions: widget.message.reactions,
-          maxBubbleWidth: widget.theme.maxBubbleWidth,
-          isMe: widget.isMe,
-          isInteractive: !widget.message.isDeleted,
           onToggleReaction: widget.onToggleReaction,
         ),
       ],
     );
   }
 
-  Widget _statusRow({required String text, required bool isError}) {
+  Widget _statusRow({
+    required BubbleThemeV2 theme,
+    required String text,
+    required bool isError,
+  }) {
     return Row(
       children: [
         Expanded(
@@ -345,34 +352,35 @@ class _VoiceBubbleV2State extends ConsumerState<VoiceBubbleV2> {
             ).copyWith(
               color: isError
                   ? CupertinoColors.systemRed.resolveFrom(context)
-                  : widget.theme.metaColor,
+                  : theme.metaColor,
             ),
           ),
         ),
         const SizedBox(width: 8),
-        MetaFooter(
-          message: widget.message,
-          theme: widget.theme,
-          isMe: widget.isMe,
-        ),
+        MetaFooter(message: widget.message),
       ],
     );
   }
 
-  Color _accentColor(BuildContext context) => widget.isMe
+  Color _accentColor(BuildContext context, BubbleThemeV2 theme) => theme.isMe
       ? CupertinoColors.white
       : CupertinoColors.activeBlue.resolveFrom(context);
 
-  Color _buttonBackground(BuildContext context, Color accent) => widget.isMe
+  Color _buttonBackground(
+    BuildContext context,
+    BubbleThemeV2 theme,
+    Color accent,
+  ) => theme.isMe
       ? CupertinoColors.white.withAlpha(36)
       : accent.withAlpha(28);
 
-  Color _inactiveWaveformColor(Color accent) => widget.isMe
+  Color _inactiveWaveformColor(BubbleThemeV2 theme, Color accent) => theme.isMe
       ? CupertinoColors.white.withAlpha(92)
       : accent.withAlpha(72);
 
   double _measureStatusTextWidth(
     BuildContext context,
+    BubbleThemeV2 theme,
     String text, {
     required bool isError,
   }) {
@@ -380,7 +388,7 @@ class _VoiceBubbleV2State extends ConsumerState<VoiceBubbleV2> {
         .copyWith(
           color: isError
               ? CupertinoColors.systemRed.resolveFrom(context)
-              : widget.theme.metaColor,
+              : theme.metaColor,
         );
     final painter = TextPainter(
       text: TextSpan(text: text, style: style),

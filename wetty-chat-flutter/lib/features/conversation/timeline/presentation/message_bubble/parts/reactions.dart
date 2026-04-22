@@ -3,13 +3,13 @@ import 'package:chahua/shared/presentation/app_avatar.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
 import 'package:flutter/cupertino.dart';
 
+import '../bubble_theme_v2.dart';
+
 class BubbleReactions extends StatelessWidget {
   const BubbleReactions({
     super.key,
     required this.reactions,
-    required this.maxBubbleWidth,
-    required this.isMe,
-    required this.isInteractive,
+    this.interactive,
     this.onToggleReaction,
   });
 
@@ -20,17 +20,20 @@ class BubbleReactions extends StatelessWidget {
   static const FontWeight _bubbleFontWeight = FontWeight.w400;
 
   final List<ReactionSummary> reactions;
-  final double maxBubbleWidth;
-  final bool isMe;
-  final bool isInteractive;
+
+  /// When null, reactions follow `BubbleThemeV2.isInteractive`.
+  /// When `false`, reactions are non-interactive regardless of theme
+  /// (used by sticker bubbles).
+  final bool? interactive;
   final ValueChanged<String>? onToggleReaction;
 
   Color _reactionPillBackground(
     BuildContext context,
+    BubbleThemeV2 theme,
     ReactionSummary reaction,
   ) {
     final colors = context.appColors;
-    if (isMe) {
+    if (theme.isMe) {
       return reaction.reactedByMe == true
           ? colors.chatReactionSentActive
           : colors.chatReactionSent;
@@ -42,9 +45,10 @@ class BubbleReactions extends StatelessWidget {
 
   Color _reactionPillForeground(
     BuildContext context,
+    BubbleThemeV2 theme,
     ReactionSummary reaction,
   ) {
-    if (isMe || reaction.reactedByMe == true) {
+    if (theme.isMe || reaction.reactedByMe == true) {
       return context.appColors.textOnAccent;
     }
     return context.appColors.textPrimary;
@@ -113,7 +117,7 @@ class BubbleReactions extends StatelessWidget {
     return width;
   }
 
-  double _preferredReactionRowWidth(BuildContext context) {
+  double _preferredReactionRowWidth(BuildContext context, double maxBubbleWidth) {
     final maxContentWidth = maxBubbleWidth - 24;
     if (reactions.isEmpty) {
       return maxContentWidth;
@@ -132,10 +136,12 @@ class BubbleReactions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = BubbleThemeV2.of(context);
+    final isInteractive = interactive ?? theme.isInteractive;
     final pills = reactions
         .map((reaction) {
-          final pillBackground = _reactionPillBackground(context, reaction);
-          final pillForeground = _reactionPillForeground(context, reaction);
+          final pillBackground = _reactionPillBackground(context, theme, reaction);
+          final pillForeground = _reactionPillForeground(context, theme, reaction);
 
           final pill = Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -192,7 +198,7 @@ class BubbleReactions extends StatelessWidget {
         .toList(growable: false);
 
     return SizedBox(
-      width: _preferredReactionRowWidth(context),
+      width: _preferredReactionRowWidth(context, theme.maxBubbleWidth),
       child: Wrap(
         spacing: _reactionPillGap,
         runSpacing: _reactionPillGap,

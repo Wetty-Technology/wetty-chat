@@ -5,105 +5,115 @@ import 'package:chahua/features/chats/chat_timestamp_formatter.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:flutter/cupertino.dart';
 
-class BubbleThemeV2 {
-  static const double maxRowWidthFactor = 0.80;
-  static const double rowHorizontalPadding = 24;
-  static const double avatarSlotWidth = 36;
-  static const double avatarGap = 8;
-  static const double statusIconSize = 14;
-  static const double statusIconGap = 4;
-  static const double senderHeaderBadgeGap = 4;
-  static const double senderHeaderBadgeSize = 11;
-  static const double senderHeaderBodyGap = 4;
-  static const double senderHeaderReservedHeight = 24;
-  static const double threadIndicatorIconSize = 12;
-  static const double threadIndicatorIconGap = 4;
+const double _maxRowWidthFactor = 0.80;
+const double _rowHorizontalPadding = 24;
+const double _avatarSlotWidth = 36;
+const double _avatarGap = 8;
 
+class BubbleThemeV2 extends InheritedWidget {
   const BubbleThemeV2({
-    required this.senderName,
-    required this.timeText,
+    super.key,
+    required this.isMe,
+    required this.isInteractive,
     required this.maxBubbleWidth,
+    required this.timeSpacerWidth,
+    required this.chatMessageFontSize,
     required this.bubbleColor,
     required this.textColor,
     required this.metaColor,
     required this.linkColor,
-    required this.timeSpacerWidth,
-    required this.minBubbleContentHeight,
+    required super.child,
   });
 
   factory BubbleThemeV2.fromContext({
+    Key? key,
     required BuildContext context,
     required ConversationMessageV2 message,
     required bool isMe,
+    required bool isInteractive,
     required double chatMessageFontSize,
+    required Widget child,
   }) {
     final colors = context.appColors;
     final screenWidth = MediaQuery.sizeOf(context).width;
-
+    final timeText = formatChatMessageTime(context, message.createdAt);
     return BubbleThemeV2(
-      senderName: message.sender.name ?? 'User ${message.sender.uid}',
-      timeText: formatChatMessageTime(context, message.createdAt),
+      key: key,
+      isMe: isMe,
+      isInteractive: isInteractive,
       maxBubbleWidth: math.max(
         0,
-        (screenWidth * maxRowWidthFactor) -
-            rowHorizontalPadding -
-            avatarSlotWidth -
-            avatarGap,
+        (screenWidth * _maxRowWidthFactor) -
+            _rowHorizontalPadding -
+            _avatarSlotWidth -
+            _avatarGap,
       ),
+      timeSpacerWidth:
+          measureMetaWidth(context, message, timeText, isMe: isMe) + 8,
+      chatMessageFontSize: chatMessageFontSize,
       bubbleColor: isMe ? colors.chatSentBubble : colors.chatReceivedBubble,
       textColor: isMe ? colors.textOnAccent : colors.textPrimary,
       metaColor: isMe ? colors.chatSentMeta : colors.chatReceivedMeta,
       linkColor: isMe ? colors.chatLinkOnSent : colors.chatLinkOnReceived,
-      timeSpacerWidth:
-          measureMetaWidth(
-            context,
-            message,
-            formatChatMessageTime(context, message.createdAt),
-            isMe: isMe,
-          ) +
-          8,
-      minBubbleContentHeight: chatMessageFontSize * 1.28,
+      child: child,
     );
   }
 
-  final String senderName;
-  final String timeText;
+  final bool isMe;
+  final bool isInteractive;
   final double maxBubbleWidth;
+  final double timeSpacerWidth;
+  final double chatMessageFontSize;
   final Color bubbleColor;
   final Color textColor;
   final Color metaColor;
   final Color linkColor;
-  final double timeSpacerWidth;
-  final double minBubbleContentHeight;
 
-  static double measureMetaWidth(
-    BuildContext context,
-    ConversationMessageV2 message,
-    String timeStr, {
-    required bool isMe,
-  }) {
-    final metaText = message.isEdited ? 'edited $timeStr' : timeStr;
-    final metaPainter = TextPainter(
-      text: TextSpan(
-        text: metaText,
-        style: appBubbleMetaTextStyle(
-          context,
-          fontSize: AppFontSizes.bubbleMeta,
-        ),
-      ),
-      maxLines: 1,
-      textDirection: TextDirection.ltr,
-    )..layout(maxWidth: double.infinity);
+  double get minBubbleContentHeight => chatMessageFontSize * 1.28;
 
-    if (_showsDeliveryStatus(message, isMe: isMe)) {
-      return metaPainter.width + statusIconGap + statusIconSize;
-    }
-
-    return metaPainter.width;
+  static BubbleThemeV2 of(BuildContext context) {
+    final theme = context.dependOnInheritedWidgetOfExactType<BubbleThemeV2>();
+    assert(theme != null, 'BubbleThemeV2.of() called without an ancestor');
+    return theme!;
   }
 
-  static bool _showsDeliveryStatus(
-    ConversationMessageV2 message, {
-    required bool isMe,
-  }) => isMe && message.deliveryState != ConversationDeliveryState.failed;
+  @override
+  bool updateShouldNotify(BubbleThemeV2 old) {
+    return isMe != old.isMe ||
+        isInteractive != old.isInteractive ||
+        maxBubbleWidth != old.maxBubbleWidth ||
+        timeSpacerWidth != old.timeSpacerWidth ||
+        chatMessageFontSize != old.chatMessageFontSize ||
+        bubbleColor != old.bubbleColor ||
+        textColor != old.textColor ||
+        metaColor != old.metaColor ||
+        linkColor != old.linkColor;
+  }
+}
+
+const double _statusIconSize = 14;
+const double _statusIconGap = 4;
+
+double measureMetaWidth(
+  BuildContext context,
+  ConversationMessageV2 message,
+  String timeStr, {
+  required bool isMe,
+}) {
+  final metaText = message.isEdited ? 'edited $timeStr' : timeStr;
+  final metaPainter = TextPainter(
+    text: TextSpan(
+      text: metaText,
+      style: appBubbleMetaTextStyle(context, fontSize: AppFontSizes.bubbleMeta),
+    ),
+    maxLines: 1,
+    textDirection: TextDirection.ltr,
+  )..layout(maxWidth: double.infinity);
+
+  final showsDelivery =
+      isMe && message.deliveryState != ConversationDeliveryState.failed;
+  if (showsDelivery) {
+    return metaPainter.width + _statusIconGap + _statusIconSize;
+  }
+  return metaPainter.width;
 }

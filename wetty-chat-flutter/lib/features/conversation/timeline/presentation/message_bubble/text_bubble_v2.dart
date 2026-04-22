@@ -17,38 +17,31 @@ class TextBubbleV2 extends StatelessWidget {
   const TextBubbleV2({
     super.key,
     required this.message,
-    required this.theme,
-    required this.isMe,
-    required this.chatMessageFontSize,
     required this.showSenderName,
     this.onToggleReaction,
     this.onTapReply,
     this.onOpenThread,
-    this.onTapMention,
   });
 
   final ConversationMessageV2 message;
-  final BubbleThemeV2 theme;
-  final bool isMe;
-  final double chatMessageFontSize;
   final bool showSenderName;
   final ValueChanged<String>? onToggleReaction;
   final VoidCallback? onTapReply;
   final VoidCallback? onOpenThread;
-  final void Function(int uid, MentionInfo? mention)? onTapMention;
 
   static const FontWeight _bubbleFontWeight = FontWeight.w400;
   static const double _emptyBubbleMinWidth = 48;
 
   @override
   Widget build(BuildContext context) {
+    final theme = BubbleThemeV2.of(context);
     const bubbleRadius = Radius.circular(18);
     const tailRadius = Radius.circular(4);
     final borderRadius = BorderRadius.only(
       topLeft: bubbleRadius,
       topRight: bubbleRadius,
-      bottomLeft: !isMe ? tailRadius : bubbleRadius,
-      bottomRight: isMe ? tailRadius : bubbleRadius,
+      bottomLeft: !theme.isMe ? tailRadius : bubbleRadius,
+      bottomRight: theme.isMe ? tailRadius : bubbleRadius,
     );
 
     return IntrinsicWidth(
@@ -64,18 +57,18 @@ class TextBubbleV2 extends StatelessWidget {
             style: appBubbleTextStyle(
               context,
               color: theme.textColor,
-              fontSize: chatMessageFontSize,
+              fontSize: theme.chatMessageFontSize,
               height: 1.28,
               fontWeight: _bubbleFontWeight,
             ),
-            child: _buildContent(context),
+            child: _buildContent(context, theme),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildContent(BuildContext context) {
+  Widget _buildContent(BuildContext context, BubbleThemeV2 theme) {
     final attachments = _attachmentsFor(message.content);
     final hasAttachments = attachments.isNotEmpty;
     final children = <Widget>[];
@@ -83,22 +76,16 @@ class TextBubbleV2 extends StatelessWidget {
     if (showSenderName) {
       children.add(
         SenderHeader(
-          senderName: theme.senderName,
-          textColor: theme.textColor,
+          senderName: message.sender.name ?? 'User ${message.sender.uid}',
           gender: message.sender.gender,
         ),
       );
-      children.add(const SizedBox(height: BubbleThemeV2.senderHeaderBodyGap));
+      children.add(const SizedBox(height: senderHeaderBodyGap));
     }
 
     if (message.replyToMessage != null) {
       children.add(
-        ReplyQuote(
-          reply: message.replyToMessage!,
-          textColor: theme.textColor,
-          isMe: isMe,
-          onTap: onTapReply,
-        ),
+        ReplyQuote(reply: message.replyToMessage!, onTap: onTapReply),
       );
     }
 
@@ -112,7 +99,7 @@ class TextBubbleV2 extends StatelessWidget {
           style: appBubbleTextStyle(
             context,
             color: theme.metaColor,
-            fontSize: chatMessageFontSize,
+            fontSize: theme.chatMessageFontSize,
             fontStyle: FontStyle.italic,
             fontWeight: _bubbleFontWeight,
           ),
@@ -129,25 +116,18 @@ class TextBubbleV2 extends StatelessWidget {
       if (children.isNotEmpty) {
         children.add(const SizedBox(height: 8));
       }
-      children.add(_buildAttachmentSection(context, attachments));
+      children.add(_buildAttachmentSection(context, theme, attachments));
     }
 
     if (children.isNotEmpty && (message.replyToMessage != null || hasAttachments)) {
       children.add(const SizedBox(height: 4));
     }
-    children.add(_buildMessageBody(context));
+    children.add(_buildMessageBody(context, theme));
 
     final threadInfo = message.threadInfo;
     if (threadInfo != null && threadInfo.replyCount > 0) {
       children.add(const SizedBox(height: 4));
-      children.add(
-        ThreadIndicator(
-          threadInfo: threadInfo,
-          isMe: isMe,
-          textColor: theme.textColor,
-          onTap: onOpenThread,
-        ),
-      );
+      children.add(ThreadIndicator(threadInfo: threadInfo, onTap: onOpenThread));
     }
 
     if (message.reactions.isNotEmpty) {
@@ -155,9 +135,6 @@ class TextBubbleV2 extends StatelessWidget {
       children.add(
         BubbleReactions(
           reactions: message.reactions,
-          maxBubbleWidth: theme.maxBubbleWidth,
-          isMe: isMe,
-          isInteractive: !message.isDeleted,
           onToggleReaction: onToggleReaction,
         ),
       );
@@ -170,14 +147,10 @@ class TextBubbleV2 extends StatelessWidget {
     );
   }
 
-  Widget _buildMessageBody(BuildContext context) {
+  Widget _buildMessageBody(BuildContext context, BubbleThemeV2 theme) {
     final messageText = _messageTextFor(message.content);
     final mentions = _mentionsFor(message.content);
-    final metaWidget = MetaFooter(
-      message: message,
-      theme: theme,
-      isMe: isMe,
-    );
+    final metaWidget = MetaFooter(message: message);
 
     if (messageText.trim().isEmpty) {
       return ConstrainedBox(
@@ -200,28 +173,12 @@ class TextBubbleV2 extends StatelessWidget {
               textStyle: appBubbleTextStyle(
                 context,
                 color: theme.textColor,
-                fontSize: chatMessageFontSize,
+                fontSize: theme.chatMessageFontSize,
                 height: 1.28,
                 fontWeight: _bubbleFontWeight,
               ),
-              linkColor: theme.linkColor,
               mentions: mentions,
               currentUserId: null,
-              mentionTextColor: isMe
-                  ? CupertinoColors.white
-                  : CupertinoColors.activeBlue.resolveFrom(context),
-              mentionBackgroundColor: isMe
-                  ? CupertinoColors.white.withAlpha(46)
-                  : CupertinoColors.activeBlue
-                        .resolveFrom(context)
-                        .withAlpha(26),
-              selfMentionBackgroundColor: isMe
-                  ? CupertinoColors.white.withAlpha(71)
-                  : CupertinoColors.activeBlue
-                        .resolveFrom(context)
-                        .withAlpha(51),
-              trailingSpacerWidth: theme.timeSpacerWidth,
-              onTapMention: onTapMention,
             ),
             Positioned(right: 0, bottom: 0, child: metaWidget),
           ],
@@ -232,6 +189,7 @@ class TextBubbleV2 extends StatelessWidget {
 
   Widget _buildAttachmentSection(
     BuildContext context,
+    BubbleThemeV2 theme,
     List<AttachmentItem> attachments,
   ) {
     final maxAttachmentWidth = theme.maxBubbleWidth - 24;
@@ -245,6 +203,7 @@ class TextBubbleV2 extends StatelessWidget {
             if (index > 0) const SizedBox(height: 8),
             _buildAttachmentPreview(
               context,
+              theme,
               attachments[index],
               maxAttachmentWidth: maxAttachmentWidth,
             ),
@@ -256,6 +215,7 @@ class TextBubbleV2 extends StatelessWidget {
 
   Widget _buildAttachmentPreview(
     BuildContext context,
+    BubbleThemeV2 theme,
     AttachmentItem attachment, {
     required double maxAttachmentWidth,
   }) {
@@ -270,22 +230,23 @@ class TextBubbleV2 extends StatelessWidget {
       return MessageImageAttachmentPreview(
         attachment: attachment,
         onTap: () {},
-        fallback: _buildFileAttachmentTile(context, attachment),
+        fallback: _buildFileAttachmentTile(context, theme, attachment),
         maxWidth: maxAttachmentWidth,
       );
     }
-    return _buildFileAttachmentTile(context, attachment);
+    return _buildFileAttachmentTile(context, theme, attachment);
   }
 
   Widget _buildFileAttachmentTile(
     BuildContext context,
+    BubbleThemeV2 theme,
     AttachmentItem attachment,
   ) {
     return Container(
       width: 180,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: isMe
+        color: theme.isMe
             ? context.appColors.chatAttachmentChipSent
             : context.appColors.chatAttachmentChipReceived,
         borderRadius: BorderRadius.circular(12),

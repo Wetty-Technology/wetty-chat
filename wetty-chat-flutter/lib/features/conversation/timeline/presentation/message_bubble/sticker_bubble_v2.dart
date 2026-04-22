@@ -13,16 +13,12 @@ class StickerBubbleV2 extends StatelessWidget {
   const StickerBubbleV2({
     super.key,
     required this.message,
-    required this.theme,
-    required this.isMe,
     this.onTapReply,
     this.onOpenThread,
     this.onToggleReaction,
   });
 
   final ConversationMessageV2 message;
-  final BubbleThemeV2 theme;
-  final bool isMe;
   final VoidCallback? onTapReply;
   final VoidCallback? onOpenThread;
   final ValueChanged<String>? onToggleReaction;
@@ -32,15 +28,16 @@ class StickerBubbleV2 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = BubbleThemeV2.of(context);
     return IntrinsicWidth(
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: theme.maxBubbleWidth),
-        child: _buildContent(context),
+        child: _buildContent(context, theme),
       ),
     );
   }
 
-  Widget _buildContent(BuildContext context) {
+  Widget _buildContent(BuildContext context, BubbleThemeV2 theme) {
     if (message.isDeleted) {
       return Text(
         '[Deleted]',
@@ -63,8 +60,6 @@ class StickerBubbleV2 extends StatelessWidget {
       if (message.replyToMessage != null)
         ReplyQuote(
           reply: message.replyToMessage!,
-          textColor: theme.textColor,
-          isMe: isMe,
           variant: ReplyQuoteVariant.overSticker,
           onTap: onTapReply,
         ),
@@ -87,7 +82,7 @@ class StickerBubbleV2 extends StatelessWidget {
                 color: CupertinoColors.black.withAlpha(110),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: MetaFooter(message: message, theme: theme, isMe: isMe),
+              child: MetaFooter(message: message),
             ),
           ),
         ],
@@ -97,14 +92,7 @@ class StickerBubbleV2 extends StatelessWidget {
     final threadInfo = message.threadInfo;
     if (threadInfo != null && threadInfo.replyCount > 0) {
       children.add(const SizedBox(height: 4));
-      children.add(
-        ThreadIndicator(
-          threadInfo: threadInfo,
-          isMe: isMe,
-          textColor: theme.textColor,
-          onTap: onOpenThread,
-        ),
-      );
+      children.add(ThreadIndicator(threadInfo: threadInfo, onTap: onOpenThread));
     }
 
     if (message.reactions.isNotEmpty) {
@@ -112,16 +100,14 @@ class StickerBubbleV2 extends StatelessWidget {
       children.add(
         BubbleReactions(
           reactions: message.reactions,
-          maxBubbleWidth: theme.maxBubbleWidth,
-          isMe: isMe,
-          isInteractive: false,
+          interactive: false,
           onToggleReaction: onToggleReaction,
         ),
       );
     }
 
     return Column(
-      crossAxisAlignment: isMe
+      crossAxisAlignment: theme.isMe
           ? CrossAxisAlignment.end
           : CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,

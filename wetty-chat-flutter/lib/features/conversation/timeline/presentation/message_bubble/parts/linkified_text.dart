@@ -4,30 +4,22 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:chahua/features/chats/models/message_models.dart';
 
+import '../bubble_theme_v2.dart';
+
 class LinkifiedText extends StatelessWidget {
   const LinkifiedText({
     super.key,
     required this.text,
     required this.textStyle,
-    required this.linkColor,
     required this.mentions,
     required this.currentUserId,
-    required this.mentionTextColor,
-    required this.mentionBackgroundColor,
-    required this.selfMentionBackgroundColor,
-    required this.trailingSpacerWidth,
     this.onTapMention,
   });
 
   final String text;
   final TextStyle textStyle;
-  final Color linkColor;
   final List<MentionInfo> mentions;
   final int? currentUserId;
-  final Color mentionTextColor;
-  final Color mentionBackgroundColor;
-  final Color selfMentionBackgroundColor;
-  final double trailingSpacerWidth;
   final void Function(int uid, MentionInfo? mention)? onTapMention;
 
   static final RegExp _mentionRegex = RegExp(r'@\[uid:(\d+)\]');
@@ -44,32 +36,43 @@ class LinkifiedText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = BubbleThemeV2.of(context);
     return Text.rich(
       TextSpan(
         children: [
-          ..._buildLinkedSpans(text, textStyle, linkColor),
-          WidgetSpan(child: SizedBox(width: trailingSpacerWidth, height: 14)),
+          ..._buildLinkedSpans(context, theme),
+          WidgetSpan(
+            child: SizedBox(width: theme.timeSpacerWidth, height: 14),
+          ),
         ],
       ),
     );
   }
 
   List<InlineSpan> _buildLinkedSpans(
-    String value,
-    TextStyle baseStyle,
-    Color resolvedLinkColor,
+    BuildContext context,
+    BubbleThemeV2 theme,
   ) {
     final mentionsById = <int, MentionInfo>{
       for (final mention in mentions) mention.uid: mention,
     };
+    final mentionTextColor = theme.isMe
+        ? CupertinoColors.white
+        : CupertinoColors.activeBlue.resolveFrom(context);
+    final mentionBackgroundColor = theme.isMe
+        ? CupertinoColors.white.withAlpha(46)
+        : CupertinoColors.activeBlue.resolveFrom(context).withAlpha(26);
+    final selfMentionBackgroundColor = theme.isMe
+        ? CupertinoColors.white.withAlpha(71)
+        : CupertinoColors.activeBlue.resolveFrom(context).withAlpha(51);
     final spans = <InlineSpan>[];
     var lastEnd = 0;
-    for (final match in _tokenRegex.allMatches(value)) {
+    for (final match in _tokenRegex.allMatches(text)) {
       if (match.start > lastEnd) {
         spans.add(
           TextSpan(
-            text: value.substring(lastEnd, match.start),
-            style: baseStyle,
+            text: text.substring(lastEnd, match.start),
+            style: textStyle,
           ),
         );
       }
@@ -82,16 +85,15 @@ class LinkifiedText extends StatelessWidget {
         final visibleText =
             '@${(username != null && username.isNotEmpty) ? username : 'User $mentionUid'}';
         final isSelf = currentUserId != null && mentionUid == currentUserId;
-        final recognizer = onTapMention == null
-            ? null
-            : (TapGestureRecognizer()
-                ..onTap = () => onTapMention!(mentionUid, mention));
+        final mentionTap = theme.isInteractive && onTapMention != null
+            ? () => onTapMention!(mentionUid, mention)
+            : null;
         spans.add(
           WidgetSpan(
             alignment: PlaceholderAlignment.baseline,
             baseline: TextBaseline.alphabetic,
             child: GestureDetector(
-              onTap: recognizer?.onTap,
+              onTap: mentionTap,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                 decoration: BoxDecoration(
@@ -103,9 +105,9 @@ class LinkifiedText extends StatelessWidget {
                 child: Text(
                   visibleText,
                   textScaler: TextScaler.noScaling,
-                  style: baseStyle.copyWith(
+                  style: textStyle.copyWith(
                     color: mentionTextColor,
-                    fontSize: (baseStyle.fontSize ?? 14) * 0.9,
+                    fontSize: (textStyle.fontSize ?? 14) * 0.9,
                     fontWeight: FontWeight.w600,
                     height: 1,
                   ),
@@ -116,18 +118,20 @@ class LinkifiedText extends StatelessWidget {
         );
       } else {
         final url = token;
-        final recognizer = TapGestureRecognizer()
-          ..onTap = () {
-            final uri = url.startsWith('http') ? url : 'https://$url';
-            launchUrl(Uri.parse(uri), mode: LaunchMode.externalApplication);
-          };
+        final recognizer = theme.isInteractive
+            ? (TapGestureRecognizer()
+                ..onTap = () {
+                  final uri = url.startsWith('http') ? url : 'https://$url';
+                  launchUrl(Uri.parse(uri), mode: LaunchMode.externalApplication);
+                })
+            : null;
         spans.add(
           TextSpan(
             text: url,
-            style: baseStyle.copyWith(
-              color: resolvedLinkColor,
+            style: textStyle.copyWith(
+              color: theme.linkColor,
               decoration: TextDecoration.underline,
-              decorationColor: resolvedLinkColor,
+              decorationColor: theme.linkColor,
             ),
             recognizer: recognizer,
           ),
@@ -136,11 +140,11 @@ class LinkifiedText extends StatelessWidget {
       lastEnd = match.end;
     }
 
-    if (lastEnd < value.length) {
-      spans.add(TextSpan(text: value.substring(lastEnd), style: baseStyle));
+    if (lastEnd < text.length) {
+      spans.add(TextSpan(text: text.substring(lastEnd), style: textStyle));
     }
     if (spans.isEmpty) {
-      spans.add(TextSpan(text: value, style: baseStyle));
+      spans.add(TextSpan(text: text, style: textStyle));
     }
     return spans;
   }
