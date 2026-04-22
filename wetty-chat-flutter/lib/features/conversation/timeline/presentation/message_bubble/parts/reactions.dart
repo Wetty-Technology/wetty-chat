@@ -3,8 +3,8 @@ import 'package:chahua/shared/presentation/app_avatar.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
 import 'package:flutter/cupertino.dart';
 
-class MessageReactionsV2 extends StatelessWidget {
-  const MessageReactionsV2({
+class BubbleReactions extends StatelessWidget {
+  const BubbleReactions({
     super.key,
     required this.reactions,
     required this.maxBubbleWidth,
@@ -87,7 +87,7 @@ class MessageReactionsV2 extends StatelessWidget {
     if (reactors != null && reactors.isNotEmpty) {
       final visibleReactors = reactors.length.clamp(0, _maxVisibleReactors);
       width += 4;
-      width += _ReactionReactorStripV2.avatarStackWidth(visibleReactors);
+      width += _ReactionReactorStrip.avatarStackWidth(visibleReactors);
       if (reaction.count > _maxVisibleReactors) {
         width += 2;
         width += _measureTextWidth(
@@ -158,7 +158,7 @@ class MessageReactionsV2 extends StatelessWidget {
                 if (reaction.reactors != null &&
                     reaction.reactors!.isNotEmpty) ...[
                   const SizedBox(width: 4),
-                  _ReactionReactorStripV2(
+                  _ReactionReactorStrip(
                     reactors: reaction.reactors!,
                     count: reaction.count,
                     borderColor: pillForeground,
@@ -202,8 +202,8 @@ class MessageReactionsV2 extends StatelessWidget {
   }
 }
 
-class _ReactionReactorStripV2 extends StatelessWidget {
-  const _ReactionReactorStripV2({
+class _ReactionReactorStrip extends StatelessWidget {
+  const _ReactionReactorStrip({
     required this.reactors,
     required this.count,
     required this.borderColor,
@@ -228,7 +228,7 @@ class _ReactionReactorStripV2 extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final visibleReactors = reactors
-        .take(MessageReactionsV2._maxVisibleReactors)
+        .take(BubbleReactions._maxVisibleReactors)
         .toList(growable: false);
     final stackWidth = avatarStackWidth(visibleReactors.length);
 
@@ -244,7 +244,7 @@ class _ReactionReactorStripV2 extends StatelessWidget {
               for (var index = visibleReactors.length - 1; index >= 0; index--)
                 Positioned(
                   left: index * (_avatarSize - _avatarOverlap),
-                  child: _ReactionReactorAvatarV2(
+                  child: _ReactionReactorAvatar(
                     reactor: visibleReactors[index],
                     size: _avatarSize,
                     borderColor: borderColor,
@@ -253,10 +253,10 @@ class _ReactionReactorStripV2 extends StatelessWidget {
             ],
           ),
         ),
-        if (count > MessageReactionsV2._maxVisibleReactors) ...[
+        if (count > BubbleReactions._maxVisibleReactors) ...[
           const SizedBox(width: 2),
           Text(
-            '+${count - MessageReactionsV2._maxVisibleReactors}',
+            '+${count - BubbleReactions._maxVisibleReactors}',
             style: appBubbleTextStyle(
               context,
               color: textColor.withAlpha(204),
@@ -270,8 +270,8 @@ class _ReactionReactorStripV2 extends StatelessWidget {
   }
 }
 
-class _ReactionReactorAvatarV2 extends StatelessWidget {
-  const _ReactionReactorAvatarV2({
+class _ReactionReactorAvatar extends StatelessWidget {
+  const _ReactionReactorAvatar({
     required this.reactor,
     required this.size,
     required this.borderColor,

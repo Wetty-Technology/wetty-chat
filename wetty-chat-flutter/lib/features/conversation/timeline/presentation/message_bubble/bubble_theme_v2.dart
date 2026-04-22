@@ -5,7 +5,7 @@ import 'package:chahua/features/chats/chat_timestamp_formatter.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:flutter/cupertino.dart';
 
-class MessageBubblePresentationV2 {
+class BubbleThemeV2 {
   static const double maxRowWidthFactor = 0.80;
   static const double rowHorizontalPadding = 24;
   static const double avatarSlotWidth = 36;
@@ -19,7 +19,7 @@ class MessageBubblePresentationV2 {
   static const double threadIndicatorIconSize = 12;
   static const double threadIndicatorIconGap = 4;
 
-  const MessageBubblePresentationV2({
+  const BubbleThemeV2({
     required this.senderName,
     required this.timeText,
     required this.maxBubbleWidth,
@@ -31,7 +31,7 @@ class MessageBubblePresentationV2 {
     required this.minBubbleContentHeight,
   });
 
-  factory MessageBubblePresentationV2.fromContext({
+  factory BubbleThemeV2.fromContext({
     required BuildContext context,
     required ConversationMessageV2 message,
     required bool isMe,
@@ -40,7 +40,7 @@ class MessageBubblePresentationV2 {
     final colors = context.appColors;
     final screenWidth = MediaQuery.sizeOf(context).width;
 
-    return MessageBubblePresentationV2(
+    return BubbleThemeV2(
       senderName: message.sender.name ?? 'User ${message.sender.uid}',
       timeText: formatChatMessageTime(context, message.createdAt),
       maxBubbleWidth: math.max(

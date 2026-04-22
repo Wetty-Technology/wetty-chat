@@ -2,20 +2,18 @@ import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
 import 'package:flutter/cupertino.dart';
 
-import 'message_bubble_presentation_v2.dart';
-
-class MessageThreadIndicatorV2 extends StatelessWidget {
-  const MessageThreadIndicatorV2({
+class ThreadIndicator extends StatelessWidget {
+  const ThreadIndicator({
     super.key,
     required this.threadInfo,
     required this.isMe,
-    required this.presentation,
+    required this.textColor,
     this.onTap,
   });
 
   final ThreadInfo threadInfo;
   final bool isMe;
-  final MessageBubblePresentationV2 presentation;
+  final Color textColor;
   final VoidCallback? onTap;
 
   @override
@@ -41,7 +39,7 @@ class MessageThreadIndicatorV2 extends StatelessWidget {
               Icon(
                 CupertinoIcons.chat_bubble_2,
                 size: 12,
-                color: presentation.textColor,
+                color: textColor,
               ),
               const SizedBox(width: 4),
               Text(
@@ -50,7 +48,7 @@ class MessageThreadIndicatorV2 extends StatelessWidget {
                   context,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: presentation.textColor,
+                  color: textColor,
                 ),
               ),
             ],

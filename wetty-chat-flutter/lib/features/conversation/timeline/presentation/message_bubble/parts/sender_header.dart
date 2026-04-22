@@ -2,10 +2,10 @@ import 'package:chahua/app/theme/style_config.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import 'message_bubble_presentation_v2.dart';
+import '../bubble_theme_v2.dart';
 
-class MessageSenderHeaderV2 extends StatelessWidget {
-  const MessageSenderHeaderV2({
+class SenderHeader extends StatelessWidget {
+  const SenderHeader({
     super.key,
     required this.senderName,
     required this.textColor,
@@ -40,15 +40,13 @@ class MessageSenderHeaderV2 extends StatelessWidget {
           ),
         ),
         if (gender == 1 || gender == 2) ...[
-          const SizedBox(
-            width: MessageBubblePresentationV2.senderHeaderBadgeGap,
-          ),
+          const SizedBox(width: BubbleThemeV2.senderHeaderBadgeGap),
           Opacity(
             opacity: 0.9,
             child: SvgPicture.string(
               gender == 1 ? _maleBadgeSvg : _femaleBadgeSvg,
-              width: MessageBubblePresentationV2.senderHeaderBadgeSize,
-              height: MessageBubblePresentationV2.senderHeaderBadgeSize,
+              width: BubbleThemeV2.senderHeaderBadgeSize,
+              height: BubbleThemeV2.senderHeaderBadgeSize,
               colorFilter: ColorFilter.mode(
                 gender == 1 ? const Color(0xFF4A90E2) : const Color(0xFFE86DA8),
                 BlendMode.srcIn,

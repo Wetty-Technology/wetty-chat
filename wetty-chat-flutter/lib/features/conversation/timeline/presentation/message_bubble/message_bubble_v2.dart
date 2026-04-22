@@ -1,11 +1,11 @@
-import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:flutter/cupertino.dart';
 
-import 'message_bubble_content_v2.dart';
-import 'message_bubble_presentation_v2.dart';
-import 'message_render_spec_v2.dart';
-import 'sticker_message_bubble_v2.dart';
+import 'bubble_theme_v2.dart';
+import 'sticker_bubble_v2.dart';
+import 'system_bubble_v2.dart';
+import 'text_bubble_v2.dart';
+import 'voice_bubble_v2.dart';
 
 class MessageBubbleV2 extends StatelessWidget {
   const MessageBubbleV2({
@@ -27,82 +27,46 @@ class MessageBubbleV2 extends StatelessWidget {
   final VoidCallback? onTapReply;
   final VoidCallback? onOpenThread;
 
-  static const FontWeight _bubbleFontWeight = FontWeight.w400;
-
   @override
   Widget build(BuildContext context) {
-    final presentation = MessageBubblePresentationV2.fromContext(
+    final theme = BubbleThemeV2.fromContext(
       context: context,
       message: message,
       isMe: isMe,
       chatMessageFontSize: chatMessageFontSize,
     );
-    final renderSpec = MessageRenderSpecV2.timeline(
-      message: message,
-      showSenderName: showSenderName,
-      showThreadIndicator: onOpenThread != null,
-      // TODO(conversation_v2): revisit renderSpec interactivity so thread taps,
-      // reactions, attachment opens, and future overlay gestures can be enabled
-      // independently instead of sharing one coarse flag.
-      isInteractive: true,
-    );
 
-    if (message.content is StickerMessageContent) {
-      return IntrinsicWidth(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: presentation.maxBubbleWidth),
-          child: StickerMessageBubbleV2(
-            message: message,
-            presentation: presentation,
-            isMe: isMe,
-            renderSpec: renderSpec,
-            onToggleReaction: onToggleReaction,
-            onTapReply: onTapReply,
-            onOpenThread: onOpenThread,
-          ),
-        ),
-      );
-    }
-
-    const bubbleRadius = Radius.circular(18);
-    const tailRadius = Radius.circular(4);
-    final borderRadius = BorderRadius.only(
-      topLeft: bubbleRadius,
-      topRight: bubbleRadius,
-      bottomLeft: !isMe ? tailRadius : bubbleRadius,
-      bottomRight: isMe ? tailRadius : bubbleRadius,
-    );
-
-    return IntrinsicWidth(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: presentation.maxBubbleWidth),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-          decoration: BoxDecoration(
-            color: presentation.bubbleColor,
-            borderRadius: borderRadius,
-          ),
-          child: DefaultTextStyle(
-            style: appBubbleTextStyle(
-              context,
-              color: presentation.textColor,
-              fontSize: chatMessageFontSize,
-              height: 1.28,
-              fontWeight: _bubbleFontWeight,
-            ),
-            child: MessageBubbleContentV2(
-              message: message,
-              presentation: presentation,
-              chatMessageFontSize: chatMessageFontSize,
-              isMe: isMe,
-              renderSpec: renderSpec,
-              onToggleReaction: onToggleReaction,
-              onTapReply: onTapReply,
-              onOpenThread: onOpenThread,
-            ),
-          ),
-        ),
+    return switch (message.content) {
+      SystemMessageContent() => SystemBubbleV2(message: message),
+      StickerMessageContent() => StickerBubbleV2(
+        message: message,
+        theme: theme,
+        isMe: isMe,
+        onTapReply: onTapReply,
+        onOpenThread: onOpenThread,
+        onToggleReaction: onToggleReaction,
       ),
-    );
+      AudioMessageContent() => VoiceBubbleV2(
+        message: message,
+        theme: theme,
+        isMe: isMe,
+        showSenderName: showSenderName,
+        onTapReply: onTapReply,
+        onOpenThread: onOpenThread,
+        onToggleReaction: onToggleReaction,
+      ),
+      TextMessageContent() ||
+      FileMessageContent() ||
+      InviteMessageContent() => TextBubbleV2(
+        message: message,
+        theme: theme,
+        isMe: isMe,
+        chatMessageFontSize: chatMessageFontSize,
+        showSenderName: showSenderName,
+        onTapReply: onTapReply,
+        onOpenThread: onOpenThread,
+        onToggleReaction: onToggleReaction,
+      ),
+    };
   }
 }

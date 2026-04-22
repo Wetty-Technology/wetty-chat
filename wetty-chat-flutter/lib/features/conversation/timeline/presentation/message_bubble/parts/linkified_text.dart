@@ -4,8 +4,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:chahua/features/chats/models/message_models.dart';
 
-class LinkifiedMessageText extends StatelessWidget {
-  const LinkifiedMessageText({
+class LinkifiedText extends StatelessWidget {
+  const LinkifiedText({
     super.key,
     required this.text,
     required this.textStyle,

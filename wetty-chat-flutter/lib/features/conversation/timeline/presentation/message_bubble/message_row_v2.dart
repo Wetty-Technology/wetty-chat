@@ -1,4 +1,3 @@
-import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/core/network/api_config.dart';
 import 'package:chahua/shared/presentation/app_avatar.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
@@ -7,8 +6,9 @@ import 'package:flutter/cupertino.dart';
 
 import '../message_long_press_details_v2.dart';
 import '../reply_swipe_action_v2.dart';
+import 'bubble_theme_v2.dart';
 import 'message_bubble_v2.dart';
-import 'message_bubble_presentation_v2.dart';
+import 'system_bubble_v2.dart';
 
 class MessageRowV2 extends StatefulWidget {
   const MessageRowV2({
@@ -27,10 +27,9 @@ class MessageRowV2 extends StatefulWidget {
 
   static const double _bottomSpacing = 12;
   static const double _rowHorizontalPadding =
-      MessageBubblePresentationV2.rowHorizontalPadding / 2;
+      BubbleThemeV2.rowHorizontalPadding / 2;
   static const double _avatarLaneWidth =
-      MessageBubblePresentationV2.avatarSlotWidth +
-      MessageBubblePresentationV2.avatarGap;
+      BubbleThemeV2.avatarSlotWidth + BubbleThemeV2.avatarGap;
 
   final ConversationMessageV2 message;
   final double chatMessageFontSize;
@@ -98,17 +97,15 @@ class _MessageRowV2State extends State<MessageRowV2> {
   @override
   Widget build(BuildContext context) {
     if (_isSystem) {
-      return _SystemMessageRowV2(message: widget.message);
+      return SystemBubbleV2(message: widget.message);
     }
 
     final avatar = widget.showAvatar
         ? Padding(
-            padding: EdgeInsets.only(
-              left: MessageBubblePresentationV2.avatarGap,
-            ),
+            padding: const EdgeInsets.only(left: BubbleThemeV2.avatarGap),
             child: AppAvatar(
               imageUrl: widget.message.sender.avatarUrl,
-              size: MessageBubblePresentationV2.avatarSlotWidth,
+              size: BubbleThemeV2.avatarSlotWidth,
               name: widget.message.sender.name,
             ),
           )
@@ -176,65 +173,6 @@ class _MessageRowV2State extends State<MessageRowV2> {
                         ],
                 ),
               ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SystemMessageRowV2 extends StatelessWidget {
-  const _SystemMessageRowV2({required this.message});
-
-  static const double _horizontalPadding = 16;
-  static const double _verticalPadding = 8;
-  static const double _maxContentWidth = 520;
-  static const double _lineHeight = 1.45;
-
-  final ConversationMessageV2 message;
-
-  @override
-  Widget build(BuildContext context) {
-    final senderName = message.sender.name?.trim();
-    final hasSenderName = senderName != null && senderName.isNotEmpty;
-    final messageText = message.isDeleted
-        ? '[Deleted]'
-        : switch (message.content) {
-            SystemMessageContent(:final text) => text,
-            _ => '',
-          };
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: _horizontalPadding,
-        vertical: _verticalPadding,
-      ),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: _maxContentWidth),
-          child: RichText(
-            textAlign: TextAlign.center,
-            text: TextSpan(
-              style: appSecondaryTextStyle(
-                context,
-                fontSize: AppFontSizes.bodySmall,
-                height: _lineHeight,
-              ),
-              children: [
-                if (hasSenderName)
-                  TextSpan(
-                    text: senderName,
-                    style: appSecondaryTextStyle(
-                      context,
-                      fontSize: AppFontSizes.bodySmall,
-                      height: _lineHeight,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                if (hasSenderName) const TextSpan(text: ' '),
-                TextSpan(text: messageText),
-              ],
             ),
           ),
         ),

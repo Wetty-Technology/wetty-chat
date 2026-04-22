@@ -1,103 +1,117 @@
 import 'package:chahua/app/theme/style_config.dart';
-import 'package:chahua/features/chats/models/message_preview_formatter.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
+import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:flutter/cupertino.dart';
 
-import '../../../shared/domain/conversation_message_v2.dart';
 import '../message_attachment_previews.dart';
 import '../video_popup_player.dart';
-import 'message_bubble_meta_v2.dart';
-import 'linkified_message_text.dart';
-import 'message_bubble_presentation_v2.dart';
-import 'message_reactions_v2.dart';
-import 'message_render_spec_v2.dart';
-import 'message_sender_header_v2.dart';
-import 'message_thread_indicator_v2.dart';
-import 'voice_message_bubble_v2.dart';
+import 'bubble_theme_v2.dart';
+import 'parts/linkified_text.dart';
+import 'parts/meta_footer.dart';
+import 'parts/reactions.dart';
+import 'parts/reply_quote.dart';
+import 'parts/sender_header.dart';
+import 'parts/thread_indicator.dart';
 
-class MessageBubbleContentV2 extends StatelessWidget {
-  const MessageBubbleContentV2({
+class TextBubbleV2 extends StatelessWidget {
+  const TextBubbleV2({
     super.key,
     required this.message,
-    required this.presentation,
-    required this.chatMessageFontSize,
+    required this.theme,
     required this.isMe,
-    required this.renderSpec,
+    required this.chatMessageFontSize,
+    required this.showSenderName,
+    this.onToggleReaction,
     this.onTapReply,
     this.onOpenThread,
-    this.onToggleReaction,
     this.onTapMention,
   });
 
   final ConversationMessageV2 message;
-  final MessageBubblePresentationV2 presentation;
-  final double chatMessageFontSize;
+  final BubbleThemeV2 theme;
   final bool isMe;
-  final MessageRenderSpecV2 renderSpec;
+  final double chatMessageFontSize;
+  final bool showSenderName;
+  final ValueChanged<String>? onToggleReaction;
   final VoidCallback? onTapReply;
   final VoidCallback? onOpenThread;
-  final ValueChanged<String>? onToggleReaction;
   final void Function(int uid, MentionInfo? mention)? onTapMention;
 
   static const FontWeight _bubbleFontWeight = FontWeight.w400;
   static const double _emptyBubbleMinWidth = 48;
 
-  TextStyle _bubbleStyle(
-    BuildContext context, {
-    Color? color,
-    double? fontSize,
-    FontWeight? fontWeight,
-    double? height,
-    FontStyle? fontStyle,
-  }) {
-    return appBubbleTextStyle(
-      context,
-      color: color,
-      fontSize: fontSize,
-      fontWeight: fontWeight,
-      height: height,
-      fontStyle: fontStyle,
+  @override
+  Widget build(BuildContext context) {
+    const bubbleRadius = Radius.circular(18);
+    const tailRadius = Radius.circular(4);
+    final borderRadius = BorderRadius.only(
+      topLeft: bubbleRadius,
+      topRight: bubbleRadius,
+      bottomLeft: !isMe ? tailRadius : bubbleRadius,
+      bottomRight: isMe ? tailRadius : bubbleRadius,
+    );
+
+    return IntrinsicWidth(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: theme.maxBubbleWidth),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+          decoration: BoxDecoration(
+            color: theme.bubbleColor,
+            borderRadius: borderRadius,
+          ),
+          child: DefaultTextStyle(
+            style: appBubbleTextStyle(
+              context,
+              color: theme.textColor,
+              fontSize: chatMessageFontSize,
+              height: 1.28,
+              fontWeight: _bubbleFontWeight,
+            ),
+            child: _buildContent(context),
+          ),
+        ),
+      ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildContent(BuildContext context) {
     final attachments = _attachmentsFor(message.content);
     final hasAttachments = attachments.isNotEmpty;
-    final contentChildren = <Widget>[];
+    final children = <Widget>[];
 
-    if (renderSpec.showSenderName) {
-      contentChildren.add(
-        MessageSenderHeaderV2(
-          senderName: presentation.senderName,
-          textColor: presentation.textColor,
+    if (showSenderName) {
+      children.add(
+        SenderHeader(
+          senderName: theme.senderName,
+          textColor: theme.textColor,
           gender: message.sender.gender,
         ),
       );
-      contentChildren.add(
-        const SizedBox(height: MessageBubblePresentationV2.senderHeaderBodyGap),
-      );
+      children.add(const SizedBox(height: BubbleThemeV2.senderHeaderBodyGap));
     }
 
-    if (renderSpec.showReplyQuote && message.replyToMessage != null) {
-      contentChildren.add(
-        GestureDetector(
+    if (message.replyToMessage != null) {
+      children.add(
+        ReplyQuote(
+          reply: message.replyToMessage!,
+          textColor: theme.textColor,
+          isMe: isMe,
           onTap: onTapReply,
-          child: _buildReplyQuote(context, message.replyToMessage!),
         ),
       );
     }
 
     if (message.isDeleted) {
-      if (contentChildren.isNotEmpty) {
-        contentChildren.add(const SizedBox(height: 4));
+      if (children.isNotEmpty) {
+        children.add(const SizedBox(height: 4));
       }
-      contentChildren.add(
+      children.add(
         Text(
           '[Deleted]',
-          style: _bubbleStyle(
+          style: appBubbleTextStyle(
             context,
-            color: presentation.metaColor,
+            color: theme.metaColor,
             fontSize: chatMessageFontSize,
             fontStyle: FontStyle.italic,
             fontWeight: _bubbleFontWeight,
@@ -107,51 +121,43 @@ class MessageBubbleContentV2 extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
-        children: contentChildren,
+        children: children,
       );
     }
 
-    if (renderSpec.showAttachments && hasAttachments) {
-      if (contentChildren.isNotEmpty) {
-        contentChildren.add(const SizedBox(height: 8));
+    if (hasAttachments) {
+      if (children.isNotEmpty) {
+        children.add(const SizedBox(height: 8));
       }
-      contentChildren.add(_buildAttachmentSection(context, attachments));
+      children.add(_buildAttachmentSection(context, attachments));
     }
 
-    if (contentChildren.isNotEmpty &&
-        (renderSpec.showReplyQuote || renderSpec.showAttachments)) {
-      contentChildren.add(const SizedBox(height: 4));
+    if (children.isNotEmpty && (message.replyToMessage != null || hasAttachments)) {
+      children.add(const SizedBox(height: 4));
     }
-    if (renderSpec.showBody || renderSpec.showMeta) {
-      contentChildren.add(_buildMessageBody(context));
-    }
+    children.add(_buildMessageBody(context));
 
     final threadInfo = message.threadInfo;
-    if (threadInfo != null &&
-        threadInfo.replyCount > 0 &&
-        renderSpec.showThreadIndicator) {
-      contentChildren.add(const SizedBox(height: 4));
-      contentChildren.add(
-        MessageThreadIndicatorV2(
+    if (threadInfo != null && threadInfo.replyCount > 0) {
+      children.add(const SizedBox(height: 4));
+      children.add(
+        ThreadIndicator(
           threadInfo: threadInfo,
           isMe: isMe,
-          presentation: presentation,
-          onTap: renderSpec.isInteractive ? onOpenThread : null,
+          textColor: theme.textColor,
+          onTap: onOpenThread,
         ),
       );
     }
 
-    if (renderSpec.showReactions && message.reactions.isNotEmpty) {
-      contentChildren.add(const SizedBox(height: 8));
-      contentChildren.add(
-        MessageReactionsV2(
+    if (message.reactions.isNotEmpty) {
+      children.add(const SizedBox(height: 8));
+      children.add(
+        BubbleReactions(
           reactions: message.reactions,
-          maxBubbleWidth: presentation.maxBubbleWidth,
+          maxBubbleWidth: theme.maxBubbleWidth,
           isMe: isMe,
-          isInteractive:
-              renderSpec.isInteractive &&
-              !message.isDeleted &&
-              message.content is! StickerMessageContent,
+          isInteractive: !message.isDeleted,
           onToggleReaction: onToggleReaction,
         ),
       );
@@ -160,16 +166,16 @@ class MessageBubbleContentV2 extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
-      children: contentChildren,
+      children: children,
     );
   }
 
   Widget _buildMessageBody(BuildContext context) {
     final messageText = _messageTextFor(message.content);
     final mentions = _mentionsFor(message.content);
-    final metaWidget = MessageBubbleMetaV2(
+    final metaWidget = MetaFooter(
       message: message,
-      presentation: presentation,
+      theme: theme,
       isMe: isMe,
     );
 
@@ -177,7 +183,7 @@ class MessageBubbleContentV2 extends StatelessWidget {
       return ConstrainedBox(
         constraints: BoxConstraints(
           minWidth: _emptyBubbleMinWidth,
-          minHeight: presentation.minBubbleContentHeight,
+          minHeight: theme.minBubbleContentHeight,
         ),
         child: Align(alignment: Alignment.bottomRight, child: metaWidget),
       );
@@ -189,16 +195,16 @@ class MessageBubbleContentV2 extends StatelessWidget {
         width: double.infinity,
         child: Stack(
           children: [
-            LinkifiedMessageText(
+            LinkifiedText(
               text: messageText,
-              textStyle: _bubbleStyle(
+              textStyle: appBubbleTextStyle(
                 context,
-                color: presentation.textColor,
+                color: theme.textColor,
                 fontSize: chatMessageFontSize,
                 height: 1.28,
                 fontWeight: _bubbleFontWeight,
               ),
-              linkColor: presentation.linkColor,
+              linkColor: theme.linkColor,
               mentions: mentions,
               currentUserId: null,
               mentionTextColor: isMe
@@ -214,7 +220,7 @@ class MessageBubbleContentV2 extends StatelessWidget {
                   : CupertinoColors.activeBlue
                         .resolveFrom(context)
                         .withAlpha(51),
-              trailingSpacerWidth: presentation.timeSpacerWidth,
+              trailingSpacerWidth: theme.timeSpacerWidth,
               onTapMention: onTapMention,
             ),
             Positioned(right: 0, bottom: 0, child: metaWidget),
@@ -228,7 +234,7 @@ class MessageBubbleContentV2 extends StatelessWidget {
     BuildContext context,
     List<AttachmentItem> attachments,
   ) {
-    final maxAttachmentWidth = presentation.maxBubbleWidth - 24;
+    final maxAttachmentWidth = theme.maxBubbleWidth - 24;
     return Align(
       alignment: Alignment.centerRight,
       child: Column(
@@ -253,15 +259,6 @@ class MessageBubbleContentV2 extends StatelessWidget {
     AttachmentItem attachment, {
     required double maxAttachmentWidth,
   }) {
-    if (attachment.isAudio && message.content is AudioMessageContent) {
-      return VoiceMessageBubbleV2(
-        attachment: attachment,
-        isMe: isMe,
-        renderSpec: renderSpec,
-        message: message,
-        presentation: presentation,
-      );
-    }
     if (attachment.isVideo && attachment.url.isNotEmpty) {
       return VideoAttachmentPreview(
         attachment: attachment,
@@ -310,66 +307,12 @@ class MessageBubbleContentV2 extends StatelessWidget {
               attachment.fileName.isEmpty ? 'Attachment' : attachment.fileName,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: _bubbleStyle(
+              style: appBubbleTextStyle(
                 context,
                 fontSize: AppFontSizes.bodySmall,
                 fontWeight: _bubbleFontWeight,
                 color: context.appColors.textPrimary,
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildReplyQuote(BuildContext context, ReplyToMessage reply) {
-    final replySender = reply.sender.name ?? 'User ${reply.sender.uid}';
-    final quoteBackgroundColor = isMe
-        ? CupertinoColors.white.withAlpha(26)
-        : CupertinoColors.black.withAlpha(15);
-    final quoteBorderColor = isMe
-        ? CupertinoColors.white.withAlpha(128)
-        : CupertinoColors.activeBlue.resolveFrom(context);
-
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: quoteBackgroundColor,
-        border: Border(left: BorderSide(color: quoteBorderColor, width: 3)),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  replySender,
-                  style: _bubbleStyle(
-                    context,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 11,
-                    color: presentation.textColor.withAlpha(217),
-                  ),
-                ),
-                Text(
-                  formatReplyPreview(reply),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: _bubbleStyle(
-                    context,
-                    fontSize: 12,
-                    fontWeight: _bubbleFontWeight,
-                    color: presentation.textColor.withAlpha(179),
-                  ),
-                ),
-              ],
             ),
           ),
         ],
@@ -397,7 +340,6 @@ List<MentionInfo> _mentionsFor(MessageContent content) => switch (content) {
 
 List<AttachmentItem> _attachmentsFor(MessageContent content) =>
     switch (content) {
-      AudioMessageContent(:final audio) => <AttachmentItem>[audio],
       FileMessageContent(:final attachments) => attachments,
       _ => const <AttachmentItem>[],
     };
