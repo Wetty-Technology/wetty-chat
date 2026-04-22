@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/api/models/chats_api_models.dart';
 import '../../../../core/api/models/messages_api_models.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/session/dev_session_store.dart';
@@ -108,6 +109,17 @@ class MessageApiServiceV2 {
     await _dio.delete<void>(
       '/chats/${identity.chatId}/messages/$messageId/reactions/${Uri.encodeComponent(emoji)}',
     );
+  }
+
+  Future<MarkChatReadStateResponseDto> markMessagesAsRead(
+    String chatId,
+    int messageId,
+  ) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/chats/$chatId/read',
+      data: MarkReadRequestDto(messageId: messageId).toJson(),
+    );
+    return MarkChatReadStateResponseDto.fromJson(response.data!);
   }
 }
 

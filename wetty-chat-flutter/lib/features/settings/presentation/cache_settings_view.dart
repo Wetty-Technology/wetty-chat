@@ -5,10 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/cache/app_cache_service.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../chats/conversation/application/voice_message_presentation_provider.dart';
-import '../../chats/conversation/application/voice_message_playback_controller.dart';
-import '../../chats/conversation/data/audio_duration_probe_service.dart';
+import '../../chats/conversation_v2/application/voice_message_playback_controller_v2.dart';
+import '../../chats/conversation_v2/application/voice_message_presentation_provider_v2.dart';
 import 'package:chahua/features/chats/conversation_v2/data/audio_source_resolver_service.dart';
+import 'package:chahua/features/chats/conversation_v2/data/audio_duration_probe_service.dart';
 import 'package:chahua/features/chats/conversation_v2/data/audio_waveform_cache_service.dart';
 
 final mediaCacheUsageProvider = FutureProvider<AppCacheUsageSummary>((ref) {
@@ -126,8 +126,8 @@ class _CacheSettingsPageState extends ConsumerState<CacheSettingsPage> {
       ref.invalidate(audioDurationProbeServiceProvider);
       ref.invalidate(audioSourceResolverServiceProvider);
       ref.invalidate(audioWaveformCacheServiceProvider);
-      ref.invalidate(voiceMessagePresentationProvider);
-      ref.invalidate(voiceMessagePlaybackControllerProvider);
+      ref.invalidate(voiceMessagePresentationV2Provider);
+      ref.invalidate(voiceMessagePlaybackControllerV2Provider);
       await ref.read(mediaCacheUsageProvider.future);
     } finally {
       if (mounted) {

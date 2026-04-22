@@ -1,6 +1,4 @@
 import '../../../core/api/models/messages_api_models.dart';
-import '../conversation/domain/conversation_message.dart';
-import '../conversation/domain/conversation_scope.dart';
 import 'message_models.dart';
 
 extension SenderDtoMapper on SenderDto {
@@ -118,27 +116,4 @@ extension MessageItemDtoMapper on MessageItemDto {
     mentions: mentions.map((mention) => mention.toDomain()).toList(),
     threadInfo: threadInfo?.toDomain(),
   );
-
-  ConversationMessage toConversation(ConversationScope scope) =>
-      ConversationMessage(
-        scope: scope,
-        serverMessageId: id,
-        clientGeneratedId: clientGeneratedId,
-        sender: sender.toDomain(),
-        message: message,
-        messageType: messageType,
-        sticker: sticker?.toDomain(),
-        createdAt: createdAt,
-        isEdited: isEdited,
-        isDeleted: isDeleted,
-        replyRootId: replyRootId,
-        hasAttachments: hasAttachments,
-        replyToMessage: replyToMessage?.toDomain(),
-        attachments: attachments
-            .map((attachment) => attachment.toDomain())
-            .toList(),
-        reactions: reactions.map((reaction) => reaction.toDomain()).toList(),
-        mentions: mentions.map((mention) => mention.toDomain()).toList(),
-        threadInfo: threadInfo?.toDomain(),
-      );
 }

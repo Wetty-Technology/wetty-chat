@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:chahua/features/chats/conversation/data/audio_playback_driver.dart';
+import 'package:chahua/features/chats/conversation_v2/data/audio_playback_driver.dart';
 import 'package:chahua/features/chats/conversation_v2/data/audio_source_resolver_service.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
