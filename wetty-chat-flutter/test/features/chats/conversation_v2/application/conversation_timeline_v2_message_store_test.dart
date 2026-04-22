@@ -1,7 +1,7 @@
-import 'package:chahua/features/conversation/timeline/presentation/conversation_timeline_v2_message_store.dart';
-import 'package:chahua/features/conversation/timeline/domain/conversation_timeline_v2_active_segment.dart';
-import 'package:chahua/features/conversation/timeline/domain/conversation_message_v2.dart';
-import 'package:chahua/features/conversation/timeline/domain/conversation_timeline_v2_canonical_scope.dart';
+import 'package:chahua/features/conversation/shared/data/conversation_canonical_message_store.dart';
+import 'package:chahua/features/conversation/shared/domain/conversation_timeline_v2_active_segment.dart';
+import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
+import 'package:chahua/features/conversation/shared/domain/conversation_timeline_v2_canonical_scope.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

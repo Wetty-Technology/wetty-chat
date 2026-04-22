@@ -1,6 +1,6 @@
 import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/features/conversation/timeline/presentation/voice_message_playback_controller_v2.dart';
-import 'package:chahua/features/conversation/timeline/domain/conversation_message_v2.dart';
+import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 
-import '../../features/conversation/timeline/presentation/conversation_timeline_v2_realtime_applier.dart';
+import '../../features/conversation/shared/data/conversation_realtime_message_applier.dart';
 import '../../features/chats/list/data/chat_repository.dart';
 import '../../features/chats/list_v2/application/group_list_v2_store.dart';
 import '../../features/chats/threads/data/thread_repository.dart';

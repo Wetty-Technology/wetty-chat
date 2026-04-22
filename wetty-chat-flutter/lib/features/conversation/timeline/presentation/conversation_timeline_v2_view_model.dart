@@ -1,12 +1,12 @@
 import 'dart:async';
 
-import 'package:chahua/features/conversation/timeline/presentation/conversation_timeline_v2_message_store.dart';
+import 'package:chahua/features/conversation/shared/data/conversation_canonical_message_store.dart';
 import 'package:chahua/features/conversation/timeline/presentation/conversation_timeline_v2_state.dart';
 import 'package:chahua/features/conversation/timeline/presentation/timeline_viewport_facts.dart';
-import 'package:chahua/features/conversation/timeline/data/conversation_timeline_v2_repository.dart';
-import 'package:chahua/features/conversation/timeline/domain/conversation_timeline_v2_active_segment.dart';
+import 'package:chahua/features/conversation/shared/data/conversation_timeline_v2_repository.dart';
+import 'package:chahua/features/conversation/shared/domain/conversation_timeline_v2_active_segment.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
-import 'package:chahua/features/conversation/timeline/domain/conversation_message_v2.dart';
+import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:chahua/features/conversation/shared/domain/launch_request.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

@@ -5,7 +5,7 @@ import 'package:chahua/features/conversation/compose/presentation/conversation_c
 import 'package:chahua/features/conversation/timeline/presentation/conversation_timeline_v2_state.dart';
 import 'package:chahua/features/conversation/timeline/presentation/conversation_timeline_v2_view_model.dart';
 import 'package:chahua/features/conversation/timeline/presentation/timeline_viewport_facts.dart';
-import 'package:chahua/features/conversation/timeline/domain/conversation_message_v2.dart';
+import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
 import 'package:chahua/features/conversation/shared/domain/launch_request.dart';
 import 'package:chahua/features/conversation/timeline/presentation/message_long_press_details_v2.dart';

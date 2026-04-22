@@ -1,5 +1,5 @@
 import 'package:chahua/app/theme/style_config.dart';
-import 'package:chahua/features/conversation/timeline/domain/conversation_message_v2.dart';
+import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:flutter/cupertino.dart';
 
 import 'message_bubble_content_v2.dart';

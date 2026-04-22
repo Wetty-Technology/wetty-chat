@@ -7,7 +7,7 @@ import 'package:flutter/material.dart' show CircularProgressIndicator;
 import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/features/conversation/compose/data/attachment_picker_service.dart';
 import 'package:chahua/features/conversation/compose/presentation/conversation_composer_view_model.dart';
-import 'package:chahua/features/conversation/timeline/domain/conversation_message_v2.dart';
+import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
 import 'package:chahua/features/conversation/compose/presentation/composer_audio_controls.dart';
 import 'package:chahua/features/conversation/compose/presentation/composer_content_row.dart';

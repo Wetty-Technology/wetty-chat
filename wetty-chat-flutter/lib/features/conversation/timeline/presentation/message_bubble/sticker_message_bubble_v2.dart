@@ -4,7 +4,7 @@ import 'package:chahua/features/chats/models/message_preview_formatter.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
 import 'package:flutter/cupertino.dart';
 
-import '../../domain/conversation_message_v2.dart';
+import '../../../shared/domain/conversation_message_v2.dart';
 import 'message_bubble_meta_v2.dart';
 import 'message_bubble_presentation_v2.dart';
 import 'message_reactions_v2.dart';
