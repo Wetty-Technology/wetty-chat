@@ -145,6 +145,8 @@ class _MessageRowV2State extends State<MessageRowV2> {
                   )
                 : const BoxDecoration(),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment
+                  .end, // Important for tall message to align avatar at bottom
               textDirection: _isMe ? TextDirection.rtl : TextDirection.ltr,
               children: [
                 avatar,
