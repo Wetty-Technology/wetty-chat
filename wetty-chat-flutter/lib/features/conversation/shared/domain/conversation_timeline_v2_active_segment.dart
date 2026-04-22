@@ -3,33 +3,25 @@ import 'package:flutter/foundation.dart';
 
 @immutable
 class ConversationTimelineV2ActiveSegmentMode {
-  const ConversationTimelineV2ActiveSegmentMode.latest({
-    this.latestSplitAfterServerMessageId,
-  }) : targetServerMessageId = null;
+  const ConversationTimelineV2ActiveSegmentMode.latest()
+    : targetServerMessageId = null;
 
   const ConversationTimelineV2ActiveSegmentMode.around(
     this.targetServerMessageId,
-  ) : latestSplitAfterServerMessageId = null;
+  );
 
   final int? targetServerMessageId;
-  final int? latestSplitAfterServerMessageId;
 
   bool get isLatest => targetServerMessageId == null;
-
-  int? get splitAfterServerMessageId =>
-      isLatest ? latestSplitAfterServerMessageId : targetServerMessageId!;
 
   @override
   bool operator ==(Object other) {
     return other is ConversationTimelineV2ActiveSegmentMode &&
-        other.targetServerMessageId == targetServerMessageId &&
-        other.latestSplitAfterServerMessageId ==
-            latestSplitAfterServerMessageId;
+        other.targetServerMessageId == targetServerMessageId;
   }
 
   @override
-  int get hashCode =>
-      Object.hash(targetServerMessageId, latestSplitAfterServerMessageId);
+  int get hashCode => targetServerMessageId.hashCode;
 }
 
 /// A single contiguous working segment handed from the repository to the view

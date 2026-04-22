@@ -11,6 +11,23 @@ import 'package:chahua/features/conversation/shared/domain/launch_request.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+@immutable
+class _TimelineRenderSplitPolicy {
+  const _TimelineRenderSplitPolicy.none()
+    : anchorServerMessageId = null,
+      includeAnchorInAfter = false;
+
+  const _TimelineRenderSplitPolicy.fromMessageInclusive(
+    this.anchorServerMessageId,
+  ) : includeAnchorInAfter = true;
+
+  const _TimelineRenderSplitPolicy.afterMessage(this.anchorServerMessageId)
+    : includeAnchorInAfter = false;
+
+  final int? anchorServerMessageId;
+  final bool includeAnchorInAfter;
+}
+
 class ConversationTimelineV2ViewModel
     extends Notifier<ConversationTimelineV2State> {
   // Mostly temproary, we will remove these later
@@ -31,6 +48,8 @@ class ConversationTimelineV2ViewModel
   int? _highlightedServerMessageId;
   TimelineViewportFacts? _latestViewportFacts;
   String? _lastRenderedTailStableKey;
+  _TimelineRenderSplitPolicy _renderSplitPolicy =
+      const _TimelineRenderSplitPolicy.none();
 
   /// Generation of the viewport command, incremented on each issuance
   int _viewportCommandGeneration = 0;
@@ -133,6 +152,7 @@ class ConversationTimelineV2ViewModel
       placement: ConversationTimelineV2ViewportPlacement.bottomPreferred,
     );
     _highlightedServerMessageId = null;
+    _renderSplitPolicy = const _TimelineRenderSplitPolicy.none();
   }
 
   /// Ensures the viewport is anchored to the tail of the latest segment.
@@ -164,6 +184,9 @@ class ConversationTimelineV2ViewModel
     );
     _setActiveSegmentMode(aroundMode);
     _highlightedServerMessageId = highlight ? messageId : null;
+    _renderSplitPolicy = _TimelineRenderSplitPolicy.fromMessageInclusive(
+      messageId,
+    );
     _issueViewportCommand(
       kind: ConversationTimelineV2ViewportCommandKind.resetToCenterOrigin,
       placement: ConversationTimelineV2ViewportPlacement.topPreferred,
@@ -244,36 +267,20 @@ class ConversationTimelineV2ViewModel
     bool? isLoadingOlder,
     bool? isLoadingNewer,
   }) {
-    final splitAfterServerMessageId =
-        _activeSegmentMode.splitAfterServerMessageId;
+    _captureLatestTailSplitIfNeeded(segment);
+
     final beforeMessages = <ConversationMessageV2>[];
     final afterMessages = <ConversationMessageV2>[];
-
-    // TODO: Fix this
-    // This is currently a workaround to handle when new message arrives we properly
-    // put them in the after segment.
-    // I think there gotta be a better way to handle this.
-    if (_activeSegmentMode.isLatest &&
-        _activeSegmentMode.latestSplitAfterServerMessageId == null &&
-        segment.orderedMessages.isNotEmpty) {
-      _activeSegmentMode = ConversationTimelineV2ActiveSegmentMode.latest(
-        latestSplitAfterServerMessageId:
-            segment.orderedMessages.last.serverMessageId! + 1,
-      );
-    }
-
-    if (splitAfterServerMessageId == null) {
+    final splitAnchorServerMessageId = _renderSplitPolicy.anchorServerMessageId;
+    if (splitAnchorServerMessageId == null) {
       beforeMessages.addAll(segment.orderedMessages);
     } else {
-      final splitIndex = segment.orderedMessages.indexWhere(
-        (message) => message.serverMessageId == splitAfterServerMessageId,
+      _splitMessages(
+        segment.orderedMessages,
+        policy: _renderSplitPolicy,
+        beforeMessages: beforeMessages,
+        afterMessages: afterMessages,
       );
-      if (splitIndex == -1) {
-        beforeMessages.addAll(segment.orderedMessages);
-      } else {
-        beforeMessages.addAll(segment.orderedMessages.take(splitIndex));
-        afterMessages.addAll(segment.orderedMessages.skip(splitIndex));
-      }
     }
     String? highlightedStableKey;
     if (_highlightedServerMessageId != null) {
@@ -384,6 +391,54 @@ class ConversationTimelineV2ViewModel
   void _setActiveSegmentMode(ConversationTimelineV2ActiveSegmentMode mode) {
     _activeSegmentMode = mode;
     ref.invalidateSelf();
+  }
+
+  void _captureLatestTailSplitIfNeeded(
+    ConversationTimelineV2ActiveSegment segment,
+  ) {
+    if (!_activeSegmentMode.isLatest ||
+        _renderSplitPolicy.anchorServerMessageId != null) {
+      return;
+    }
+
+    final tailServerMessageId = _lastServerMessageId(segment.orderedMessages);
+    if (tailServerMessageId == null) {
+      return;
+    }
+
+    _renderSplitPolicy = _TimelineRenderSplitPolicy.afterMessage(
+      tailServerMessageId,
+    );
+  }
+
+  void _splitMessages(
+    List<ConversationMessageV2> messages, {
+    required _TimelineRenderSplitPolicy policy,
+    required List<ConversationMessageV2> beforeMessages,
+    required List<ConversationMessageV2> afterMessages,
+  }) {
+    final anchorServerMessageId = policy.anchorServerMessageId;
+    if (anchorServerMessageId == null) {
+      beforeMessages.addAll(messages);
+      return;
+    }
+
+    for (final message in messages) {
+      final serverMessageId = message.serverMessageId;
+      if (serverMessageId == null) {
+        afterMessages.add(message);
+        continue;
+      }
+
+      final belongsAfter = policy.includeAnchorInAfter
+          ? serverMessageId >= anchorServerMessageId
+          : serverMessageId > anchorServerMessageId;
+      if (belongsAfter) {
+        afterMessages.add(message);
+      } else {
+        beforeMessages.add(message);
+      }
+    }
   }
 
   void _markRepositoryTodo(String operation) {
