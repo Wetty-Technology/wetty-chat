@@ -3,7 +3,6 @@ import 'dart:developer';
 
 import 'package:chahua/features/conversation/compose/presentation/conversation_composer_view_model.dart';
 import 'package:chahua/features/conversation/timeline/presentation/conversation_timeline_view_model.dart';
-import 'package:chahua/features/conversation/timeline/presentation/timeline_viewport_facts.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
 import 'package:chahua/features/conversation/shared/domain/launch_request.dart';

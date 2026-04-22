@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:chahua/features/conversation/shared/data/conversation_canonical_message_store.dart';
-import 'package:chahua/features/conversation/timeline/presentation/timeline_viewport_facts.dart';
 import 'package:chahua/features/conversation/shared/data/conversation_timeline_v2_repository.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_timeline_v2_active_segment.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
@@ -15,6 +14,7 @@ part 'conversation_timeline_view_model.freezed.dart';
 
 // ============ Private Types ============
 @immutable
+/// Internal policy for splitting messages into before and after segments.
 class _TimelineRenderSplitPolicy {
   const _TimelineRenderSplitPolicy.none()
     : anchorServerMessageId = null,
@@ -33,20 +33,24 @@ class _TimelineRenderSplitPolicy {
 
 // ============ Public Types ============
 
+/// Commands issued by the timeline view model to the viewport controller.
 enum ConversationTimelineViewportCommandKind {
   none,
   resetToCenterOrigin,
   scrollToBottom,
 }
 
+/// The preferred placement for the viewport command.
 enum ConversationTimelineViewportPlacement { bottomPreferred, topPreferred }
 
+/// A viewport command issued by the timeline view model to the viewport controller.
 typedef ConversationTimelineViewportCommand = ({
   ConversationTimelineViewportCommandKind kind,
   ConversationTimelineViewportPlacement placement,
 });
 
 @freezed
+/// The state of the timeline view model.
 abstract class ConversationTimelineState with _$ConversationTimelineState {
   const factory ConversationTimelineState({
     @Default(<ConversationMessageV2>[])
@@ -67,6 +71,17 @@ abstract class ConversationTimelineState with _$ConversationTimelineState {
     @Default(0) int viewportCommandGeneration,
     @Default(true) bool isBootstrapping,
   }) = _ConversationTimelineState;
+}
+
+/// Facts about the viewport reported by view to the view model.
+class TimelineViewportFacts {
+  const TimelineViewportFacts({
+    required this.isNearTop,
+    required this.isNearBottom,
+  });
+
+  final bool isNearTop;
+  final bool isNearBottom;
 }
 
 // ============ View Model ============
