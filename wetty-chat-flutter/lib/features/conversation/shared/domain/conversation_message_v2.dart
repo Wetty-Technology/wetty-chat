@@ -204,11 +204,3 @@ class SystemMessageContent extends MessageContent {
 
   final String text;
 }
-
-enum BubbleLayout { centered, aligned }
-
-extension BubbleLayoutX on ConversationMessageV2 {
-  BubbleLayout get layout => content is SystemMessageContent
-      ? BubbleLayout.centered
-      : BubbleLayout.aligned;
-}

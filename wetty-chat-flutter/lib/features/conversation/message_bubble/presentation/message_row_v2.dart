@@ -9,11 +9,11 @@ import '../../timeline/presentation/reply_swipe_action_v2.dart';
 import 'message_item.dart';
 
 const double _bottomSpacing = 12;
-const double _rowFullHorizontalPadding = 24;
-const double _rowHorizontalPadding = _rowFullHorizontalPadding / 2;
 const double _avatarSlotWidth = 36;
 const double _avatarGap = 8;
-const double _avatarLaneWidth = _avatarSlotWidth + _avatarGap;
+
+/// Private bubble layout alignment
+enum _BubbleLayout { centered, aligned }
 
 class MessageRowV2 extends StatefulWidget {
   const MessageRowV2({
@@ -70,6 +70,13 @@ class _MessageRowV2State extends State<MessageRowV2> {
     }
   }
 
+  _BubbleLayout _getBubbleLayout() {
+    return switch (widget.message.content) {
+      SystemMessageContent() => _BubbleLayout.centered,
+      _ => _BubbleLayout.aligned,
+    };
+  }
+
   void _handleLongPress() {
     final context = _bubbleKey.currentContext;
     if (widget.onLongPress == null || context == null) {
@@ -103,7 +110,8 @@ class _MessageRowV2State extends State<MessageRowV2> {
       onOpenThread: widget.onOpenThread,
     );
 
-    if (widget.message.layout == BubbleLayout.centered) {
+    // NOTE: Early return here!!!
+    if (_getBubbleLayout() == _BubbleLayout.centered) {
       return item;
     }
 
@@ -124,7 +132,6 @@ class _MessageRowV2State extends State<MessageRowV2> {
       child: Padding(
         padding: const EdgeInsets.only(bottom: _bottomSpacing),
         child: ReplySwipeActionV2(
-          key: ValueKey(widget.message.stableKey),
           enabled: _canReply,
           onTriggered: widget.onReply,
           child: DecoratedBox(
