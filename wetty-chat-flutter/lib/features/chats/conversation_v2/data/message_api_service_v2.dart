@@ -85,6 +85,30 @@ class MessageApiServiceV2 {
     );
     return MessageItemDto.fromJson(response.data!);
   }
+
+  Future<void> deleteMessage(int chatId, int messageId) async {
+    await _dio.delete<void>('/chats/$chatId/messages/$messageId');
+  }
+
+  Future<void> putReaction(
+    ConversationIdentity identity,
+    int messageId,
+    String emoji,
+  ) async {
+    await _dio.put<void>(
+      '/chats/${identity.chatId}/messages/$messageId/reactions/${Uri.encodeComponent(emoji)}',
+    );
+  }
+
+  Future<void> deleteReaction(
+    ConversationIdentity identity,
+    int messageId,
+    String emoji,
+  ) async {
+    await _dio.delete<void>(
+      '/chats/${identity.chatId}/messages/$messageId/reactions/${Uri.encodeComponent(emoji)}',
+    );
+  }
 }
 
 final messageApiServiceV2Provider = Provider<MessageApiServiceV2>((ref) {

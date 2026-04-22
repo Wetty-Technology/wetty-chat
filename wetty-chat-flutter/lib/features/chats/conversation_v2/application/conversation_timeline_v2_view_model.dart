@@ -103,6 +103,24 @@ class ConversationTimelineV2ViewModel
     }
   }
 
+  Future<void> toggleReaction(ConversationMessageV2 message, String emoji) {
+    final messageId = message.serverMessageId;
+    if (messageId == null ||
+        message.content is StickerMessageContent ||
+        message.isDeleted) {
+      return Future<void>.value();
+    }
+    return _repository.toggleReaction(messageId: messageId, emoji: emoji);
+  }
+
+  Future<void> deleteMessage(ConversationMessageV2 message) {
+    final messageId = message.serverMessageId;
+    if (messageId == null || message.isDeleted) {
+      return Future<void>.value();
+    }
+    return _repository.deleteMessage(messageId);
+  }
+
   Future<void> jumpToLatest() async {
     unawaited(
       _repository.refreshLatestSegment(limit: _initialLoadedWindowSize),

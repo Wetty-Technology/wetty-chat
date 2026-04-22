@@ -3,6 +3,8 @@ import 'package:chahua/core/api/models/websocket_api_models.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_message_store.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_identity.dart';
+import 'package:chahua/features/chats/models/message_api_mapper.dart';
+import 'package:chahua/features/chats/models/message_models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class ConversationTimelineV2RealtimeApplier {
@@ -21,7 +23,9 @@ class ConversationTimelineV2RealtimeApplier {
       case MessageDeletedWsEvent(:final payload):
         _deleteMessage(payload);
         return;
-      case ReactionUpdatedWsEvent():
+      case ReactionUpdatedWsEvent(:final payload):
+        _updateReaction(payload);
+        return;
       case ThreadUpdatedWsEvent():
       case StickerPackOrderUpdatedWsEvent():
       case PongWsEvent():
@@ -86,6 +90,58 @@ class ConversationTimelineV2RealtimeApplier {
           .read(conversationTimelineV2MessageStoreProvider.notifier)
           .deleteMessage(identity, payload.id);
     }
+  }
+
+  void _updateReaction(ReactionUpdatePayloadDto payload) {
+    final scopes = ref.read(conversationTimelineV2MessageStoreProvider);
+    final store = ref.read(conversationTimelineV2MessageStoreProvider.notifier);
+    final nextReactions = payload.reactions
+        .map((reaction) => reaction.toDomain())
+        .toList(growable: false);
+
+    for (final entry in scopes.entries) {
+      final identity = entry.key;
+      if (identity.chatId != payload.chatId) {
+        continue;
+      }
+
+      final message = store.messageForServerMessageId(identity, payload.messageId);
+      if (message == null) {
+        continue;
+      }
+
+      store.updateMessage(
+        identity,
+        message.copyWith(
+          reactions: _mergeReactions(message.reactions, nextReactions),
+        ),
+      );
+    }
+  }
+
+  List<ReactionSummary> _mergeReactions(
+    List<ReactionSummary>? previous,
+    List<ReactionSummary> incoming,
+  ) {
+    if (incoming.isEmpty) {
+      return const <ReactionSummary>[];
+    }
+
+    final previousByEmoji = <String, ReactionSummary>{
+      for (final reaction in previous ?? const <ReactionSummary>[])
+        reaction.emoji: reaction,
+    };
+    return incoming
+        .map((reaction) {
+          final prior = previousByEmoji[reaction.emoji];
+          return ReactionSummary(
+            emoji: reaction.emoji,
+            count: reaction.count,
+            reactedByMe: reaction.reactedByMe ?? prior?.reactedByMe,
+            reactors: reaction.reactors ?? prior?.reactors,
+          );
+        })
+        .toList(growable: false);
   }
 
   bool _matchesMessagePayload(

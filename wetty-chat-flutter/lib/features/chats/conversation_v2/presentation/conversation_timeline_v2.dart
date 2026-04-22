@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer';
 
 import 'package:chahua/features/chats/conversation_v2/application/conversation_composer_view_model.dart';
@@ -55,6 +56,13 @@ class _ConversationTimelineV2State
     extends ConsumerState<ConversationTimelineV2> {
   static const double _edgeThreshold = 80;
   static const double _jumpToLatestInset = 16;
+  static const List<String> _quickReactionEmojis = <String>[
+    '👍',
+    '❤️',
+    '😂',
+    '😮',
+    '😢',
+  ];
 
   late ScrollController _scrollController;
   int _lastHandledViewportCommandGeneration = 0;
@@ -279,7 +287,85 @@ class _ConversationTimelineV2State
             composerNotifier.beginEdit(message);
           },
         ),
+      if (isOwn)
+        MessageOverlayActionV2(
+          label: 'Delete',
+          icon: CupertinoIcons.delete,
+          onPressed: () {
+            _dismissMessageOverlay();
+            _confirmDelete(message);
+          },
+        ),
     ];
+  }
+
+  Future<void> _toggleReaction(
+    ConversationMessageV2 message,
+    String emoji,
+  ) async {
+    try {
+      await ref
+          .read(conversationTimelineV2ViewModelProvider(_identity).notifier)
+          .toggleReaction(message, emoji);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      _showErrorDialog('$error');
+    }
+  }
+
+  Future<void> _deleteMessage(ConversationMessageV2 message) async {
+    try {
+      await ref
+          .read(conversationTimelineV2ViewModelProvider(_identity).notifier)
+          .deleteMessage(message);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      _showErrorDialog('$error');
+    }
+  }
+
+  void _confirmDelete(ConversationMessageV2 message) {
+    showCupertinoDialog<void>(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text('Delete message?'),
+        content: const Text('This cannot be undone.'),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () {
+              Navigator.pop(context);
+              unawaited(_deleteMessage(message));
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showErrorDialog(String message) {
+    showCupertinoDialog<void>(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -389,7 +475,12 @@ class _ConversationTimelineV2State
             details: overlay,
             visible: true,
             actions: _overlayActions(overlay.message),
+            quickReactionEmojis: _quickReactionEmojis,
             onDismiss: _dismissMessageOverlay,
+            onToggleReaction: (emoji) {
+              _dismissMessageOverlay();
+              unawaited(_toggleReaction(overlay.message, emoji));
+            },
           ),
       ],
     );
@@ -423,6 +514,10 @@ class _ConversationTimelineV2State
             onReply: () => ref
                 .read(conversationComposerViewModelProvider(_identity).notifier)
                 .beginReply(message),
+            onToggleReaction: message.content is StickerMessageContent ||
+                    message.isDeleted
+                ? null
+                : (emoji) => unawaited(_toggleReaction(message, emoji)),
             onTapReply: message.replyToMessage != null
                 ? () => vmNotifier.jumpToMessageServerId(
                     message.replyToMessage!.id,

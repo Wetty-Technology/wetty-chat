@@ -147,7 +147,10 @@ class MessageBubbleContentV2 extends StatelessWidget {
           reactions: message.reactions,
           maxBubbleWidth: presentation.maxBubbleWidth,
           isMe: isMe,
-          isInteractive: false,
+          isInteractive:
+              renderSpec.isInteractive &&
+              !message.isDeleted &&
+              message.content is! StickerMessageContent,
           onToggleReaction: onToggleReaction,
         ),
       );

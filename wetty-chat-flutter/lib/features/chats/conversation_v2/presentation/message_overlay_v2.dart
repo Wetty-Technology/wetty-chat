@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
+import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:flutter/cupertino.dart';
 
 import '../../../../app/theme/style_config.dart';
@@ -24,7 +25,9 @@ class MessageOverlayV2 extends StatelessWidget {
     required this.details,
     required this.visible,
     required this.actions,
+    required this.quickReactionEmojis,
     required this.onDismiss,
+    required this.onToggleReaction,
   });
 
   static const double _screenPadding = 16;
@@ -32,11 +35,18 @@ class MessageOverlayV2 extends StatelessWidget {
   static const double _panelMaxWidth = 260;
   static const double _rowHeight = 48;
   static const double _panelGap = 10;
+  static const double _reactionBarHeight = 44;
 
   final MessageLongPressDetailsV2 details;
   final bool visible;
   final List<MessageOverlayActionV2> actions;
+  final List<String> quickReactionEmojis;
   final VoidCallback onDismiss;
+  final ValueChanged<String> onToggleReaction;
+
+  bool get _showReactionBar =>
+      !details.message.isDeleted &&
+      details.message.content is! StickerMessageContent;
 
   @override
   Widget build(BuildContext context) {
@@ -51,13 +61,17 @@ class MessageOverlayV2 extends StatelessWidget {
         );
         final panelHeight = actions.length * _rowHeight;
         final safeTop = mediaQuery.padding.top + _screenPadding;
-        final safeBottom = viewportHeight - mediaQuery.padding.bottom - _screenPadding;
+        final safeBottom =
+            viewportHeight - mediaQuery.padding.bottom - _screenPadding;
+        final panelClusterHeight =
+            panelHeight + (_showReactionBar ? _reactionBarHeight + _panelGap : 0);
         final preferredTop = details.visibleRect.bottom + _panelGap;
-        final fallbackTop = details.visibleRect.top - _panelGap - panelHeight;
+        final fallbackTop =
+            details.visibleRect.top - _panelGap - panelClusterHeight;
         final top = (preferredTop + panelHeight <= safeBottom
                 ? preferredTop
                 : fallbackTop)
-            .clamp(safeTop, math.max(safeTop, safeBottom - panelHeight))
+            .clamp(safeTop, math.max(safeTop, safeBottom - panelClusterHeight))
             .toDouble();
         final left = (details.isMe
                 ? details.visibleRect.right - panelWidth
@@ -92,9 +106,29 @@ class MessageOverlayV2 extends StatelessWidget {
                 ),
               ),
             ),
+            if (_showReactionBar)
+              Positioned(
+                left: left,
+                top: top,
+                width: panelWidth,
+                child: IgnorePointer(
+                  ignoring: !visible,
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween<double>(begin: 0, end: visible ? 1 : 0),
+                    duration: const Duration(milliseconds: 160),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, value, child) =>
+                        Opacity(opacity: value, child: child),
+                    child: _ReactionBar(
+                      emojis: quickReactionEmojis,
+                      onToggleReaction: onToggleReaction,
+                    ),
+                  ),
+                ),
+              ),
             Positioned(
               left: left,
-              top: top,
+              top: top + (_showReactionBar ? _reactionBarHeight + _panelGap : 0),
               width: panelWidth,
               child: IgnorePointer(
                 ignoring: !visible,
@@ -119,6 +153,47 @@ class MessageOverlayV2 extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _ReactionBar extends StatelessWidget {
+  const _ReactionBar({
+    required this.emojis,
+    required this.onToggleReaction,
+  });
+
+  final List<String> emojis;
+  final ValueChanged<String> onToggleReaction;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: colors.backgroundSecondary,
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: const [
+          BoxShadow(
+            blurRadius: 18,
+            offset: Offset(0, 6),
+            color: Color(0x22000000),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          for (final emoji in emojis)
+            CupertinoButton(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              minimumSize: const Size(0, 0),
+              onPressed: () => onToggleReaction(emoji),
+              child: Text(emoji, style: const TextStyle(fontSize: 24)),
+            ),
+        ],
+      ),
     );
   }
 }

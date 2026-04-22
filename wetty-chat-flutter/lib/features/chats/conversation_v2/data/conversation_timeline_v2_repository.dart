@@ -3,6 +3,7 @@ import 'package:chahua/features/chats/conversation_v2/data/message_api_service_v
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_timeline_v2_canonical_scope.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_identity.dart';
+import 'package:chahua/features/chats/models/message_models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class ConversationTimelineV2Repository {
@@ -40,6 +41,83 @@ class ConversationTimelineV2Repository {
         );
   }
 
+  Future<void> toggleReaction({
+    required int messageId,
+    required String emoji,
+  }) async {
+    final message = _store.messageForServerMessageId(identity, messageId);
+    if (message == null) {
+      throw StateError('Message not found: $messageId');
+    }
+    if (message.content is StickerMessageContent) {
+      throw UnsupportedError('Sticker reactions are not supported');
+    }
+    if (message.isDeleted) {
+      throw StateError('Deleted messages cannot be reacted to');
+    }
+
+    final snapshot = message;
+    final optimistic = snapshot.copyWith(
+      reactions: _toggleReactionLocal(snapshot, emoji),
+    );
+    if (!_store.updateMessage(identity, optimistic)) {
+      throw StateError('Message not found: $messageId');
+    }
+
+    try {
+      final currentlyReacted = snapshot.reactions.any(
+        (reaction) => reaction.emoji == emoji && reaction.reactedByMe == true,
+      );
+      if (currentlyReacted) {
+        await ref
+            .read(messageApiServiceV2Provider)
+            .deleteReaction(identity, messageId, emoji);
+      } else {
+        await ref
+            .read(messageApiServiceV2Provider)
+            .putReaction(identity, messageId, emoji);
+      }
+    } catch (_) {
+      _store.updateMessage(identity, snapshot);
+      rethrow;
+    }
+  }
+
+  Future<void> deleteMessage(int messageId) async {
+    final message = _store.messageForServerMessageId(identity, messageId);
+    if (message == null) {
+      throw StateError('Message not found: $messageId');
+    }
+    if (message.isDeleted) {
+      return;
+    }
+
+    final snapshot = message;
+    final optimistic = snapshot.copyWith(
+      isDeleted: true,
+      deliveryState: ConversationDeliveryState.deleting,
+    );
+    if (!_store.updateMessage(identity, optimistic)) {
+      throw StateError('Message not found: $messageId');
+    }
+
+    try {
+      await ref
+          .read(messageApiServiceV2Provider)
+          .deleteMessage(identity.chatId, messageId);
+      _store.updateMessage(
+        identity,
+        optimistic.copyWith(
+          isDeleted: true,
+          deliveryState: ConversationDeliveryState.confirmed,
+        ),
+      );
+    } catch (_) {
+      _store.updateMessage(identity, snapshot);
+      rethrow;
+    }
+  }
+
   String _messageTypeFor(ConversationMessageV2 message) {
     return switch (message.content) {
       TextMessageContent() => 'text',
@@ -67,6 +145,42 @@ class ConversationTimelineV2Repository {
       StickerMessageContent(:final sticker) => sticker.id,
       _ => null,
     };
+  }
+
+  List<ReactionSummary> _toggleReactionLocal(
+    ConversationMessageV2 message,
+    String emoji,
+  ) {
+    final next = <ReactionSummary>[];
+    var handled = false;
+    for (final reaction in message.reactions) {
+      if (reaction.emoji != emoji) {
+        next.add(reaction);
+        continue;
+      }
+      handled = true;
+      final currentlyReacted = reaction.reactedByMe == true;
+      final updatedCount = currentlyReacted
+          ? reaction.count - 1
+          : reaction.count + 1;
+      if (updatedCount <= 0) {
+        continue;
+      }
+      next.add(
+        ReactionSummary(
+          emoji: reaction.emoji,
+          count: updatedCount,
+          reactedByMe: currentlyReacted ? false : true,
+          reactors: reaction.reactors,
+        ),
+      );
+    }
+
+    if (!handled) {
+      next.add(ReactionSummary(emoji: emoji, count: 1, reactedByMe: true));
+    }
+
+    return next;
   }
 
   Future<void> refreshLatestSegment({required int limit}) async {
