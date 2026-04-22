@@ -47,6 +47,7 @@ class ConversationTimelineV2 extends ConsumerStatefulWidget {
 class _ConversationTimelineV2State
     extends ConsumerState<ConversationTimelineV2> {
   static const double _edgeThreshold = 80;
+  static const double _jumpToLatestInset = 16;
 
   late ScrollController _scrollController;
   int _lastHandledViewportCommandGeneration = 0;
@@ -55,6 +56,7 @@ class _ConversationTimelineV2State
   bool _isMeasureScheduled = false;
   double _topPreferredAnchorAlignment = 0;
   bool _isTopPreferredAnchorResolved = false;
+  bool _isAtLiveEdge = true;
   UniqueKey _scrollViewKey = UniqueKey();
 
   ConversationIdentity get _identity =>
@@ -117,6 +119,7 @@ class _ConversationTimelineV2State
     if (oldWidget.chatId != widget.chatId ||
         oldWidget.threadRootId != widget.threadRootId) {
       _lastHandledViewportCommandGeneration = 0;
+      _isAtLiveEdge = true;
     }
     if (oldWidget.launchRequest != widget.launchRequest) {
       _scheduleInitializeLaunchRequest();
@@ -147,6 +150,15 @@ class _ConversationTimelineV2State
       isNearBottom:
           (position.maxScrollExtent - position.pixels) <= _edgeThreshold,
     );
+    final viewState = ref.read(
+      conversationTimelineV2ViewModelProvider(_identity),
+    );
+    final nextIsAtLiveEdge = facts.isNearBottom && !viewState.canLoadNewer;
+    if (nextIsAtLiveEdge != _isAtLiveEdge) {
+      setState(() {
+        _isAtLiveEdge = nextIsAtLiveEdge;
+      });
+    }
     ref
         .read(conversationTimelineV2ViewModelProvider(_identity).notifier)
         .onViewportChanged(facts);
@@ -242,71 +254,50 @@ class _ConversationTimelineV2State
     final afterMessages = state.afterMessages;
 
     // Actually build the main content
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Stack(
       children: [
-        Wrap(
-          alignment: WrapAlignment.end,
-          spacing: 8,
-          runSpacing: 0,
-          children: [
-            CupertinoButton(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        Opacity(
+          opacity: shouldHideUntilMeasured ? 0 : 1,
+          child: CustomScrollView(
+            key: _scrollViewKey,
+            center: _centerSliverKey,
+            anchor: centerViewportFraction,
+            controller: _scrollController,
+            slivers: [
+              const SliverPadding(padding: EdgeInsets.only(top: 8)),
+              if (beforeMessages.isNotEmpty)
+                _buildMessageSliver(
+                  beforeMessages,
+                  chatMessageFontSize: settings.fontSize,
+                ),
+              if (afterMessages.isNotEmpty)
+                _buildMessageSliver(
+                  afterMessages,
+                  key: _centerSliverKey,
+                  chatMessageFontSize: settings.fontSize,
+                  highlightedStableKey: state.highlightedStableKey,
+                )
+              else
+                SliverToBoxAdapter(
+                  key: _centerSliverKey,
+                  child: const SizedBox.shrink(),
+                ),
+            ],
+          ),
+        ),
+        if (state.canLoadNewer || !_isAtLiveEdge)
+          Positioned(
+            right: _jumpToLatestInset,
+            bottom: _jumpToLatestInset,
+            child: ConversationTimelineV2JumpToLatestFab(
+              pendingLiveCount: 0,
               onPressed: () => ref
                   .read(
                     conversationTimelineV2ViewModelProvider(_identity).notifier,
                   )
                   .jumpToLatest(),
-              child: const Text('Jump To Latest'),
-            ),
-          ],
-        ),
-        if (state.isResolvingJump)
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            child: Text('Resolving jump target...'),
-          ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            'Seam @ ${centerViewportFraction.toStringAsFixed(2)}'
-            ' (${placement.name})'
-            ' gen: ${state.viewportCommandGeneration}'
-            ' | before=${state.beforeMessages.length}'
-            ' after=${state.afterMessages.length}',
-          ),
-        ),
-        Expanded(
-          child: Opacity(
-            opacity: shouldHideUntilMeasured ? 0 : 1,
-            child: CustomScrollView(
-              key: _scrollViewKey,
-              center: _centerSliverKey,
-              anchor: centerViewportFraction,
-              controller: _scrollController,
-              slivers: [
-                const SliverPadding(padding: EdgeInsets.only(top: 8)),
-                if (beforeMessages.isNotEmpty)
-                  _buildMessageSliver(
-                    beforeMessages,
-                    chatMessageFontSize: settings.fontSize,
-                  ),
-                if (afterMessages.isNotEmpty)
-                  _buildMessageSliver(
-                    afterMessages,
-                    key: _centerSliverKey,
-                    chatMessageFontSize: settings.fontSize,
-                    highlightedStableKey: state.highlightedStableKey,
-                  )
-                else
-                  SliverToBoxAdapter(
-                    key: _centerSliverKey,
-                    child: const SizedBox.shrink(),
-                  ),
-              ],
             ),
           ),
-        ),
       ],
     );
   }
@@ -387,5 +378,42 @@ class _ConversationTimelineV2State
 
   GlobalKey _keyForMessage(ConversationMessageV2 message) {
     return _messageKeys.putIfAbsent(message.stableKey, GlobalKey.new);
+  }
+}
+
+class ConversationTimelineV2JumpToLatestFab extends StatelessWidget {
+  const ConversationTimelineV2JumpToLatestFab({
+    super.key,
+    required this.pendingLiveCount,
+    required this.onPressed,
+  });
+
+  final int pendingLiveCount;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      onPressed: onPressed,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: CupertinoColors.systemGrey5.resolveFrom(context),
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(CupertinoIcons.chevron_down),
+            if (pendingLiveCount > 0)
+              Padding(
+                padding: const EdgeInsets.only(left: 6),
+                child: Text('$pendingLiveCount'),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }
