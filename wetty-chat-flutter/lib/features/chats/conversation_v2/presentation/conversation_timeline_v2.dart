@@ -7,7 +7,10 @@ import 'package:chahua/features/chats/conversation_v2/application/timeline_viewp
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_identity.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/launch_request.dart';
+import 'package:chahua/features/chats/conversation_v2/presentation/message_long_press_details_v2.dart';
+import 'package:chahua/features/chats/conversation_v2/presentation/message_overlay_v2.dart';
 import 'package:chahua/features/chats/conversation_v2/presentation/message_bubble/message_row_v2.dart';
+import 'package:chahua/core/session/dev_session_store.dart';
 import 'package:chahua/core/settings/app_settings_store.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
@@ -62,6 +65,7 @@ class _ConversationTimelineV2State
   bool _isTopPreferredAnchorResolved = false;
   bool _isAtLiveEdge = true;
   UniqueKey _scrollViewKey = UniqueKey();
+  MessageLongPressDetailsV2? _activeOverlay;
 
   ConversationIdentity get _identity =>
       (chatId: widget.chatId, threadRootId: widget.threadRootId);
@@ -219,6 +223,65 @@ class _ConversationTimelineV2State
     );
   }
 
+  void _openMessageOverlay(MessageLongPressDetailsV2 details) {
+    if (details.message.isDeleted) {
+      return;
+    }
+    final bubbleRect = details.bubbleRect;
+    final viewportSize = context.size;
+    if (viewportSize == null) {
+      return;
+    }
+    final viewportRect = Offset.zero & viewportSize;
+    final visibleRect = bubbleRect.intersect(viewportRect);
+    if (visibleRect.isEmpty) {
+      return;
+    }
+    setState(() {
+      _activeOverlay = details.copyWith(
+        bubbleRect: bubbleRect,
+        visibleRect: visibleRect,
+      );
+    });
+  }
+
+  void _dismissMessageOverlay() {
+    if (_activeOverlay == null) {
+      return;
+    }
+    setState(() {
+      _activeOverlay = null;
+    });
+  }
+
+  List<MessageOverlayActionV2> _overlayActions(ConversationMessageV2 message) {
+    final currentUserId = ref.read(authSessionProvider).currentUserId;
+    final isOwn = message.sender.uid == currentUserId;
+    final composerNotifier = ref.read(
+      conversationComposerViewModelProvider(_identity).notifier,
+    );
+    return <MessageOverlayActionV2>[
+      MessageOverlayActionV2(
+        label: 'Reply',
+        icon: CupertinoIcons.reply,
+        onPressed: () {
+          _dismissMessageOverlay();
+          composerNotifier.beginReply(message);
+        },
+      ),
+      if (isOwn && message.content is! AudioMessageContent)
+        MessageOverlayActionV2(
+          label: 'Edit',
+          icon: CupertinoIcons.pencil,
+          onPressed: () {
+            _dismissMessageOverlay();
+            composerNotifier.clearAttachments();
+            composerNotifier.beginEdit(message);
+          },
+        ),
+    ];
+  }
+
   @override
   void dispose() {
     _scrollController.removeListener(_reportViewportFacts);
@@ -321,6 +384,13 @@ class _ConversationTimelineV2State
                   .jumpToLatest(),
             ),
           ),
+        if (_activeOverlay case final overlay?)
+          MessageOverlayV2(
+            details: overlay,
+            visible: true,
+            actions: _overlayActions(overlay.message),
+            onDismiss: _dismissMessageOverlay,
+          ),
       ],
     );
   }
@@ -349,6 +419,7 @@ class _ConversationTimelineV2State
             isHighlighted: message.stableKey == highlightedStableKey,
             showSenderName: showSenderName,
             showAvatar: showAvatar,
+            onLongPress: _openMessageOverlay,
             onReply: () => ref
                 .read(conversationComposerViewModelProvider(_identity).notifier)
                 .beginReply(message),

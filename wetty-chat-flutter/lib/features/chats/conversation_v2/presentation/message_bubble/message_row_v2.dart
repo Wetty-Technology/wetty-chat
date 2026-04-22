@@ -2,18 +2,21 @@ import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/core/network/api_config.dart';
 import 'package:chahua/shared/presentation/app_avatar.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
 
+import '../message_long_press_details_v2.dart';
 import '../reply_swipe_action_v2.dart';
 import 'message_bubble_v2.dart';
 import 'message_bubble_presentation_v2.dart';
 
-class MessageRowV2 extends StatelessWidget {
+class MessageRowV2 extends StatefulWidget {
   const MessageRowV2({
     super.key,
     required this.message,
     required this.chatMessageFontSize,
     this.isHighlighted = false,
+    this.onLongPress,
     this.onReply,
     this.onTapReply,
     this.onOpenThread,
@@ -31,18 +34,26 @@ class MessageRowV2 extends StatelessWidget {
   final ConversationMessageV2 message;
   final double chatMessageFontSize;
   final bool isHighlighted;
+  final ValueChanged<MessageLongPressDetailsV2>? onLongPress;
   final VoidCallback? onReply;
   final VoidCallback? onTapReply;
   final VoidCallback? onOpenThread;
   final bool showSenderName;
   final bool showAvatar;
 
-  bool get _isMe => message.sender.uid == ApiSession.currentUserId;
-  bool get _isSystem => message.content is SystemMessageContent;
+  @override
+  State<MessageRowV2> createState() => _MessageRowV2State();
+}
+
+class _MessageRowV2State extends State<MessageRowV2> {
+  final GlobalKey _bubbleKey = GlobalKey();
+
+  bool get _isMe => widget.message.sender.uid == ApiSession.currentUserId;
+  bool get _isSystem => widget.message.content is SystemMessageContent;
   bool get _canReply =>
-      onReply != null &&
-      !message.isDeleted &&
-      switch (message.content) {
+      widget.onReply != null &&
+      !widget.message.isDeleted &&
+      switch (widget.message.content) {
         TextMessageContent() ||
         AudioMessageContent() ||
         StickerMessageContent() ||
@@ -50,77 +61,118 @@ class MessageRowV2 extends StatelessWidget {
         SystemMessageContent() ||
         FileMessageContent() => false,
       };
+  bool get _isDesktopPlatform {
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.windows:
+      case TargetPlatform.linux:
+      case TargetPlatform.macOS:
+        return true;
+      case TargetPlatform.android:
+      case TargetPlatform.iOS:
+      case TargetPlatform.fuchsia:
+        return false;
+    }
+  }
+
+  void _handleLongPress() {
+    final context = _bubbleKey.currentContext;
+    if (widget.onLongPress == null || context == null) {
+      return;
+    }
+    final renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox == null || !renderBox.attached) {
+      return;
+    }
+    final origin = renderBox.localToGlobal(Offset.zero);
+    widget.onLongPress!(
+      MessageLongPressDetailsV2(
+        message: widget.message,
+        bubbleRect: origin & renderBox.size,
+        isMe: _isMe,
+        sourceShowsSenderName: widget.showSenderName,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     if (_isSystem) {
-      return _SystemMessageRowV2(message: message);
+      return _SystemMessageRowV2(message: widget.message);
     }
 
-    final avatar = showAvatar
+    final avatar = widget.showAvatar
         ? Padding(
             padding: EdgeInsets.only(
               left: MessageBubblePresentationV2.avatarGap,
             ),
             child: AppAvatar(
-              imageUrl: message.sender.avatarUrl,
+              imageUrl: widget.message.sender.avatarUrl,
               size: MessageBubblePresentationV2.avatarSlotWidth,
-              name: message.sender.name,
+              name: widget.message.sender.name,
             ),
           )
         : const SizedBox.shrink();
 
-    final bubble = MessageBubbleV2(
-      message: message,
-      isMe: _isMe,
-      chatMessageFontSize: chatMessageFontSize,
-      showSenderName: showSenderName,
-      onTapReply: onTapReply,
-      onOpenThread: onOpenThread,
+    final bubble = KeyedSubtree(
+      key: _bubbleKey,
+      child: MessageBubbleV2(
+        message: widget.message,
+        isMe: _isMe,
+        chatMessageFontSize: widget.chatMessageFontSize,
+        showSenderName: widget.showSenderName,
+        onTapReply: widget.onTapReply,
+        onOpenThread: widget.onOpenThread,
+      ),
     );
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: _bottomSpacing),
-      child: ReplySwipeActionV2(
-        key: ValueKey(message.stableKey),
-        enabled: _canReply,
-        onTriggered: onReply,
-        child: DecoratedBox(
-          decoration: isHighlighted
-              ? BoxDecoration(
-                  border: Border.all(
-                    color: CupertinoColors.activeBlue,
-                    width: 1.5,
-                  ),
-                  borderRadius: BorderRadius.circular(14),
-                )
-              : const BoxDecoration(),
-          child: Padding(
-            padding: isHighlighted ? const EdgeInsets.all(2) : EdgeInsets.zero,
+    return GestureDetector(
+      onLongPress: _isDesktopPlatform ? null : _handleLongPress,
+      onSecondaryTapUp: _isDesktopPlatform ? (_) => _handleLongPress() : null,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: MessageRowV2._bottomSpacing),
+        child: ReplySwipeActionV2(
+          key: ValueKey(widget.message.stableKey),
+          enabled: _canReply,
+          onTriggered: widget.onReply,
+          child: DecoratedBox(
+            decoration: widget.isHighlighted
+                ? BoxDecoration(
+                    border: Border.all(
+                      color: CupertinoColors.activeBlue,
+                      width: 1.5,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                  )
+                : const BoxDecoration(),
             child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: _rowHorizontalPadding,
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisAlignment: _isMe
-                    ? MainAxisAlignment.end
-                    : MainAxisAlignment.start,
-                children: _isMe
-                    ? <Widget>[
-                        Flexible(child: bubble),
-                        const SizedBox(width: _avatarLaneWidth),
-                      ]
-                    : <Widget>[
-                        SizedBox(
-                          width: _avatarLaneWidth,
-                          child: Align(
-                            alignment: Alignment.bottomLeft,
-                            child: avatar,
+              padding: widget.isHighlighted
+                  ? const EdgeInsets.all(2)
+                  : EdgeInsets.zero,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: MessageRowV2._rowHorizontalPadding,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisAlignment: _isMe
+                      ? MainAxisAlignment.end
+                      : MainAxisAlignment.start,
+                  children: _isMe
+                      ? <Widget>[
+                          Flexible(child: bubble),
+                          const SizedBox(width: MessageRowV2._avatarLaneWidth),
+                        ]
+                      : <Widget>[
+                          SizedBox(
+                            width: MessageRowV2._avatarLaneWidth,
+                            child: Align(
+                              alignment: Alignment.bottomLeft,
+                              child: avatar,
+                            ),
                           ),
-                        ),
-                        Flexible(child: bubble),
-                      ],
+                          Flexible(child: bubble),
+                        ],
+                ),
               ),
             ),
           ),
