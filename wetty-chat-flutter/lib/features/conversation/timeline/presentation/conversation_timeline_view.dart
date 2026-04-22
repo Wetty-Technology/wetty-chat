@@ -11,6 +11,7 @@ import 'package:chahua/features/conversation/timeline/presentation/message_overl
 import 'package:chahua/features/conversation/message_bubble/presentation/message_row_v2.dart';
 import 'package:chahua/core/session/dev_session_store.dart';
 import 'package:chahua/core/settings/app_settings_store.dart';
+import 'package:chahua/features/conversation/timeline/presentation/parts/jump_to_latest_fab.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/rendering.dart';
@@ -69,9 +70,9 @@ class _ConversationTimelineViewState
   bool _isMeasureScheduled = false;
   double _topPreferredAnchorAlignment = 0;
   bool _isTopPreferredAnchorResolved = false;
-  bool _isAtLiveEdge = true;
   UniqueKey _scrollViewKey = UniqueKey();
   MessageLongPressDetailsV2? _activeOverlay;
+  TimelineViewportFacts _latestViewportFacts = const TimelineViewportFacts();
 
   ConversationIdentity get _identity =>
       (chatId: widget.chatId, threadRootId: widget.threadRootId);
@@ -80,7 +81,7 @@ class _ConversationTimelineViewState
   void initState() {
     super.initState();
     _scrollController = ScrollController();
-    _scrollController.addListener(_reportViewportFacts);
+    _scrollController.addListener(_updateViewportFacts);
     _scheduleInitializeLaunchRequest();
   }
 
@@ -133,7 +134,6 @@ class _ConversationTimelineViewState
     if (oldWidget.chatId != widget.chatId ||
         oldWidget.threadRootId != widget.threadRootId) {
       _lastHandledViewportCommandGeneration = 0;
-      _isAtLiveEdge = true;
     }
     if (oldWidget.launchRequest != widget.launchRequest) {
       _scheduleInitializeLaunchRequest();
@@ -153,7 +153,7 @@ class _ConversationTimelineViewState
   }
 
   /// Reports the viewport facts to the view model.
-  void _reportViewportFacts() {
+  void _updateViewportFacts() {
     if (!_scrollController.hasClients) {
       return;
     }
@@ -164,18 +164,16 @@ class _ConversationTimelineViewState
       isNearBottom:
           (position.maxScrollExtent - position.pixels) <= _edgeThreshold,
     );
-    final viewState = ref.read(
-      conversationTimelineViewModelProvider(_identity),
-    );
-    final nextIsAtLiveEdge = facts.isNearBottom && !viewState.canLoadNewer;
-    if (nextIsAtLiveEdge != _isAtLiveEdge) {
+
+    if (facts != _latestViewportFacts) {
       setState(() {
-        _isAtLiveEdge = nextIsAtLiveEdge;
+        _latestViewportFacts = facts;
       });
+
+      ref
+          .read(conversationTimelineViewModelProvider(_identity).notifier)
+          .onViewportChanged(facts);
     }
-    ref
-        .read(conversationTimelineViewModelProvider(_identity).notifier)
-        .onViewportChanged(facts);
   }
 
   /// This method is meant to be called by the build method synchronously,
@@ -213,7 +211,7 @@ class _ConversationTimelineViewState
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _reportViewportFacts();
+      _updateViewportFacts();
     });
   }
 
@@ -258,43 +256,6 @@ class _ConversationTimelineViewState
     setState(() {
       _activeOverlay = null;
     });
-  }
-
-  List<MessageOverlayActionV2> _overlayActions(ConversationMessageV2 message) {
-    final currentUserId = ref.read(authSessionProvider).currentUserId;
-    final isOwn = message.sender.uid == currentUserId;
-    final composerNotifier = ref.read(
-      conversationComposerViewModelProvider(_identity).notifier,
-    );
-    return <MessageOverlayActionV2>[
-      MessageOverlayActionV2(
-        label: 'Reply',
-        icon: CupertinoIcons.reply,
-        onPressed: () {
-          _dismissMessageOverlay();
-          composerNotifier.beginReply(message);
-        },
-      ),
-      if (isOwn && message.content is! AudioMessageContent)
-        MessageOverlayActionV2(
-          label: 'Edit',
-          icon: CupertinoIcons.pencil,
-          onPressed: () {
-            _dismissMessageOverlay();
-            composerNotifier.clearAttachments();
-            composerNotifier.beginEdit(message);
-          },
-        ),
-      if (isOwn)
-        MessageOverlayActionV2(
-          label: 'Delete',
-          icon: CupertinoIcons.delete,
-          onPressed: () {
-            _dismissMessageOverlay();
-            _confirmDelete(message);
-          },
-        ),
-    ];
   }
 
   Future<void> _toggleReaction(
@@ -366,122 +327,77 @@ class _ConversationTimelineViewState
     );
   }
 
-  @override
-  void dispose() {
-    _scrollController.removeListener(_reportViewportFacts);
-    _scrollController.dispose();
-    super.dispose();
+  bool _shouldShowSenderName(List<ConversationMessageV2> messages, int index) {
+    final message = messages[index];
+    if (message.content is SystemMessageContent) {
+      return false;
+    }
+    if (index == 0) {
+      return true;
+    }
+    final previousMessage = messages[index - 1];
+    if (previousMessage.content is SystemMessageContent) {
+      return true;
+    }
+    return previousMessage.sender.uid != message.sender.uid;
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final state = ref.watch(conversationTimelineViewModelProvider(_identity));
-    final settings = ref.watch(appSettingsProvider);
-
-    if (state.isBootstrapping) {
-      return const Center(child: CupertinoActivityIndicator());
+  bool _shouldShowAvatar(List<ConversationMessageV2> messages, int index) {
+    final message = messages[index];
+    if (message.content is SystemMessageContent) {
+      return false;
     }
-
-    final placement = state.viewportCommand.placement;
-
-    // If we need to execute a viewport command, schedule it to be executed in the next frame.
-    // as well as clear the top preferred anchor measurement.
-    if (state.viewportCommandGeneration >
-        _lastHandledViewportCommandGeneration) {
-      _consumeViewportCommand(state);
+    if (index == messages.length - 1) {
+      return true;
     }
+    final nextMessage = messages[index + 1];
+    if (nextMessage.content is SystemMessageContent) {
+      return true;
+    }
+    return nextMessage.sender.uid != message.sender.uid;
+  }
 
-    final centerViewportFraction =
-        placement == ConversationTimelineViewportPlacement.bottomPreferred
-        ? 1.0
-        : (_isTopPreferredAnchorResolved ? _topPreferredAnchorAlignment : 0.0);
-    final shouldHideUntilMeasured =
-        placement == ConversationTimelineViewportPlacement.topPreferred &&
-        !_isTopPreferredAnchorResolved;
+  GlobalKey _keyForMessage(ConversationMessageV2 message) {
+    return _messageKeys.putIfAbsent(message.stableKey, GlobalKey.new);
+  }
 
-    final beforeMessages = state.beforeMessages.reversed.toList(
-      growable: false,
+  // ============ Build & Build Helpers ============
+
+  List<MessageOverlayActionV2> _overlayActions(ConversationMessageV2 message) {
+    final currentUserId = ref.read(authSessionProvider).currentUserId;
+    final isOwn = message.sender.uid == currentUserId;
+    final composerNotifier = ref.read(
+      conversationComposerViewModelProvider(_identity).notifier,
     );
-    final afterMessages = state.afterMessages;
-
-    // Actually build the main content
-    return Stack(
-      children: [
-        Opacity(
-          opacity: shouldHideUntilMeasured ? 0 : 1,
-          child: CustomScrollView(
-            key: _scrollViewKey,
-            center: _centerSliverKey,
-            anchor: centerViewportFraction,
-            controller: _scrollController,
-            slivers: [
-              const SliverPadding(padding: EdgeInsets.only(top: 8)),
-              if (beforeMessages.isNotEmpty)
-                _buildMessageSliver(
-                  beforeMessages,
-                  chatMessageFontSize: settings.fontSize,
-                ),
-              if (afterMessages.isNotEmpty)
-                _buildMessageSliver(
-                  afterMessages,
-                  key: _centerSliverKey,
-                  chatMessageFontSize: settings.fontSize,
-                  highlightedStableKey: state.highlightedStableKey,
-                )
-              else
-                SliverToBoxAdapter(
-                  key: _centerSliverKey,
-                  child: const SizedBox.shrink(),
-                ),
-            ],
-          ),
+    return <MessageOverlayActionV2>[
+      MessageOverlayActionV2(
+        label: 'Reply',
+        icon: CupertinoIcons.reply,
+        onPressed: () {
+          _dismissMessageOverlay();
+          composerNotifier.beginReply(message);
+        },
+      ),
+      if (isOwn && message.content is! AudioMessageContent)
+        MessageOverlayActionV2(
+          label: 'Edit',
+          icon: CupertinoIcons.pencil,
+          onPressed: () {
+            _dismissMessageOverlay();
+            composerNotifier.clearAttachments();
+            composerNotifier.beginEdit(message);
+          },
         ),
-        if (kDebugMode)
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: IgnorePointer(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  'Seam @ ${centerViewportFraction.toStringAsFixed(2)}'
-                  ' (${placement.name})'
-                  ' cmd: ${state.viewportCommand.kind.name} (${state.viewportCommand.placement.name})'
-                  ' gen: ${state.viewportCommandGeneration}'
-                  ' | before=${state.beforeMessages.length}'
-                  ' after=${state.afterMessages.length}',
-                ),
-              ),
-            ),
-          ),
-        if (state.canLoadNewer || !_isAtLiveEdge)
-          Positioned(
-            right: _jumpToLatestInset,
-            bottom: _jumpToLatestInset,
-            child: ConversationTimelineV2JumpToLatestFab(
-              pendingLiveCount: 0,
-              onPressed: () => ref
-                  .read(
-                    conversationTimelineViewModelProvider(_identity).notifier,
-                  )
-                  .jumpToLatest(),
-            ),
-          ),
-        if (_activeOverlay case final overlay?)
-          MessageOverlayV2(
-            details: overlay,
-            visible: true,
-            actions: _overlayActions(overlay.message),
-            quickReactionEmojis: _quickReactionEmojis,
-            onDismiss: _dismissMessageOverlay,
-            onToggleReaction: (emoji) {
-              _dismissMessageOverlay();
-              unawaited(_toggleReaction(overlay.message, emoji));
-            },
-          ),
-      ],
-    );
+      if (isOwn)
+        MessageOverlayActionV2(
+          label: 'Delete',
+          icon: CupertinoIcons.delete,
+          onPressed: () {
+            _dismissMessageOverlay();
+            _confirmDelete(message);
+          },
+        ),
+    ];
   }
 
   SliverList _buildMessageSliver(
@@ -534,74 +450,122 @@ class _ConversationTimelineViewState
     );
   }
 
-  bool _shouldShowSenderName(List<ConversationMessageV2> messages, int index) {
-    final message = messages[index];
-    if (message.content is SystemMessageContent) {
-      return false;
-    }
-    if (index == 0) {
-      return true;
-    }
-    final previousMessage = messages[index - 1];
-    if (previousMessage.content is SystemMessageContent) {
-      return true;
-    }
-    return previousMessage.sender.uid != message.sender.uid;
-  }
-
-  bool _shouldShowAvatar(List<ConversationMessageV2> messages, int index) {
-    final message = messages[index];
-    if (message.content is SystemMessageContent) {
-      return false;
-    }
-    if (index == messages.length - 1) {
-      return true;
-    }
-    final nextMessage = messages[index + 1];
-    if (nextMessage.content is SystemMessageContent) {
-      return true;
-    }
-    return nextMessage.sender.uid != message.sender.uid;
-  }
-
-  GlobalKey _keyForMessage(ConversationMessageV2 message) {
-    return _messageKeys.putIfAbsent(message.stableKey, GlobalKey.new);
-  }
-}
-
-class ConversationTimelineV2JumpToLatestFab extends StatelessWidget {
-  const ConversationTimelineV2JumpToLatestFab({
-    super.key,
-    required this.pendingLiveCount,
-    required this.onPressed,
-  });
-
-  final int pendingLiveCount;
-  final VoidCallback onPressed;
-
   @override
   Widget build(BuildContext context) {
-    return CupertinoButton(
-      padding: EdgeInsets.zero,
-      onPressed: onPressed,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: CupertinoColors.systemGrey5.resolveFrom(context),
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(CupertinoIcons.chevron_down),
-            if (pendingLiveCount > 0)
-              Padding(
-                padding: const EdgeInsets.only(left: 6),
-                child: Text('$pendingLiveCount'),
-              ),
-          ],
-        ),
-      ),
+    final state = ref.watch(conversationTimelineViewModelProvider(_identity));
+    final settings = ref.watch(appSettingsProvider);
+
+    if (state.isBootstrapping) {
+      return const Center(child: CupertinoActivityIndicator());
+    }
+
+    final placement = state.viewportCommand.placement;
+
+    // If we need to execute a viewport command, schedule it to be executed in the next frame.
+    // as well as clear the top preferred anchor measurement.
+    if (state.viewportCommandGeneration >
+        _lastHandledViewportCommandGeneration) {
+      _consumeViewportCommand(state);
+    }
+
+    final centerViewportFraction =
+        placement == ConversationTimelineViewportPlacement.bottomPreferred
+        ? 1.0
+        : (_isTopPreferredAnchorResolved ? _topPreferredAnchorAlignment : 0.0);
+    final shouldHideUntilMeasured =
+        placement == ConversationTimelineViewportPlacement.topPreferred &&
+        !_isTopPreferredAnchorResolved;
+
+    final beforeMessages = state.beforeMessages.reversed.toList(
+      growable: false,
     );
+    final afterMessages = state.afterMessages;
+
+    _updateViewportFacts();
+
+    return Stack(
+      children: [
+        Opacity(
+          opacity: shouldHideUntilMeasured ? 0 : 1,
+          child: CustomScrollView(
+            key: _scrollViewKey,
+            center: _centerSliverKey,
+            anchor: centerViewportFraction,
+            controller: _scrollController,
+            slivers: [
+              const SliverPadding(padding: EdgeInsets.only(top: 8)),
+              if (beforeMessages.isNotEmpty)
+                _buildMessageSliver(
+                  beforeMessages,
+                  chatMessageFontSize: settings.fontSize,
+                ),
+              if (afterMessages.isNotEmpty)
+                _buildMessageSliver(
+                  afterMessages,
+                  key: _centerSliverKey,
+                  chatMessageFontSize: settings.fontSize,
+                  highlightedStableKey: state.highlightedStableKey,
+                )
+              else
+                SliverToBoxAdapter(
+                  key: _centerSliverKey,
+                  child: const SizedBox.shrink(),
+                ),
+            ],
+          ),
+        ),
+        if (kDebugMode)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: IgnorePointer(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'Seam @ ${centerViewportFraction.toStringAsFixed(2)}'
+                  ' (${placement.name})'
+                  ' cmd: ${state.viewportCommand.kind.name} (${state.viewportCommand.placement.name})'
+                  ' gen: ${state.viewportCommandGeneration}'
+                  ' | before=${state.beforeMessages.length}'
+                  ' after=${state.afterMessages.length}',
+                ),
+              ),
+            ),
+          ),
+        if (state.canLoadNewer || !_latestViewportFacts.isNearBottom)
+          Positioned(
+            right: _jumpToLatestInset,
+            bottom: _jumpToLatestInset,
+            child: JumpToLatestFab(
+              pendingLiveCount: 0,
+              onPressed: () => ref
+                  .read(
+                    conversationTimelineViewModelProvider(_identity).notifier,
+                  )
+                  .jumpToLatest(),
+            ),
+          ),
+        if (_activeOverlay case final overlay?)
+          MessageOverlayV2(
+            details: overlay,
+            visible: true,
+            actions: _overlayActions(overlay.message),
+            quickReactionEmojis: _quickReactionEmojis,
+            onDismiss: _dismissMessageOverlay,
+            onToggleReaction: (emoji) {
+              _dismissMessageOverlay();
+              unawaited(_toggleReaction(overlay.message, emoji));
+            },
+          ),
+      ],
+    );
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_updateViewportFacts);
+    _scrollController.dispose();
+    super.dispose();
   }
 }

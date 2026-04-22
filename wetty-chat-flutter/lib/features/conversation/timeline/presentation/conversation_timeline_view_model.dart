@@ -74,14 +74,12 @@ abstract class ConversationTimelineState with _$ConversationTimelineState {
 }
 
 /// Facts about the viewport reported by view to the view model.
-class TimelineViewportFacts {
-  const TimelineViewportFacts({
-    required this.isNearTop,
-    required this.isNearBottom,
-  });
-
-  final bool isNearTop;
-  final bool isNearBottom;
+@freezed
+abstract class TimelineViewportFacts with _$TimelineViewportFacts {
+  const factory TimelineViewportFacts({
+    @Default(false) bool isNearTop,
+    @Default(true) bool isNearBottom,
+  }) = _TimelineViewportFacts;
 }
 
 // ============ View Model ============

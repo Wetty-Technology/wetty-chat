@@ -103,7 +103,7 @@ class ConversationTimelineCanonicalSegment {
 
 @freezed
 abstract class ConversationTimelineCanonicalScope
-    with _$ConversationTimelineV2CanonicalScope {
+    with _$ConversationTimelineCanonicalScope {
   const factory ConversationTimelineCanonicalScope({
     @Default(<ConversationTimelineCanonicalSegment>[])
     List<ConversationTimelineCanonicalSegment> segments,
@@ -111,5 +111,5 @@ abstract class ConversationTimelineCanonicalScope
     @Default(false) bool hasReachedOldest,
     @Default(<ConversationMessageV2>[])
     List<ConversationMessageV2> optimisticMessages,
-  }) = _ConversationTimelineV2CanonicalScope;
+  }) = _ConversationTimelineCanonicalScope;
 }

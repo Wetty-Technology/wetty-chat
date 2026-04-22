@@ -322,4 +322,276 @@ as bool,
 
 }
 
+/// @nodoc
+mixin _$TimelineViewportFacts implements DiagnosticableTreeMixin {
+
+ bool get isNearTop; bool get isNearBottom;
+/// Create a copy of TimelineViewportFacts
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$TimelineViewportFactsCopyWith<TimelineViewportFacts> get copyWith => _$TimelineViewportFactsCopyWithImpl<TimelineViewportFacts>(this as TimelineViewportFacts, _$identity);
+
+
+@override
+void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+  properties
+    ..add(DiagnosticsProperty('type', 'TimelineViewportFacts'))
+    ..add(DiagnosticsProperty('isNearTop', isNearTop))..add(DiagnosticsProperty('isNearBottom', isNearBottom));
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TimelineViewportFacts&&(identical(other.isNearTop, isNearTop) || other.isNearTop == isNearTop)&&(identical(other.isNearBottom, isNearBottom) || other.isNearBottom == isNearBottom));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,isNearTop,isNearBottom);
+
+@override
+String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
+  return 'TimelineViewportFacts(isNearTop: $isNearTop, isNearBottom: $isNearBottom)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $TimelineViewportFactsCopyWith<$Res>  {
+  factory $TimelineViewportFactsCopyWith(TimelineViewportFacts value, $Res Function(TimelineViewportFacts) _then) = _$TimelineViewportFactsCopyWithImpl;
+@useResult
+$Res call({
+ bool isNearTop, bool isNearBottom
+});
+
+
+
+
+}
+/// @nodoc
+class _$TimelineViewportFactsCopyWithImpl<$Res>
+    implements $TimelineViewportFactsCopyWith<$Res> {
+  _$TimelineViewportFactsCopyWithImpl(this._self, this._then);
+
+  final TimelineViewportFacts _self;
+  final $Res Function(TimelineViewportFacts) _then;
+
+/// Create a copy of TimelineViewportFacts
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? isNearTop = null,Object? isNearBottom = null,}) {
+  return _then(_self.copyWith(
+isNearTop: null == isNearTop ? _self.isNearTop : isNearTop // ignore: cast_nullable_to_non_nullable
+as bool,isNearBottom: null == isNearBottom ? _self.isNearBottom : isNearBottom // ignore: cast_nullable_to_non_nullable
+as bool,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [TimelineViewportFacts].
+extension TimelineViewportFactsPatterns on TimelineViewportFacts {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _TimelineViewportFacts value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _TimelineViewportFacts() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _TimelineViewportFacts value)  $default,){
+final _that = this;
+switch (_that) {
+case _TimelineViewportFacts():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _TimelineViewportFacts value)?  $default,){
+final _that = this;
+switch (_that) {
+case _TimelineViewportFacts() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool isNearTop,  bool isNearBottom)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _TimelineViewportFacts() when $default != null:
+return $default(_that.isNearTop,_that.isNearBottom);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool isNearTop,  bool isNearBottom)  $default,) {final _that = this;
+switch (_that) {
+case _TimelineViewportFacts():
+return $default(_that.isNearTop,_that.isNearBottom);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool isNearTop,  bool isNearBottom)?  $default,) {final _that = this;
+switch (_that) {
+case _TimelineViewportFacts() when $default != null:
+return $default(_that.isNearTop,_that.isNearBottom);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+
+
+class _TimelineViewportFacts with DiagnosticableTreeMixin implements TimelineViewportFacts {
+  const _TimelineViewportFacts({this.isNearTop = false, this.isNearBottom = false});
+  
+
+@override@JsonKey() final  bool isNearTop;
+@override@JsonKey() final  bool isNearBottom;
+
+/// Create a copy of TimelineViewportFacts
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$TimelineViewportFactsCopyWith<_TimelineViewportFacts> get copyWith => __$TimelineViewportFactsCopyWithImpl<_TimelineViewportFacts>(this, _$identity);
+
+
+@override
+void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+  properties
+    ..add(DiagnosticsProperty('type', 'TimelineViewportFacts'))
+    ..add(DiagnosticsProperty('isNearTop', isNearTop))..add(DiagnosticsProperty('isNearBottom', isNearBottom));
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _TimelineViewportFacts&&(identical(other.isNearTop, isNearTop) || other.isNearTop == isNearTop)&&(identical(other.isNearBottom, isNearBottom) || other.isNearBottom == isNearBottom));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,isNearTop,isNearBottom);
+
+@override
+String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
+  return 'TimelineViewportFacts(isNearTop: $isNearTop, isNearBottom: $isNearBottom)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$TimelineViewportFactsCopyWith<$Res> implements $TimelineViewportFactsCopyWith<$Res> {
+  factory _$TimelineViewportFactsCopyWith(_TimelineViewportFacts value, $Res Function(_TimelineViewportFacts) _then) = __$TimelineViewportFactsCopyWithImpl;
+@override @useResult
+$Res call({
+ bool isNearTop, bool isNearBottom
+});
+
+
+
+
+}
+/// @nodoc
+class __$TimelineViewportFactsCopyWithImpl<$Res>
+    implements _$TimelineViewportFactsCopyWith<$Res> {
+  __$TimelineViewportFactsCopyWithImpl(this._self, this._then);
+
+  final _TimelineViewportFacts _self;
+  final $Res Function(_TimelineViewportFacts) _then;
+
+/// Create a copy of TimelineViewportFacts
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? isNearTop = null,Object? isNearBottom = null,}) {
+  return _then(_TimelineViewportFacts(
+isNearTop: null == isNearTop ? _self.isNearTop : isNearTop // ignore: cast_nullable_to_non_nullable
+as bool,isNearBottom: null == isNearBottom ? _self.isNearBottom : isNearBottom // ignore: cast_nullable_to_non_nullable
+as bool,
+  ));
+}
+
+
+}
+
 // dart format on
