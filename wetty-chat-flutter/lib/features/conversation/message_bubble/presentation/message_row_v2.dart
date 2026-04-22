@@ -107,16 +107,16 @@ class _MessageRowV2State extends State<MessageRowV2> {
       return item;
     }
 
-    final avatar = widget.showAvatar
-        ? Padding(
-            padding: const EdgeInsets.only(left: _avatarGap),
-            child: AppAvatar(
+    final avatar = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: _avatarGap),
+      child: widget.showAvatar
+          ? AppAvatar(
               imageUrl: widget.message.sender.avatarUrl,
               size: _avatarSlotWidth,
               name: widget.message.sender.name,
-            ),
-          )
-        : const SizedBox.shrink();
+            )
+          : const SizedBox.square(dimension: _avatarSlotWidth),
+    );
 
     return GestureDetector(
       onLongPress: _isDesktopPlatform ? null : _handleLongPress,
@@ -137,36 +137,12 @@ class _MessageRowV2State extends State<MessageRowV2> {
                     borderRadius: BorderRadius.circular(14),
                   )
                 : const BoxDecoration(),
-            child: Padding(
-              padding: widget.isHighlighted
-                  ? const EdgeInsets.all(2)
-                  : EdgeInsets.zero,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: _rowHorizontalPadding,
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  mainAxisAlignment: _isMe
-                      ? MainAxisAlignment.end
-                      : MainAxisAlignment.start,
-                  children: _isMe
-                      ? <Widget>[
-                          Flexible(child: item),
-                          const SizedBox(width: _avatarLaneWidth),
-                        ]
-                      : <Widget>[
-                          SizedBox(
-                            width: _avatarLaneWidth,
-                            child: Align(
-                              alignment: Alignment.bottomLeft,
-                              child: avatar,
-                            ),
-                          ),
-                          Flexible(child: item),
-                        ],
-                ),
-              ),
+            child: Row(
+              textDirection: _isMe ? TextDirection.rtl : TextDirection.ltr,
+              children: [
+                avatar,
+                Flexible(child: item),
+              ],
             ),
           ),
         ),
