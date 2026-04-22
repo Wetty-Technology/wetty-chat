@@ -231,6 +231,14 @@ class ConversationTimelineV2ViewModel
     final beforeMessages = <ConversationMessageV2>[];
     final afterMessages = <ConversationMessageV2>[];
 
+    if (_activeSegmentMode.isLatest &&
+        _activeSegmentMode.latestSplitAfterServerMessageId == null) {
+      _activeSegmentMode = ConversationTimelineV2ActiveSegmentMode.latest(
+        latestSplitAfterServerMessageId:
+            segment.orderedMessages.lastOrNull?.serverMessageId,
+      );
+    }
+
     if (splitAfterServerMessageId == null) {
       beforeMessages.addAll(segment.orderedMessages);
     } else {

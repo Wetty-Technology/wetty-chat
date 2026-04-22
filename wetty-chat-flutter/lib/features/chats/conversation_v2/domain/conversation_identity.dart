@@ -1,1 +1,1 @@
-typedef ConversationIdentity = ({String chatId, String? threadRootId});
+typedef ConversationIdentity = ({int chatId, int? threadRootId});

@@ -1133,7 +1133,7 @@ class ConversationComposerViewModel
 String _storageKeyFor(ConversationIdentity identity) {
   final threadRootId = identity.threadRootId;
   if (threadRootId == null) {
-    return identity.chatId;
+    return identity.chatId.toString();
   }
   return '${identity.chatId}::thread::$threadRootId';
 }

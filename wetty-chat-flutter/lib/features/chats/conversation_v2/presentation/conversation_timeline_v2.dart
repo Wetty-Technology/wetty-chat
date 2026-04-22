@@ -8,6 +8,7 @@ import 'package:chahua/features/chats/conversation_v2/domain/conversation_identi
 import 'package:chahua/features/chats/conversation_v2/domain/launch_request.dart';
 import 'package:chahua/features/chats/conversation_v2/presentation/message_bubble/message_row_v2.dart';
 import 'package:chahua/core/settings/app_settings_store.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -35,8 +36,8 @@ class ConversationTimelineV2 extends ConsumerStatefulWidget {
     this.threadRootId,
   });
 
-  final String chatId;
-  final String? threadRootId;
+  final int chatId;
+  final int? threadRootId;
   final LaunchRequest launchRequest;
 
   @override
@@ -285,6 +286,25 @@ class _ConversationTimelineV2State
             ],
           ),
         ),
+        if (kDebugMode)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: IgnorePointer(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'Seam @ ${centerViewportFraction.toStringAsFixed(2)}'
+                  ' (${placement.name})'
+                  ' cmd: ${state.viewportCommand.kind.name} (${state.viewportCommand.placement.name})'
+                  ' gen: ${state.viewportCommandGeneration}'
+                  ' | before=${state.beforeMessages.length}'
+                  ' after=${state.afterMessages.length}',
+                ),
+              ),
+            ),
+          ),
         if (state.canLoadNewer || !_isAtLiveEdge)
           Positioned(
             right: _jumpToLatestInset,

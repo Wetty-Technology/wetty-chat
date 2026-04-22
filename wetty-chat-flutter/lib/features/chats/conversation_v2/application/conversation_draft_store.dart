@@ -24,7 +24,7 @@ class ConversationDraftStore {
 
   String _storageKey(ConversationIdentity identity) {
     return identity.threadRootId == null
-        ? identity.chatId
+        ? identity.chatId.toString()
         : '${identity.chatId}::thread::${identity.threadRootId}';
   }
 }

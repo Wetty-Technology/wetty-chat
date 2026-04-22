@@ -247,7 +247,7 @@ class _ChatListRowBuilder extends ConsumerWidget {
     final dateText = formatChatListTimestamp(context, chat.lastMessageAt);
     final lastMessage = chat.lastMessage;
     final draftText = ref.read(conversationDraftProvider).getDraft((
-      chatId: chat.id,
+      chatId: int.parse(chat.id),
       threadRootId: null,
     ));
 

@@ -188,7 +188,7 @@ class _ConversationV2ComposerBarState
       final page = await ref
           .read(groupMemberRepositoryProvider)
           .fetchMembers(
-            widget.identity.chatId,
+            widget.identity.chatId.toString(),
             limit: _mentionLimit,
             query: query,
             searchMode: GroupMemberSearchMode.autocomplete,

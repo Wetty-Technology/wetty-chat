@@ -6,7 +6,7 @@ import 'package:chahua/features/chats/models/message_models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-final _identity = (chatId: 'chat-1', threadRootId: null);
+final _identity = (chatId: 1, threadRootId: null);
 const _sender = Sender(uid: 1, name: 'Alice');
 
 void main() {

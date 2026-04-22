@@ -36,7 +36,7 @@ class MessageApiServiceV2 {
     if (after != null) query['after'] = after.toString();
     if (around != null) query['around'] = around.toString();
     if (identity.threadRootId != null) {
-      query['threadId'] = identity.threadRootId!;
+      query['threadId'] = identity.threadRootId!.toString();
     }
 
     final response = await _dio.get<Map<String, dynamic>>(
@@ -71,7 +71,7 @@ class MessageApiServiceV2 {
   }
 
   Future<MessageItemDto> editMessage(
-    String chatId,
+    int chatId,
     int messageId,
     String newText, {
     List<String> attachmentIds = const <String>[],

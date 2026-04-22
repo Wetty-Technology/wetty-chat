@@ -92,17 +92,8 @@ class ConversationTimelineV2RealtimeApplier {
     ConversationIdentity identity,
     MessageItemDto payload,
   ) {
-    if (payload.chatId.toString() != identity.chatId) {
-      return false;
-    }
-
-    final threadRootId = identity.threadRootId;
-    if (threadRootId == null) {
-      return true;
-    }
-
-    return payload.id.toString() == threadRootId ||
-        payload.replyRootId?.toString() == threadRootId;
+    return payload.chatId == identity.chatId &&
+        payload.replyRootId == identity.threadRootId;
   }
 }
 

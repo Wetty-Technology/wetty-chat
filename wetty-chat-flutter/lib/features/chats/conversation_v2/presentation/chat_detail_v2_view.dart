@@ -12,7 +12,7 @@ class ChatDetailV2Page extends StatelessWidget {
     this.launchRequest = const LaunchRequest.latest(),
   });
 
-  final String chatId;
+  final int chatId;
   final LaunchRequest launchRequest;
 
   @override
@@ -37,11 +37,11 @@ class ChatDetailV2Page extends StatelessWidget {
 class _ChatDetailTitle extends ConsumerWidget {
   const _ChatDetailTitle({required this.chatId});
 
-  final String chatId;
+  final int chatId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final group = ref.watch(groupByIdProvider(chatId));
+    final group = ref.watch(groupByIdProvider(chatId.toString()));
     final resolvedName = group?.name?.trim();
     final title = resolvedName != null && resolvedName.isNotEmpty
         ? resolvedName

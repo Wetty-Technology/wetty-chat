@@ -12,7 +12,6 @@ import 'package:chahua/features/chats/conversation_v2/presentation/attachment_vi
 import 'package:chahua/features/chats/conversation_v2/presentation/attachment_viewer_request.dart';
 import 'package:chahua/features/chats/conversation_v2/presentation/chat_detail_v2_view.dart';
 import 'package:chahua/features/chats/conversation_v2/presentation/thread_detail_v2_view.dart';
-import 'package:chahua/features/chats/list/presentation/chat_list_view.dart';
 import 'package:chahua/features/chats/list/presentation/new_chat_view.dart';
 import 'package:chahua/features/groups/members/presentation/group_members_view.dart';
 import 'package:chahua/features/groups/settings/presentation/group_settings_view.dart';
@@ -124,7 +123,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     parentNavigatorKey: _rootNavigatorKey,
                     path: 'chat/:chatId',
                     pageBuilder: (context, state) {
-                      final chatId = state.pathParameters['chatId']!;
+                      final chatId = int.parse(state.pathParameters['chatId']!);
                       final extra = state.extra as Map<String, dynamic>?;
                       return CupertinoPage(
                         key: state.pageKey,
@@ -163,8 +162,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                         parentNavigatorKey: _rootNavigatorKey,
                         path: 'thread/:threadId',
                         pageBuilder: (context, state) {
-                          final chatId = state.pathParameters['chatId']!;
-                          final threadId = state.pathParameters['threadId']!;
+                          final chatId = int.parse(
+                            state.pathParameters['chatId']!,
+                          );
+                          final threadId = int.parse(
+                            state.pathParameters['threadId']!,
+                          );
                           final extra = state.extra as Map<String, dynamic>?;
                           return CupertinoPage(
                             key: state.pageKey,
@@ -184,8 +187,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     parentNavigatorKey: _rootNavigatorKey,
                     path: 'thread/:chatId/:threadId',
                     pageBuilder: (context, state) {
-                      final chatId = state.pathParameters['chatId']!;
-                      final threadId = state.pathParameters['threadId']!;
+                      final chatId = int.parse(state.pathParameters['chatId']!);
+                      final threadId = int.parse(
+                        state.pathParameters['threadId']!,
+                      );
                       final extra = state.extra as Map<String, dynamic>?;
                       return CupertinoPage(
                         key: state.pageKey,

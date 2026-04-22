@@ -11,8 +11,8 @@ class ThreadDetailV2Page extends StatelessWidget {
     this.launchRequest = const LaunchRequest.latest(),
   });
 
-  final String chatId;
-  final String threadRootId;
+  final int chatId;
+  final int threadRootId;
   final LaunchRequest launchRequest;
 
   @override
