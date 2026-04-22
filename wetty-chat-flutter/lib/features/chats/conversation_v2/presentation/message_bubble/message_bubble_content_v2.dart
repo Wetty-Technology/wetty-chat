@@ -13,6 +13,7 @@ import 'message_reactions_v2.dart';
 import 'message_render_spec_v2.dart';
 import 'message_sender_header_v2.dart';
 import 'message_thread_indicator_v2.dart';
+import 'voice_message_bubble_v2.dart';
 
 class MessageBubbleContentV2 extends StatelessWidget {
   const MessageBubbleContentV2({
@@ -252,6 +253,15 @@ class MessageBubbleContentV2 extends StatelessWidget {
     AttachmentItem attachment, {
     required double maxAttachmentWidth,
   }) {
+    if (attachment.isAudio && message.content is AudioMessageContent) {
+      return VoiceMessageBubbleV2(
+        attachment: attachment,
+        isMe: isMe,
+        renderSpec: renderSpec,
+        message: message,
+        presentation: presentation,
+      );
+    }
     if (attachment.isVideo && attachment.url.isNotEmpty) {
       return VideoAttachmentPreview(
         attachment: attachment,
