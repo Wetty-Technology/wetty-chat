@@ -338,7 +338,7 @@ class ConversationComposerViewModel
   ConversationComposerViewModel(this.arg);
 
   late final ConversationTimelineV2Repository _timelineRepository;
-  late final ConversationTimelineV2MessageStore _messageStore;
+  late final ConversationTimelineMessageStore _messageStore;
   late final ConversationDraftStore _draftStore;
   late final AttachmentService _attachmentService;
   late final AttachmentPickerService _pickerService;
@@ -355,9 +355,7 @@ class ConversationComposerViewModel
     _timelineRepository = ref.read(
       conversationTimelineV2RepositoryProvider(arg),
     );
-    _messageStore = ref.read(
-      conversationTimelineV2MessageStoreProvider.notifier,
-    );
+    _messageStore = ref.read(conversationTimelineMessageStoreProvider.notifier);
     _draftStore = ref.read(conversationDraftProvider);
     _attachmentService = ref.read(attachmentServiceProvider);
     _pickerService = ref.read(attachmentPickerServiceProvider);

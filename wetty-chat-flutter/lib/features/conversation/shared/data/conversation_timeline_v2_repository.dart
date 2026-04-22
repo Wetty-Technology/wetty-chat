@@ -12,8 +12,8 @@ class ConversationTimelineV2Repository {
   final Ref ref;
   final ConversationIdentity identity;
 
-  ConversationTimelineV2MessageStore get _store =>
-      ref.read(conversationTimelineV2MessageStoreProvider.notifier);
+  ConversationTimelineMessageStore get _store =>
+      ref.read(conversationTimelineMessageStoreProvider.notifier);
 
   Future<void> sendMessage({
     required ConversationMessageV2 optimisticMessage,
@@ -185,7 +185,7 @@ class ConversationTimelineV2Repository {
 
   Future<void> refreshLatestSegment({required int limit}) async {
     final existingScope = ref.read(
-      conversationTimelineV2MessageStoreProvider,
+      conversationTimelineMessageStoreProvider,
     )[identity];
     if (existingScope?.hasLatestSegment ?? false) {
       return;
@@ -198,10 +198,10 @@ class ConversationTimelineV2Repository {
     // If the response is empty, means we are at latest but there is just simply no message
     if (response.messages.isEmpty) {
       ref
-          .read(conversationTimelineV2MessageStoreProvider.notifier)
+          .read(conversationTimelineMessageStoreProvider.notifier)
           .putScope(
             identity,
-            const ConversationTimelineV2CanonicalScope(
+            const ConversationTimelineCanonicalScope(
               hasLatestSegment: true,
               hasReachedOldest: true,
             ),
@@ -209,14 +209,14 @@ class ConversationTimelineV2Repository {
       return;
     }
 
-    final latestSegment = ConversationTimelineV2CanonicalSegment(
+    final latestSegment = ConversationTimelineCanonicalSegment(
       orderedMessages: response.messages
           .map(ConversationMessageV2.fromMessageItemDto)
           .toList(growable: false),
     );
 
     ref
-        .read(conversationTimelineV2MessageStoreProvider.notifier)
+        .read(conversationTimelineMessageStoreProvider.notifier)
         .insertLatest(identity, latestSegment);
   }
 
@@ -255,17 +255,17 @@ class ConversationTimelineV2Repository {
 
     if (response.messages.isEmpty) {
       ref
-          .read(conversationTimelineV2MessageStoreProvider.notifier)
+          .read(conversationTimelineMessageStoreProvider.notifier)
           .markReachedOldest(identity);
       return;
     }
 
     ref
-        .read(conversationTimelineV2MessageStoreProvider.notifier)
+        .read(conversationTimelineMessageStoreProvider.notifier)
         .insertBeforeAnchor(
           identity,
           anchorServerMessageId,
-          ConversationTimelineV2CanonicalSegment(
+          ConversationTimelineCanonicalSegment(
             orderedMessages: response.messages
                 .map(ConversationMessageV2.fromMessageItemDto)
                 .toList(growable: false),
@@ -287,11 +287,11 @@ class ConversationTimelineV2Repository {
 
     if (response.messages.isNotEmpty) {
       ref
-          .read(conversationTimelineV2MessageStoreProvider.notifier)
+          .read(conversationTimelineMessageStoreProvider.notifier)
           .insertAfterAnchor(
             identity,
             anchorServerMessageId,
-            ConversationTimelineV2CanonicalSegment(
+            ConversationTimelineCanonicalSegment(
               orderedMessages: response.messages
                   .map(ConversationMessageV2.fromMessageItemDto)
                   .toList(growable: false),
@@ -324,10 +324,10 @@ class ConversationTimelineV2Repository {
     }
 
     ref
-        .read(conversationTimelineV2MessageStoreProvider.notifier)
+        .read(conversationTimelineMessageStoreProvider.notifier)
         .insertAround(
           identity,
-          ConversationTimelineV2CanonicalSegment(
+          ConversationTimelineCanonicalSegment(
             orderedMessages: response.messages
                 .map(ConversationMessageV2.fromMessageItemDto)
                 .toList(growable: false),

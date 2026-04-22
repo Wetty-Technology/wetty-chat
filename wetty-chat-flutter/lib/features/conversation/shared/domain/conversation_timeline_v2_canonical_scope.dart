@@ -4,8 +4,8 @@ import 'package:chahua/features/conversation/shared/domain/conversation_message_
 part 'conversation_timeline_v2_canonical_scope.freezed.dart';
 
 /// A canonical segment is a contiguous range of messages that are sorted by server message id.
-class ConversationTimelineV2CanonicalSegment {
-  ConversationTimelineV2CanonicalSegment({
+class ConversationTimelineCanonicalSegment {
+  ConversationTimelineCanonicalSegment({
     required List<ConversationMessageV2> orderedMessages,
   }) : assert(orderedMessages.isNotEmpty, 'canonical segment cannot be empty'),
        assert(
@@ -23,11 +23,11 @@ class ConversationTimelineV2CanonicalSegment {
   int get lastServerMessageId => orderedMessages.last.serverMessageId!;
 
   /// Returns true if this is "fully" before the other segment (no overlap).
-  bool isStrictlyBefore(ConversationTimelineV2CanonicalSegment other) {
+  bool isStrictlyBefore(ConversationTimelineCanonicalSegment other) {
     return lastServerMessageId < other.firstServerMessageId;
   }
 
-  bool overlaps(ConversationTimelineV2CanonicalSegment other) {
+  bool overlaps(ConversationTimelineCanonicalSegment other) {
     return firstServerMessageId <= other.lastServerMessageId &&
         other.firstServerMessageId <= lastServerMessageId;
   }
@@ -48,7 +48,7 @@ class ConversationTimelineV2CanonicalSegment {
     return lastServerMessageId <= serverMessageIdInclusive;
   }
 
-  ConversationTimelineV2CanonicalSegment? messagesBefore(
+  ConversationTimelineCanonicalSegment? messagesBefore(
     int serverMessageIdExclusive,
   ) {
     final prefix = orderedMessages
@@ -57,10 +57,10 @@ class ConversationTimelineV2CanonicalSegment {
     if (prefix.isEmpty) {
       return null;
     }
-    return ConversationTimelineV2CanonicalSegment(orderedMessages: prefix);
+    return ConversationTimelineCanonicalSegment(orderedMessages: prefix);
   }
 
-  ConversationTimelineV2CanonicalSegment? messagesThrough(
+  ConversationTimelineCanonicalSegment? messagesThrough(
     int serverMessageIdInclusive,
   ) {
     final prefix = orderedMessages
@@ -71,10 +71,10 @@ class ConversationTimelineV2CanonicalSegment {
     if (prefix.isEmpty) {
       return null;
     }
-    return ConversationTimelineV2CanonicalSegment(orderedMessages: prefix);
+    return ConversationTimelineCanonicalSegment(orderedMessages: prefix);
   }
 
-  ConversationTimelineV2CanonicalSegment? messagesFrom(
+  ConversationTimelineCanonicalSegment? messagesFrom(
     int serverMessageIdInclusive,
   ) {
     final suffix = orderedMessages
@@ -85,10 +85,10 @@ class ConversationTimelineV2CanonicalSegment {
     if (suffix.isEmpty) {
       return null;
     }
-    return ConversationTimelineV2CanonicalSegment(orderedMessages: suffix);
+    return ConversationTimelineCanonicalSegment(orderedMessages: suffix);
   }
 
-  ConversationTimelineV2CanonicalSegment? messagesAfter(
+  ConversationTimelineCanonicalSegment? messagesAfter(
     int serverMessageIdExclusive,
   ) {
     final suffix = orderedMessages
@@ -97,16 +97,16 @@ class ConversationTimelineV2CanonicalSegment {
     if (suffix.isEmpty) {
       return null;
     }
-    return ConversationTimelineV2CanonicalSegment(orderedMessages: suffix);
+    return ConversationTimelineCanonicalSegment(orderedMessages: suffix);
   }
 }
 
 @freezed
-abstract class ConversationTimelineV2CanonicalScope
+abstract class ConversationTimelineCanonicalScope
     with _$ConversationTimelineV2CanonicalScope {
-  const factory ConversationTimelineV2CanonicalScope({
-    @Default(<ConversationTimelineV2CanonicalSegment>[])
-    List<ConversationTimelineV2CanonicalSegment> segments,
+  const factory ConversationTimelineCanonicalScope({
+    @Default(<ConversationTimelineCanonicalSegment>[])
+    List<ConversationTimelineCanonicalSegment> segments,
     @Default(false) bool hasLatestSegment,
     @Default(false) bool hasReachedOldest,
     @Default(<ConversationMessageV2>[])

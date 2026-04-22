@@ -2,11 +2,11 @@ import 'package:chahua/features/conversation/shared/domain/conversation_message_
 import 'package:flutter/foundation.dart';
 
 @immutable
-class ConversationTimelineV2ActiveSegmentMode {
-  const ConversationTimelineV2ActiveSegmentMode.latest()
+class ConversationTimelineActiveSegmentMode {
+  const ConversationTimelineActiveSegmentMode.latest()
     : targetServerMessageId = null;
 
-  const ConversationTimelineV2ActiveSegmentMode.around(
+  const ConversationTimelineActiveSegmentMode.around(
     this.targetServerMessageId,
   );
 
@@ -16,7 +16,7 @@ class ConversationTimelineV2ActiveSegmentMode {
 
   @override
   bool operator ==(Object other) {
-    return other is ConversationTimelineV2ActiveSegmentMode &&
+    return other is ConversationTimelineActiveSegmentMode &&
         other.targetServerMessageId == targetServerMessageId;
   }
 
@@ -27,7 +27,7 @@ class ConversationTimelineV2ActiveSegmentMode {
 /// A single contiguous working segment handed from the repository to the view
 /// model. Unlike the canonical store, which may cache multiple discontiguous
 /// segments, the view model only consumes one active segment at a time.
-typedef ConversationTimelineV2ActiveSegment = ({
+typedef ConversationTimelineActiveSegment = ({
   List<ConversationMessageV2> orderedMessages,
   bool canLoadBefore,
   bool canLoadAfter,

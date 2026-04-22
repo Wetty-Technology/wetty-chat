@@ -34,7 +34,7 @@ class ConversationTimelineV2RealtimeApplier {
   }
 
   void _newMessage(MessageItemDto payload) {
-    final scopes = ref.read(conversationTimelineV2MessageStoreProvider);
+    final scopes = ref.read(conversationTimelineMessageStoreProvider);
     final message = ConversationMessageV2.fromMessageItemDto(payload);
 
     for (final entry in scopes.entries) {
@@ -54,13 +54,13 @@ class ConversationTimelineV2RealtimeApplier {
       }
 
       ref
-          .read(conversationTimelineV2MessageStoreProvider.notifier)
+          .read(conversationTimelineMessageStoreProvider.notifier)
           .newMessage(identity, message);
     }
   }
 
   void _updateMessage(MessageItemDto payload) {
-    final scopes = ref.read(conversationTimelineV2MessageStoreProvider);
+    final scopes = ref.read(conversationTimelineMessageStoreProvider);
     final message = ConversationMessageV2.fromMessageItemDto(payload);
 
     for (final entry in scopes.entries) {
@@ -71,13 +71,13 @@ class ConversationTimelineV2RealtimeApplier {
       }
 
       ref
-          .read(conversationTimelineV2MessageStoreProvider.notifier)
+          .read(conversationTimelineMessageStoreProvider.notifier)
           .updateMessage(identity, message);
     }
   }
 
   void _deleteMessage(MessageItemDto payload) {
-    final scopes = ref.read(conversationTimelineV2MessageStoreProvider);
+    final scopes = ref.read(conversationTimelineMessageStoreProvider);
 
     for (final entry in scopes.entries) {
       final identity = entry.key;
@@ -87,14 +87,14 @@ class ConversationTimelineV2RealtimeApplier {
       }
 
       ref
-          .read(conversationTimelineV2MessageStoreProvider.notifier)
+          .read(conversationTimelineMessageStoreProvider.notifier)
           .deleteMessage(identity, payload.id);
     }
   }
 
   void _updateReaction(ReactionUpdatePayloadDto payload) {
-    final scopes = ref.read(conversationTimelineV2MessageStoreProvider);
-    final store = ref.read(conversationTimelineV2MessageStoreProvider.notifier);
+    final scopes = ref.read(conversationTimelineMessageStoreProvider);
+    final store = ref.read(conversationTimelineMessageStoreProvider.notifier);
     final nextReactions = payload.reactions
         .map((reaction) => reaction.toDomain())
         .toList(growable: false);

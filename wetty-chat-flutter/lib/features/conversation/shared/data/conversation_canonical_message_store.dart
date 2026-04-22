@@ -4,19 +4,17 @@ import 'package:chahua/features/conversation/shared/domain/conversation_timeline
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-typedef ConversationTimelineV2MessageStoreState =
-    Map<ConversationIdentity, ConversationTimelineV2CanonicalScope>;
+typedef ConversationTimelineMessageStoreState =
+    Map<ConversationIdentity, ConversationTimelineCanonicalScope>;
 
-class ConversationTimelineV2MessageStore
-    extends Notifier<ConversationTimelineV2MessageStoreState> {
+class ConversationTimelineMessageStore
+    extends Notifier<ConversationTimelineMessageStoreState> {
   @override
-  ConversationTimelineV2MessageStoreState build() {
-    return <ConversationIdentity, ConversationTimelineV2CanonicalScope>{};
+  ConversationTimelineMessageStoreState build() {
+    return <ConversationIdentity, ConversationTimelineCanonicalScope>{};
   }
 
-  ConversationTimelineV2CanonicalScope? scopeFor(
-    ConversationIdentity identity,
-  ) {
+  ConversationTimelineCanonicalScope? scopeFor(ConversationIdentity identity) {
     return state[identity];
   }
 
@@ -48,9 +46,9 @@ class ConversationTimelineV2MessageStore
 
   void putScope(
     ConversationIdentity identity,
-    ConversationTimelineV2CanonicalScope scope,
+    ConversationTimelineCanonicalScope scope,
   ) {
-    state = <ConversationIdentity, ConversationTimelineV2CanonicalScope>{
+    state = <ConversationIdentity, ConversationTimelineCanonicalScope>{
       ...state,
       identity: scope,
     };
@@ -67,7 +65,7 @@ class ConversationTimelineV2MessageStore
   void insertBeforeAnchor(
     ConversationIdentity identity,
     int anchorServerMessageId,
-    ConversationTimelineV2CanonicalSegment segment,
+    ConversationTimelineCanonicalSegment segment,
   ) {
     assert(
       segment.lastServerMessageId < anchorServerMessageId,
@@ -75,15 +73,14 @@ class ConversationTimelineV2MessageStore
     );
     final existingScope = scopeFor(identity);
     final segments = _normalizeBeforeAnchorSegments(
-      existingScope?.segments ??
-          const <ConversationTimelineV2CanonicalSegment>[],
+      existingScope?.segments ?? const <ConversationTimelineCanonicalSegment>[],
       incoming: segment,
       anchorServerMessageId: anchorServerMessageId,
     );
 
     putScope(
       identity,
-      (existingScope ?? const ConversationTimelineV2CanonicalScope()).copyWith(
+      (existingScope ?? const ConversationTimelineCanonicalScope()).copyWith(
         segments: segments,
       ),
     );
@@ -92,7 +89,7 @@ class ConversationTimelineV2MessageStore
   void insertAfterAnchor(
     ConversationIdentity identity,
     int anchorServerMessageId,
-    ConversationTimelineV2CanonicalSegment segment,
+    ConversationTimelineCanonicalSegment segment,
   ) {
     assert(
       segment.firstServerMessageId > anchorServerMessageId,
@@ -100,15 +97,14 @@ class ConversationTimelineV2MessageStore
     );
     final existingScope = scopeFor(identity);
     final segments = _normalizeAfterAnchorSegments(
-      existingScope?.segments ??
-          const <ConversationTimelineV2CanonicalSegment>[],
+      existingScope?.segments ?? const <ConversationTimelineCanonicalSegment>[],
       incoming: segment,
       anchorServerMessageId: anchorServerMessageId,
     );
 
     putScope(
       identity,
-      (existingScope ?? const ConversationTimelineV2CanonicalScope()).copyWith(
+      (existingScope ?? const ConversationTimelineCanonicalScope()).copyWith(
         segments: segments,
       ),
     );
@@ -116,18 +112,17 @@ class ConversationTimelineV2MessageStore
 
   void insertAround(
     ConversationIdentity identity,
-    ConversationTimelineV2CanonicalSegment segment,
+    ConversationTimelineCanonicalSegment segment,
   ) {
     final existingScope = scopeFor(identity);
     final segments = _normalizeAroundSegments(
-      existingScope?.segments ??
-          const <ConversationTimelineV2CanonicalSegment>[],
+      existingScope?.segments ?? const <ConversationTimelineCanonicalSegment>[],
       incoming: segment,
     );
 
     putScope(
       identity,
-      (existingScope ?? const ConversationTimelineV2CanonicalScope()).copyWith(
+      (existingScope ?? const ConversationTimelineCanonicalScope()).copyWith(
         segments: segments,
       ),
     );
@@ -135,18 +130,17 @@ class ConversationTimelineV2MessageStore
 
   void insertLatest(
     ConversationIdentity identity,
-    ConversationTimelineV2CanonicalSegment segment,
+    ConversationTimelineCanonicalSegment segment,
   ) {
     final existingScope = scopeFor(identity);
     final segments = _normalizeLatestSegments(
-      existingScope?.segments ??
-          const <ConversationTimelineV2CanonicalSegment>[],
+      existingScope?.segments ?? const <ConversationTimelineCanonicalSegment>[],
       incoming: segment,
     );
 
     putScope(
       identity,
-      (existingScope ?? const ConversationTimelineV2CanonicalScope()).copyWith(
+      (existingScope ?? const ConversationTimelineCanonicalScope()).copyWith(
         segments: segments,
         hasLatestSegment: true,
       ),
@@ -194,7 +188,7 @@ class ConversationTimelineV2MessageStore
         optimisticMessages: optimisticMessages,
         segments: [
           ...existingScope.segments.take(existingScope.segments.length - 1),
-          ConversationTimelineV2CanonicalSegment(
+          ConversationTimelineCanonicalSegment(
             orderedMessages: updatedLatestMessages,
           ),
         ],
@@ -225,11 +219,10 @@ class ConversationTimelineV2MessageStore
       optimisticMessages[index] = message;
       putScope(
         identity,
-        (existingScope ?? const ConversationTimelineV2CanonicalScope())
-            .copyWith(
-              hasLatestSegment: true,
-              optimisticMessages: optimisticMessages.toList(growable: false),
-            ),
+        (existingScope ?? const ConversationTimelineCanonicalScope()).copyWith(
+          hasLatestSegment: true,
+          optimisticMessages: optimisticMessages.toList(growable: false),
+        ),
       );
       return;
     }
@@ -238,7 +231,7 @@ class ConversationTimelineV2MessageStore
 
     putScope(
       identity,
-      (existingScope ?? const ConversationTimelineV2CanonicalScope()).copyWith(
+      (existingScope ?? const ConversationTimelineCanonicalScope()).copyWith(
         hasLatestSegment: true,
         optimisticMessages: optimisticMessages.toList(growable: false),
       ),
@@ -275,7 +268,7 @@ class ConversationTimelineV2MessageStore
               })
               .toList(growable: false);
           return segmentReplaced
-              ? ConversationTimelineV2CanonicalSegment(
+              ? ConversationTimelineCanonicalSegment(
                   orderedMessages: updatedMessages,
                 )
               : segment;
@@ -309,10 +302,10 @@ class ConversationTimelineV2MessageStore
               })
               .toList(growable: false);
           if (remainingMessages.isEmpty) {
-            return const <ConversationTimelineV2CanonicalSegment>[];
+            return const <ConversationTimelineCanonicalSegment>[];
           }
-          return <ConversationTimelineV2CanonicalSegment>[
-            ConversationTimelineV2CanonicalSegment(
+          return <ConversationTimelineCanonicalSegment>[
+            ConversationTimelineCanonicalSegment(
               orderedMessages: remainingMessages,
             ),
           ];
@@ -368,14 +361,14 @@ class ConversationTimelineV2MessageStore
     return updated.toList(growable: false);
   }
 
-  List<ConversationTimelineV2CanonicalSegment> _normalizeBeforeAnchorSegments(
-    List<ConversationTimelineV2CanonicalSegment> existingSegments, {
-    required ConversationTimelineV2CanonicalSegment incoming,
+  List<ConversationTimelineCanonicalSegment> _normalizeBeforeAnchorSegments(
+    List<ConversationTimelineCanonicalSegment> existingSegments, {
+    required ConversationTimelineCanonicalSegment incoming,
     required int anchorServerMessageId,
   }) {
     final incomingStartId = incoming.firstServerMessageId;
 
-    final result = <ConversationTimelineV2CanonicalSegment>[];
+    final result = <ConversationTimelineCanonicalSegment>[];
     var emittedIncoming = false;
 
     for (final existing in existingSegments) {
@@ -413,14 +406,14 @@ class ConversationTimelineV2MessageStore
     return result;
   }
 
-  List<ConversationTimelineV2CanonicalSegment> _normalizeAfterAnchorSegments(
-    List<ConversationTimelineV2CanonicalSegment> existingSegments, {
-    required ConversationTimelineV2CanonicalSegment incoming,
+  List<ConversationTimelineCanonicalSegment> _normalizeAfterAnchorSegments(
+    List<ConversationTimelineCanonicalSegment> existingSegments, {
+    required ConversationTimelineCanonicalSegment incoming,
     required int anchorServerMessageId,
   }) {
     final incomingEndId = incoming.lastServerMessageId;
 
-    final result = <ConversationTimelineV2CanonicalSegment>[];
+    final result = <ConversationTimelineCanonicalSegment>[];
     var emittedIncoming = false;
     var pendingIncoming = incoming;
 
@@ -463,14 +456,14 @@ class ConversationTimelineV2MessageStore
     return result;
   }
 
-  List<ConversationTimelineV2CanonicalSegment> _normalizeAroundSegments(
-    List<ConversationTimelineV2CanonicalSegment> existingSegments, {
-    required ConversationTimelineV2CanonicalSegment incoming,
+  List<ConversationTimelineCanonicalSegment> _normalizeAroundSegments(
+    List<ConversationTimelineCanonicalSegment> existingSegments, {
+    required ConversationTimelineCanonicalSegment incoming,
   }) {
     final incomingStartId = incoming.firstServerMessageId;
     final incomingEndId = incoming.lastServerMessageId;
 
-    final result = <ConversationTimelineV2CanonicalSegment>[];
+    final result = <ConversationTimelineCanonicalSegment>[];
     var emittedIncoming = false;
 
     for (final existing in existingSegments) {
@@ -509,13 +502,13 @@ class ConversationTimelineV2MessageStore
     return result;
   }
 
-  List<ConversationTimelineV2CanonicalSegment> _normalizeLatestSegments(
-    List<ConversationTimelineV2CanonicalSegment> existingSegments, {
-    required ConversationTimelineV2CanonicalSegment incoming,
+  List<ConversationTimelineCanonicalSegment> _normalizeLatestSegments(
+    List<ConversationTimelineCanonicalSegment> existingSegments, {
+    required ConversationTimelineCanonicalSegment incoming,
   }) {
     final incomingStartId = incoming.firstServerMessageId;
 
-    final result = <ConversationTimelineV2CanonicalSegment>[];
+    final result = <ConversationTimelineCanonicalSegment>[];
     var insertedIncoming = false;
 
     for (final existing in existingSegments) {
@@ -543,38 +536,38 @@ class ConversationTimelineV2MessageStore
     return result;
   }
 
-  ConversationTimelineV2CanonicalSegment _concatenateSegments(
-    ConversationTimelineV2CanonicalSegment left,
-    ConversationTimelineV2CanonicalSegment? right,
+  ConversationTimelineCanonicalSegment _concatenateSegments(
+    ConversationTimelineCanonicalSegment left,
+    ConversationTimelineCanonicalSegment? right,
   ) {
     if (right == null) {
       return left;
     }
 
-    return ConversationTimelineV2CanonicalSegment(
+    return ConversationTimelineCanonicalSegment(
       orderedMessages: [...left.orderedMessages, ...right.orderedMessages],
     );
   }
 }
 
-final conversationTimelineV2MessageStoreProvider =
+final conversationTimelineMessageStoreProvider =
     NotifierProvider<
-      ConversationTimelineV2MessageStore,
-      ConversationTimelineV2MessageStoreState
-    >(ConversationTimelineV2MessageStore.new);
+      ConversationTimelineMessageStore,
+      ConversationTimelineMessageStoreState
+    >(ConversationTimelineMessageStore.new);
 
-typedef ConversationTimelineV2ActiveSegmentProviderArgs = ({
+typedef ConversationTimelineActiveSegmentProviderArgs = ({
   ConversationIdentity identity,
-  ConversationTimelineV2ActiveSegmentMode mode,
+  ConversationTimelineActiveSegmentMode mode,
 });
 
-final conversationTimelineV2ActiveSegmentProvider =
+final conversationTimelineActiveSegmentProvider =
     Provider.family<
-      ConversationTimelineV2ActiveSegment?,
-      ConversationTimelineV2ActiveSegmentProviderArgs
+      ConversationTimelineActiveSegment?,
+      ConversationTimelineActiveSegmentProviderArgs
     >((ref, args) {
       final scope = ref.watch(
-        conversationTimelineV2MessageStoreProvider.select(
+        conversationTimelineMessageStoreProvider.select(
           (state) => state[args.identity],
         ),
       );
@@ -627,9 +620,9 @@ final conversationTimelineV2ActiveSegmentProvider =
       return null;
     });
 
-ConversationTimelineV2ActiveSegment _activeSegmentForScopeSegment(
-  ConversationTimelineV2CanonicalScope scope,
-  ConversationTimelineV2CanonicalSegment selectedSegment, {
+ConversationTimelineActiveSegment _activeSegmentForScopeSegment(
+  ConversationTimelineCanonicalScope scope,
+  ConversationTimelineCanonicalSegment selectedSegment, {
   required int selectedIndex,
 }) {
   final isLatestSegment =

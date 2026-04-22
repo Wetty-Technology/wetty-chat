@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:chahua/features/conversation/shared/data/conversation_canonical_message_store.dart';
-import 'package:chahua/features/conversation/timeline/presentation/conversation_timeline_v2_state.dart';
 import 'package:chahua/features/conversation/timeline/presentation/timeline_viewport_facts.dart';
 import 'package:chahua/features/conversation/shared/data/conversation_timeline_v2_repository.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_timeline_v2_active_segment.dart';
@@ -10,7 +9,11 @@ import 'package:chahua/features/conversation/shared/domain/conversation_message_
 import 'package:chahua/features/conversation/shared/domain/launch_request.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 
+part 'conversation_timeline_view_model.freezed.dart';
+
+// ============ Private Types ============
 @immutable
 class _TimelineRenderSplitPolicy {
   const _TimelineRenderSplitPolicy.none()
@@ -28,8 +31,47 @@ class _TimelineRenderSplitPolicy {
   final bool includeAnchorInAfter;
 }
 
-class ConversationTimelineV2ViewModel
-    extends Notifier<ConversationTimelineV2State> {
+// ============ Public Types ============
+
+enum ConversationTimelineViewportCommandKind {
+  none,
+  resetToCenterOrigin,
+  scrollToBottom,
+}
+
+enum ConversationTimelineViewportPlacement { bottomPreferred, topPreferred }
+
+typedef ConversationTimelineViewportCommand = ({
+  ConversationTimelineViewportCommandKind kind,
+  ConversationTimelineViewportPlacement placement,
+});
+
+@freezed
+abstract class ConversationTimelineState with _$ConversationTimelineState {
+  const factory ConversationTimelineState({
+    @Default(<ConversationMessageV2>[])
+    List<ConversationMessageV2> beforeMessages,
+    @Default(<ConversationMessageV2>[])
+    List<ConversationMessageV2> afterMessages,
+    @Default(false) bool canLoadOlder,
+    @Default(false) bool canLoadNewer,
+    @Default(false) bool isLoadingOlder,
+    @Default(false) bool isLoadingNewer,
+    @Default(false) bool isResolvingJump,
+    String? highlightedStableKey,
+    @Default((
+      kind: ConversationTimelineViewportCommandKind.none,
+      placement: ConversationTimelineViewportPlacement.bottomPreferred,
+    ))
+    ConversationTimelineViewportCommand viewportCommand,
+    @Default(0) int viewportCommandGeneration,
+    @Default(true) bool isBootstrapping,
+  }) = _ConversationTimelineState;
+}
+
+// ============ View Model ============
+class ConversationTimelineViewModel
+    extends Notifier<ConversationTimelineState> {
   // Mostly temproary, we will remove these later
   static const int _initialLoadedWindowSize = 50;
 
@@ -42,7 +84,7 @@ class ConversationTimelineV2ViewModel
   LaunchRequest? _initialLaunchRequest;
 
   /// Active segment containing the messages and some metadata
-  ConversationTimelineV2ActiveSegment? _activeSegment;
+  ConversationTimelineActiveSegment? _activeSegment;
 
   bool _bootstrapStarted = false;
   int? _highlightedServerMessageId;
@@ -53,24 +95,24 @@ class ConversationTimelineV2ViewModel
 
   /// Generation of the viewport command, incremented on each issuance
   int _viewportCommandGeneration = 0;
-  ConversationTimelineV2ViewportCommand? _pendingViewportCommand;
-  ConversationTimelineV2ViewportCommand _lastViewportCommand = const (
-    kind: ConversationTimelineV2ViewportCommandKind.none,
-    placement: ConversationTimelineV2ViewportPlacement.bottomPreferred,
+  ConversationTimelineViewportCommand? _pendingViewportCommand;
+  ConversationTimelineViewportCommand _lastViewportCommand = const (
+    kind: ConversationTimelineViewportCommandKind.none,
+    placement: ConversationTimelineViewportPlacement.bottomPreferred,
   );
 
   /// Make sure to use `_setActiveSegmentMode` instead of assigning directly
   /// to avoid forgetting `ref.invalidateSelf()`.
-  ConversationTimelineV2ActiveSegmentMode _activeSegmentMode =
-      const ConversationTimelineV2ActiveSegmentMode.latest();
+  ConversationTimelineActiveSegmentMode _activeSegmentMode =
+      const ConversationTimelineActiveSegmentMode.latest();
 
-  ConversationTimelineV2ViewModel(this.identity);
+  ConversationTimelineViewModel(this.identity);
 
   @override
-  ConversationTimelineV2State build() {
+  ConversationTimelineState build() {
     _repository = ref.read(conversationTimelineV2RepositoryProvider(identity));
     _activeSegment = ref.watch(
-      conversationTimelineV2ActiveSegmentProvider((
+      conversationTimelineActiveSegmentProvider((
         identity: identity,
         mode: _activeSegmentMode,
       )),
@@ -144,12 +186,10 @@ class ConversationTimelineV2ViewModel
     unawaited(
       _repository.refreshLatestSegment(limit: _initialLoadedWindowSize),
     );
-    _setActiveSegmentMode(
-      const ConversationTimelineV2ActiveSegmentMode.latest(),
-    );
+    _setActiveSegmentMode(const ConversationTimelineActiveSegmentMode.latest());
     _issueViewportCommand(
-      kind: ConversationTimelineV2ViewportCommandKind.resetToCenterOrigin,
-      placement: ConversationTimelineV2ViewportPlacement.bottomPreferred,
+      kind: ConversationTimelineViewportCommandKind.resetToCenterOrigin,
+      placement: ConversationTimelineViewportPlacement.bottomPreferred,
     );
     _highlightedServerMessageId = null;
     _renderSplitPolicy = const _TimelineRenderSplitPolicy.none();
@@ -179,17 +219,15 @@ class ConversationTimelineV2ViewModel
       ),
     );
 
-    final aroundMode = ConversationTimelineV2ActiveSegmentMode.around(
-      messageId,
-    );
+    final aroundMode = ConversationTimelineActiveSegmentMode.around(messageId);
     _setActiveSegmentMode(aroundMode);
     _highlightedServerMessageId = highlight ? messageId : null;
     _renderSplitPolicy = _TimelineRenderSplitPolicy.fromMessageInclusive(
       messageId,
     );
     _issueViewportCommand(
-      kind: ConversationTimelineV2ViewportCommandKind.resetToCenterOrigin,
-      placement: ConversationTimelineV2ViewportPlacement.topPreferred,
+      kind: ConversationTimelineViewportCommandKind.resetToCenterOrigin,
+      placement: ConversationTimelineViewportPlacement.topPreferred,
     );
   }
 
@@ -262,8 +300,8 @@ class ConversationTimelineV2ViewModel
     }
   }
 
-  ConversationTimelineV2State _stateFromActiveSegment(
-    ConversationTimelineV2ActiveSegment segment, {
+  ConversationTimelineState _stateFromActiveSegment(
+    ConversationTimelineActiveSegment segment, {
     bool? isLoadingOlder,
     bool? isLoadingNewer,
   }) {
@@ -300,8 +338,8 @@ class ConversationTimelineV2ViewModel
         currentTailStableKey != null &&
         currentTailStableKey != _lastRenderedTailStableKey) {
       _issueViewportCommand(
-        kind: ConversationTimelineV2ViewportCommandKind.scrollToBottom,
-        placement: ConversationTimelineV2ViewportPlacement.bottomPreferred,
+        kind: ConversationTimelineViewportCommandKind.scrollToBottom,
+        placement: ConversationTimelineViewportPlacement.bottomPreferred,
       );
     }
     final viewportCommand = _takePendingViewportCommand(
@@ -309,7 +347,7 @@ class ConversationTimelineV2ViewModel
     );
     _lastRenderedTailStableKey = currentTailStableKey;
 
-    return ConversationTimelineV2State(
+    return ConversationTimelineState(
       beforeMessages: beforeMessages,
       afterMessages: afterMessages,
       canLoadOlder: segment.canLoadBefore,
@@ -325,7 +363,7 @@ class ConversationTimelineV2ViewModel
     );
   }
 
-  ({ConversationTimelineV2ViewportCommand command, int generation})?
+  ({ConversationTimelineViewportCommand command, int generation})?
   _takePendingViewportCommand({required bool hasMessages}) {
     // We can execute a pending viewport command if we have messages.
     if ((_pendingViewportCommand != null) && hasMessages) {
@@ -356,16 +394,16 @@ class ConversationTimelineV2ViewModel
     return null;
   }
 
-  ConversationTimelineV2ViewportCommand _viewportCommand({
-    required ConversationTimelineV2ViewportCommandKind kind,
-    required ConversationTimelineV2ViewportPlacement placement,
+  ConversationTimelineViewportCommand _viewportCommand({
+    required ConversationTimelineViewportCommandKind kind,
+    required ConversationTimelineViewportPlacement placement,
   }) {
     return (kind: kind, placement: placement);
   }
 
   void _issueViewportCommand({
-    required ConversationTimelineV2ViewportCommandKind kind,
-    required ConversationTimelineV2ViewportPlacement placement,
+    required ConversationTimelineViewportCommandKind kind,
+    required ConversationTimelineViewportPlacement placement,
   }) {
     final command = _viewportCommand(kind: kind, placement: placement);
     _pendingViewportCommand = command;
@@ -373,11 +411,11 @@ class ConversationTimelineV2ViewModel
     ++_viewportCommandGeneration;
   }
 
-  ConversationTimelineV2State _loadingState({bool isBootstrapping = true}) {
-    return ConversationTimelineV2State(
+  ConversationTimelineState _loadingState({bool isBootstrapping = true}) {
+    return ConversationTimelineState(
       viewportCommand: _viewportCommand(
-        kind: ConversationTimelineV2ViewportCommandKind.none,
-        placement: ConversationTimelineV2ViewportPlacement.bottomPreferred,
+        kind: ConversationTimelineViewportCommandKind.none,
+        placement: ConversationTimelineViewportPlacement.bottomPreferred,
       ),
       viewportCommandGeneration: _viewportCommandGeneration,
       isBootstrapping: isBootstrapping,
@@ -388,13 +426,13 @@ class ConversationTimelineV2ViewModel
   /// build() re-subscribes to the matching active-segment provider. Command
   /// paths should always use this helper instead of assigning `_activeSegmentMode`
   /// directly, to avoid forgetting `ref.invalidateSelf()`.
-  void _setActiveSegmentMode(ConversationTimelineV2ActiveSegmentMode mode) {
+  void _setActiveSegmentMode(ConversationTimelineActiveSegmentMode mode) {
     _activeSegmentMode = mode;
     ref.invalidateSelf();
   }
 
   void _captureLatestTailSplitIfNeeded(
-    ConversationTimelineV2ActiveSegment segment,
+    ConversationTimelineActiveSegment segment,
   ) {
     if (!_activeSegmentMode.isLatest ||
         _renderSplitPolicy.anchorServerMessageId != null) {
@@ -454,9 +492,9 @@ class ConversationTimelineV2ViewModel
   }
 }
 
-final conversationTimelineV2ViewModelProvider =
+final conversationTimelineViewModelProvider =
     NotifierProvider.family<
-      ConversationTimelineV2ViewModel,
-      ConversationTimelineV2State,
+      ConversationTimelineViewModel,
+      ConversationTimelineState,
       ConversationIdentity
-    >(ConversationTimelineV2ViewModel.new, isAutoDispose: true);
+    >(ConversationTimelineViewModel.new, isAutoDispose: true);

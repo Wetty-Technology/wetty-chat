@@ -2,12 +2,12 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:chahua/app/theme/style_config.dart';
-import 'package:chahua/features/conversation/timeline/presentation/conversation_timeline_v2_view_model.dart';
+import 'package:chahua/features/conversation/timeline/presentation/conversation_timeline_view_model.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:chahua/features/conversation/shared/domain/launch_request.dart';
 import 'package:chahua/features/conversation/compose/presentation/conversation_compose_v2.dart';
-import 'package:chahua/features/conversation/timeline/presentation/conversation_timeline_v2.dart';
+import 'package:chahua/features/conversation/timeline/presentation/conversation_timeline_view.dart';
 
 class ConversationSurfaceV2 extends ConsumerStatefulWidget {
   const ConversationSurfaceV2({
@@ -32,7 +32,7 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
 
   Future<void> _handleMessageSent() async {
     ref
-        .read(conversationTimelineV2ViewModelProvider(widget.identity).notifier)
+        .read(conversationTimelineViewModelProvider(widget.identity).notifier)
         .followLatestTailIfNeeded();
   }
 
@@ -51,7 +51,7 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
           Expanded(
             child: Container(
               color: colors.chatBackground,
-              child: ConversationTimelineV2(
+              child: ConversationTimelineView(
                 chatId: widget.identity.chatId,
                 threadRootId: widget.identity.threadRootId,
                 launchRequest: widget.launchRequest,

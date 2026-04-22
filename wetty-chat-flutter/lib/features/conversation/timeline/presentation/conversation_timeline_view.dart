@@ -2,8 +2,7 @@ import 'dart:async';
 import 'dart:developer';
 
 import 'package:chahua/features/conversation/compose/presentation/conversation_composer_view_model.dart';
-import 'package:chahua/features/conversation/timeline/presentation/conversation_timeline_v2_state.dart';
-import 'package:chahua/features/conversation/timeline/presentation/conversation_timeline_v2_view_model.dart';
+import 'package:chahua/features/conversation/timeline/presentation/conversation_timeline_view_model.dart';
 import 'package:chahua/features/conversation/timeline/presentation/timeline_viewport_facts.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
@@ -33,8 +32,8 @@ double resolveTopPreferredAnchorAlignment({
   return 1.0 - visibleFractionBelowAnchor;
 }
 
-class ConversationTimelineV2 extends ConsumerStatefulWidget {
-  const ConversationTimelineV2({
+class ConversationTimelineView extends ConsumerStatefulWidget {
+  const ConversationTimelineView({
     super.key,
     required this.chatId,
     required this.launchRequest,
@@ -48,12 +47,12 @@ class ConversationTimelineV2 extends ConsumerStatefulWidget {
   final void Function(ConversationMessageV2 message)? onOpenThread;
 
   @override
-  ConsumerState<ConversationTimelineV2> createState() =>
-      _ConversationTimelineV2State();
+  ConsumerState<ConversationTimelineView> createState() =>
+      _ConversationTimelineViewState();
 }
 
-class _ConversationTimelineV2State
-    extends ConsumerState<ConversationTimelineV2> {
+class _ConversationTimelineViewState
+    extends ConsumerState<ConversationTimelineView> {
   static const double _edgeThreshold = 80;
   static const double _jumpToLatestInset = 16;
   static const List<String> _quickReactionEmojis = <String>[
@@ -129,7 +128,7 @@ class _ConversationTimelineV2State
   }
 
   @override
-  void didUpdateWidget(covariant ConversationTimelineV2 oldWidget) {
+  void didUpdateWidget(covariant ConversationTimelineView oldWidget) {
     super.didUpdateWidget(oldWidget);
     debugPrint('didUpdateWidget: ConversationTimelinV2');
     if (oldWidget.chatId != widget.chatId ||
@@ -149,7 +148,7 @@ class _ConversationTimelineV2State
       }
 
       ref
-          .read(conversationTimelineV2ViewModelProvider(_identity).notifier)
+          .read(conversationTimelineViewModelProvider(_identity).notifier)
           .initialize(widget.launchRequest);
     });
   }
@@ -167,7 +166,7 @@ class _ConversationTimelineV2State
           (position.maxScrollExtent - position.pixels) <= _edgeThreshold,
     );
     final viewState = ref.read(
-      conversationTimelineV2ViewModelProvider(_identity),
+      conversationTimelineViewModelProvider(_identity),
     );
     final nextIsAtLiveEdge = facts.isNearBottom && !viewState.canLoadNewer;
     if (nextIsAtLiveEdge != _isAtLiveEdge) {
@@ -176,12 +175,12 @@ class _ConversationTimelineV2State
       });
     }
     ref
-        .read(conversationTimelineV2ViewModelProvider(_identity).notifier)
+        .read(conversationTimelineViewModelProvider(_identity).notifier)
         .onViewportChanged(facts);
   }
 
   /// This method is meant to be called by the build method synchronously,
-  void _consumeViewportCommand(ConversationTimelineV2State state) {
+  void _consumeViewportCommand(ConversationTimelineState state) {
     final generation = state.viewportCommandGeneration;
     if (generation <= _lastHandledViewportCommandGeneration) {
       return;
@@ -196,18 +195,18 @@ class _ConversationTimelineV2State
     // If we are here, we have a new viewport command to execute.
 
     switch (state.viewportCommand.kind) {
-      case ConversationTimelineV2ViewportCommandKind.none:
+      case ConversationTimelineViewportCommandKind.none:
         // Nothing to do
         break;
-      case ConversationTimelineV2ViewportCommandKind.resetToCenterOrigin:
+      case ConversationTimelineViewportCommandKind.resetToCenterOrigin:
         // There are two cases for this, for now we are not caring, just forcing a new scrollable.
         _scrollViewKey = UniqueKey();
         if (state.viewportCommand.placement ==
-            ConversationTimelineV2ViewportPlacement.topPreferred) {
+            ConversationTimelineViewportPlacement.topPreferred) {
           _scheduleTopPreferredMeasurement();
         }
         break;
-      case ConversationTimelineV2ViewportCommandKind.scrollToBottom:
+      case ConversationTimelineViewportCommandKind.scrollToBottom:
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _scrollToBottom();
         });
@@ -305,7 +304,7 @@ class _ConversationTimelineV2State
   ) async {
     try {
       await ref
-          .read(conversationTimelineV2ViewModelProvider(_identity).notifier)
+          .read(conversationTimelineViewModelProvider(_identity).notifier)
           .toggleReaction(message, emoji);
     } catch (error) {
       if (!mounted) {
@@ -318,7 +317,7 @@ class _ConversationTimelineV2State
   Future<void> _deleteMessage(ConversationMessageV2 message) async {
     try {
       await ref
-          .read(conversationTimelineV2ViewModelProvider(_identity).notifier)
+          .read(conversationTimelineViewModelProvider(_identity).notifier)
           .deleteMessage(message);
     } catch (error) {
       if (!mounted) {
@@ -377,7 +376,7 @@ class _ConversationTimelineV2State
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(conversationTimelineV2ViewModelProvider(_identity));
+    final state = ref.watch(conversationTimelineViewModelProvider(_identity));
     final settings = ref.watch(appSettingsProvider);
 
     if (state.isBootstrapping) {
@@ -394,11 +393,11 @@ class _ConversationTimelineV2State
     }
 
     final centerViewportFraction =
-        placement == ConversationTimelineV2ViewportPlacement.bottomPreferred
+        placement == ConversationTimelineViewportPlacement.bottomPreferred
         ? 1.0
         : (_isTopPreferredAnchorResolved ? _topPreferredAnchorAlignment : 0.0);
     final shouldHideUntilMeasured =
-        placement == ConversationTimelineV2ViewportPlacement.topPreferred &&
+        placement == ConversationTimelineViewportPlacement.topPreferred &&
         !_isTopPreferredAnchorResolved;
 
     final beforeMessages = state.beforeMessages.reversed.toList(
@@ -465,7 +464,7 @@ class _ConversationTimelineV2State
               pendingLiveCount: 0,
               onPressed: () => ref
                   .read(
-                    conversationTimelineV2ViewModelProvider(_identity).notifier,
+                    conversationTimelineViewModelProvider(_identity).notifier,
                   )
                   .jumpToLatest(),
             ),
@@ -493,7 +492,7 @@ class _ConversationTimelineV2State
     String? highlightedStableKey,
   }) {
     final vmNotifier = ref.read(
-      conversationTimelineV2ViewModelProvider(_identity).notifier,
+      conversationTimelineViewModelProvider(_identity).notifier,
     );
     return SliverList.builder(
       key: key,

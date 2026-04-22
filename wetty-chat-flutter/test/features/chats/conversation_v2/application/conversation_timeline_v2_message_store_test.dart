@@ -15,7 +15,7 @@ void main() {
       // Tests the invariant that canonical cache segments must contain at least
       // one message so the store never has to reason about empty ranges.
       expect(
-        () => ConversationTimelineV2CanonicalSegment(orderedMessages: const []),
+        () => ConversationTimelineCanonicalSegment(orderedMessages: const []),
         throwsA(isA<AssertionError>()),
       );
     });
@@ -24,7 +24,7 @@ void main() {
       // Tests the invariant that canonical cached segments are always ordered by
       // server id, so every message in the segment must have one.
       expect(
-        () => ConversationTimelineV2CanonicalSegment(
+        () => ConversationTimelineCanonicalSegment(
           orderedMessages: [_message(null)],
         ),
         throwsA(isA<AssertionError>()),
@@ -40,13 +40,13 @@ void main() {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final store = container.read(
-          conversationTimelineV2MessageStoreProvider.notifier,
+          conversationTimelineMessageStoreProvider.notifier,
         );
 
         store.insertBeforeAnchor(_identity, 5, _segment(3, 4));
 
         final segments = container
-            .read(conversationTimelineV2MessageStoreProvider)[_identity]!
+            .read(conversationTimelineMessageStoreProvider)[_identity]!
             .segments;
         expect(_segmentIds(segments), [
           [3, 4],
@@ -60,7 +60,7 @@ void main() {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final store = container.read(
-          conversationTimelineV2MessageStoreProvider.notifier,
+          conversationTimelineMessageStoreProvider.notifier,
         );
 
         store.putScope(_identity, _scope([_segment(1, 5)]));
@@ -68,7 +68,7 @@ void main() {
         store.insertBeforeAnchor(_identity, 5, _segment(3, 4));
 
         final segments = container
-            .read(conversationTimelineV2MessageStoreProvider)[_identity]!
+            .read(conversationTimelineMessageStoreProvider)[_identity]!
             .segments;
         expect(_segmentIds(segments), [
           [1, 2],
@@ -82,7 +82,7 @@ void main() {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final store = container.read(
-          conversationTimelineV2MessageStoreProvider.notifier,
+          conversationTimelineMessageStoreProvider.notifier,
         );
 
         store.putScope(_identity, _scope([_segment(1, 2), _segment(5, 10)]));
@@ -90,7 +90,7 @@ void main() {
         store.insertBeforeAnchor(_identity, 8, _segment(6, 7));
 
         final segments = container
-            .read(conversationTimelineV2MessageStoreProvider)[_identity]!
+            .read(conversationTimelineMessageStoreProvider)[_identity]!
             .segments;
         expect(_segmentIds(segments), [
           [1, 2],
@@ -105,7 +105,7 @@ void main() {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final store = container.read(
-          conversationTimelineV2MessageStoreProvider.notifier,
+          conversationTimelineMessageStoreProvider.notifier,
         );
 
         store.putScope(_identity, _scope([_segment(1, 2), _segment(5, 6)]));
@@ -113,7 +113,7 @@ void main() {
         store.insertBeforeAnchor(_identity, 6, _segment(3, 4));
 
         final segments = container
-            .read(conversationTimelineV2MessageStoreProvider)[_identity]!
+            .read(conversationTimelineMessageStoreProvider)[_identity]!
             .segments;
         expect(_segmentIds(segments), [
           [1, 2],
@@ -127,7 +127,7 @@ void main() {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final store = container.read(
-          conversationTimelineV2MessageStoreProvider.notifier,
+          conversationTimelineMessageStoreProvider.notifier,
         );
 
         store.putScope(_identity, _scope([_segment(1, 2), _segment(5, 6)]));
@@ -135,7 +135,7 @@ void main() {
         store.insertBeforeAnchor(_identity, 5, _segment(3, 4));
 
         final segments = container
-            .read(conversationTimelineV2MessageStoreProvider)[_identity]!
+            .read(conversationTimelineMessageStoreProvider)[_identity]!
             .segments;
         expect(_segmentIds(segments), [
           [1, 2],
@@ -151,7 +151,7 @@ void main() {
           final container = ProviderContainer();
           addTearDown(container.dispose);
           final store = container.read(
-            conversationTimelineV2MessageStoreProvider.notifier,
+            conversationTimelineMessageStoreProvider.notifier,
           );
 
           store.putScope(_identity, _scope([_segment(7, 8)]));
@@ -159,7 +159,7 @@ void main() {
           store.insertBeforeAnchor(_identity, 7, _segment(1, 4));
 
           final segments = container
-              .read(conversationTimelineV2MessageStoreProvider)[_identity]!
+              .read(conversationTimelineMessageStoreProvider)[_identity]!
               .segments;
           expect(_segmentIds(segments), [
             [1, 2, 3, 4, 7, 8],
@@ -174,7 +174,7 @@ void main() {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final store = container.read(
-          conversationTimelineV2MessageStoreProvider.notifier,
+          conversationTimelineMessageStoreProvider.notifier,
         );
 
         store.putScope(_identity, _scope([_segment(1, 3), _segment(4, 6)]));
@@ -182,7 +182,7 @@ void main() {
         store.insertBeforeAnchor(_identity, 5, _segment(3, 4));
 
         final segments = container
-            .read(conversationTimelineV2MessageStoreProvider)[_identity]!
+            .read(conversationTimelineMessageStoreProvider)[_identity]!
             .segments;
         expect(_segmentIds(segments), [
           [1, 2],
@@ -193,7 +193,7 @@ void main() {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final store = container.read(
-          conversationTimelineV2MessageStoreProvider.notifier,
+          conversationTimelineMessageStoreProvider.notifier,
         );
 
         store.putScope(
@@ -204,7 +204,7 @@ void main() {
         store.insertBeforeAnchor(_identity, 8, _segment(2, 7));
 
         final segments = container
-            .read(conversationTimelineV2MessageStoreProvider)[_identity]!
+            .read(conversationTimelineMessageStoreProvider)[_identity]!
             .segments;
         expect(_segmentIds(segments), [
           [1],
@@ -220,13 +220,13 @@ void main() {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final store = container.read(
-          conversationTimelineV2MessageStoreProvider.notifier,
+          conversationTimelineMessageStoreProvider.notifier,
         );
 
         store.insertAfterAnchor(_identity, 2, _segment(3, 4));
 
         final segments = container
-            .read(conversationTimelineV2MessageStoreProvider)[_identity]!
+            .read(conversationTimelineMessageStoreProvider)[_identity]!
             .segments;
         expect(_segmentIds(segments), [
           [3, 4],
@@ -240,7 +240,7 @@ void main() {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final store = container.read(
-          conversationTimelineV2MessageStoreProvider.notifier,
+          conversationTimelineMessageStoreProvider.notifier,
         );
 
         store.putScope(_identity, _scope([_segment(1, 5)]));
@@ -248,7 +248,7 @@ void main() {
         store.insertAfterAnchor(_identity, 2, _segment(3, 4));
 
         final segments = container
-            .read(conversationTimelineV2MessageStoreProvider)[_identity]!
+            .read(conversationTimelineMessageStoreProvider)[_identity]!
             .segments;
         expect(_segmentIds(segments), [
           [1, 2, 3, 4],
@@ -262,7 +262,7 @@ void main() {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final store = container.read(
-          conversationTimelineV2MessageStoreProvider.notifier,
+          conversationTimelineMessageStoreProvider.notifier,
         );
 
         store.putScope(_identity, _scope([_segment(1, 6), _segment(9, 10)]));
@@ -270,7 +270,7 @@ void main() {
         store.insertAfterAnchor(_identity, 3, _segment(4, 5));
 
         final segments = container
-            .read(conversationTimelineV2MessageStoreProvider)[_identity]!
+            .read(conversationTimelineMessageStoreProvider)[_identity]!
             .segments;
         expect(_segmentIds(segments), [
           [1, 2, 3, 4, 5],
@@ -286,7 +286,7 @@ void main() {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final store = container.read(
-          conversationTimelineV2MessageStoreProvider.notifier,
+          conversationTimelineMessageStoreProvider.notifier,
         );
 
         store.putScope(_identity, _scope([_segment(1, 2), _segment(5, 6)]));
@@ -294,7 +294,7 @@ void main() {
         store.insertAfterAnchor(_identity, 1, _segment(3, 4));
 
         final segments = container
-            .read(conversationTimelineV2MessageStoreProvider)[_identity]!
+            .read(conversationTimelineMessageStoreProvider)[_identity]!
             .segments;
         expect(_segmentIds(segments), [
           [1, 3, 4],
@@ -311,7 +311,7 @@ void main() {
           final container = ProviderContainer();
           addTearDown(container.dispose);
           final store = container.read(
-            conversationTimelineV2MessageStoreProvider.notifier,
+            conversationTimelineMessageStoreProvider.notifier,
           );
 
           store.putScope(_identity, _scope([_segment(1, 2), _segment(5, 6)]));
@@ -319,7 +319,7 @@ void main() {
           store.insertAfterAnchor(_identity, 2, _segment(3, 4));
 
           final segments = container
-              .read(conversationTimelineV2MessageStoreProvider)[_identity]!
+              .read(conversationTimelineMessageStoreProvider)[_identity]!
               .segments;
           expect(_segmentIds(segments), [
             [1, 2, 3, 4],
@@ -337,7 +337,7 @@ void main() {
           final container = ProviderContainer();
           addTearDown(container.dispose);
           final store = container.read(
-            conversationTimelineV2MessageStoreProvider.notifier,
+            conversationTimelineMessageStoreProvider.notifier,
           );
 
           store.putScope(_identity, _scope([_segment(1, 2)]));
@@ -345,7 +345,7 @@ void main() {
           store.insertAfterAnchor(_identity, 2, _segment(3, 4));
 
           final segments = container
-              .read(conversationTimelineV2MessageStoreProvider)[_identity]!
+              .read(conversationTimelineMessageStoreProvider)[_identity]!
               .segments;
           expect(_segmentIds(segments), [
             [1, 2, 3, 4],
@@ -361,7 +361,7 @@ void main() {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final store = container.read(
-          conversationTimelineV2MessageStoreProvider.notifier,
+          conversationTimelineMessageStoreProvider.notifier,
         );
 
         store.putScope(_identity, _scope([_segment(1, 3), _segment(4, 6)]));
@@ -369,7 +369,7 @@ void main() {
         store.insertAfterAnchor(_identity, 2, _segment(3, 4));
 
         final segments = container
-            .read(conversationTimelineV2MessageStoreProvider)[_identity]!
+            .read(conversationTimelineMessageStoreProvider)[_identity]!
             .segments;
         expect(_segmentIds(segments), [
           [1, 2, 3, 4],
@@ -385,13 +385,13 @@ void main() {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final store = container.read(
-          conversationTimelineV2MessageStoreProvider.notifier,
+          conversationTimelineMessageStoreProvider.notifier,
         );
 
         store.insertAround(_identity, _segment(3, 4));
 
         final segments = container
-            .read(conversationTimelineV2MessageStoreProvider)[_identity]!
+            .read(conversationTimelineMessageStoreProvider)[_identity]!
             .segments;
         expect(_segmentIds(segments), [
           [3, 4],
@@ -405,7 +405,7 @@ void main() {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final store = container.read(
-          conversationTimelineV2MessageStoreProvider.notifier,
+          conversationTimelineMessageStoreProvider.notifier,
         );
 
         store.putScope(_identity, _scope([_segment(1, 5)]));
@@ -413,7 +413,7 @@ void main() {
         store.insertAround(_identity, _segment(3, 4));
 
         final segments = container
-            .read(conversationTimelineV2MessageStoreProvider)[_identity]!
+            .read(conversationTimelineMessageStoreProvider)[_identity]!
             .segments;
         expect(_segmentIds(segments), [
           [1, 2],
@@ -430,7 +430,7 @@ void main() {
           final container = ProviderContainer();
           addTearDown(container.dispose);
           final store = container.read(
-            conversationTimelineV2MessageStoreProvider.notifier,
+            conversationTimelineMessageStoreProvider.notifier,
           );
 
           store.putScope(_identity, _scope([_segment(1, 2), _segment(5, 6)]));
@@ -438,7 +438,7 @@ void main() {
           store.insertAround(_identity, _segment(3, 4));
 
           final segments = container
-              .read(conversationTimelineV2MessageStoreProvider)[_identity]!
+              .read(conversationTimelineMessageStoreProvider)[_identity]!
               .segments;
           expect(_segmentIds(segments), [
             [1, 2],
@@ -454,7 +454,7 @@ void main() {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final store = container.read(
-          conversationTimelineV2MessageStoreProvider.notifier,
+          conversationTimelineMessageStoreProvider.notifier,
         );
 
         store.putScope(_identity, _scope([_segment(1, 2), _segment(7, 8)]));
@@ -462,7 +462,7 @@ void main() {
         store.insertAround(_identity, _segment(4, 5));
 
         final segments = container
-            .read(conversationTimelineV2MessageStoreProvider)[_identity]!
+            .read(conversationTimelineMessageStoreProvider)[_identity]!
             .segments;
         expect(_segmentIds(segments), [
           [1, 2],
@@ -478,7 +478,7 @@ void main() {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final store = container.read(
-          conversationTimelineV2MessageStoreProvider.notifier,
+          conversationTimelineMessageStoreProvider.notifier,
         );
 
         store.putScope(_identity, _scope([_segment(1, 3), _segment(4, 6)]));
@@ -486,7 +486,7 @@ void main() {
         store.insertAround(_identity, _segment(3, 4));
 
         final segments = container
-            .read(conversationTimelineV2MessageStoreProvider)[_identity]!
+            .read(conversationTimelineMessageStoreProvider)[_identity]!
             .segments;
         expect(_segmentIds(segments), [
           [1, 2],
@@ -502,7 +502,7 @@ void main() {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final store = container.read(
-          conversationTimelineV2MessageStoreProvider.notifier,
+          conversationTimelineMessageStoreProvider.notifier,
         );
 
         store.putScope(_identity, _scope([_segment(1, 3), _segment(4, 6)]));
@@ -510,7 +510,7 @@ void main() {
         store.insertAround(_identity, _segment(1, 10));
 
         final segments = container
-            .read(conversationTimelineV2MessageStoreProvider)[_identity]!
+            .read(conversationTimelineMessageStoreProvider)[_identity]!
             .segments;
         expect(_segmentIds(segments), [
           [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
@@ -525,13 +525,13 @@ void main() {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final store = container.read(
-          conversationTimelineV2MessageStoreProvider.notifier,
+          conversationTimelineMessageStoreProvider.notifier,
         );
 
         store.insertLatest(_identity, _segment(3, 4));
 
         final scope = container.read(
-          conversationTimelineV2MessageStoreProvider,
+          conversationTimelineMessageStoreProvider,
         )[_identity]!;
         expect(_segmentIds(scope.segments), [
           [3, 4],
@@ -545,7 +545,7 @@ void main() {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final store = container.read(
-          conversationTimelineV2MessageStoreProvider.notifier,
+          conversationTimelineMessageStoreProvider.notifier,
         );
 
         store.putScope(_identity, _scope([_segment(1, 5)]));
@@ -553,7 +553,7 @@ void main() {
         store.insertLatest(_identity, _segment(3, 4));
 
         final scope = container.read(
-          conversationTimelineV2MessageStoreProvider,
+          conversationTimelineMessageStoreProvider,
         )[_identity]!;
         expect(_segmentIds(scope.segments), [
           [1, 2],
@@ -568,7 +568,7 @@ void main() {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final store = container.read(
-          conversationTimelineV2MessageStoreProvider.notifier,
+          conversationTimelineMessageStoreProvider.notifier,
         );
 
         store.putScope(_identity, _scope([_segment(1, 5)]));
@@ -576,7 +576,7 @@ void main() {
         store.insertLatest(_identity, _segment(7, 10));
 
         final scope = container.read(
-          conversationTimelineV2MessageStoreProvider,
+          conversationTimelineMessageStoreProvider,
         )[_identity]!;
         expect(_segmentIds(scope.segments), [
           [1, 2, 3, 4, 5],
@@ -593,7 +593,7 @@ void main() {
           final container = ProviderContainer();
           addTearDown(container.dispose);
           final store = container.read(
-            conversationTimelineV2MessageStoreProvider.notifier,
+            conversationTimelineMessageStoreProvider.notifier,
           );
 
           store.putScope(_identity, _scope([_segment(1, 2), _segment(5, 6)]));
@@ -601,7 +601,7 @@ void main() {
           store.insertLatest(_identity, _segment(3, 4));
 
           final scope = container.read(
-            conversationTimelineV2MessageStoreProvider,
+            conversationTimelineMessageStoreProvider,
           )[_identity]!;
           expect(_segmentIds(scope.segments), [
             [1, 2],
@@ -617,7 +617,7 @@ void main() {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final store = container.read(
-          conversationTimelineV2MessageStoreProvider.notifier,
+          conversationTimelineMessageStoreProvider.notifier,
         );
 
         store.putScope(_identity, _scope([_segment(1, 2), _segment(7, 8)]));
@@ -625,7 +625,7 @@ void main() {
         store.insertLatest(_identity, _segment(4, 5));
 
         final scope = container.read(
-          conversationTimelineV2MessageStoreProvider,
+          conversationTimelineMessageStoreProvider,
         )[_identity]!;
         expect(_segmentIds(scope.segments), [
           [1, 2],
@@ -640,7 +640,7 @@ void main() {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final store = container.read(
-          conversationTimelineV2MessageStoreProvider.notifier,
+          conversationTimelineMessageStoreProvider.notifier,
         );
 
         store.putScope(_identity, _scope([_segment(1, 3), _segment(4, 6)]));
@@ -648,7 +648,7 @@ void main() {
         store.insertLatest(_identity, _segment(3, 4));
 
         final scope = container.read(
-          conversationTimelineV2MessageStoreProvider,
+          conversationTimelineMessageStoreProvider,
         )[_identity]!;
         expect(_segmentIds(scope.segments), [
           [1, 2],
@@ -663,7 +663,7 @@ void main() {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final store = container.read(
-          conversationTimelineV2MessageStoreProvider.notifier,
+          conversationTimelineMessageStoreProvider.notifier,
         );
 
         store.putScope(_identity, _scope([_segment(1, 3), _segment(4, 6)]));
@@ -671,7 +671,7 @@ void main() {
         store.insertLatest(_identity, _segment(1, 10));
 
         final scope = container.read(
-          conversationTimelineV2MessageStoreProvider,
+          conversationTimelineMessageStoreProvider,
         )[_identity]!;
         expect(_segmentIds(scope.segments), [
           [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
@@ -689,13 +689,13 @@ void main() {
           final container = ProviderContainer();
           addTearDown(container.dispose);
           final store = container.read(
-            conversationTimelineV2MessageStoreProvider.notifier,
+            conversationTimelineMessageStoreProvider.notifier,
           );
 
           store.newMessage(_identity, _message(7));
 
           final scope = container.read(
-            conversationTimelineV2MessageStoreProvider,
+            conversationTimelineMessageStoreProvider,
           )[_identity];
           expect(scope, isNull);
         },
@@ -709,7 +709,7 @@ void main() {
           final container = ProviderContainer();
           addTearDown(container.dispose);
           final store = container.read(
-            conversationTimelineV2MessageStoreProvider.notifier,
+            conversationTimelineMessageStoreProvider.notifier,
           );
 
           store.putScope(
@@ -720,7 +720,7 @@ void main() {
           store.newMessage(_identity, _message(15));
 
           final scope = container.read(
-            conversationTimelineV2MessageStoreProvider,
+            conversationTimelineMessageStoreProvider,
           )[_identity]!;
           expect(_segmentIds(scope.segments), [
             [1, 2, 3],
@@ -736,7 +736,7 @@ void main() {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final store = container.read(
-          conversationTimelineV2MessageStoreProvider.notifier,
+          conversationTimelineMessageStoreProvider.notifier,
         );
 
         store.putScope(
@@ -747,7 +747,7 @@ void main() {
         store.newMessage(_identity, _message(13));
 
         final scope = container.read(
-          conversationTimelineV2MessageStoreProvider,
+          conversationTimelineMessageStoreProvider,
         )[_identity]!;
         expect(_segmentIds(scope.segments), [
           [1, 2, 3],
@@ -760,7 +760,7 @@ void main() {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final store = container.read(
-          conversationTimelineV2MessageStoreProvider.notifier,
+          conversationTimelineMessageStoreProvider.notifier,
         );
 
         store.putScope(
@@ -771,7 +771,7 @@ void main() {
         store.newMessage(_identity, _messageWithCustomText(11, 'updated-11'));
 
         final latestMessages = container
-            .read(conversationTimelineV2MessageStoreProvider)[_identity]!
+            .read(conversationTimelineMessageStoreProvider)[_identity]!
             .segments
             .last
             .orderedMessages;
@@ -788,13 +788,13 @@ void main() {
           final container = ProviderContainer();
           addTearDown(container.dispose);
           final store = container.read(
-            conversationTimelineV2MessageStoreProvider.notifier,
+            conversationTimelineMessageStoreProvider.notifier,
           );
 
           store.putScope(
             _identity,
             _scope([
-              ConversationTimelineV2CanonicalSegment(
+              ConversationTimelineCanonicalSegment(
                 orderedMessages: [_message(10), _message(12)],
               ),
             ], hasLatestSegment: true),
@@ -803,7 +803,7 @@ void main() {
           store.newMessage(_identity, _message(11));
 
           final scope = container.read(
-            conversationTimelineV2MessageStoreProvider,
+            conversationTimelineMessageStoreProvider,
           )[_identity]!;
           expect(_segmentIds(scope.segments), [
             [10, 11, 12],
@@ -817,13 +817,13 @@ void main() {
           final container = ProviderContainer();
           addTearDown(container.dispose);
           final store = container.read(
-            conversationTimelineV2MessageStoreProvider.notifier,
+            conversationTimelineMessageStoreProvider.notifier,
           );
 
           store.putScope(
             _identity,
             _scope([
-              ConversationTimelineV2CanonicalSegment(
+              ConversationTimelineCanonicalSegment(
                 orderedMessages: [_message(11), _message(12)],
               ),
             ], hasLatestSegment: true),
@@ -832,7 +832,7 @@ void main() {
           store.newMessage(_identity, _message(10));
 
           final scope = container.read(
-            conversationTimelineV2MessageStoreProvider,
+            conversationTimelineMessageStoreProvider,
           )[_identity]!;
           expect(_segmentIds(scope.segments), [
             [10, 11, 12],
@@ -846,7 +846,7 @@ void main() {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final store = container.read(
-          conversationTimelineV2MessageStoreProvider.notifier,
+          conversationTimelineMessageStoreProvider.notifier,
         );
 
         store.putScope(
@@ -857,7 +857,7 @@ void main() {
         store.newMessage(_identity, _optimisticMessage('client-4'));
 
         final scope = container.read(
-          conversationTimelineV2MessageStoreProvider,
+          conversationTimelineMessageStoreProvider,
         )[_identity]!;
         expect(_segmentIds(scope.segments), [
           [1, 2, 3],
@@ -872,7 +872,7 @@ void main() {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final store = container.read(
-          conversationTimelineV2MessageStoreProvider.notifier,
+          conversationTimelineMessageStoreProvider.notifier,
         );
 
         store.putScope(
@@ -890,7 +890,7 @@ void main() {
         );
 
         final optimisticMessages = container
-            .read(conversationTimelineV2MessageStoreProvider)[_identity]!
+            .read(conversationTimelineMessageStoreProvider)[_identity]!
             .optimisticMessages;
         expect(optimisticMessages, hasLength(1));
         expect(_messageText(optimisticMessages.single), 'optimistic-updated');
@@ -902,7 +902,7 @@ void main() {
           final container = ProviderContainer();
           addTearDown(container.dispose);
           final store = container.read(
-            conversationTimelineV2MessageStoreProvider.notifier,
+            conversationTimelineMessageStoreProvider.notifier,
           );
 
           store.putScope(
@@ -915,9 +915,9 @@ void main() {
           );
 
           final activeSegment = container.read(
-            conversationTimelineV2ActiveSegmentProvider((
+            conversationTimelineActiveSegmentProvider((
               identity: _identity,
-              mode: const ConversationTimelineV2ActiveSegmentMode.latest(),
+              mode: const ConversationTimelineActiveSegmentMode.latest(),
             )),
           )!;
 
@@ -938,7 +938,7 @@ void main() {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final store = container.read(
-          conversationTimelineV2MessageStoreProvider.notifier,
+          conversationTimelineMessageStoreProvider.notifier,
         );
 
         store.putScope(
@@ -951,9 +951,9 @@ void main() {
         );
 
         final activeSegment = container.read(
-          conversationTimelineV2ActiveSegmentProvider((
+          conversationTimelineActiveSegmentProvider((
             identity: _identity,
-            mode: const ConversationTimelineV2ActiveSegmentMode.around(2),
+            mode: const ConversationTimelineActiveSegmentMode.around(2),
           )),
         )!;
 
@@ -971,14 +971,14 @@ void main() {
           final container = ProviderContainer();
           addTearDown(container.dispose);
           final store = container.read(
-            conversationTimelineV2MessageStoreProvider.notifier,
+            conversationTimelineMessageStoreProvider.notifier,
           );
 
           store.putScope(
             _identity,
             _scope(
               [
-                ConversationTimelineV2CanonicalSegment(
+                ConversationTimelineCanonicalSegment(
                   orderedMessages: [_message(1), _message(2), _message(3)],
                 ),
               ],
@@ -988,9 +988,9 @@ void main() {
           );
 
           final activeSegment = container.read(
-            conversationTimelineV2ActiveSegmentProvider((
+            conversationTimelineActiveSegmentProvider((
               identity: _identity,
-              mode: const ConversationTimelineV2ActiveSegmentMode.latest(),
+              mode: const ConversationTimelineActiveSegmentMode.latest(),
             )),
           )!;
 
@@ -1009,7 +1009,7 @@ void main() {
           final container = ProviderContainer();
           addTearDown(container.dispose);
           final store = container.read(
-            conversationTimelineV2MessageStoreProvider.notifier,
+            conversationTimelineMessageStoreProvider.notifier,
           );
 
           store.putScope(
@@ -1024,7 +1024,7 @@ void main() {
           store.newMessage(_identity, _message(4));
 
           final scope = container.read(
-            conversationTimelineV2MessageStoreProvider,
+            conversationTimelineMessageStoreProvider,
           )[_identity]!;
           expect(_segmentIds(scope.segments), [
             [1, 2, 3, 4],
@@ -1036,8 +1036,8 @@ void main() {
   });
 }
 
-ConversationTimelineV2CanonicalSegment _segment(int start, int end) {
-  return ConversationTimelineV2CanonicalSegment(
+ConversationTimelineCanonicalSegment _segment(int start, int end) {
+  return ConversationTimelineCanonicalSegment(
     orderedMessages: [for (var id = start; id <= end; id++) _message(id)],
   );
 }
@@ -1094,7 +1094,7 @@ String _messageText(ConversationMessageV2 message) {
 }
 
 List<List<int>> _segmentIds(
-  List<ConversationTimelineV2CanonicalSegment> segments,
+  List<ConversationTimelineCanonicalSegment> segments,
 ) {
   return [
     for (final segment in segments)
@@ -1102,13 +1102,13 @@ List<List<int>> _segmentIds(
   ];
 }
 
-ConversationTimelineV2CanonicalScope _scope(
-  List<ConversationTimelineV2CanonicalSegment> segments, {
+ConversationTimelineCanonicalScope _scope(
+  List<ConversationTimelineCanonicalSegment> segments, {
   bool hasLatestSegment = false,
   bool hasReachedOldest = false,
   List<ConversationMessageV2> optimisticMessages = const [],
 }) {
-  return ConversationTimelineV2CanonicalScope(
+  return ConversationTimelineCanonicalScope(
     segments: segments,
     hasLatestSegment: hasLatestSegment,
     hasReachedOldest: hasReachedOldest,
