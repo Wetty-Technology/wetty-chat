@@ -10,7 +10,6 @@ import 'package:chahua/features/conversation/timeline/presentation/message_long_
 import 'package:chahua/features/conversation/timeline/presentation/message_overlay_v2.dart';
 import 'package:chahua/features/conversation/message_bubble/presentation/message_row_v2.dart';
 import 'package:chahua/core/session/dev_session_store.dart';
-import 'package:chahua/core/settings/app_settings_store.dart';
 import 'package:chahua/features/conversation/timeline/presentation/parts/jump_to_latest_fab.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
@@ -400,10 +399,10 @@ class _ConversationTimelineViewState
     ];
   }
 
+  /// Build the actual message list (sliver)
   SliverList _buildMessageSliver(
     List<ConversationMessageV2> messages, {
     Key? key,
-    required double chatMessageFontSize,
     String? highlightedStableKey,
   }) {
     final vmNotifier = ref.read(
@@ -420,7 +419,6 @@ class _ConversationTimelineViewState
           key: _keyForMessage(message),
           child: MessageRowV2(
             message: message,
-            chatMessageFontSize: chatMessageFontSize,
             isHighlighted: message.stableKey == highlightedStableKey,
             showSenderName: showSenderName,
             showAvatar: showAvatar,
@@ -453,7 +451,6 @@ class _ConversationTimelineViewState
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(conversationTimelineViewModelProvider(_identity));
-    final settings = ref.watch(appSettingsProvider);
 
     if (state.isBootstrapping) {
       return const Center(child: CupertinoActivityIndicator());
@@ -495,15 +492,11 @@ class _ConversationTimelineViewState
             slivers: [
               const SliverPadding(padding: EdgeInsets.only(top: 8)),
               if (beforeMessages.isNotEmpty)
-                _buildMessageSliver(
-                  beforeMessages,
-                  chatMessageFontSize: settings.fontSize,
-                ),
+                _buildMessageSliver(beforeMessages),
               if (afterMessages.isNotEmpty)
                 _buildMessageSliver(
                   afterMessages,
                   key: _centerSliverKey,
-                  chatMessageFontSize: settings.fontSize,
                   highlightedStableKey: state.highlightedStableKey,
                 )
               else

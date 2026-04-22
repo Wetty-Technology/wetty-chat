@@ -1,5 +1,7 @@
+import 'package:chahua/core/settings/app_settings_store.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/bubble_theme_v2.dart';
 import 'sticker_bubble_v2.dart';
@@ -7,13 +9,12 @@ import 'system_bubble_v2.dart';
 import 'text_bubble_v2.dart';
 import 'voice_bubble_v2.dart';
 
-class MessageItem extends StatelessWidget {
+class MessageItem extends ConsumerWidget {
   const MessageItem({
     super.key,
     required this.message,
     required this.isMe,
     required this.isInteractive,
-    required this.chatMessageFontSize,
     required this.showSenderName,
     this.onToggleReaction,
     this.onTapReply,
@@ -23,14 +24,14 @@ class MessageItem extends StatelessWidget {
   final ConversationMessageV2 message;
   final bool isMe;
   final bool isInteractive;
-  final double chatMessageFontSize;
   final bool showSenderName;
   final ValueChanged<String>? onToggleReaction;
   final VoidCallback? onTapReply;
   final VoidCallback? onOpenThread;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final chatMessageFontSize = ref.watch(appSettingsProvider).fontSize;
     return BubbleThemeV2.fromContext(
       context: context,
       message: message,

@@ -19,7 +19,6 @@ class MessageRowV2 extends StatefulWidget {
   const MessageRowV2({
     super.key,
     required this.message,
-    required this.chatMessageFontSize,
     this.isHighlighted = false,
     this.onLongPress,
     this.onReply,
@@ -31,7 +30,6 @@ class MessageRowV2 extends StatefulWidget {
   });
 
   final ConversationMessageV2 message;
-  final double chatMessageFontSize;
   final bool isHighlighted;
   final ValueChanged<MessageLongPressDetailsV2>? onLongPress;
   final VoidCallback? onReply;
@@ -99,7 +97,6 @@ class _MessageRowV2State extends State<MessageRowV2> {
       message: widget.message,
       isMe: _isMe,
       isInteractive: true,
-      chatMessageFontSize: widget.chatMessageFontSize,
       showSenderName: widget.showSenderName,
       onToggleReaction: widget.onToggleReaction,
       onTapReply: widget.onTapReply,
