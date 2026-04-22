@@ -1,5 +1,6 @@
 import 'dart:developer';
 
+import 'package:chahua/features/chats/conversation_v2/application/conversation_composer_view_model.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_state.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_view_model.dart';
 import 'package:chahua/features/chats/conversation_v2/application/timeline_viewport_facts.dart';
@@ -348,6 +349,9 @@ class _ConversationTimelineV2State
             isHighlighted: message.stableKey == highlightedStableKey,
             showSenderName: showSenderName,
             showAvatar: showAvatar,
+            onReply: () => ref
+                .read(conversationComposerViewModelProvider(_identity).notifier)
+                .beginReply(message),
             onTapReply: message.replyToMessage != null
                 ? () => vmNotifier.jumpToMessageServerId(
                     message.replyToMessage!.id,

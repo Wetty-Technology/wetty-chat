@@ -4,6 +4,7 @@ import 'package:chahua/shared/presentation/app_avatar.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:flutter/cupertino.dart';
 
+import '../reply_swipe_action_v2.dart';
 import 'message_bubble_v2.dart';
 import 'message_bubble_presentation_v2.dart';
 
@@ -13,6 +14,7 @@ class MessageRowV2 extends StatelessWidget {
     required this.message,
     required this.chatMessageFontSize,
     this.isHighlighted = false,
+    this.onReply,
     this.onTapReply,
     this.onOpenThread,
     this.showSenderName = true,
@@ -29,6 +31,7 @@ class MessageRowV2 extends StatelessWidget {
   final ConversationMessageV2 message;
   final double chatMessageFontSize;
   final bool isHighlighted;
+  final VoidCallback? onReply;
   final VoidCallback? onTapReply;
   final VoidCallback? onOpenThread;
   final bool showSenderName;
@@ -36,6 +39,17 @@ class MessageRowV2 extends StatelessWidget {
 
   bool get _isMe => message.sender.uid == ApiSession.currentUserId;
   bool get _isSystem => message.content is SystemMessageContent;
+  bool get _canReply =>
+      onReply != null &&
+      !message.isDeleted &&
+      switch (message.content) {
+        TextMessageContent() ||
+        AudioMessageContent() ||
+        StickerMessageContent() ||
+        InviteMessageContent() => true,
+        SystemMessageContent() ||
+        FileMessageContent() => false,
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -67,42 +81,47 @@ class MessageRowV2 extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: _bottomSpacing),
-      child: DecoratedBox(
-        decoration: isHighlighted
-            ? BoxDecoration(
-                border: Border.all(
-                  color: CupertinoColors.activeBlue,
-                  width: 1.5,
-                ),
-                borderRadius: BorderRadius.circular(14),
-              )
-            : const BoxDecoration(),
-        child: Padding(
-          padding: isHighlighted ? const EdgeInsets.all(2) : EdgeInsets.zero,
+      child: ReplySwipeActionV2(
+        key: ValueKey(message.stableKey),
+        enabled: _canReply,
+        onTriggered: onReply,
+        child: DecoratedBox(
+          decoration: isHighlighted
+              ? BoxDecoration(
+                  border: Border.all(
+                    color: CupertinoColors.activeBlue,
+                    width: 1.5,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                )
+              : const BoxDecoration(),
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: _rowHorizontalPadding,
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisAlignment: _isMe
-                  ? MainAxisAlignment.end
-                  : MainAxisAlignment.start,
-              children: _isMe
-                  ? <Widget>[
-                      Flexible(child: bubble),
-                      const SizedBox(width: _avatarLaneWidth),
-                    ]
-                  : <Widget>[
-                      SizedBox(
-                        width: _avatarLaneWidth,
-                        child: Align(
-                          alignment: Alignment.bottomLeft,
-                          child: avatar,
+            padding: isHighlighted ? const EdgeInsets.all(2) : EdgeInsets.zero,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: _rowHorizontalPadding,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: _isMe
+                    ? MainAxisAlignment.end
+                    : MainAxisAlignment.start,
+                children: _isMe
+                    ? <Widget>[
+                        Flexible(child: bubble),
+                        const SizedBox(width: _avatarLaneWidth),
+                      ]
+                    : <Widget>[
+                        SizedBox(
+                          width: _avatarLaneWidth,
+                          child: Align(
+                            alignment: Alignment.bottomLeft,
+                            child: avatar,
+                          ),
                         ),
-                      ),
-                      Flexible(child: bubble),
-                    ],
+                        Flexible(child: bubble),
+                      ],
+              ),
             ),
           ),
         ),
