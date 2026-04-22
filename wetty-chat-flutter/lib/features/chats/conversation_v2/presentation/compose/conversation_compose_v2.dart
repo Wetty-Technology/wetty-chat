@@ -1,0 +1,108 @@
+import 'dart:async';
+import 'dart:math' as math;
+
+import 'package:flutter/cupertino.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:chahua/app/theme/style_config.dart';
+import 'package:chahua/features/chats/conversation_v2/application/conversation_composer_view_model.dart';
+import 'package:chahua/features/chats/conversation_v2/domain/conversation_identity.dart';
+import 'package:chahua/features/chats/conversation_v2/presentation/compose/conversation_v2_composer_bar.dart';
+import 'package:chahua/features/chats/models/message_models.dart';
+import 'package:chahua/features/stickers/presentation/sticker_picker_panel.dart';
+
+class ConversationComposeV2 extends ConsumerStatefulWidget {
+  const ConversationComposeV2({
+    super.key,
+    required this.identity,
+    this.onMessageSent,
+  });
+
+  final ConversationIdentity identity;
+  final Future<void> Function()? onMessageSent;
+
+  @override
+  ConversationComposeV2State createState() => ConversationComposeV2State();
+}
+
+class ConversationComposeV2State extends ConsumerState<ConversationComposeV2> {
+  bool _isStickerPickerOpen = false;
+
+  void dismissTransientUi() {
+    if (!_isStickerPickerOpen) {
+      return;
+    }
+    setState(() {
+      _isStickerPickerOpen = false;
+    });
+  }
+
+  void _toggleStickerPicker() {
+    setState(() {
+      _isStickerPickerOpen = !_isStickerPickerOpen;
+      if (_isStickerPickerOpen) {
+        FocusScope.of(context).unfocus();
+      }
+    });
+  }
+
+  void _handleStickerSelected(StickerSummary sticker) {
+    if (sticker.id == null) {
+      return;
+    }
+    setState(() {
+      _isStickerPickerOpen = false;
+    });
+    unawaited(_sendSticker(sticker));
+  }
+
+  Future<void> _sendSticker(StickerSummary sticker) async {
+    try {
+      await ref
+          .read(conversationComposerViewModelProvider(widget.identity).notifier)
+          .sendSticker(sticker);
+      await widget.onMessageSent?.call();
+    } catch (_) {
+      // Error presentation is handled by the composer state / retry flows.
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final viewInsets = MediaQuery.viewInsetsOf(context);
+    final viewPadding = MediaQuery.viewPaddingOf(context);
+    final bottomInset = _isStickerPickerOpen
+        ? viewPadding.bottom
+        : math.max(viewInsets.bottom, viewPadding.bottom);
+
+    return ColoredBox(
+      color: colors.backgroundSecondary,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: colors.inputBorder)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ConversationV2ComposerBar(
+              identity: widget.identity,
+              onMessageSent: widget.onMessageSent,
+              onToggleStickerPicker: _toggleStickerPicker,
+              isStickerPickerOpen: _isStickerPickerOpen,
+            ),
+            if (_isStickerPickerOpen)
+              SizedBox(
+                width: double.infinity,
+                child: StickerPickerPanel(
+                  onStickerSelected: _handleStickerSelected,
+                  onClose: dismissTransientUi,
+                ),
+              ),
+            SizedBox(height: bottomInset),
+          ],
+        ),
+      ),
+    );
+  }
+}
