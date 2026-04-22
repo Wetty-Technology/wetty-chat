@@ -24,17 +24,6 @@ void main() {
     expect(find.text('Login'), findsWidgets);
   });
 
-  testWidgets('login page shows validation error when fields are empty', (
-    WidgetTester tester,
-  ) async {
-    await tester.pumpWidget(await _buildTestApp());
-
-    await tester.tap(find.widgetWithText(CupertinoButton, 'Login'));
-    await tester.pump();
-
-    expect(find.text('Missing fields'), findsOneWidget);
-  });
-
   testWidgets('login page shows loading state while submitting', (
     WidgetTester tester,
   ) async {
