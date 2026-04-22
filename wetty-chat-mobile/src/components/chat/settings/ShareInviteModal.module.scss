@@ -116,7 +116,7 @@
   justify-content: space-between;
   padding: 12px 16px;
   border-radius: 12px;
-  background: #fff;
+  background: var(--ion-color-step-50, var(--ion-background-color-step-50, #fff));
   border: 1px solid var(--ion-color-step-150, #e2e2e2);
 }
 
