@@ -39,7 +39,10 @@ class MessageBubbleV2 extends StatelessWidget {
       message: message,
       showSenderName: showSenderName,
       showThreadIndicator: onOpenThread != null,
-      isInteractive: false,
+      // TODO(conversation_v2): revisit renderSpec interactivity so thread taps,
+      // reactions, attachment opens, and future overlay gestures can be enabled
+      // independently instead of sharing one coarse flag.
+      isInteractive: true,
     );
 
     if (message.content is StickerMessageContent) {

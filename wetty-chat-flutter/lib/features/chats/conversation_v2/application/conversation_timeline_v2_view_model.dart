@@ -231,11 +231,16 @@ class ConversationTimelineV2ViewModel
     final beforeMessages = <ConversationMessageV2>[];
     final afterMessages = <ConversationMessageV2>[];
 
+    // TODO: Fix this
+    // This is currently a workaround to handle when new message arrives we properly
+    // put them in the after segment.
+    // I think there gotta be a better way to handle this.
     if (_activeSegmentMode.isLatest &&
-        _activeSegmentMode.latestSplitAfterServerMessageId == null) {
+        _activeSegmentMode.latestSplitAfterServerMessageId == null &&
+        segment.orderedMessages.isNotEmpty) {
       _activeSegmentMode = ConversationTimelineV2ActiveSegmentMode.latest(
         latestSplitAfterServerMessageId:
-            segment.orderedMessages.lastOrNull?.serverMessageId,
+            segment.orderedMessages.last.serverMessageId! + 1,
       );
     }
 

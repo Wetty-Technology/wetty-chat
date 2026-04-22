@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/features/chats/conversation_v2/application/conversation_timeline_v2_view_model.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_identity.dart';
+import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/launch_request.dart';
 import 'package:chahua/features/chats/conversation_v2/presentation/compose/conversation_compose_v2.dart';
 import 'package:chahua/features/chats/conversation_v2/presentation/conversation_timeline_v2.dart';
@@ -13,10 +14,12 @@ class ConversationSurfaceV2 extends ConsumerStatefulWidget {
     super.key,
     required this.identity,
     required this.launchRequest,
+    this.onOpenThread,
   });
 
   final ConversationIdentity identity;
   final LaunchRequest launchRequest;
+  final void Function(ConversationMessageV2 message)? onOpenThread;
 
   @override
   ConsumerState<ConversationSurfaceV2> createState() =>
@@ -52,6 +55,7 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
                 chatId: widget.identity.chatId,
                 threadRootId: widget.identity.threadRootId,
                 launchRequest: widget.launchRequest,
+                onOpenThread: widget.onOpenThread,
               ),
             ),
           ),

@@ -34,11 +34,13 @@ class ConversationTimelineV2 extends ConsumerStatefulWidget {
     required this.chatId,
     required this.launchRequest,
     this.threadRootId,
+    this.onOpenThread,
   });
 
   final int chatId;
   final int? threadRootId;
   final LaunchRequest launchRequest;
+  final void Function(ConversationMessageV2 message)? onOpenThread;
 
   @override
   ConsumerState<ConversationTimelineV2> createState() =>
@@ -353,12 +355,10 @@ class _ConversationTimelineV2State
                   )
                 : null,
             onOpenThread:
-                message.threadInfo != null && message.threadInfo!.replyCount > 0
-                ? () {
-                    debugPrint(
-                      'onOpenThread: ${message.threadInfo?.replyCount}',
-                    );
-                  }
+                widget.onOpenThread != null &&
+                    message.threadInfo != null &&
+                    message.threadInfo!.replyCount > 0
+                ? () => widget.onOpenThread!(message)
                 : null,
           ),
         );

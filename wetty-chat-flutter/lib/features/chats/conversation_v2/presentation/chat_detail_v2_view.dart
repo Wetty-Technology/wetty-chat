@@ -1,9 +1,13 @@
 import 'package:chahua/features/chats/conversation_v2/domain/conversation_identity.dart';
 import 'package:chahua/features/chats/conversation_v2/domain/launch_request.dart';
+import 'package:chahua/features/chats/conversation_v2/domain/conversation_message_v2.dart';
 import 'package:chahua/features/chats/conversation_v2/presentation/conversation_surface_v2.dart';
 import 'package:chahua/features/chats/list_v2/application/group_list_v2_store.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import 'package:chahua/app/routing/route_names.dart';
 
 class ChatDetailV2Page extends StatelessWidget {
   const ChatDetailV2Page({
@@ -28,9 +32,18 @@ class ChatDetailV2Page extends StatelessWidget {
         child: ConversationSurfaceV2(
           identity: identity,
           launchRequest: launchRequest,
+          onOpenThread: (message) => _openThread(context, message),
         ),
       ),
     );
+  }
+
+  void _openThread(BuildContext context, ConversationMessageV2 message) {
+    final threadRootId = message.serverMessageId;
+    if (threadRootId == null) {
+      return;
+    }
+    context.push(AppRoutes.nestedThreadDetail('$chatId', '$threadRootId'));
   }
 }
 
