@@ -1,7 +1,7 @@
 import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:flutter/cupertino.dart';
 
-import 'bubble_theme_v2.dart';
+import '../domain/bubble_theme_v2.dart';
 import 'sticker_bubble_v2.dart';
 import 'system_bubble_v2.dart';
 import 'text_bubble_v2.dart';

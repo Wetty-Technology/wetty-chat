@@ -3,9 +3,9 @@ import 'package:chahua/features/chats/models/message_models.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:flutter/cupertino.dart';
 
-import '../message_attachment_previews.dart';
-import '../video_popup_player.dart';
-import 'bubble_theme_v2.dart';
+import '../../timeline/presentation/message_attachment_previews.dart';
+import '../../timeline/presentation/video_popup_player.dart';
+import '../domain/bubble_theme_v2.dart';
 import 'parts/linkified_text.dart';
 import 'parts/meta_footer.dart';
 import 'parts/reactions.dart';

@@ -4,8 +4,8 @@ import 'package:chahua/features/conversation/shared/domain/conversation_message_
 import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
 
-import '../message_long_press_details_v2.dart';
-import '../reply_swipe_action_v2.dart';
+import '../../timeline/presentation/message_long_press_details_v2.dart';
+import '../../timeline/presentation/reply_swipe_action_v2.dart';
 import 'message_item.dart';
 
 const double _bottomSpacing = 12;

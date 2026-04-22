@@ -3,7 +3,7 @@ import 'package:chahua/features/chats/shared/presentation/sticker_image_widget.d
 import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:flutter/cupertino.dart';
 
-import 'bubble_theme_v2.dart';
+import '../domain/bubble_theme_v2.dart';
 import 'parts/meta_footer.dart';
 import 'parts/reactions.dart';
 import 'parts/reply_quote.dart';

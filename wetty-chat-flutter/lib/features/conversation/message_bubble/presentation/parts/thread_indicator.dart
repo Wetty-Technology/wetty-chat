@@ -2,7 +2,7 @@ import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
 import 'package:flutter/cupertino.dart';
 
-import '../bubble_theme_v2.dart';
+import '../../domain/bubble_theme_v2.dart';
 
 class ThreadIndicator extends StatelessWidget {
   const ThreadIndicator({super.key, required this.threadInfo, this.onTap});

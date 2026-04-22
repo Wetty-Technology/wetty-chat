@@ -2,7 +2,7 @@ import 'package:chahua/app/theme/style_config.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import '../bubble_theme_v2.dart';
+import '../../domain/bubble_theme_v2.dart';
 
 const double senderHeaderBodyGap = 4;
 const double _senderHeaderBadgeGap = 4;

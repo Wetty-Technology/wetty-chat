@@ -10,7 +10,7 @@ import 'package:chahua/features/conversation/shared/domain/conversation_identity
 import 'package:chahua/features/conversation/shared/domain/launch_request.dart';
 import 'package:chahua/features/conversation/timeline/presentation/message_long_press_details_v2.dart';
 import 'package:chahua/features/conversation/timeline/presentation/message_overlay_v2.dart';
-import 'package:chahua/features/conversation/timeline/presentation/message_bubble/message_row_v2.dart';
+import 'package:chahua/features/conversation/message_bubble/presentation/message_row_v2.dart';
 import 'package:chahua/core/session/dev_session_store.dart';
 import 'package:chahua/core/settings/app_settings_store.dart';
 import 'package:flutter/foundation.dart';

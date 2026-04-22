@@ -4,7 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:chahua/features/chats/models/message_models.dart';
 
-import '../bubble_theme_v2.dart';
+import '../../domain/bubble_theme_v2.dart';
 
 class LinkifiedText extends StatelessWidget {
   const LinkifiedText({

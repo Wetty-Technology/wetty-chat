@@ -3,7 +3,7 @@ import 'package:chahua/features/chats/models/message_models.dart';
 import 'package:chahua/features/chats/models/message_preview_formatter.dart';
 import 'package:flutter/cupertino.dart';
 
-import '../bubble_theme_v2.dart';
+import '../../domain/bubble_theme_v2.dart';
 
 enum ReplyQuoteVariant { inBubble, overSticker }
 

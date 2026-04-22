@@ -3,7 +3,7 @@ import 'package:chahua/features/chats/chat_timestamp_formatter.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:flutter/cupertino.dart';
 
-import '../bubble_theme_v2.dart';
+import '../../domain/bubble_theme_v2.dart';
 
 const double _statusIconSize = 14;
 const double _statusIconGap = 4;

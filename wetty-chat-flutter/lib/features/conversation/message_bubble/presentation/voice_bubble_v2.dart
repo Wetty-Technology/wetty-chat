@@ -7,7 +7,7 @@ import 'package:chahua/features/chats/models/message_models.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'bubble_theme_v2.dart';
+import '../domain/bubble_theme_v2.dart';
 import 'parts/meta_footer.dart';
 import 'parts/reactions.dart';
 import 'parts/sender_header.dart';
