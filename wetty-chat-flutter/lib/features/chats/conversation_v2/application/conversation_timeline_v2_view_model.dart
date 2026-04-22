@@ -226,16 +226,6 @@ class ConversationTimelineV2ViewModel
     bool? isLoadingOlder,
     bool? isLoadingNewer,
   }) {
-    if (_activeSegmentMode.isLatest &&
-        segment.orderedMessages.isNotEmpty &&
-        _activeSegmentMode.splitAfterServerMessageId == null) {
-      final latestSplitAfterServerMessageId = _lastServerMessageId(
-        segment.orderedMessages,
-      );
-      _activeSegmentMode = ConversationTimelineV2ActiveSegmentMode.latest(
-        latestSplitAfterServerMessageId: latestSplitAfterServerMessageId,
-      );
-    }
     final splitAfterServerMessageId =
         _activeSegmentMode.splitAfterServerMessageId;
     final beforeMessages = <ConversationMessageV2>[];
