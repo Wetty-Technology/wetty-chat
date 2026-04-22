@@ -402,14 +402,12 @@ class _ConversationTimelineViewState
   /// Build the actual message list (sliver)
   SliverList _buildMessageSliver(
     List<ConversationMessageV2> messages, {
-    Key? key,
     String? highlightedStableKey,
   }) {
     final vmNotifier = ref.read(
       conversationTimelineViewModelProvider(_identity).notifier,
     );
     return SliverList.builder(
-      key: key,
       itemCount: messages.length,
       itemBuilder: (context, index) {
         final message = messages[index];
@@ -495,7 +493,10 @@ class _ConversationTimelineViewState
 
               // Before slice (if not empty)
               if (beforeMessages.isNotEmpty)
-                _buildMessageSliver(beforeMessages),
+                _buildMessageSliver(
+                  beforeMessages,
+                  highlightedStableKey: state.highlightedStableKey,
+                ),
 
               // Center sentinel / seam
               SliverToBoxAdapter(
