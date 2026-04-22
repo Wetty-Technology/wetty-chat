@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/notifications/unread_badge_provider.dart';
 import '../../../../core/settings/app_settings_store.dart';
 import '../../list/presentation/chat_list_segment.dart';
+import '../application/all_list_v2_view_model.dart';
 import '../application/group_list_v2_view_model.dart';
 import '../application/thread_list_v2_view_model.dart';
 import 'widgets/chat_list_v2_tab_body.dart';
@@ -83,6 +84,17 @@ class _ChatListV2PageState extends ConsumerState<ChatListV2Page> {
         return;
       }
       ref.read(threadListV2ViewModelProvider.notifier).loadMoreThreads();
+      return;
+    }
+
+    if (activeTab == ChatListTab.all) {
+      final allState = ref.read(allListV2ViewModelProvider).value;
+      if (allState == null ||
+          allState.isLoadingMore ||
+          (!allState.groupsHasMore && !allState.threadsHasMore)) {
+        return;
+      }
+      ref.read(allListV2ViewModelProvider.notifier).loadMoreAll();
     }
   }
 

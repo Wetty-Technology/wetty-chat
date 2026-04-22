@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../list/presentation/chat_list_segment.dart';
+import '../all_list_v2_view.dart';
 import '../group_list_v2_view.dart';
 import '../thread_list_v2_view.dart';
 
@@ -28,26 +29,10 @@ class ChatListV2TabBody extends ConsumerWidget {
         scrollController: scrollController,
         supportsPullToRefresh: supportsPullToRefresh,
       ),
-      ChatListTab.all => _V2PlaceholderBody(
-        message:
-            'The All tab still uses the old merged flow. We will move it to list_v2 later.',
+      ChatListTab.all => AllListV2View(
+        scrollController: scrollController,
+        supportsPullToRefresh: supportsPullToRefresh,
       ),
     };
-  }
-}
-
-class _V2PlaceholderBody extends StatelessWidget {
-  const _V2PlaceholderBody({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Text(message, textAlign: TextAlign.center),
-      ),
-    );
   }
 }
