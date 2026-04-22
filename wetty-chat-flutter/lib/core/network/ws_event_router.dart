@@ -3,6 +3,7 @@ import 'dart:async';
 
 import '../../features/chats/conversation_v2/application/conversation_timeline_v2_realtime_applier.dart';
 import '../../features/chats/list/data/chat_repository.dart';
+import '../../features/chats/list_v2/application/group_list_v2_store.dart';
 import '../../features/chats/threads/data/thread_repository.dart';
 import '../../features/stickers/data/sticker_pack_order_store.dart';
 import '../api/models/websocket_api_models.dart';
@@ -86,6 +87,7 @@ final wsEventRouterProvider = Provider<void>((ref) {
       case MessageCreatedWsEvent():
       case MessageUpdatedWsEvent():
       case MessageDeletedWsEvent():
+        ref.read(groupListV2StoreProvider.notifier).applyRealtimeEvent(event);
         ref.read(chatListStateProvider.notifier).applyRealtimeEvent(event);
         ref.read(threadListStateProvider.notifier).applyRealtimeEvent(event);
         ref.read(unreadBadgeProvider.notifier).scheduleReconcile();

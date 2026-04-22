@@ -2,8 +2,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../list/presentation/chat_list_segment.dart';
-import '../../../list/presentation/models/merged_list_item.dart';
 import '../../../list/application/chat_list_view_model.dart';
+import '../../../list/presentation/models/merged_list_item.dart';
 import '../../../threads/application/thread_list_view_model.dart';
 import '../../../threads/presentation/thread_list_view.dart';
 import '../group_list_v2_view.dart';

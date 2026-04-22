@@ -7,6 +7,7 @@ import '../../../../core/settings/app_settings_store.dart';
 import '../../list/application/chat_list_view_model.dart';
 import '../../list/presentation/chat_list_segment.dart';
 import '../../list/presentation/models/merged_list_item.dart';
+import '../application/group_list_v2_view_model.dart';
 import '../../threads/application/thread_list_view_model.dart';
 import 'widgets/chat_list_v2_tab_body.dart';
 
@@ -38,11 +39,12 @@ class _ChatListV2PageState extends ConsumerState<ChatListV2Page> {
   @override
   void initState() {
     super.initState();
-    _scrollController = ScrollController();
+    _scrollController = ScrollController()..addListener(_onScroll);
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
   }
@@ -50,12 +52,40 @@ class _ChatListV2PageState extends ConsumerState<ChatListV2Page> {
   ChatListTab _effectiveTab(bool showAllTab) {
     final tab = _activeTab;
     if (tab == null) {
-      return showAllTab ? ChatListTab.all : ChatListTab.groups;
+      return ChatListTab.groups;
     }
     if (!showAllTab && tab == ChatListTab.all) {
       return ChatListTab.groups;
     }
     return tab;
+  }
+
+  void _onScroll() {
+    final position = _scrollController.position;
+    if (position.pixels < position.maxScrollExtent - 200) {
+      return;
+    }
+
+    final settings = ref.read(appSettingsProvider);
+    final activeTab = _effectiveTab(settings.showAllTab);
+    if (activeTab == ChatListTab.groups) {
+      final viewState = ref.read(groupListV2ViewModelProvider).value;
+      if (viewState == null || !viewState.hasMore || viewState.isLoadingMore) {
+        return;
+      }
+      ref.read(groupListV2ViewModelProvider.notifier).loadMoreGroups();
+      return;
+    }
+
+    if (activeTab == ChatListTab.threads) {
+      final threadState = ref.read(threadListViewModelProvider).value;
+      if (threadState == null ||
+          !threadState.hasMore ||
+          threadState.isLoadingMore) {
+        return;
+      }
+      ref.read(threadListViewModelProvider.notifier).loadMoreThreads();
+    }
   }
 
   @override

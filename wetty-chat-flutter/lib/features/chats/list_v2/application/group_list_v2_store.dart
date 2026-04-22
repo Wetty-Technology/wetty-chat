@@ -1,14 +1,145 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/api/models/messages_api_models.dart';
+import '../../../../core/api/models/websocket_api_models.dart';
+import '../../../../core/session/dev_session_store.dart';
+import '../../list_projection/domain/list_projection_helpers.dart';
 import '../../models/chat_models.dart';
-import '../../models/message_models.dart';
+import '../../models/message_api_mapper.dart';
 
-typedef GroupListV2StoreState = ({List<ChatListItem> groups});
+typedef GroupListV2StoreState = ({
+  List<ChatListItem> groups,
+  String? nextCursor,
+  bool hasMore,
+});
 
 class GroupListV2Store extends Notifier<GroupListV2StoreState> {
+  bool _isRealtimeRefreshing = false;
+
   @override
   GroupListV2StoreState build() {
-    return (groups: _fakeGroups);
+    return (groups: const [], nextCursor: null, hasMore: false);
+  }
+
+  void replacePage({required List<ChatListItem> groups, String? nextCursor}) {
+    state = (
+      groups: groups,
+      nextCursor: nextCursor,
+      hasMore: nextCursor != null && nextCursor.isNotEmpty,
+    );
+  }
+
+  void appendPage({required List<ChatListItem> groups, String? nextCursor}) {
+    final existingIds = state.groups.map((group) => group.id).toSet();
+    final appended = groups
+        .where((group) => !existingIds.contains(group.id))
+        .toList(growable: false);
+
+    state = (
+      groups: [...state.groups, ...appended],
+      nextCursor: nextCursor,
+      hasMore: nextCursor != null && nextCursor.isNotEmpty,
+    );
+  }
+
+  void applyRealtimeEvent(ApiWsEvent event) {
+    switch (event) {
+      case MessageCreatedWsEvent(:final payload):
+        _applyRealtimeCreated(payload);
+        return;
+      case MessageUpdatedWsEvent(:final payload):
+        _applyRealtimePatched(payload);
+        return;
+      case MessageDeletedWsEvent(:final payload):
+        _applyRealtimePatched(payload);
+        return;
+      default:
+        return;
+    }
+  }
+
+  void _applyRealtimeCreated(MessageItemDto payload) {
+    final chatId = payload.chatId.toString();
+    final index = state.groups.indexWhere((group) => group.id == chatId);
+    if (index < 0) {
+      _refreshForRealtimeMiss();
+      return;
+    }
+
+    final message = payload.toDomain();
+    if (!isEligibleChatPreviewMessage(message)) {
+      return;
+    }
+
+    final previous = state.groups[index];
+    if (matchesChatPreview(previous.lastMessage, payload)) {
+      return;
+    }
+
+    final currentUserId = ref.read(authSessionProvider).currentUserId;
+    final shouldIncrementUnread = payload.sender.uid != currentUserId;
+    final updated = previous.copyWith(
+      lastMessage: message,
+      lastMessageAt: payload.createdAt,
+      unreadCount: shouldIncrementUnread
+          ? previous.unreadCount + 1
+          : previous.unreadCount,
+    );
+
+    state = (
+      groups: moveChatToFront(state.groups, index, updated),
+      nextCursor: state.nextCursor,
+      hasMore: state.hasMore,
+    );
+  }
+
+  void _applyRealtimePatched(MessageItemDto payload) {
+    if (payload.replyRootId != null) {
+      return;
+    }
+
+    final chatId = payload.chatId.toString();
+    final index = state.groups.indexWhere((group) => group.id == chatId);
+    if (index < 0) {
+      return;
+    }
+
+    final previous = state.groups[index];
+    if (!matchesChatPreview(previous.lastMessage, payload)) {
+      return;
+    }
+
+    if (payload.isDeleted) {
+      _refreshForRealtimeMiss();
+      return;
+    }
+
+    state = (
+      groups: replaceChatAt(
+        state.groups,
+        index,
+        previous.copyWith(
+          lastMessage: payload.toDomain(),
+          lastMessageAt: payload.createdAt,
+        ),
+      ),
+      nextCursor: state.nextCursor,
+      hasMore: state.hasMore,
+    );
+  }
+
+  void _refreshForRealtimeMiss() {
+    if (_isRealtimeRefreshing) {
+      return;
+    }
+
+    _isRealtimeRefreshing = true;
+    Future<void>.microtask(() {
+      // TODO(codex): Reconcile the v2 groups list from the backend when a
+      // realtime event references a group or preview slice we do not have
+      // enough local state to update precisely.
+      _isRealtimeRefreshing = false;
+    });
   }
 }
 
@@ -17,53 +148,10 @@ final groupListV2StoreProvider =
       GroupListV2Store.new,
     );
 
-final List<ChatListItem> _fakeGroups = <ChatListItem>[
-  ChatListItem(
-    id: 'v2-group-design',
-    name: 'Design Crit',
-    avatarUrl: null,
-    lastMessageAt: DateTime.utc(2026, 4, 20, 18, 42),
-    unreadCount: 3,
-    lastReadMessageId: '9001001',
-    lastMessage: MessageItem(
-      id: 9001004,
-      message: 'Uploaded the revised mockups for the composer states.',
-      messageType: 'text',
-      sender: Sender(uid: 101, name: 'Mia'),
-      chatId: 'v2-group-design',
-      createdAt: DateTime.utc(2026, 4, 20, 18, 42),
+final groupByIdProvider = Provider.family<ChatListItem?, String>((ref, chatId) {
+  return ref.watch(
+    groupListV2StoreProvider.select(
+      (state) => state.groups.where((group) => group.id == chatId).firstOrNull,
     ),
-  ),
-  ChatListItem(
-    id: 'v2-group-mobile',
-    name: 'Mobile V2',
-    avatarUrl: null,
-    lastMessageAt: DateTime.utc(2026, 4, 20, 17, 05),
-    unreadCount: 0,
-    lastReadMessageId: '9002002',
-    lastMessage: MessageItem(
-      id: 9002002,
-      message: 'Let us keep the first cut fake-data only.',
-      messageType: 'text',
-      sender: Sender(uid: 102, name: 'Evan'),
-      chatId: 'v2-group-mobile',
-      createdAt: DateTime.utc(2026, 4, 20, 17, 05),
-    ),
-  ),
-  ChatListItem(
-    id: 'v2-group-eng',
-    name: 'Engineering',
-    avatarUrl: null,
-    lastMessageAt: DateTime.utc(2026, 4, 20, 15, 30),
-    unreadCount: 1,
-    lastReadMessageId: '9003000',
-    lastMessage: MessageItem(
-      id: 9003001,
-      message: 'Backend deploy is done. Monitoring for regressions now.',
-      messageType: 'text',
-      sender: Sender(uid: 103, name: 'Noah'),
-      chatId: 'v2-group-eng',
-      createdAt: DateTime.utc(2026, 4, 20, 15, 30),
-    ),
-  ),
-];
+  );
+});
