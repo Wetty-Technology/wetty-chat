@@ -119,15 +119,20 @@ class TextBubbleV2 extends StatelessWidget {
       children.add(_buildAttachmentSection(context, theme, attachments));
     }
 
-    if (children.isNotEmpty && (message.replyToMessage != null || hasAttachments)) {
+    if (children.isNotEmpty &&
+        (message.replyToMessage != null || hasAttachments)) {
       children.add(const SizedBox(height: 4));
     }
     children.add(_buildMessageBody(context, theme));
 
     final threadInfo = message.threadInfo;
     if (threadInfo != null && threadInfo.replyCount > 0) {
-      children.add(const SizedBox(height: 4));
-      children.add(ThreadIndicator(threadInfo: threadInfo, onTap: onOpenThread));
+      children.add(
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: ThreadIndicator(threadInfo: threadInfo, onTap: onOpenThread),
+        ),
+      );
     }
 
     if (message.reactions.isNotEmpty) {
