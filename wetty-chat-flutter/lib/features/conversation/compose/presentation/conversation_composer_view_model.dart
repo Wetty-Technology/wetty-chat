@@ -22,7 +22,7 @@ import 'package:chahua/features/conversation/shared/domain/conversation_identity
 import 'package:chahua/features/conversation/shared/data/conversation_timeline_v2_repository.dart';
 import 'package:chahua/features/chats/shared/data/attachment_service.dart';
 import 'package:chahua/features/conversation/compose/domain/audio_recorder_service.dart';
-import 'package:chahua/features/conversation/media/data/audio_waveform_cache_service.dart';
+import 'package:chahua/features/conversation/media/application/audio_waveform_cache_service.dart';
 
 const int composerMaxAttachments =
     ConversationComposerState.maxAttachmentsPerMessage;

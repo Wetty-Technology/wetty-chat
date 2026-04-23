@@ -10,9 +10,9 @@ import '../../../../core/cache/app_cached_network_image.dart';
 import '../../../../core/cache/image_cache_service.dart';
 import '../../../../core/network/api_config.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
-import '../data/media_save_service.dart';
+import '../application/media_save_service.dart';
 import 'attachment_viewer_request.dart';
-import 'package:chahua/features/conversation/timeline/presentation/video_attachment_thumbnail.dart';
+import 'package:chahua/features/conversation/message_bubble/presentation/parts/attachment/video_attachment_thumbnail.dart';
 
 class AttachmentViewerPage extends ConsumerStatefulWidget {
   const AttachmentViewerPage({super.key, required this.request});

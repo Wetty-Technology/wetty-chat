@@ -1,5 +1,5 @@
 import 'package:chahua/app/theme/style_config.dart';
-import 'package:chahua/features/conversation/media/data/audio_waveform_cache_service.dart';
+import 'package:chahua/features/conversation/media/application/audio_waveform_cache_service.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:chahua/features/conversation/shared/presentation/conversation_presentation_scope.dart';
 import 'package:chahua/features/conversation/timeline/presentation/voice_message_playback_controller_v2.dart';

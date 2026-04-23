@@ -1,6 +1,6 @@
 import 'package:flutter/cupertino.dart';
 
-import '../../../../core/cache/app_cached_network_image.dart';
+import 'package:chahua/core/cache/app_cached_network_image.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
 
 class AttachmentPreviewLayout {

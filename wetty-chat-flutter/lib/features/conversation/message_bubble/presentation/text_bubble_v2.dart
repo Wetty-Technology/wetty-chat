@@ -4,8 +4,8 @@ import 'package:chahua/features/conversation/shared/domain/conversation_message_
 import 'package:chahua/features/conversation/shared/presentation/conversation_presentation_scope.dart';
 import 'package:flutter/cupertino.dart';
 
-import '../../timeline/presentation/message_attachment_previews.dart';
-import '../../timeline/presentation/video_popup_player.dart';
+import 'parts/attachment/message_attachment_previews.dart';
+import 'parts/attachment/video_popup_player.dart';
 import '../domain/bubble_theme_v2.dart';
 import 'parts/linkified_text.dart';
 import 'parts/meta_footer.dart';

@@ -1,9 +1,9 @@
 import 'package:flutter/cupertino.dart';
 
-import '../../../../app/theme/style_config.dart';
+import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
 import 'message_attachment_previews.dart';
-import 'package:chahua/features/conversation/timeline/presentation/video_attachment_thumbnail.dart';
+import 'video_attachment_thumbnail.dart';
 
 class VideoAttachmentPreview extends StatelessWidget {
   const VideoAttachmentPreview({
