@@ -12,15 +12,18 @@ class MetaFooter extends StatelessWidget {
   const MetaFooter({
     super.key,
     required this.message,
+    this.color,
     this.fontWeight = FontWeight.w400,
   });
 
   final ConversationMessageV2 message;
   final FontWeight fontWeight;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
     final theme = BubbleThemeV2.of(context);
+    final metaColor = color ?? theme.metaColor;
     final timeText = formatChatMessageTime(context, message.createdAt);
     final showDeliveryStatus =
         theme.isMe && message.deliveryState != ConversationDeliveryState.failed;
@@ -29,12 +32,12 @@ class MetaFooter extends StatelessWidget {
       ConversationDeliveryState.sent => Icon(
         CupertinoIcons.checkmark_alt_circle,
         size: _statusIconSize,
-        color: theme.metaColor,
+        color: metaColor,
       ),
       ConversationDeliveryState.confirmed => Icon(
         CupertinoIcons.checkmark_alt_circle_fill,
         size: _statusIconSize,
-        color: theme.metaColor,
+        color: metaColor,
       ),
       _ => null,
     };
@@ -50,7 +53,7 @@ class MetaFooter extends StatelessWidget {
               'edited',
               style: appBubbleTextStyle(
                 context,
-                color: theme.metaColor,
+                color: metaColor,
                 fontSize: AppFontSizes.bubbleMeta,
                 fontWeight: fontWeight,
               ),
@@ -60,7 +63,7 @@ class MetaFooter extends StatelessWidget {
           timeText,
           style: appBubbleTextStyle(
             context,
-            color: theme.metaColor,
+            color: metaColor,
             fontSize: AppFontSizes.bubbleMeta,
             fontWeight: fontWeight,
           ),

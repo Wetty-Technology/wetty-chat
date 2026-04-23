@@ -47,6 +47,10 @@ class MessageImageAttachmentPreview extends StatelessWidget {
     required this.maxWidth,
     this.maxHeight = 300,
     this.heroTag,
+    this.fit = BoxFit.contain,
+    this.borderRadius = const BorderRadius.all(Radius.circular(8)),
+    this.frameWidth,
+    this.frameHeight,
   });
 
   final AttachmentItem attachment;
@@ -55,6 +59,10 @@ class MessageImageAttachmentPreview extends StatelessWidget {
   final double maxWidth;
   final double maxHeight;
   final String? heroTag;
+  final BoxFit fit;
+  final BorderRadius? borderRadius;
+  final double? frameWidth;
+  final double? frameHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -63,32 +71,34 @@ class MessageImageAttachmentPreview extends StatelessWidget {
       maxWidth: maxWidth,
       maxHeight: maxHeight,
     );
-    final previewWidth = layout?.width ?? maxWidth.clamp(0, 220).toDouble();
-    final previewHeight = layout?.height ?? maxHeight.clamp(0, 220).toDouble();
+    final previewWidth =
+        frameWidth ?? layout?.width ?? maxWidth.clamp(0, 220).toDouble();
+    final previewHeight =
+        frameHeight ?? layout?.height ?? maxHeight.clamp(0, 220).toDouble();
     final cacheWidth = (previewWidth * 2).round();
 
-    Widget preview = ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: CupertinoColors.systemGrey5.resolveFrom(context),
-        ),
-        child: SizedBox(
+    Widget preview = DecoratedBox(
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemGrey5.resolveFrom(context),
+      ),
+      child: SizedBox(
+        width: previewWidth,
+        height: previewHeight,
+        child: AppCachedNetworkImage(
+          imageUrl: attachment.url,
           width: previewWidth,
           height: previewHeight,
-          child: AppCachedNetworkImage(
-            imageUrl: attachment.url,
-            width: previewWidth,
-            height: previewHeight,
-            memCacheWidth: cacheWidth,
-            fit: BoxFit.contain,
-            placeholder: (context, url) =>
-                const Center(child: CupertinoActivityIndicator()),
-            errorWidget: (context, url, error) => fallback,
-          ),
+          memCacheWidth: cacheWidth,
+          fit: fit,
+          placeholder: (context, url) =>
+              const Center(child: CupertinoActivityIndicator()),
+          errorWidget: (context, url, error) => fallback,
         ),
       ),
     );
+    if (borderRadius != null) {
+      preview = ClipRRect(borderRadius: borderRadius!, child: preview);
+    }
     if (heroTag != null) {
       preview = Hero(tag: heroTag!, child: preview);
     }

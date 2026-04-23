@@ -164,7 +164,7 @@ Suggested initial planner inputs:
 
 Suggested initial rendering bounds:
 
-- `spacing = 8`
+- `spacing = 2`
 - `maxVisibleCount = 6`
 - `minTileSize = 72`
 - `targetGalleryHeight` should stay visually bounded and not scale linearly with attachment count

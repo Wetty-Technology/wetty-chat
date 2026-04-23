@@ -5,6 +5,7 @@ import 'package:chahua/features/conversation/shared/presentation/conversation_pr
 import 'package:flutter/cupertino.dart';
 
 import '../domain/bubble_theme_v2.dart';
+import 'parts/media_footer_chip.dart';
 import 'parts/meta_footer.dart';
 import 'parts/reactions.dart';
 import 'parts/reply_quote.dart';
@@ -79,14 +80,7 @@ class StickerBubbleV2 extends StatelessWidget {
           Positioned(
             right: 4,
             bottom: 4,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-              decoration: BoxDecoration(
-                color: CupertinoColors.black.withAlpha(110),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: MetaFooter(message: message),
-            ),
+            child: MediaFooterChip(child: MetaFooter(message: message)),
           ),
         ],
       ),

@@ -18,13 +18,21 @@ class AttachmentGalleryLayoutPlan {
 class AttachmentGalleryTilePlan {
   const AttachmentGalleryTilePlan({
     required this.attachment,
+    required this.sourceIndex,
+    required this.left,
+    required this.top,
     required this.width,
     required this.height,
-    required this.topInset,
+    this.showsOverflowOverlay = false,
+    this.overflowCount = 0,
   });
 
   final AttachmentItem attachment;
+  final int sourceIndex;
+  final double left;
+  final double top;
   final double width;
   final double height;
-  final double topInset;
+  final bool showsOverflowOverlay;
+  final int overflowCount;
 }

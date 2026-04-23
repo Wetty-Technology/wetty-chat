@@ -1,11 +1,10 @@
-import 'dart:math' as math;
-
 import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
 import 'package:flutter/cupertino.dart';
 
 import '../../../domain/bubble_theme_v2.dart';
-import 'attachment_gallery_layout_plan.dart';
+import '../media_footer_chip.dart';
+import 'attachment_gallery_layout_planner.dart';
 import 'message_attachment_previews.dart';
 import 'video_popup_player.dart';
 
@@ -16,119 +15,53 @@ class VisualAttachmentGallery extends StatelessWidget {
     required this.theme,
     required this.maxWidth,
     this.overlayFooter,
+    this.clipBorderRadius,
   });
 
   final List<AttachmentItem> attachments;
   final BubbleThemeV2 theme;
   final double maxWidth;
   final Widget? overlayFooter;
-
-  static const double _tileSpacing = 8;
+  final BorderRadius? clipBorderRadius;
 
   @override
   Widget build(BuildContext context) {
-    final layoutPlan = _buildLayoutPlan(attachments, maxWidth: maxWidth);
-    return Align(
-      alignment: Alignment.centerRight,
-      child: SizedBox(
-        width: layoutPlan.width,
-        height: layoutPlan.height,
-        child: Stack(
-          children: [
-            for (final tile in layoutPlan.tiles)
-              Positioned(
-                top: tile.topInset,
-                right: 0,
-                child: _BubbleAttachmentPreview(
-                  attachment: tile.attachment,
-                  theme: theme,
-                  width: tile.width,
-                  height: tile.height,
-                ),
-              ),
-            if (overlayFooter != null)
-              Positioned(
-                right: 4,
-                bottom: 4,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 5,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: CupertinoColors.black.withAlpha(110),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: DefaultTextStyle.merge(
-                    style: appBubbleTextStyle(
-                      context,
-                      color: CupertinoColors.white,
-                      fontSize: AppFontSizes.bubbleMeta,
-                      fontWeight: FontWeight.w400,
-                    ),
-                    child: IconTheme.merge(
-                      data: const IconThemeData(
-                        color: CupertinoColors.white,
-                        size: 14,
-                      ),
-                      child: overlayFooter!,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  AttachmentGalleryLayoutPlan _buildLayoutPlan(
-    List<AttachmentItem> attachments, {
-    required double maxWidth,
-  }) {
-    final tiles = <AttachmentGalleryTilePlan>[];
-    var currentTopInset = 0.0;
-    var maxResolvedWidth = 0.0;
-
-    for (var index = 0; index < attachments.length; index++) {
-      final attachment = attachments[index];
-      final resolvedSize = _resolveTileSize(attachment, maxWidth: maxWidth);
-      tiles.add(
-        AttachmentGalleryTilePlan(
-          attachment: attachment,
-          width: resolvedSize.width,
-          height: resolvedSize.height,
-          topInset: currentTopInset,
-        ),
-      );
-      maxResolvedWidth = math.max(maxResolvedWidth, resolvedSize.width);
-      currentTopInset += resolvedSize.height;
-      if (index < attachments.length - 1) {
-        currentTopInset += _tileSpacing;
-      }
-    }
-
-    return AttachmentGalleryLayoutPlan(
-      width: maxResolvedWidth,
-      height: currentTopInset,
-      tiles: tiles,
-    );
-  }
-
-  ({double width, double height}) _resolveTileSize(
-    AttachmentItem attachment, {
-    required double maxWidth,
-  }) {
-    final layout = computeAttachmentPreviewLayout(
-      attachment,
+    final layoutPlan = buildAttachmentGalleryLayoutPlan(
+      attachments,
       maxWidth: maxWidth,
     );
-    final fallbackWidth = maxWidth.clamp(0, 220).toDouble();
-    final fallbackHeight = 220.0;
-    return (
-      width: layout?.width ?? fallbackWidth,
-      height: layout?.height ?? fallbackHeight,
+    Widget gallery = SizedBox(
+      width: layoutPlan.width,
+      height: layoutPlan.height,
+      child: Stack(
+        children: [
+          for (final tile in layoutPlan.tiles)
+            Positioned(
+              left: tile.left,
+              top: tile.top,
+              child: _BubbleAttachmentPreview(
+                attachment: tile.attachment,
+                theme: theme,
+                width: tile.width,
+                height: tile.height,
+                showsOverflowOverlay: tile.showsOverflowOverlay,
+                overflowCount: tile.overflowCount,
+              ),
+            ),
+          if (overlayFooter != null)
+            Positioned(
+              right: 4,
+              bottom: 4,
+              child: MediaFooterChip(child: overlayFooter!),
+            ),
+        ],
+      ),
     );
+    if (clipBorderRadius != null) {
+      gallery = ClipRRect(borderRadius: clipBorderRadius!, child: gallery);
+    }
+
+    return Align(alignment: Alignment.centerRight, child: gallery);
   }
 }
 
@@ -138,33 +71,77 @@ class _BubbleAttachmentPreview extends StatelessWidget {
     required this.theme,
     required this.width,
     required this.height,
+    required this.showsOverflowOverlay,
+    required this.overflowCount,
   });
 
   final AttachmentItem attachment;
   final BubbleThemeV2 theme;
   final double width;
   final double height;
+  final bool showsOverflowOverlay;
+  final int overflowCount;
 
   @override
   Widget build(BuildContext context) {
+    final fallback = _FileAttachmentTile(attachment: attachment, theme: theme);
+    Widget child;
     if (attachment.isVideo && attachment.url.isNotEmpty) {
-      return VideoAttachmentPreview(
+      child = VideoAttachmentPreview(
         attachment: attachment,
         maxWidth: width,
         maxHeight: height,
+        frameWidth: width,
+        frameHeight: height,
+        borderRadius: null,
+        fit: BoxFit.cover,
         onTap: () {},
       );
-    }
-    if (attachment.isImage && attachment.url.isNotEmpty) {
-      return MessageImageAttachmentPreview(
+    } else if (attachment.isImage && attachment.url.isNotEmpty) {
+      child = MessageImageAttachmentPreview(
         attachment: attachment,
         onTap: () {},
-        fallback: _FileAttachmentTile(attachment: attachment, theme: theme),
+        fallback: fallback,
         maxWidth: width,
         maxHeight: height,
+        frameWidth: width,
+        frameHeight: height,
+        borderRadius: null,
+        fit: BoxFit.cover,
       );
+    } else {
+      child = fallback;
     }
-    return _FileAttachmentTile(attachment: attachment, theme: theme);
+
+    if (!showsOverflowOverlay) {
+      return child;
+    }
+
+    return Stack(
+      children: [
+        child,
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: CupertinoColors.black.withAlpha(110),
+            ),
+          ),
+        ),
+        Positioned.fill(
+          child: Center(
+            child: Text(
+              '+$overflowCount',
+              style: appBubbleTextStyle(
+                context,
+                color: CupertinoColors.white,
+                fontSize: 28,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 

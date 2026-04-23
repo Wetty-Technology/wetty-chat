@@ -12,12 +12,20 @@ class VideoAttachmentPreview extends StatelessWidget {
     required this.onTap,
     required this.maxWidth,
     this.maxHeight = 300,
+    this.borderRadius = const BorderRadius.all(Radius.circular(14)),
+    this.frameWidth,
+    this.frameHeight,
+    this.fit = BoxFit.cover,
   });
 
   final AttachmentItem attachment;
   final VoidCallback onTap;
   final double maxWidth;
   final double maxHeight;
+  final BorderRadius? borderRadius;
+  final double? frameWidth;
+  final double? frameHeight;
+  final BoxFit fit;
 
   @override
   Widget build(BuildContext context) {
@@ -26,68 +34,64 @@ class VideoAttachmentPreview extends StatelessWidget {
       maxWidth: maxWidth,
       maxHeight: maxHeight,
     );
-    final previewWidth = layout?.width ?? maxWidth.clamp(0, 220).toDouble();
-    final previewHeight = layout?.height ?? maxHeight.clamp(0, 220).toDouble();
+    final previewWidth =
+        frameWidth ?? layout?.width ?? maxWidth.clamp(0, 220).toDouble();
+    final previewHeight =
+        frameHeight ?? layout?.height ?? maxHeight.clamp(0, 220).toDouble();
 
-    return GestureDetector(
-      onTap: onTap,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: SizedBox(
-          width: previewWidth,
-          height: previewHeight,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              VideoAttachmentThumbnail(attachment: attachment),
-              Container(color: CupertinoColors.black.withAlpha(36)),
-              if (attachment.duration case final duration?)
-                Positioned(
-                  left: 12,
-                  bottom: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: CupertinoColors.black.withAlpha(96),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      _formatDuration(duration),
-                      style: appOnDarkTextStyle(
-                        context,
-                        fontSize: AppFontSizes.meta,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
+    Widget preview = SizedBox(
+      width: previewWidth,
+      height: previewHeight,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          VideoAttachmentThumbnail(attachment: attachment, fit: fit),
+          Container(color: CupertinoColors.black.withAlpha(36)),
+          if (attachment.duration case final duration?)
+            Positioned(
+              left: 12,
+              bottom: 12,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: CupertinoColors.black.withAlpha(96),
+                  borderRadius: BorderRadius.circular(999),
                 ),
-              Center(
-                child: Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: CupertinoColors.black.withAlpha(110),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: CupertinoColors.white.withAlpha(70),
-                    ),
-                  ),
-                  alignment: Alignment.center,
-                  child: const Icon(
-                    CupertinoIcons.play_fill,
-                    color: CupertinoColors.white,
-                    size: 28,
+                child: Text(
+                  _formatDuration(duration),
+                  style: appOnDarkTextStyle(
+                    context,
+                    fontSize: AppFontSizes.meta,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
-            ],
+            ),
+          Center(
+            child: Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: CupertinoColors.black.withAlpha(110),
+                shape: BoxShape.circle,
+                border: Border.all(color: CupertinoColors.white.withAlpha(70)),
+              ),
+              alignment: Alignment.center,
+              child: const Icon(
+                CupertinoIcons.play_fill,
+                color: CupertinoColors.white,
+                size: 28,
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
+    if (borderRadius != null) {
+      preview = ClipRRect(borderRadius: borderRadius!, child: preview);
+    }
+
+    return GestureDetector(onTap: onTap, child: preview);
   }
 }
 

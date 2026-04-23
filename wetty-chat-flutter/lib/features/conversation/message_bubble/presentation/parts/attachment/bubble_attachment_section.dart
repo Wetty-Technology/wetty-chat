@@ -14,12 +14,14 @@ class BubbleAttachmentSection extends StatelessWidget {
     required this.theme,
     required this.variant,
     this.overlayFooter,
+    this.clipBorderRadius,
   });
 
   final List<AttachmentItem> attachments;
   final BubbleThemeV2 theme;
   final BubbleAttachmentSectionVariant variant;
   final Widget? overlayFooter;
+  final BorderRadius? clipBorderRadius;
 
   @override
   Widget build(BuildContext context) {
@@ -30,6 +32,7 @@ class BubbleAttachmentSection extends StatelessWidget {
         theme: theme,
         maxWidth: maxAttachmentWidth,
         overlayFooter: overlayFooter,
+        clipBorderRadius: clipBorderRadius,
       );
     }
 

@@ -39,7 +39,11 @@ class TextBubbleVisualOnlyContent extends StatelessWidget {
         attachments: attachments,
         theme: theme,
         variant: BubbleAttachmentSectionVariant.visualMedia,
-        overlayFooter: MetaFooter(message: message),
+        overlayFooter: MetaFooter(
+          message: message,
+          color: CupertinoColors.white,
+        ),
+        clipBorderRadius: BorderRadius.circular(18),
       ),
     ];
 
