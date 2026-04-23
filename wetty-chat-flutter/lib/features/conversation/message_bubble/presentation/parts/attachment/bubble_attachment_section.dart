@@ -6,19 +6,34 @@ import '../../../domain/bubble_theme_v2.dart';
 import 'message_attachment_previews.dart';
 import 'video_popup_player.dart';
 
+enum BubbleAttachmentSectionVariant { visualMedia, fileList }
+
 class BubbleAttachmentSection extends StatelessWidget {
   const BubbleAttachmentSection({
     super.key,
     required this.attachments,
     required this.theme,
+    required this.variant,
+    this.overlayFooter,
   });
 
   final List<AttachmentItem> attachments;
   final BubbleThemeV2 theme;
+  final BubbleAttachmentSectionVariant variant;
+  final Widget? overlayFooter;
 
   @override
   Widget build(BuildContext context) {
     final maxAttachmentWidth = theme.maxBubbleWidth - 24;
+    if (variant == BubbleAttachmentSectionVariant.visualMedia) {
+      return _VisualAttachmentSection(
+        attachments: attachments,
+        theme: theme,
+        maxAttachmentWidth: maxAttachmentWidth,
+        overlayFooter: overlayFooter,
+      );
+    }
+
     return Align(
       alignment: Alignment.centerRight,
       child: Column(
@@ -33,6 +48,72 @@ class BubbleAttachmentSection extends StatelessWidget {
               maxAttachmentWidth: maxAttachmentWidth,
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _VisualAttachmentSection extends StatelessWidget {
+  const _VisualAttachmentSection({
+    required this.attachments,
+    required this.theme,
+    required this.maxAttachmentWidth,
+    this.overlayFooter,
+  });
+
+  final List<AttachmentItem> attachments;
+  final BubbleThemeV2 theme;
+  final double maxAttachmentWidth;
+  final Widget? overlayFooter;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Stack(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var index = 0; index < attachments.length; index++) ...[
+                if (index > 0) const SizedBox(height: 8),
+                _BubbleAttachmentPreview(
+                  attachment: attachments[index],
+                  theme: theme,
+                  maxAttachmentWidth: maxAttachmentWidth,
+                ),
+              ],
+            ],
+          ),
+          if (overlayFooter != null)
+            Positioned(
+              right: 4,
+              bottom: 4,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                decoration: BoxDecoration(
+                  color: CupertinoColors.black.withAlpha(110),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: DefaultTextStyle.merge(
+                  style: appBubbleTextStyle(
+                    context,
+                    color: CupertinoColors.white,
+                    fontSize: AppFontSizes.bubbleMeta,
+                    fontWeight: FontWeight.w400,
+                  ),
+                  child: IconTheme.merge(
+                    data: const IconThemeData(
+                      color: CupertinoColors.white,
+                      size: 14,
+                    ),
+                    child: overlayFooter!,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

@@ -4,93 +4,37 @@ import 'package:chahua/features/conversation/shared/domain/conversation_message_
 import 'package:chahua/features/conversation/shared/presentation/conversation_presentation_scope.dart';
 import 'package:flutter/cupertino.dart';
 
-import '../domain/bubble_theme_v2.dart';
-import 'parts/attachment/bubble_attachment_section.dart';
-import 'parts/linkified_text.dart';
-import 'parts/meta_footer.dart';
-import 'parts/reactions.dart';
-import 'parts/reply_quote.dart';
-import 'parts/sender_header.dart';
-import 'parts/thread_indicator.dart';
+import '../../domain/bubble_theme_v2.dart';
+import '../parts/attachment/bubble_attachment_section.dart';
+import '../parts/linkified_text.dart';
+import '../parts/meta_footer.dart';
+import '../parts/reply_quote.dart';
+import '../parts/sender_header.dart';
+import '../parts/thread_indicator.dart';
+import 'text_bubble_v2.dart';
 
-class TextBubbleV2 extends StatelessWidget {
-  const TextBubbleV2({
+class TextBubblePlainContent extends StatelessWidget {
+  const TextBubblePlainContent({
     super.key,
     required this.message,
+    required this.theme,
     required this.showSenderName,
-    this.onToggleReaction,
     this.onTapReply,
     this.onOpenThread,
   });
 
   final ConversationMessageV2 message;
+  final BubbleThemeV2 theme;
   final bool showSenderName;
-  final ValueChanged<String>? onToggleReaction;
   final VoidCallback? onTapReply;
   final VoidCallback? onOpenThread;
 
   static const FontWeight _bubbleFontWeight = FontWeight.w400;
-  static const double _emptyBubbleMinWidth = 48;
-
   @override
   Widget build(BuildContext context) {
-    final theme = BubbleThemeV2.of(context);
-    const bubbleRadius = Radius.circular(18);
-    const tailRadius = Radius.circular(4);
-    final borderRadius = BorderRadius.only(
-      topLeft: bubbleRadius,
-      topRight: bubbleRadius,
-      bottomLeft: !theme.isMe ? tailRadius : bubbleRadius,
-      bottomRight: theme.isMe ? tailRadius : bubbleRadius,
-    );
-
-    final bubble = IntrinsicWidth(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: theme.maxBubbleWidth),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-          decoration: BoxDecoration(
-            color: theme.bubbleColor,
-            borderRadius: borderRadius,
-          ),
-          child: DefaultTextStyle(
-            style: appBubbleTextStyle(
-              context,
-              color: theme.textColor,
-              fontSize: theme.chatMessageFontSize,
-              height: 1.28,
-              fontWeight: _bubbleFontWeight,
-            ),
-            child: _buildBubbleContent(context, theme),
-          ),
-        ),
-      ),
-    );
-
-    if (message.reactions.isEmpty) {
-      return bubble;
-    }
-
-    return Column(
-      crossAxisAlignment: theme.isMe
-          ? CrossAxisAlignment.end
-          : CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        bubble,
-        const SizedBox(height: 8),
-        BubbleReactions(
-          reactions: message.reactions,
-          onToggleReaction: onToggleReaction,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBubbleContent(BuildContext context, BubbleThemeV2 theme) {
     final isThreadView =
         ConversationPresentationScope.maybeOf(context)?.isThreadView ?? false;
-    final attachments = _attachmentsFor(message.content);
+    final attachments = attachmentsForBubble(message.content);
     final hasAttachments = attachments.isNotEmpty;
     final children = <Widget>[];
 
@@ -138,7 +82,11 @@ class TextBubbleV2 extends StatelessWidget {
         children.add(const SizedBox(height: 8));
       }
       children.add(
-        BubbleAttachmentSection(attachments: attachments, theme: theme),
+        BubbleAttachmentSection(
+          attachments: attachments,
+          theme: theme,
+          variant: BubbleAttachmentSectionVariant.fileList,
+        ),
       );
     }
 
@@ -146,7 +94,7 @@ class TextBubbleV2 extends StatelessWidget {
         (message.replyToMessage != null || hasAttachments)) {
       children.add(const SizedBox(height: 4));
     }
-    children.add(_buildMessageBody(context, theme));
+    children.add(TextBubbleMessageBody(message: message, theme: theme));
 
     final threadInfo = message.threadInfo;
     if (!isThreadView && threadInfo != null && threadInfo.replyCount > 0) {
@@ -164,10 +112,25 @@ class TextBubbleV2 extends StatelessWidget {
       children: children,
     );
   }
+}
 
-  Widget _buildMessageBody(BuildContext context, BubbleThemeV2 theme) {
-    final messageText = _messageTextFor(message.content);
-    final mentions = _mentionsFor(message.content);
+class TextBubbleMessageBody extends StatelessWidget {
+  const TextBubbleMessageBody({
+    super.key,
+    required this.message,
+    required this.theme,
+  });
+
+  final ConversationMessageV2 message;
+  final BubbleThemeV2 theme;
+
+  static const FontWeight _bubbleFontWeight = FontWeight.w400;
+  static const double _emptyBubbleMinWidth = 48;
+
+  @override
+  Widget build(BuildContext context) {
+    final messageText = messageTextForBubble(message.content);
+    final mentions = mentionsForBubble(message.content);
     final metaWidget = MetaFooter(message: message);
 
     if (messageText.trim().isEmpty) {
@@ -205,26 +168,3 @@ class TextBubbleV2 extends StatelessWidget {
     );
   }
 }
-
-String _messageTextFor(MessageContent content) => switch (content) {
-  TextMessageContent(:final text) => text,
-  AudioMessageContent(:final text) => text ?? '',
-  FileMessageContent(:final text) => text ?? '',
-  InviteMessageContent(:final text) => text ?? '',
-  SystemMessageContent(:final text) => text,
-  StickerMessageContent() => '',
-};
-
-List<MentionInfo> _mentionsFor(MessageContent content) => switch (content) {
-  TextMessageContent(:final mentions) => mentions,
-  AudioMessageContent(:final mentions) => mentions,
-  FileMessageContent(:final mentions) => mentions,
-  InviteMessageContent(:final mentions) => mentions,
-  _ => const <MentionInfo>[],
-};
-
-List<AttachmentItem> _attachmentsFor(MessageContent content) =>
-    switch (content) {
-      FileMessageContent(:final attachments) => attachments,
-      _ => const <AttachmentItem>[],
-    };

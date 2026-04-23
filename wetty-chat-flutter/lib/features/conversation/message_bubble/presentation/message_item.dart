@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/bubble_theme_v2.dart';
 import 'sticker_bubble_v2.dart';
 import 'system_bubble_v2.dart';
-import 'text_bubble_v2.dart';
+import 'text/text_bubble_v2.dart';
 import 'voice_bubble_v2.dart';
 
 class MessageItem extends ConsumerWidget {
