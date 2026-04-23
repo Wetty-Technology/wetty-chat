@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/bubble_theme_v2.dart';
 import 'parts/meta_footer.dart';
 import 'parts/reactions.dart';
+import 'parts/reply_quote.dart';
 import 'parts/sender_header.dart';
 import 'parts/thread_indicator.dart';
 import 'voice/voice_slider_view.dart';
@@ -293,6 +294,11 @@ class _VoiceBubbleV2State extends ConsumerState<VoiceBubbleV2> {
                 'User ${widget.message.sender.uid}',
             gender: widget.message.sender.gender,
           ),
+        ),
+      if (widget.message.replyToMessage != null)
+        ReplyQuote(
+          reply: widget.message.replyToMessage!,
+          onTap: widget.onTapReply,
         ),
       body,
       if (statusRow != null) ...[const SizedBox(height: 6), statusRow],
