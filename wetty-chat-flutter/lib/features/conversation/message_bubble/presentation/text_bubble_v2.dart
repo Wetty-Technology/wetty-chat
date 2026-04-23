@@ -4,9 +4,8 @@ import 'package:chahua/features/conversation/shared/domain/conversation_message_
 import 'package:chahua/features/conversation/shared/presentation/conversation_presentation_scope.dart';
 import 'package:flutter/cupertino.dart';
 
-import 'parts/attachment/message_attachment_previews.dart';
-import 'parts/attachment/video_popup_player.dart';
 import '../domain/bubble_theme_v2.dart';
+import 'parts/attachment/bubble_attachment_section.dart';
 import 'parts/linkified_text.dart';
 import 'parts/meta_footer.dart';
 import 'parts/reactions.dart';
@@ -138,7 +137,9 @@ class TextBubbleV2 extends StatelessWidget {
       if (children.isNotEmpty) {
         children.add(const SizedBox(height: 8));
       }
-      children.add(_buildAttachmentSection(context, theme, attachments));
+      children.add(
+        BubbleAttachmentSection(attachments: attachments, theme: theme),
+      );
     }
 
     if (children.isNotEmpty &&
@@ -200,100 +201,6 @@ class TextBubbleV2 extends StatelessWidget {
             Positioned(right: 0, bottom: 0, child: metaWidget),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildAttachmentSection(
-    BuildContext context,
-    BubbleThemeV2 theme,
-    List<AttachmentItem> attachments,
-  ) {
-    final maxAttachmentWidth = theme.maxBubbleWidth - 24;
-    return Align(
-      alignment: Alignment.centerRight,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (var index = 0; index < attachments.length; index++) ...[
-            if (index > 0) const SizedBox(height: 8),
-            _buildAttachmentPreview(
-              context,
-              theme,
-              attachments[index],
-              maxAttachmentWidth: maxAttachmentWidth,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAttachmentPreview(
-    BuildContext context,
-    BubbleThemeV2 theme,
-    AttachmentItem attachment, {
-    required double maxAttachmentWidth,
-  }) {
-    if (attachment.isVideo && attachment.url.isNotEmpty) {
-      return VideoAttachmentPreview(
-        attachment: attachment,
-        maxWidth: maxAttachmentWidth,
-        onTap: () {},
-      );
-    }
-    if (attachment.isImage && attachment.url.isNotEmpty) {
-      return MessageImageAttachmentPreview(
-        attachment: attachment,
-        onTap: () {},
-        fallback: _buildFileAttachmentTile(context, theme, attachment),
-        maxWidth: maxAttachmentWidth,
-      );
-    }
-    return _buildFileAttachmentTile(context, theme, attachment);
-  }
-
-  Widget _buildFileAttachmentTile(
-    BuildContext context,
-    BubbleThemeV2 theme,
-    AttachmentItem attachment,
-  ) {
-    return Container(
-      width: 180,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: theme.isMe
-            ? context.appColors.chatAttachmentChipSent
-            : context.appColors.chatAttachmentChipReceived,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            attachment.isAudio
-                ? CupertinoIcons.mic_fill
-                : attachment.isVideo
-                ? CupertinoIcons.play_rectangle
-                : CupertinoIcons.doc,
-            size: 18,
-            color: const Color(0xFF8B6D52),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              attachment.fileName.isEmpty ? 'Attachment' : attachment.fileName,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: appBubbleTextStyle(
-                context,
-                fontSize: AppFontSizes.bodySmall,
-                fontWeight: _bubbleFontWeight,
-                color: context.appColors.textPrimary,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
