@@ -45,7 +45,7 @@ class TextBubbleV2 extends StatelessWidget {
       bottomRight: theme.isMe ? tailRadius : bubbleRadius,
     );
 
-    return IntrinsicWidth(
+    final bubble = IntrinsicWidth(
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: theme.maxBubbleWidth),
         child: Container(
@@ -62,14 +62,33 @@ class TextBubbleV2 extends StatelessWidget {
               height: 1.28,
               fontWeight: _bubbleFontWeight,
             ),
-            child: _buildContent(context, theme),
+            child: _buildBubbleContent(context, theme),
           ),
         ),
       ),
     );
+
+    if (message.reactions.isEmpty) {
+      return bubble;
+    }
+
+    return Column(
+      crossAxisAlignment: theme.isMe
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        bubble,
+        const SizedBox(height: 8),
+        BubbleReactions(
+          reactions: message.reactions,
+          onToggleReaction: onToggleReaction,
+        ),
+      ],
+    );
   }
 
-  Widget _buildContent(BuildContext context, BubbleThemeV2 theme) {
+  Widget _buildBubbleContent(BuildContext context, BubbleThemeV2 theme) {
     final isThreadView =
         ConversationPresentationScope.maybeOf(context)?.isThreadView ?? false;
     final attachments = _attachmentsFor(message.content);
@@ -134,16 +153,6 @@ class TextBubbleV2 extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(top: 8),
           child: ThreadIndicator(threadInfo: threadInfo, onTap: onOpenThread),
-        ),
-      );
-    }
-
-    if (message.reactions.isNotEmpty) {
-      children.add(const SizedBox(height: 8));
-      children.add(
-        BubbleReactions(
-          reactions: message.reactions,
-          onToggleReaction: onToggleReaction,
         ),
       );
     }
