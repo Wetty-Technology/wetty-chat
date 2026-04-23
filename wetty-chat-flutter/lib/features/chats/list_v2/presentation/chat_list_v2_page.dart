@@ -51,7 +51,7 @@ class _ChatListV2PageState extends ConsumerState<ChatListV2Page> {
   ChatListTab _effectiveTab(bool showAllTab) {
     final tab = _activeTab;
     if (tab == null) {
-      return ChatListTab.groups;
+      return showAllTab ? ChatListTab.all : ChatListTab.groups;
     }
     if (!showAllTab && tab == ChatListTab.all) {
       return ChatListTab.groups;
