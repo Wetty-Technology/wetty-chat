@@ -8,6 +8,7 @@ import 'package:chahua/features/conversation/shared/domain/conversation_message_
 import 'package:chahua/features/conversation/shared/domain/launch_request.dart';
 import 'package:chahua/features/conversation/compose/presentation/conversation_compose_v2.dart';
 import 'package:chahua/features/conversation/timeline/presentation/conversation_timeline_view.dart';
+import 'package:chahua/features/conversation/shared/presentation/conversation_presentation_scope.dart';
 
 class ConversationSurfaceV2 extends ConsumerStatefulWidget {
   const ConversationSurfaceV2({
@@ -39,32 +40,36 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final isThreadView = widget.identity.threadRootId != null;
 
-    return GestureDetector(
-      onTap: () {
-        FocusScope.of(context).unfocus();
-        _composeKey.currentState?.dismissTransientUi();
-      },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: Container(
-              color: colors.chatBackground,
-              child: ConversationTimelineView(
-                chatId: widget.identity.chatId,
-                threadRootId: widget.identity.threadRootId,
-                launchRequest: widget.launchRequest,
-                onOpenThread: widget.onOpenThread,
+    return ConversationPresentationScope(
+      isThreadView: isThreadView,
+      child: GestureDetector(
+        onTap: () {
+          FocusScope.of(context).unfocus();
+          _composeKey.currentState?.dismissTransientUi();
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: Container(
+                color: colors.chatBackground,
+                child: ConversationTimelineView(
+                  chatId: widget.identity.chatId,
+                  threadRootId: widget.identity.threadRootId,
+                  launchRequest: widget.launchRequest,
+                  onOpenThread: widget.onOpenThread,
+                ),
               ),
             ),
-          ),
-          ConversationComposeV2(
-            key: _composeKey,
-            identity: widget.identity,
-            onMessageSent: _handleMessageSent,
-          ),
-        ],
+            ConversationComposeV2(
+              key: _composeKey,
+              identity: widget.identity,
+              onMessageSent: _handleMessageSent,
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/features/conversation/media/data/audio_waveform_cache_service.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
+import 'package:chahua/features/conversation/shared/presentation/conversation_presentation_scope.dart';
 import 'package:chahua/features/conversation/timeline/presentation/voice_message_playback_controller_v2.dart';
 import 'package:chahua/features/conversation/timeline/presentation/voice_message_presentation_provider_v2.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
@@ -147,8 +148,7 @@ class _VoiceBubbleV2State extends ConsumerState<VoiceBubbleV2> {
     );
     final resolvedPosition = switch (phase) {
       VoiceMessagePlaybackPhaseV2.completed => duration,
-      _ =>
-        _dragPosition ?? (isActive ? playbackState.position : Duration.zero),
+      _ => _dragPosition ?? (isActive ? playbackState.position : Duration.zero),
     };
     final clampedPosition = clampDuration(
       resolvedPosition,
@@ -255,8 +255,7 @@ class _VoiceBubbleV2State extends ConsumerState<VoiceBubbleV2> {
           accentColor: accent,
           buttonBackgroundColor: _buttonBackground(context, theme, accent),
           onTogglePlayback: () => controller.togglePlayback(attachment),
-          onSeekPreview: (position) =>
-              setState(() => _dragPosition = position),
+          onSeekPreview: (position) => setState(() => _dragPosition = position),
           onSeekCommit: (position) async {
             setState(() => _dragPosition = null);
             await controller.seekToAttachment(attachment, position);
@@ -278,8 +277,11 @@ class _VoiceBubbleV2State extends ConsumerState<VoiceBubbleV2> {
     required Widget body,
     required Widget? statusRow,
   }) {
+    final isThreadView =
+        ConversationPresentationScope.maybeOf(context)?.isThreadView ?? false;
     final threadInfo = widget.message.threadInfo;
-    final showThread = threadInfo != null && threadInfo.replyCount > 0;
+    final showThread =
+        !isThreadView && threadInfo != null && threadInfo.replyCount > 0;
 
     final children = <Widget>[
       if (widget.showSenderName)
@@ -346,14 +348,12 @@ class _VoiceBubbleV2State extends ConsumerState<VoiceBubbleV2> {
             text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: appSecondaryTextStyle(
-              context,
-              fontSize: AppFontSizes.meta,
-            ).copyWith(
-              color: isError
-                  ? CupertinoColors.systemRed.resolveFrom(context)
-                  : theme.metaColor,
-            ),
+            style: appSecondaryTextStyle(context, fontSize: AppFontSizes.meta)
+                .copyWith(
+                  color: isError
+                      ? CupertinoColors.systemRed.resolveFrom(context)
+                      : theme.metaColor,
+                ),
           ),
         ),
         const SizedBox(width: 8),
@@ -370,13 +370,10 @@ class _VoiceBubbleV2State extends ConsumerState<VoiceBubbleV2> {
     BuildContext context,
     BubbleThemeV2 theme,
     Color accent,
-  ) => theme.isMe
-      ? CupertinoColors.white.withAlpha(36)
-      : accent.withAlpha(28);
+  ) => theme.isMe ? CupertinoColors.white.withAlpha(36) : accent.withAlpha(28);
 
-  Color _inactiveWaveformColor(BubbleThemeV2 theme, Color accent) => theme.isMe
-      ? CupertinoColors.white.withAlpha(92)
-      : accent.withAlpha(72);
+  Color _inactiveWaveformColor(BubbleThemeV2 theme, Color accent) =>
+      theme.isMe ? CupertinoColors.white.withAlpha(92) : accent.withAlpha(72);
 
   double _measureStatusTextWidth(
     BuildContext context,

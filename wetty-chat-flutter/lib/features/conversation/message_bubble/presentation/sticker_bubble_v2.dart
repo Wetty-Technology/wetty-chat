@@ -1,6 +1,7 @@
 import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/features/chats/shared/presentation/sticker_image_widget.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
+import 'package:chahua/features/conversation/shared/presentation/conversation_presentation_scope.dart';
 import 'package:flutter/cupertino.dart';
 
 import '../domain/bubble_theme_v2.dart';
@@ -38,6 +39,8 @@ class StickerBubbleV2 extends StatelessWidget {
   }
 
   Widget _buildContent(BuildContext context, BubbleThemeV2 theme) {
+    final isThreadView =
+        ConversationPresentationScope.maybeOf(context)?.isThreadView ?? false;
     if (message.isDeleted) {
       return Text(
         '[Deleted]',
@@ -90,9 +93,11 @@ class StickerBubbleV2 extends StatelessWidget {
     ];
 
     final threadInfo = message.threadInfo;
-    if (threadInfo != null && threadInfo.replyCount > 0) {
+    if (!isThreadView && threadInfo != null && threadInfo.replyCount > 0) {
       children.add(const SizedBox(height: 4));
-      children.add(ThreadIndicator(threadInfo: threadInfo, onTap: onOpenThread));
+      children.add(
+        ThreadIndicator(threadInfo: threadInfo, onTap: onOpenThread),
+      );
     }
 
     if (message.reactions.isNotEmpty) {
