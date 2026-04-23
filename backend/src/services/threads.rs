@@ -393,39 +393,106 @@ pub fn get_user_threads(
 }
 
 #[derive(QueryableByName)]
-struct UnreadThreadCountRow {
+pub struct UnreadThreadSummaryCounts {
     #[diesel(sql_type = diesel::sql_types::BigInt)]
-    unread_thread_count: i64,
+    pub unread_thread_count: i64,
+    #[diesel(sql_type = diesel::sql_types::BigInt)]
+    pub archived_unread_thread_count: i64,
+    #[diesel(sql_type = diesel::sql_types::BigInt)]
+    pub unread_message_count: i64,
+    #[diesel(sql_type = diesel::sql_types::BigInt)]
+    pub archived_unread_message_count: i64,
 }
 
-/// Count of subscribed threads that have at least one unread reply.
-pub fn get_total_unread_thread_count(
+/// Counts unread subscribed threads and unread replies for the current user.
+///
+/// Thread counts preserve the historical exact-count behavior. Message counts are badge-style
+/// counts capped at `MAX_UNREAD_COUNT`.
+pub fn get_unread_summary_counts(
     conn: &mut PgConnection,
     uid: i32,
-    archived: bool,
-) -> Result<i64, diesel::result::Error> {
+) -> Result<UnreadThreadSummaryCounts, diesel::result::Error> {
     let query = sql_query(
-        "SELECT COUNT(*)::bigint AS unread_thread_count
-         FROM thread_subscriptions ts
-         JOIN messages root_msg ON root_msg.id = ts.thread_root_id
-         WHERE ts.uid = $1
-           AND ts.archived = $2
-           AND root_msg.deleted_at IS NULL
-           AND root_msg.is_published = TRUE
-           AND EXISTS (
-               SELECT 1 FROM messages m
-               WHERE m.reply_root_id = ts.thread_root_id
-                 AND m.deleted_at IS NULL
-                 AND m.is_published = TRUE
-                 AND m.id > COALESCE(ts.last_read_message_id, 0)
-           )",
+        "WITH qualified_subscriptions AS MATERIALIZED (
+             SELECT ts.thread_root_id, ts.last_read_message_id, ts.archived
+             FROM thread_subscriptions ts
+             JOIN messages root_msg ON root_msg.id = ts.thread_root_id
+             WHERE ts.uid = $1
+               AND root_msg.deleted_at IS NULL
+               AND root_msg.is_published = TRUE
+         ),
+         active_unread_threads AS (
+             SELECT 1 AS marker
+             FROM qualified_subscriptions ts
+             WHERE ts.archived = FALSE
+               AND EXISTS (
+                 SELECT 1
+                 FROM messages m
+                 WHERE m.reply_root_id = ts.thread_root_id
+                   AND m.deleted_at IS NULL
+                   AND m.is_published = TRUE
+                   AND m.id > COALESCE(ts.last_read_message_id, 0)
+               )
+         ),
+         archived_unread_threads AS (
+             SELECT 1 AS marker
+             FROM qualified_subscriptions ts
+             WHERE ts.archived = TRUE
+               AND EXISTS (
+                 SELECT 1
+                 FROM messages m
+                 WHERE m.reply_root_id = ts.thread_root_id
+                   AND m.deleted_at IS NULL
+                   AND m.is_published = TRUE
+                   AND m.id > COALESCE(ts.last_read_message_id, 0)
+               )
+         ),
+         active_unread_messages AS (
+             SELECT 1
+             FROM qualified_subscriptions ts
+             JOIN LATERAL (
+                 SELECT 1
+                 FROM messages m
+                 WHERE m.reply_root_id = ts.thread_root_id
+                   AND m.deleted_at IS NULL
+                   AND m.is_published = TRUE
+                   AND m.id > COALESCE(ts.last_read_message_id, 0)
+                 LIMIT $2
+             ) unread_message ON TRUE
+             WHERE ts.archived = FALSE
+             LIMIT $2
+         ),
+         archived_unread_messages AS (
+             SELECT 1
+             FROM qualified_subscriptions ts
+             JOIN LATERAL (
+                 SELECT 1
+                 FROM messages m
+                 WHERE m.reply_root_id = ts.thread_root_id
+                   AND m.deleted_at IS NULL
+                   AND m.is_published = TRUE
+                   AND m.id > COALESCE(ts.last_read_message_id, 0)
+                 LIMIT $2
+             ) unread_message ON TRUE
+             WHERE ts.archived = TRUE
+             LIMIT $2
+         )
+         SELECT
+           (SELECT COUNT(*)::bigint FROM active_unread_threads) AS unread_thread_count,
+           (SELECT COUNT(*)::bigint FROM archived_unread_threads) AS archived_unread_thread_count,
+           (SELECT COUNT(*)::bigint FROM active_unread_messages) AS unread_message_count,
+           (SELECT COUNT(*)::bigint FROM archived_unread_messages) AS archived_unread_message_count",
     )
     .bind::<diesel::sql_types::Integer, _>(uid)
-    .bind::<diesel::sql_types::Bool, _>(archived);
+    .bind::<diesel::sql_types::BigInt, _>(MAX_UNREAD_COUNT);
 
-    query
-        .get_result::<UnreadThreadCountRow>(conn)
-        .map(|row| row.unread_thread_count)
+    match query.get_result::<UnreadThreadSummaryCounts>(conn) {
+        Ok(row) => Ok(row),
+        Err(e) => {
+            warn!("Failed to load unread thread summary counts: {:?}", e);
+            Err(e)
+        }
+    }
 }
 
 // --- Thread list enrichment types and logic ---

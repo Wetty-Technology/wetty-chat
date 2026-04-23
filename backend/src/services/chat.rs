@@ -30,6 +30,18 @@ struct ChatUnreadCountRow {
     unread_count: i64,
 }
 
+#[derive(QueryableByName)]
+pub struct UnreadSummaryCounts {
+    #[diesel(sql_type = diesel::sql_types::BigInt)]
+    pub unread_count: i64,
+    #[diesel(sql_type = diesel::sql_types::BigInt)]
+    pub archived_unread_count: i64,
+    #[diesel(sql_type = diesel::sql_types::BigInt)]
+    pub unread_chat_count: i64,
+    #[diesel(sql_type = diesel::sql_types::BigInt)]
+    pub archived_unread_chat_count: i64,
+}
+
 /// Calculate capped global unread counts for badge-style displays.
 /// UIDs are processed in chunks to keep individual query times bounded.
 pub fn get_unread_counts(
@@ -44,26 +56,6 @@ pub fn get_unread_counts(
 
     for chunk in target_uids.chunks(UNREAD_COUNT_CHUNK_SIZE) {
         let rows = get_unread_counts_batch(conn, chunk, false, true)?;
-        for row in rows {
-            result.insert(row.uid, row.unread_count.min(MAX_UNREAD_COUNT));
-        }
-    }
-
-    Ok(result)
-}
-
-pub fn get_archived_unread_counts(
-    conn: &mut PgConnection,
-    target_uids: &[i32],
-) -> Result<HashMap<i32, i64>, diesel::result::Error> {
-    if target_uids.is_empty() {
-        return Ok(HashMap::new());
-    }
-
-    let mut result = HashMap::with_capacity(target_uids.len());
-
-    for chunk in target_uids.chunks(UNREAD_COUNT_CHUNK_SIZE) {
-        let rows = get_unread_counts_batch(conn, chunk, true, false)?;
         for row in rows {
             result.insert(row.uid, row.unread_count.min(MAX_UNREAD_COUNT));
         }
@@ -113,6 +105,90 @@ fn get_unread_counts_batch(
         Ok(rows) => Ok(rows),
         Err(e) => {
             warn!("Failed to load unread counts: {:?}", e);
+            Err(e)
+        }
+    }
+}
+
+pub fn get_unread_summary_counts(
+    conn: &mut PgConnection,
+    uid: i32,
+) -> Result<UnreadSummaryCounts, diesel::result::Error> {
+    let query = sql_query(
+        "WITH qualified_memberships AS MATERIALIZED (
+             SELECT gm.chat_id, gm.last_read_message_id, gm.archived
+             FROM group_membership AS gm
+             WHERE gm.uid = $1
+               AND (
+                 gm.archived = TRUE
+                 OR gm.muted_until IS NULL
+                 OR gm.muted_until <= NOW()
+               )
+         ),
+         active_unread_messages AS (
+             SELECT 1 AS marker
+             FROM qualified_memberships AS gm
+             JOIN messages AS m ON m.chat_id = gm.chat_id
+             WHERE gm.archived = FALSE
+               AND m.id > COALESCE(gm.last_read_message_id, 0)
+               AND m.deleted_at IS NULL
+               AND m.is_published = TRUE
+               AND m.reply_root_id IS NULL
+             LIMIT 100
+         ),
+         archived_unread_messages AS (
+             SELECT 1 AS marker
+             FROM qualified_memberships AS gm
+             JOIN messages AS m ON m.chat_id = gm.chat_id
+             WHERE gm.archived = TRUE
+               AND m.id > COALESCE(gm.last_read_message_id, 0)
+               AND m.deleted_at IS NULL
+               AND m.is_published = TRUE
+               AND m.reply_root_id IS NULL
+             LIMIT 100
+         ),
+         active_unread_chats AS (
+             SELECT 1 AS marker
+             FROM qualified_memberships AS gm
+             WHERE gm.archived = FALSE
+               AND EXISTS (
+                 SELECT 1
+                 FROM messages AS m
+                 WHERE m.chat_id = gm.chat_id
+                   AND m.id > COALESCE(gm.last_read_message_id, 0)
+                   AND m.deleted_at IS NULL
+                   AND m.is_published = TRUE
+                   AND m.reply_root_id IS NULL
+               )
+             LIMIT 100
+         ),
+         archived_unread_chats AS (
+             SELECT 1 AS marker
+             FROM qualified_memberships AS gm
+             WHERE gm.archived = TRUE
+               AND EXISTS (
+                 SELECT 1
+                 FROM messages AS m
+                 WHERE m.chat_id = gm.chat_id
+                   AND m.id > COALESCE(gm.last_read_message_id, 0)
+                   AND m.deleted_at IS NULL
+                   AND m.is_published = TRUE
+                   AND m.reply_root_id IS NULL
+               )
+             LIMIT 100
+         )
+         SELECT
+           (SELECT COUNT(*)::bigint FROM active_unread_messages) AS unread_count,
+           (SELECT COUNT(*)::bigint FROM archived_unread_messages) AS archived_unread_count,
+           (SELECT COUNT(*)::bigint FROM active_unread_chats) AS unread_chat_count,
+           (SELECT COUNT(*)::bigint FROM archived_unread_chats) AS archived_unread_chat_count",
+    )
+    .bind::<diesel::sql_types::Integer, _>(uid);
+
+    match query.get_result::<UnreadSummaryCounts>(conn) {
+        Ok(row) => Ok(row),
+        Err(e) => {
+            warn!("Failed to load unread summary counts: {:?}", e);
             Err(e)
         }
     }

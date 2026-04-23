@@ -1506,9 +1506,11 @@ async fn get_chat_unread_count(
 pub struct UnreadCountResponse {
     unread_count: i64,
     archived_unread_count: i64,
+    unread_chat_count: i64,
+    archived_unread_chat_count: i64,
 }
 
-/// GET /chats/unread — Get total unread count for the current user.
+/// GET /chats/unread — Get total unread message and chat counts for the current user.
 #[utoipa::path(
     get,
     path = "/unread",
@@ -1524,15 +1526,13 @@ async fn get_unread_count(
 ) -> Result<Json<UnreadCountResponse>, AppError> {
     let conn = &mut *conn;
 
-    let counts = crate::services::chat::get_unread_counts(conn, &[uid])?;
-    let archived_counts = crate::services::chat::get_archived_unread_counts(conn, &[uid])?;
-
-    let unread_count = counts.get(&uid).copied().unwrap_or(0);
-    let archived_unread_count = archived_counts.get(&uid).copied().unwrap_or(0);
+    let counts = crate::services::chat::get_unread_summary_counts(conn, uid)?;
 
     Ok(Json(UnreadCountResponse {
-        unread_count,
-        archived_unread_count,
+        unread_count: counts.unread_count,
+        archived_unread_count: counts.archived_unread_count,
+        unread_chat_count: counts.unread_chat_count,
+        archived_unread_chat_count: counts.archived_unread_chat_count,
     }))
 }
 

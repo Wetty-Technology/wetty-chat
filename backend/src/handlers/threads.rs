@@ -138,9 +138,11 @@ async fn mark_thread_read(
 struct UnreadThreadCountResponse {
     unread_thread_count: i64,
     archived_unread_thread_count: i64,
+    unread_message_count: i64,
+    archived_unread_message_count: i64,
 }
 
-/// GET /threads/unread — Get total unread thread count for the current user.
+/// GET /threads/unread — Get total unread thread and message counts for the current user.
 #[utoipa::path(
     get,
     path = "/unread",
@@ -156,12 +158,13 @@ async fn get_unread_thread_count(
 ) -> Result<Json<UnreadThreadCountResponse>, AppError> {
     let conn = &mut *conn;
 
-    let count = thread_svc::get_total_unread_thread_count(conn, uid, false)?;
-    let archived_count = thread_svc::get_total_unread_thread_count(conn, uid, true)?;
+    let counts = thread_svc::get_unread_summary_counts(conn, uid)?;
 
     Ok(Json(UnreadThreadCountResponse {
-        unread_thread_count: count,
-        archived_unread_thread_count: archived_count,
+        unread_thread_count: counts.unread_thread_count,
+        archived_unread_thread_count: counts.archived_unread_thread_count,
+        unread_message_count: counts.unread_message_count,
+        archived_unread_message_count: counts.archived_unread_message_count,
     }))
 }
 

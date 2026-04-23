@@ -19,6 +19,7 @@ This repository contains three apps plus shared docs and API collections. `backe
 - When designing new table / column / queries, make sure to also consider if it needs a corressponding index.
 - Pay extra attention if you are modifying queries related to messages, thread, reactions. These are high volumn tables, and have huge performance impact.
 - On these high volume / large table, if after modification we have index no longer in use, be sure to highlight that and ask the user if we can drop those index.
+- When introducing a query, think about **Is this the most efficient way to query this?** before proceeding.
 
 ## Build, Test, and Development Commands
 
