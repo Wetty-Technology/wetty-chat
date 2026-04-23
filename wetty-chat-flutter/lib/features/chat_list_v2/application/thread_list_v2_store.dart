@@ -1,12 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/api/models/messages_api_models.dart';
-import '../../../../core/api/models/websocket_api_models.dart';
-import '../../../../core/notifications/unread_badge_provider.dart';
-import '../../../../core/session/dev_session_store.dart';
-import '../../list_projection/domain/list_projection_helpers.dart';
-import '../../models/message_api_mapper.dart';
-import '../../threads/models/thread_models.dart';
+import '../../../core/api/models/messages_api_models.dart';
+import '../../../core/api/models/websocket_api_models.dart';
+import '../../../core/notifications/unread_badge_provider.dart';
+import '../../../core/session/dev_session_store.dart';
+import '../../chats/list_projection/domain/list_projection_helpers.dart';
+import '../../chats/models/message_api_mapper.dart';
+import '../../chats/threads/models/thread_models.dart';
 
 typedef ThreadListV2StoreState = ({
   List<ThreadListItem> threads,

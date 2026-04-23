@@ -4,7 +4,7 @@ import 'package:chahua/features/conversation/shared/domain/conversation_message_
 import 'package:chahua/features/conversation/shared/domain/conversation_timeline_v2_canonical_scope.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
 import 'package:chahua/features/chats/shared/data/read_state_repository.dart';
-import 'package:chahua/features/chats/list_v2/application/group_list_v2_store.dart';
+import 'package:chahua/features/chat_list_v2/application/group_list_v2_store.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
 import 'package:chahua/core/notifications/unread_badge_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

@@ -2,11 +2,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../app/routing/route_names.dart';
-import '../../../../app/theme/style_config.dart';
-import '../../list/presentation/widgets/swipe_to_action_row.dart';
-import '../../threads/models/thread_models.dart';
-import '../../threads/presentation/thread_list_row.dart';
+import '../../../app/routing/route_names.dart';
+import '../../../app/theme/style_config.dart';
+import '../../chats/list/presentation/widgets/swipe_to_action_row.dart';
+import '../../chats/threads/models/thread_models.dart';
+import '../../chats/threads/presentation/thread_list_row.dart';
 import '../application/thread_list_v2_view_model.dart';
 
 class ThreadListV2View extends ConsumerWidget {

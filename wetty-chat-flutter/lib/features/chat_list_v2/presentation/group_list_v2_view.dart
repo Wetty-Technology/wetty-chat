@@ -2,13 +2,13 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../app/routing/route_names.dart';
-import '../../chat_timestamp_formatter.dart';
+import '../../../app/routing/route_names.dart';
 import 'package:chahua/features/conversation/shared/domain/launch_request.dart';
-import '../../list/presentation/widgets/chat_list_row.dart';
-import '../../models/chat_models.dart';
-import '../../models/message_models.dart';
-import '../../models/message_preview_formatter.dart';
+import '../../chats/chat_timestamp_formatter.dart';
+import '../../chats/list/presentation/widgets/chat_list_row.dart';
+import '../../chats/models/chat_models.dart';
+import '../../chats/models/message_models.dart';
+import '../../chats/models/message_preview_formatter.dart';
 import '../application/group_list_v2_view_model.dart';
 
 class GroupListV2View extends ConsumerWidget {

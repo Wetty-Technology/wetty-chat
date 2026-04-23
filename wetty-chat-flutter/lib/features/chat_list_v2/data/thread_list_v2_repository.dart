@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/notifications/unread_badge_provider.dart';
-import '../../threads/data/thread_api_service.dart';
-import '../../threads/models/thread_api_models.dart';
-import '../../threads/models/thread_api_mapper.dart';
+import '../../../core/notifications/unread_badge_provider.dart';
+import '../../chats/threads/data/thread_api_service.dart';
+import '../../chats/threads/models/thread_api_models.dart';
+import '../../chats/threads/models/thread_api_mapper.dart';
 import '../application/thread_list_v2_store.dart';
 
 class ThreadListV2Repository {

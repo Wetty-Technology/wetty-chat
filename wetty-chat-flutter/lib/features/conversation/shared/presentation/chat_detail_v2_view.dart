@@ -2,7 +2,7 @@ import 'package:chahua/features/conversation/shared/domain/conversation_identity
 import 'package:chahua/features/conversation/shared/domain/launch_request.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:chahua/features/conversation/shared/presentation/conversation_surface_v2.dart';
-import 'package:chahua/features/chats/list_v2/application/group_list_v2_store.dart';
+import 'package:chahua/features/chat_list_v2/application/group_list_v2_store.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';

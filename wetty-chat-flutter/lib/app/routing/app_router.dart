@@ -1,4 +1,4 @@
-import 'package:chahua/features/chats/list_v2/presentation/chat_list_v2_page.dart';
+import 'package:chahua/features/chat_list_v2/presentation/chat_list_v2_page.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';

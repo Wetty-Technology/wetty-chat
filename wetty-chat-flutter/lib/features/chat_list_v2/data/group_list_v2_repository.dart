@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../list/data/chat_api_service.dart';
-import '../../models/chat_api_mapper.dart';
+import '../../chats/list/data/chat_api_service.dart';
+import '../../chats/models/chat_api_mapper.dart';
 import '../application/group_list_v2_store.dart';
 
 class GroupListV2Repository {

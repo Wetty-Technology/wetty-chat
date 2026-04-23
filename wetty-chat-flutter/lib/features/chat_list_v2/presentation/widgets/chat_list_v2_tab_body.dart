@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../list/presentation/chat_list_segment.dart';
+import '../../../chats/list/presentation/chat_list_segment.dart';
 import '../all_list_v2_view.dart';
 import '../group_list_v2_view.dart';
 import '../thread_list_v2_view.dart';
