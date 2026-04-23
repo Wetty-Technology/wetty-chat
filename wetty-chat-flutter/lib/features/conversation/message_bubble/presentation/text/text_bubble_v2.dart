@@ -86,11 +86,16 @@ class TextBubbleV2 extends StatelessWidget {
     );
 
     final bubble = switch (displayMode) {
-      _TextBubbleDisplayMode.visualOnly => TextBubbleVisualOnlyContent(
-        message: message,
-        theme: theme,
-        onTapReply: onTapReply,
-        onOpenThread: onOpenThread,
+      _TextBubbleDisplayMode.visualOnly => IntrinsicWidth(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: theme.maxBubbleWidth),
+          child: TextBubbleVisualOnlyContent(
+            message: message,
+            theme: theme,
+            onTapReply: onTapReply,
+            onOpenThread: onOpenThread,
+          ),
+        ),
       ),
       _TextBubbleDisplayMode.visualWithText => IntrinsicWidth(
         child: ConstrainedBox(

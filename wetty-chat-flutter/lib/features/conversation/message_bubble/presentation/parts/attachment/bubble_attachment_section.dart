@@ -3,8 +3,7 @@ import 'package:chahua/features/chats/models/message_models.dart';
 import 'package:flutter/cupertino.dart';
 
 import '../../../domain/bubble_theme_v2.dart';
-import 'message_attachment_previews.dart';
-import 'video_popup_player.dart';
+import 'visual_attachment_gallery.dart';
 
 enum BubbleAttachmentSectionVariant { visualMedia, fileList }
 
@@ -26,10 +25,10 @@ class BubbleAttachmentSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final maxAttachmentWidth = theme.maxBubbleWidth - 24;
     if (variant == BubbleAttachmentSectionVariant.visualMedia) {
-      return _VisualAttachmentSection(
+      return VisualAttachmentGallery(
         attachments: attachments,
         theme: theme,
-        maxAttachmentWidth: maxAttachmentWidth,
+        maxWidth: maxAttachmentWidth,
         overlayFooter: overlayFooter,
       );
     }
@@ -42,113 +41,11 @@ class BubbleAttachmentSection extends StatelessWidget {
         children: [
           for (var index = 0; index < attachments.length; index++) ...[
             if (index > 0) const SizedBox(height: 8),
-            _BubbleAttachmentPreview(
-              attachment: attachments[index],
-              theme: theme,
-              maxAttachmentWidth: maxAttachmentWidth,
-            ),
+            _FileAttachmentTile(attachment: attachments[index], theme: theme),
           ],
         ],
       ),
     );
-  }
-}
-
-class _VisualAttachmentSection extends StatelessWidget {
-  const _VisualAttachmentSection({
-    required this.attachments,
-    required this.theme,
-    required this.maxAttachmentWidth,
-    this.overlayFooter,
-  });
-
-  final List<AttachmentItem> attachments;
-  final BubbleThemeV2 theme;
-  final double maxAttachmentWidth;
-  final Widget? overlayFooter;
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerRight,
-      child: Stack(
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (var index = 0; index < attachments.length; index++) ...[
-                if (index > 0) const SizedBox(height: 8),
-                _BubbleAttachmentPreview(
-                  attachment: attachments[index],
-                  theme: theme,
-                  maxAttachmentWidth: maxAttachmentWidth,
-                ),
-              ],
-            ],
-          ),
-          if (overlayFooter != null)
-            Positioned(
-              right: 4,
-              bottom: 4,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                decoration: BoxDecoration(
-                  color: CupertinoColors.black.withAlpha(110),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: DefaultTextStyle.merge(
-                  style: appBubbleTextStyle(
-                    context,
-                    color: CupertinoColors.white,
-                    fontSize: AppFontSizes.bubbleMeta,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  child: IconTheme.merge(
-                    data: const IconThemeData(
-                      color: CupertinoColors.white,
-                      size: 14,
-                    ),
-                    child: overlayFooter!,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BubbleAttachmentPreview extends StatelessWidget {
-  const _BubbleAttachmentPreview({
-    required this.attachment,
-    required this.theme,
-    required this.maxAttachmentWidth,
-  });
-
-  final AttachmentItem attachment;
-  final BubbleThemeV2 theme;
-  final double maxAttachmentWidth;
-
-  @override
-  Widget build(BuildContext context) {
-    if (attachment.isVideo && attachment.url.isNotEmpty) {
-      return VideoAttachmentPreview(
-        attachment: attachment,
-        maxWidth: maxAttachmentWidth,
-        onTap: () {},
-      );
-    }
-    if (attachment.isImage && attachment.url.isNotEmpty) {
-      return MessageImageAttachmentPreview(
-        attachment: attachment,
-        onTap: () {},
-        fallback: _FileAttachmentTile(attachment: attachment, theme: theme),
-        maxWidth: maxAttachmentWidth,
-      );
-    }
-    return _FileAttachmentTile(attachment: attachment, theme: theme);
   }
 }
 
