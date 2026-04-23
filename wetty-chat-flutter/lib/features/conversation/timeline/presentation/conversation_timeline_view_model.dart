@@ -87,6 +87,7 @@ class ConversationTimelineViewModel
     extends Notifier<ConversationTimelineState> {
   // Mostly temproary, we will remove these later
   static const int _initialLoadedWindowSize = 50;
+  static const Duration _readReportDebounce = Duration(milliseconds: 150);
 
   /// Identity (ChatID, threadID) for this VM
   final ConversationIdentity identity;
@@ -95,6 +96,7 @@ class ConversationTimelineViewModel
   late ConversationTimelineV2Repository _repository;
 
   LaunchRequest? _initialLaunchRequest;
+  bool _didRegisterDispose = false;
 
   /// Active segment containing the messages and some metadata
   ConversationTimelineActiveSegment? _activeSegment;
@@ -113,6 +115,9 @@ class ConversationTimelineViewModel
     kind: ConversationTimelineViewportCommandKind.none,
     placement: ConversationTimelineViewportPlacement.bottomPreferred,
   );
+  Timer? _pendingReadReportTimer;
+  int? _queuedLastVisibleMessageId;
+  int? _lastReadReportedMessageId;
 
   /// Make sure to use `_setActiveSegmentMode` instead of assigning directly
   /// to avoid forgetting `ref.invalidateSelf()`.
@@ -123,6 +128,12 @@ class ConversationTimelineViewModel
 
   @override
   ConversationTimelineState build() {
+    if (!_didRegisterDispose) {
+      _didRegisterDispose = true;
+      ref.onDispose(() {
+        _pendingReadReportTimer?.cancel();
+      });
+    }
     _repository = ref.read(conversationTimelineV2RepositoryProvider(identity));
     _activeSegment = ref.watch(
       conversationTimelineActiveSegmentProvider((
@@ -193,6 +204,24 @@ class ConversationTimelineViewModel
       return Future<void>.value();
     }
     return _repository.deleteMessage(messageId);
+  }
+
+  void reportLastVisibleMessageId(int messageId) {
+    if (state.isBootstrapping) {
+      return;
+    }
+    if ((_lastReadReportedMessageId != null &&
+            messageId <= _lastReadReportedMessageId!) ||
+        (_queuedLastVisibleMessageId != null &&
+            messageId < _queuedLastVisibleMessageId!)) {
+      return;
+    }
+
+    _queuedLastVisibleMessageId = messageId;
+    _pendingReadReportTimer?.cancel();
+    _pendingReadReportTimer = Timer(_readReportDebounce, () {
+      unawaited(_flushLastVisibleMessageIdReport());
+    });
   }
 
   Future<void> jumpToLatest() async {
@@ -502,6 +531,22 @@ class ConversationTimelineViewModel
         ref.invalidateSelf();
       }),
     );
+  }
+
+  Future<void> _flushLastVisibleMessageIdReport() async {
+    final queuedLastVisibleMessageId = _queuedLastVisibleMessageId;
+    if (queuedLastVisibleMessageId == null ||
+        (_lastReadReportedMessageId != null &&
+            queuedLastVisibleMessageId <= _lastReadReportedMessageId!)) {
+      return;
+    }
+
+    try {
+      await _repository.markVisibleMessageRead(queuedLastVisibleMessageId);
+      _lastReadReportedMessageId = queuedLastVisibleMessageId;
+    } catch (error) {
+      debugPrint('markVisibleMessageRead failed: $error');
+    }
   }
 }
 

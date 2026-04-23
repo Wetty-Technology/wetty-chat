@@ -3,7 +3,10 @@ import 'package:chahua/features/conversation/compose/data/message_api_service_v2
 import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_timeline_v2_canonical_scope.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
+import 'package:chahua/features/chats/shared/data/read_state_repository.dart';
+import 'package:chahua/features/chats/list_v2/application/group_list_v2_store.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
+import 'package:chahua/core/notifications/unread_badge_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class ConversationTimelineV2Repository {
@@ -116,6 +119,29 @@ class ConversationTimelineV2Repository {
       _store.updateMessage(identity, snapshot);
       rethrow;
     }
+  }
+
+  Future<void> markVisibleMessageRead(int messageId) async {
+    if (identity.threadRootId case final threadRootId?) {
+      await ref
+          .read(readStateRepositoryProvider)
+          .markThreadRead(threadRootId: threadRootId, messageId: messageId);
+      ref.read(unreadBadgeProvider.notifier).scheduleReconcile();
+      return;
+    }
+
+    final chatId = identity.chatId.toString();
+    final response = await ref
+        .read(readStateRepositoryProvider)
+        .markChatRead(chatId: chatId, messageId: messageId);
+    ref
+        .read(groupListV2StoreProvider.notifier)
+        .applyServerReadState(
+          chatId: chatId,
+          messageId: messageId,
+          response: response,
+        );
+    ref.read(unreadBadgeProvider.notifier).scheduleReconcile();
   }
 
   String _messageTypeFor(ConversationMessageV2 message) {

@@ -31,6 +31,49 @@ double resolveTopPreferredAnchorAlignment({
   return 1.0 - visibleFractionBelowAnchor;
 }
 
+int? _resolveLastVisibleMessageIdAtViewportMidpoint({
+  required Iterable<({int? messageId, double top, double bottom})> measurements,
+  required double viewportTop,
+  required double viewportBottom,
+}) {
+  if (viewportBottom <= viewportTop) {
+    return null;
+  }
+
+  int? lastVisibleMessageId;
+  double? lastVisibleTop;
+  double? lastVisibleBottom;
+
+  for (final measurement in measurements) {
+    final messageId = measurement.messageId;
+    if (messageId == null) {
+      continue;
+    }
+
+    final visibleTop = measurement.top.clamp(viewportTop, viewportBottom);
+    final visibleBottom = measurement.bottom.clamp(viewportTop, viewportBottom);
+    if (visibleBottom <= visibleTop) {
+      continue;
+    }
+
+    final bubbleMidpoint = (measurement.top + measurement.bottom) / 2;
+    if (bubbleMidpoint < viewportTop || bubbleMidpoint > viewportBottom) {
+      continue;
+    }
+
+    if (lastVisibleTop == null ||
+        visibleTop > lastVisibleTop ||
+        (visibleTop == lastVisibleTop &&
+            (lastVisibleBottom == null || visibleBottom > lastVisibleBottom))) {
+      lastVisibleMessageId = messageId;
+      lastVisibleTop = visibleTop;
+      lastVisibleBottom = visibleBottom;
+    }
+  }
+
+  return lastVisibleMessageId;
+}
+
 class ConversationTimelineView extends ConsumerStatefulWidget {
   const ConversationTimelineView({
     super.key,
@@ -72,6 +115,10 @@ class _ConversationTimelineViewState
   UniqueKey _scrollViewKey = UniqueKey();
   MessageLongPressDetailsV2? _activeOverlay;
   TimelineViewportFacts _latestViewportFacts = const TimelineViewportFacts();
+  Map<String, ConversationMessageV2> _renderedMessagesByStableKey =
+      const <String, ConversationMessageV2>{};
+  bool _isViewportMeasurementScheduled = false;
+  int? _lastVisibleMessageId;
 
   ConversationIdentity get _identity =>
       (chatId: widget.chatId, threadRootId: widget.threadRootId);
@@ -80,8 +127,15 @@ class _ConversationTimelineViewState
   void initState() {
     super.initState();
     _scrollController = ScrollController();
-    _scrollController.addListener(_updateViewportFacts);
+    _scrollController.addListener(_handleScrollChanged);
     _scheduleInitializeLaunchRequest();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_handleScrollChanged);
+    _scrollController.dispose();
+    super.dispose();
   }
 
   void _scheduleTopPreferredMeasurement() {
@@ -133,6 +187,7 @@ class _ConversationTimelineViewState
     if (oldWidget.chatId != widget.chatId ||
         oldWidget.threadRootId != widget.threadRootId) {
       _lastHandledViewportCommandGeneration = 0;
+      _lastVisibleMessageId = null;
     }
     if (oldWidget.launchRequest != widget.launchRequest) {
       _scheduleInitializeLaunchRequest();
@@ -148,6 +203,26 @@ class _ConversationTimelineViewState
       ref
           .read(conversationTimelineViewModelProvider(_identity).notifier)
           .initialize(widget.launchRequest);
+    });
+  }
+
+  void _handleScrollChanged() {
+    _updateViewportFacts();
+    _updateLastVisibleMessageId();
+  }
+
+  void _scheduleViewportMeasurement() {
+    if (_isViewportMeasurementScheduled) {
+      return;
+    }
+    _isViewportMeasurementScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _isViewportMeasurementScheduled = false;
+      if (!mounted) {
+        return;
+      }
+      _updateViewportFacts();
+      _updateLastVisibleMessageId();
     });
   }
 
@@ -172,6 +247,57 @@ class _ConversationTimelineViewState
       ref
           .read(conversationTimelineViewModelProvider(_identity).notifier)
           .onViewportChanged(facts);
+    }
+  }
+
+  void _updateLastVisibleMessageId() {
+    if (!_scrollController.hasClients || _renderedMessagesByStableKey.isEmpty) {
+      return;
+    }
+
+    final viewportBox = context.findRenderObject();
+    if (viewportBox is! RenderBox) {
+      return;
+    }
+
+    final viewportTopLeft = viewportBox.localToGlobal(Offset.zero);
+    final viewportTop = viewportTopLeft.dy;
+    final viewportBottom = viewportTop + viewportBox.size.height;
+    final measurements = <({int? messageId, double top, double bottom})>[];
+
+    for (final entry in _renderedMessagesByStableKey.entries) {
+      final renderObject = _messageKeys[entry.key]?.currentContext
+          ?.findRenderObject();
+      if (renderObject is! RenderBox || !renderObject.attached) {
+        continue;
+      }
+
+      final topLeft = renderObject.localToGlobal(Offset.zero);
+      measurements.add((
+        messageId: entry.value.serverMessageId,
+        top: topLeft.dy,
+        bottom: topLeft.dy + renderObject.size.height,
+      ));
+    }
+
+    final nextLastVisibleMessageId =
+        _resolveLastVisibleMessageIdAtViewportMidpoint(
+          measurements: measurements,
+          viewportTop: viewportTop,
+          viewportBottom: viewportBottom,
+        );
+    if (nextLastVisibleMessageId == _lastVisibleMessageId) {
+      return;
+    }
+
+    setState(() {
+      _lastVisibleMessageId = nextLastVisibleMessageId;
+    });
+
+    if (nextLastVisibleMessageId != null) {
+      ref
+          .read(conversationTimelineViewModelProvider(_identity).notifier)
+          .reportLastVisibleMessageId(nextLastVisibleMessageId);
     }
   }
 
@@ -210,7 +336,7 @@ class _ConversationTimelineViewState
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _updateViewportFacts();
+      _scheduleViewportMeasurement();
     });
   }
 
@@ -487,13 +613,16 @@ class _ConversationTimelineViewState
       ...state.beforeMessages,
       ...state.afterMessages,
     ];
+    _renderedMessagesByStableKey = <String, ConversationMessageV2>{
+      for (final message in orderedMessages) message.stableKey: message,
+    };
     final rowPresentationByStableKey = _buildRowPresentation(orderedMessages);
     final beforeMessages = state.beforeMessages.reversed.toList(
       growable: false,
     );
     final afterMessages = state.afterMessages;
 
-    _updateViewportFacts();
+    _scheduleViewportMeasurement();
 
     return Stack(
       children: [
@@ -546,7 +675,8 @@ class _ConversationTimelineViewState
                   ' cmd: ${state.viewportCommand.kind.name} (${state.viewportCommand.placement.name})'
                   ' gen: ${state.viewportCommandGeneration}'
                   ' | before=${state.beforeMessages.length}'
-                  ' after=${state.afterMessages.length}',
+                  ' after=${state.afterMessages.length}'
+                  ' | last_visible_id=${_lastVisibleMessageId?.toString() ?? 'null'}',
                 ),
               ),
             ),
@@ -578,12 +708,5 @@ class _ConversationTimelineViewState
           ),
       ],
     );
-  }
-
-  @override
-  void dispose() {
-    _scrollController.removeListener(_updateViewportFacts);
-    _scrollController.dispose();
-    super.dispose();
   }
 }

@@ -6,6 +6,7 @@ import '../../../../core/session/dev_session_store.dart';
 import '../../list_projection/domain/list_projection_helpers.dart';
 import '../../models/chat_models.dart';
 import '../../models/message_api_mapper.dart';
+import '../../shared/data/read_state_repository.dart';
 
 typedef GroupListV2StoreState = ({
   List<ChatListItem> groups,
@@ -39,6 +40,28 @@ class GroupListV2Store extends Notifier<GroupListV2StoreState> {
       groups: [...state.groups, ...appended],
       nextCursor: nextCursor,
       hasMore: nextCursor != null && nextCursor.isNotEmpty,
+    );
+  }
+
+  void applyServerReadState({
+    required String chatId,
+    required int messageId,
+    required ChatReadStateUpdate response,
+  }) {
+    final index = state.groups.indexWhere((group) => group.id == chatId);
+    if (index < 0) {
+      return;
+    }
+
+    final groups = [...state.groups];
+    groups[index] = groups[index].copyWith(
+      unreadCount: response.unreadCount,
+      lastReadMessageId: response.lastReadMessageId ?? messageId.toString(),
+    );
+    state = (
+      groups: groups,
+      nextCursor: state.nextCursor,
+      hasMore: state.hasMore,
     );
   }
 
