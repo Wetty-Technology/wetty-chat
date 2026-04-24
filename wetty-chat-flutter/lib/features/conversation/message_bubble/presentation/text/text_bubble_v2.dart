@@ -1,5 +1,6 @@
 import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
+import 'package:chahua/features/conversation/media/presentation/attachment_viewer_request.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:flutter/cupertino.dart';
 
@@ -43,6 +44,7 @@ class TextBubbleV2 extends StatelessWidget {
     this.onToggleReaction,
     this.onTapReply,
     this.onOpenThread,
+    this.onOpenAttachment,
   });
 
   final ConversationMessageV2 message;
@@ -50,6 +52,7 @@ class TextBubbleV2 extends StatelessWidget {
   final ValueChanged<String>? onToggleReaction;
   final VoidCallback? onTapReply;
   final VoidCallback? onOpenThread;
+  final ValueChanged<MessageAttachmentOpenRequest>? onOpenAttachment;
 
   _TextBubbleDisplayMode _displayMode() {
     final attachments = attachmentsForBubble(message.content);
@@ -94,6 +97,7 @@ class TextBubbleV2 extends StatelessWidget {
             theme: theme,
             onTapReply: onTapReply,
             onOpenThread: onOpenThread,
+            onOpenAttachment: onOpenAttachment,
           ),
         ),
       ),
@@ -118,6 +122,7 @@ class TextBubbleV2 extends StatelessWidget {
                   showSenderName: showSenderName,
                   onTapReply: onTapReply,
                   onOpenThread: onOpenThread,
+                  onOpenAttachment: onOpenAttachment,
                 ),
               ),
             ),
@@ -147,6 +152,7 @@ class TextBubbleV2 extends StatelessWidget {
                 showSenderName: showSenderName,
                 onTapReply: onTapReply,
                 onOpenThread: onOpenThread,
+                onOpenAttachment: onOpenAttachment,
               ),
             ),
           ),

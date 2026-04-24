@@ -1,4 +1,5 @@
 import 'package:chahua/core/network/api_config.dart';
+import 'package:chahua/features/conversation/media/presentation/attachment_viewer_request.dart';
 import 'package:chahua/shared/presentation/app_avatar.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:flutter/foundation.dart';
@@ -25,6 +26,7 @@ class MessageRowV2 extends StatefulWidget {
     this.onToggleReaction,
     this.onTapReply,
     this.onOpenThread,
+    this.onOpenAttachment,
     this.showSenderName = true,
     this.showAvatar = true,
   });
@@ -36,6 +38,7 @@ class MessageRowV2 extends StatefulWidget {
   final ValueChanged<String>? onToggleReaction;
   final VoidCallback? onTapReply;
   final VoidCallback? onOpenThread;
+  final ValueChanged<MessageAttachmentOpenRequest>? onOpenAttachment;
   final bool showSenderName;
   final bool showAvatar;
 
@@ -108,6 +111,7 @@ class _MessageRowV2State extends State<MessageRowV2> {
       onToggleReaction: widget.onToggleReaction,
       onTapReply: widget.onTapReply,
       onOpenThread: widget.onOpenThread,
+      onOpenAttachment: widget.onOpenAttachment,
     );
 
     // NOTE: Early return here!!!

@@ -1,4 +1,5 @@
 import 'package:chahua/app/theme/style_config.dart';
+import 'package:chahua/features/conversation/media/presentation/attachment_viewer_request.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:chahua/features/conversation/shared/presentation/conversation_presentation_scope.dart';
 import 'package:flutter/cupertino.dart';
@@ -20,6 +21,7 @@ class TextBubblePlainContent extends StatelessWidget {
     required this.showSenderName,
     this.onTapReply,
     this.onOpenThread,
+    this.onOpenAttachment,
   });
 
   final ConversationMessageV2 message;
@@ -27,6 +29,7 @@ class TextBubblePlainContent extends StatelessWidget {
   final bool showSenderName;
   final VoidCallback? onTapReply;
   final VoidCallback? onOpenThread;
+  final ValueChanged<MessageAttachmentOpenRequest>? onOpenAttachment;
 
   static const FontWeight _bubbleFontWeight = FontWeight.w400;
   @override
@@ -83,8 +86,10 @@ class TextBubblePlainContent extends StatelessWidget {
       children.add(
         BubbleAttachmentSection(
           attachments: attachments,
+          messageStableKey: message.stableKey,
           theme: theme,
           variant: BubbleAttachmentSectionVariant.fileList,
+          onOpenAttachment: onOpenAttachment,
         ),
       );
     }

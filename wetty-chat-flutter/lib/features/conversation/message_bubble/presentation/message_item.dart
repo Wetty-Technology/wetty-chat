@@ -1,4 +1,5 @@
 import 'package:chahua/core/settings/app_settings_store.dart';
+import 'package:chahua/features/conversation/media/presentation/attachment_viewer_request.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,6 +20,7 @@ class MessageItem extends ConsumerWidget {
     this.onToggleReaction,
     this.onTapReply,
     this.onOpenThread,
+    this.onOpenAttachment,
   });
 
   final ConversationMessageV2 message;
@@ -28,6 +30,7 @@ class MessageItem extends ConsumerWidget {
   final ValueChanged<String>? onToggleReaction;
   final VoidCallback? onTapReply;
   final VoidCallback? onOpenThread;
+  final ValueChanged<MessageAttachmentOpenRequest>? onOpenAttachment;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -61,6 +64,7 @@ class MessageItem extends ConsumerWidget {
           onTapReply: onTapReply,
           onOpenThread: onOpenThread,
           onToggleReaction: onToggleReaction,
+          onOpenAttachment: onOpenAttachment,
         ),
       },
     );

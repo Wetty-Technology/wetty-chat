@@ -1,4 +1,5 @@
 import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
+import 'package:chahua/features/conversation/media/presentation/attachment_viewer_request.dart';
 import 'package:chahua/features/conversation/shared/presentation/conversation_presentation_scope.dart';
 import 'package:flutter/cupertino.dart';
 
@@ -18,6 +19,7 @@ class TextBubbleVisualWithTextContent extends StatelessWidget {
     required this.showSenderName,
     this.onTapReply,
     this.onOpenThread,
+    this.onOpenAttachment,
   });
 
   final ConversationMessageV2 message;
@@ -25,6 +27,7 @@ class TextBubbleVisualWithTextContent extends StatelessWidget {
   final bool showSenderName;
   final VoidCallback? onTapReply;
   final VoidCallback? onOpenThread;
+  final ValueChanged<MessageAttachmentOpenRequest>? onOpenAttachment;
 
   @override
   Widget build(BuildContext context) {
@@ -38,9 +41,11 @@ class TextBubbleVisualWithTextContent extends StatelessWidget {
       children: [
         BubbleAttachmentSection(
           attachments: attachments,
+          messageStableKey: message.stableKey,
           theme: theme,
           variant: BubbleAttachmentSectionVariant.visualMedia,
           maxWidth: theme.maxBubbleWidth,
+          onOpenAttachment: onOpenAttachment,
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),

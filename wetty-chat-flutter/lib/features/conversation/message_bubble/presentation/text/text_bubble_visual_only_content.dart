@@ -1,4 +1,5 @@
 import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
+import 'package:chahua/features/conversation/media/presentation/attachment_viewer_request.dart';
 import 'package:chahua/features/conversation/shared/presentation/conversation_presentation_scope.dart';
 import 'package:flutter/cupertino.dart';
 
@@ -16,12 +17,14 @@ class TextBubbleVisualOnlyContent extends StatelessWidget {
     required this.theme,
     this.onTapReply,
     this.onOpenThread,
+    this.onOpenAttachment,
   });
 
   final ConversationMessageV2 message;
   final BubbleThemeV2 theme;
   final VoidCallback? onTapReply;
   final VoidCallback? onOpenThread;
+  final ValueChanged<MessageAttachmentOpenRequest>? onOpenAttachment;
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +40,7 @@ class TextBubbleVisualOnlyContent extends StatelessWidget {
         ),
       BubbleAttachmentSection(
         attachments: attachments,
+        messageStableKey: message.stableKey,
         theme: theme,
         variant: BubbleAttachmentSectionVariant.visualMedia,
         overlayFooter: MetaFooter(
@@ -44,6 +48,7 @@ class TextBubbleVisualOnlyContent extends StatelessWidget {
           color: CupertinoColors.white,
         ),
         clipBorderRadius: BorderRadius.circular(18),
+        onOpenAttachment: onOpenAttachment,
       ),
     ];
 

@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:developer';
 
+import 'package:chahua/app/routing/route_names.dart';
 import 'package:chahua/features/conversation/compose/presentation/conversation_composer_view_model.dart';
+import 'package:chahua/features/conversation/media/presentation/attachment_viewer_request.dart';
 import 'package:chahua/features/conversation/timeline/presentation/conversation_timeline_view_model.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
@@ -15,6 +17,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 @visibleForTesting
 double resolveTopPreferredAnchorAlignment({
@@ -455,6 +458,14 @@ class _ConversationTimelineViewState
     );
   }
 
+  void _openAttachment(MessageAttachmentOpenRequest request) {
+    final viewerRequest = request.viewerRequest;
+    if (viewerRequest == null) {
+      return;
+    }
+    context.push(AppRoutes.attachmentViewer, extra: viewerRequest);
+  }
+
   Map<String, ({bool showSenderName, bool showAvatar})> _buildRowPresentation(
     List<ConversationMessageV2> orderedMessages,
   ) {
@@ -597,6 +608,7 @@ class _ConversationTimelineViewState
                     message.threadInfo!.replyCount > 0
                 ? () => widget.onOpenThread!(message)
                 : null,
+            onOpenAttachment: _openAttachment,
           ),
         );
       },

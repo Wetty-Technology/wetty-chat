@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/core/cache/app_cached_network_image.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
+import 'package:chahua/features/conversation/media/presentation/attachment_viewer_request.dart';
 import 'package:flutter/cupertino.dart';
 
 import '../../../domain/bubble_theme_v2.dart';
@@ -16,17 +17,21 @@ class VisualAttachmentGallery extends StatelessWidget {
   const VisualAttachmentGallery({
     super.key,
     required this.attachments,
+    required this.messageStableKey,
     required this.theme,
     required this.maxWidth,
     this.overlayFooter,
     this.clipBorderRadius,
+    this.onOpenAttachment,
   });
 
   final List<AttachmentItem> attachments;
+  final String messageStableKey;
   final BubbleThemeV2 theme;
   final double maxWidth;
   final Widget? overlayFooter;
   final BorderRadius? clipBorderRadius;
+  final ValueChanged<MessageAttachmentOpenRequest>? onOpenAttachment;
 
   @override
   Widget build(BuildContext context) {
@@ -45,12 +50,15 @@ class VisualAttachmentGallery extends StatelessWidget {
               top: tile.top,
               child: _BubbleAttachmentPreview(
                 attachment: tile.attachment,
+                attachments: attachments,
+                messageStableKey: messageStableKey,
                 theme: theme,
                 width: tile.width,
                 height: tile.height,
                 useFramedSingleLayout: layoutPlan.tiles.length == 1,
                 showsOverflowOverlay: tile.showsOverflowOverlay,
                 overflowCount: tile.overflowCount,
+                onOpenAttachment: onOpenAttachment,
               ),
             ),
           if (overlayFooter != null)
@@ -73,25 +81,48 @@ class VisualAttachmentGallery extends StatelessWidget {
 class _BubbleAttachmentPreview extends StatelessWidget {
   const _BubbleAttachmentPreview({
     required this.attachment,
+    required this.attachments,
+    required this.messageStableKey,
     required this.theme,
     required this.width,
     required this.height,
     required this.useFramedSingleLayout,
     required this.showsOverflowOverlay,
     required this.overflowCount,
+    this.onOpenAttachment,
   });
 
   final AttachmentItem attachment;
+  final List<AttachmentItem> attachments;
+  final String messageStableKey;
   final BubbleThemeV2 theme;
   final double width;
   final double height;
   final bool useFramedSingleLayout;
   final bool showsOverflowOverlay;
   final int overflowCount;
+  final ValueChanged<MessageAttachmentOpenRequest>? onOpenAttachment;
+
+  void _handleOpenAttachment() {
+    onOpenAttachment?.call(
+      MessageAttachmentOpenRequest(
+        attachment: attachment,
+        viewerRequest: buildAttachmentViewerRequest(
+          messageStableKey: messageStableKey,
+          attachments: attachments,
+          tappedAttachment: attachment,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final fallback = _FileAttachmentTile(attachment: attachment, theme: theme);
+    final heroTag = attachmentViewerHeroTag(
+      messageStableKey: messageStableKey,
+      attachment: attachment,
+    );
     Widget child;
     if (attachment.isImage && attachment.url.isNotEmpty) {
       child = useFramedSingleLayout
@@ -100,13 +131,16 @@ class _BubbleAttachmentPreview extends StatelessWidget {
               fallback: fallback,
               width: width,
               height: height,
+              heroTag: heroTag,
+              onTap: _handleOpenAttachment,
             )
           : MessageImageAttachmentPreview(
               attachment: attachment,
-              onTap: () {},
+              onTap: _handleOpenAttachment,
               fallback: fallback,
               maxWidth: width,
               maxHeight: height,
+              heroTag: heroTag,
               frameWidth: width,
               frameHeight: height,
               borderRadius: null,
@@ -118,6 +152,7 @@ class _BubbleAttachmentPreview extends StatelessWidget {
               attachment: attachment,
               width: width,
               height: height,
+              onTap: _handleOpenAttachment,
             )
           : VideoAttachmentPreview(
               attachment: attachment,
@@ -127,7 +162,7 @@ class _BubbleAttachmentPreview extends StatelessWidget {
               frameHeight: height,
               borderRadius: null,
               fit: BoxFit.cover,
-              onTap: () {},
+              onTap: _handleOpenAttachment,
             );
     } else {
       child = fallback;
@@ -141,21 +176,25 @@ class _BubbleAttachmentPreview extends StatelessWidget {
       children: [
         child,
         Positioned.fill(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: CupertinoColors.black.withAlpha(110),
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: CupertinoColors.black.withAlpha(110),
+              ),
             ),
           ),
         ),
         Positioned.fill(
-          child: Center(
-            child: Text(
-              '+$overflowCount',
-              style: appBubbleTextStyle(
-                context,
-                color: CupertinoColors.white,
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
+          child: IgnorePointer(
+            child: Center(
+              child: Text(
+                '+$overflowCount',
+                style: appBubbleTextStyle(
+                  context,
+                  color: CupertinoColors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ),
@@ -170,11 +209,13 @@ class _FramedSingleVideoAttachmentPreview extends StatelessWidget {
     required this.attachment,
     required this.width,
     required this.height,
+    required this.onTap,
   });
 
   final AttachmentItem attachment;
   final double width;
   final double height;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -203,7 +244,7 @@ class _FramedSingleVideoAttachmentPreview extends StatelessWidget {
           ),
           VideoAttachmentPreview(
             attachment: attachment,
-            onTap: () {},
+            onTap: onTap,
             maxWidth: width,
             maxHeight: height,
             frameWidth: width,
@@ -223,47 +264,54 @@ class _FramedSingleImageAttachmentPreview extends StatelessWidget {
     required this.fallback,
     required this.width,
     required this.height,
+    required this.heroTag,
+    required this.onTap,
   });
 
   final AttachmentItem attachment;
   final Widget fallback;
   final double width;
   final double height;
+  final String heroTag;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final cacheWidth = (width * 2).round();
     return GestureDetector(
-      onTap: () {},
-      child: DecoratedBox(
-        decoration: const BoxDecoration(color: CupertinoColors.black),
-        child: SizedBox(
-          width: width,
-          height: height,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              _BlurredImageFill(
-                attachment: attachment,
-                fallback: fallback,
-                cacheWidth: cacheWidth,
-              ),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: CupertinoColors.black.withAlpha(72),
+      onTap: onTap,
+      child: Hero(
+        tag: heroTag,
+        child: DecoratedBox(
+          decoration: const BoxDecoration(color: CupertinoColors.black),
+          child: SizedBox(
+            width: width,
+            height: height,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                _BlurredImageFill(
+                  attachment: attachment,
+                  fallback: fallback,
+                  cacheWidth: cacheWidth,
                 ),
-              ),
-              AppCachedNetworkImage(
-                imageUrl: attachment.url,
-                width: width,
-                height: height,
-                memCacheWidth: cacheWidth,
-                fit: BoxFit.contain,
-                placeholder: (context, url) =>
-                    const Center(child: CupertinoActivityIndicator()),
-                errorWidget: (context, url, error) => fallback,
-              ),
-            ],
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: CupertinoColors.black.withAlpha(72),
+                  ),
+                ),
+                AppCachedNetworkImage(
+                  imageUrl: attachment.url,
+                  width: width,
+                  height: height,
+                  memCacheWidth: cacheWidth,
+                  fit: BoxFit.contain,
+                  placeholder: (context, url) =>
+                      const Center(child: CupertinoActivityIndicator()),
+                  errorWidget: (context, url, error) => fallback,
+                ),
+              ],
+            ),
           ),
         ),
       ),
