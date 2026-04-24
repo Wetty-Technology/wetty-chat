@@ -358,20 +358,21 @@ class _ConversationTimelineViewState
     if (details.message.isDeleted) {
       return;
     }
-    final bubbleRect = details.bubbleRect;
-    final viewportSize = context.size;
-    if (viewportSize == null) {
+    final viewportBox = context.findRenderObject();
+    if (viewportBox is! RenderBox || !viewportBox.attached) {
       return;
     }
-    final viewportRect = Offset.zero & viewportSize;
-    final visibleRect = bubbleRect.intersect(viewportRect);
-    if (visibleRect.isEmpty) {
+    final viewportGlobalOrigin = viewportBox.localToGlobal(Offset.zero);
+    final viewportGlobalRect = viewportGlobalOrigin & viewportBox.size;
+    final bubbleGlobalRect = details.bubbleRect;
+    final visibleGlobalRect = bubbleGlobalRect.intersect(viewportGlobalRect);
+    if (visibleGlobalRect.isEmpty) {
       return;
     }
     setState(() {
       _activeOverlay = details.copyWith(
-        bubbleRect: bubbleRect,
-        visibleRect: visibleRect,
+        bubbleRect: bubbleGlobalRect.shift(-viewportGlobalOrigin),
+        visibleRect: visibleGlobalRect.shift(-viewportGlobalOrigin),
       );
     });
   }
