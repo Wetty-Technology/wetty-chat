@@ -160,6 +160,30 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                       ),
                       GoRoute(
                         parentNavigatorKey: _rootNavigatorKey,
+                        path: 'thread/:threadId/new',
+                        pageBuilder: (context, state) {
+                          final chatId = int.parse(
+                            state.pathParameters['chatId']!,
+                          );
+                          final threadId = int.parse(
+                            state.pathParameters['threadId']!,
+                          );
+                          final extra = state.extra as Map<String, dynamic>?;
+                          return CupertinoPage(
+                            key: state.pageKey,
+                            child: ThreadDetailV2Page(
+                              chatId: chatId,
+                              threadRootId: threadId,
+                              launchRequest:
+                                  extra?['launchRequest'] as LaunchRequest? ??
+                                  const LaunchRequest.latest(),
+                              isNewThread: true,
+                            ),
+                          );
+                        },
+                      ),
+                      GoRoute(
+                        parentNavigatorKey: _rootNavigatorKey,
                         path: 'thread/:threadId',
                         pageBuilder: (context, state) {
                           final chatId = int.parse(

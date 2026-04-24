@@ -16,11 +16,15 @@ class ConversationSurfaceV2 extends ConsumerStatefulWidget {
     required this.identity,
     required this.launchRequest,
     this.onOpenThread,
+    this.onStartThread,
+    this.onMessageSent,
   });
 
   final ConversationIdentity identity;
   final LaunchRequest launchRequest;
   final void Function(ConversationMessageV2 message)? onOpenThread;
+  final void Function(ConversationMessageV2 message)? onStartThread;
+  final Future<void> Function()? onMessageSent;
 
   @override
   ConsumerState<ConversationSurfaceV2> createState() =>
@@ -35,6 +39,7 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
     ref
         .read(conversationTimelineViewModelProvider(widget.identity).notifier)
         .followLatestTailIfNeeded();
+    await widget.onMessageSent?.call();
   }
 
   @override
@@ -60,6 +65,7 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
                   threadRootId: widget.identity.threadRootId,
                   launchRequest: widget.launchRequest,
                   onOpenThread: widget.onOpenThread,
+                  onStartThread: widget.onStartThread,
                 ),
               ),
             ),

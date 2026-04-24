@@ -1,34 +1,101 @@
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
 import 'package:chahua/features/conversation/shared/domain/launch_request.dart';
 import 'package:chahua/features/conversation/shared/presentation/conversation_surface_v2.dart';
+import 'package:chahua/features/chat_list_v2/application/thread_list_v2_view_model.dart';
+import 'package:chahua/app/theme/style_config.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class ThreadDetailV2Page extends StatelessWidget {
+class ThreadDetailV2Page extends ConsumerStatefulWidget {
   const ThreadDetailV2Page({
     super.key,
     required this.chatId,
     required this.threadRootId,
     this.launchRequest = const LaunchRequest.latest(),
+    this.isNewThread = false,
   });
 
   final int chatId;
   final int threadRootId;
   final LaunchRequest launchRequest;
+  final bool isNewThread;
+
+  @override
+  ConsumerState<ThreadDetailV2Page> createState() => _ThreadDetailV2PageState();
+}
+
+class _ThreadDetailV2PageState extends ConsumerState<ThreadDetailV2Page> {
+  late bool _isNewThread = widget.isNewThread;
+
+  Future<void> _handleMessageSent() async {
+    if (!_isNewThread) {
+      return;
+    }
+    if (mounted) {
+      setState(() {
+        _isNewThread = false;
+      });
+    }
+    await ref.read(threadListV2ViewModelProvider.notifier).refreshThreads();
+  }
 
   @override
   Widget build(BuildContext context) {
     final ConversationIdentity identity = (
-      chatId: chatId,
-      threadRootId: threadRootId,
+      chatId: widget.chatId,
+      threadRootId: widget.threadRootId,
     );
     return CupertinoPageScaffold(
       resizeToAvoidBottomInset: false,
-      navigationBar: const CupertinoNavigationBar(middle: Text('Thread')),
+      navigationBar: CupertinoNavigationBar(
+        middle: Text(_isNewThread ? 'New Thread' : 'Thread'),
+        // TODO: Add the thread subscribe button here once the Flutter UI is ready.
+      ),
       child: SafeArea(
         bottom: false,
-        child: ConversationSurfaceV2(
-          identity: identity,
-          launchRequest: launchRequest,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (_isNewThread) const _NewThreadInstruction(),
+            Expanded(
+              child: ConversationSurfaceV2(
+                identity: identity,
+                launchRequest: widget.launchRequest,
+                onMessageSent: _handleMessageSent,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NewThreadInstruction extends StatelessWidget {
+  const _NewThreadInstruction();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.backgroundSecondary,
+        border: Border(
+          bottom: BorderSide(
+            color: CupertinoColors.separator.resolveFrom(context),
+          ),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        child: Text(
+          'Reply to this message to start the thread.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: colors.textSecondary,
+            fontSize: 13,
+            height: 1.25,
+          ),
         ),
       ),
     );

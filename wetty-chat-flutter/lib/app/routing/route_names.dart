@@ -8,6 +8,8 @@ abstract final class AppRoutes {
   static String chatSettings(String chatId) => '/chat/$chatId/settings';
   static String nestedThreadDetail(String chatId, String threadRootId) =>
       '/chat/$chatId/thread/$threadRootId';
+  static String nestedNewThread(String chatId, String threadRootId) =>
+      '/chat/$chatId/thread/$threadRootId/new';
   static String threadDetail(String chatId, String threadRootId) =>
       '/thread/$chatId/$threadRootId';
   static const settings = '/settings';

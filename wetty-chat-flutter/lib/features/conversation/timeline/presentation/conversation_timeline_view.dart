@@ -81,12 +81,14 @@ class ConversationTimelineView extends ConsumerStatefulWidget {
     required this.launchRequest,
     this.threadRootId,
     this.onOpenThread,
+    this.onStartThread,
   });
 
   final int chatId;
   final int? threadRootId;
   final LaunchRequest launchRequest;
   final void Function(ConversationMessageV2 message)? onOpenThread;
+  final void Function(ConversationMessageV2 message)? onStartThread;
 
   @override
   ConsumerState<ConversationTimelineView> createState() =>
@@ -512,6 +514,15 @@ class _ConversationTimelineViewState
           composerNotifier.beginReply(message);
         },
       ),
+      if (_canStartThreadFrom(message))
+        MessageOverlayActionV2(
+          label: 'Start Thread',
+          icon: CupertinoIcons.chat_bubble_2,
+          onPressed: () {
+            _dismissMessageOverlay();
+            widget.onStartThread!(message);
+          },
+        ),
       if (isOwn && message.content is! AudioMessageContent)
         MessageOverlayActionV2(
           label: 'Edit',
@@ -532,6 +543,13 @@ class _ConversationTimelineViewState
           },
         ),
     ];
+  }
+
+  bool _canStartThreadFrom(ConversationMessageV2 message) {
+    return widget.threadRootId == null &&
+        widget.onStartThread != null &&
+        message.serverMessageId != null &&
+        message.threadInfo == null;
   }
 
   /// Build the actual message list (sliver)

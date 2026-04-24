@@ -33,6 +33,7 @@ class ChatDetailV2Page extends StatelessWidget {
           identity: identity,
           launchRequest: launchRequest,
           onOpenThread: (message) => _openThread(context, message),
+          onStartThread: (message) => _startThread(context, message),
         ),
       ),
     );
@@ -44,6 +45,14 @@ class ChatDetailV2Page extends StatelessWidget {
       return;
     }
     context.push(AppRoutes.nestedThreadDetail('$chatId', '$threadRootId'));
+  }
+
+  void _startThread(BuildContext context, ConversationMessageV2 message) {
+    final threadRootId = message.serverMessageId;
+    if (threadRootId == null) {
+      return;
+    }
+    context.push(AppRoutes.nestedNewThread('$chatId', '$threadRootId'));
   }
 }
 
