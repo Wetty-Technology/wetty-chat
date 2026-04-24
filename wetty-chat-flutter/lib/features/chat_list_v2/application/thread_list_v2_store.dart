@@ -18,8 +18,6 @@ typedef ThreadListV2StoreState = ({
 typedef ThreadListV2Identity = ({String chatId, String threadRootId});
 
 class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
-  bool _isUnknownRealtimeRefreshing = false;
-
   @override
   ThreadListV2StoreState build() {
     return (
@@ -62,35 +60,30 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
     );
   }
 
-  void applyRealtimeEvent(ApiWsEvent event) {
+  bool applyRealtimeEvent(ApiWsEvent event) {
     switch (event) {
       case MessageCreatedWsEvent(:final payload):
-        _applyRealtimeCreated(payload);
-        return;
+        return _applyRealtimeCreated(payload);
       case MessageUpdatedWsEvent(:final payload):
-        _applyRealtimeUpdated(payload);
-        return;
+        return _applyRealtimeUpdated(payload);
       case MessageDeletedWsEvent(:final payload):
-        _applyRealtimeDeleted(payload);
-        return;
+        return _applyRealtimeDeleted(payload);
       case ThreadUpdatedWsEvent():
-        _refreshForUnknownRealtimeThread();
-        return;
+        return true;
       default:
-        return;
+        return false;
     }
   }
 
-  void _applyRealtimeCreated(MessageItemDto payload) {
+  bool _applyRealtimeCreated(MessageItemDto payload) {
     final threadRootId = payload.replyRootId;
     if (threadRootId == null || !isEligibleThreadPreviewPayload(payload)) {
-      return;
+      return false;
     }
 
     final index = _indexOfThread(threadRootId);
     if (index < 0) {
-      _refreshForUnknownRealtimeThread();
-      return;
+      return true;
     }
 
     final previous = state.threads[index];
@@ -116,23 +109,22 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
       _replaceState(totalUnreadCount: state.totalUnreadCount + 1);
       ref.read(unreadBadgeProvider.notifier).applyThreadUnreadDelta(1);
     }
+    return false;
   }
 
-  void _applyRealtimeUpdated(MessageItemDto payload) {
+  bool _applyRealtimeUpdated(MessageItemDto payload) {
     if (payload.replyRootId == null) {
-      _applyRootPatched(payload);
-      return;
+      return _applyRootPatched(payload);
     }
 
     final index = _indexOfThread(payload.replyRootId!);
     if (index < 0) {
-      _refreshForUnknownRealtimeThread();
-      return;
+      return true;
     }
 
     final previous = state.threads[index];
     if (!matchesThreadPreview(previous.lastReply, payload)) {
-      return;
+      return false;
     }
 
     _replaceState(
@@ -142,31 +134,30 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
         previous.copyWith(lastReply: _toReplyPreview(payload)),
       ),
     );
+    return false;
   }
 
-  void _applyRealtimeDeleted(MessageItemDto payload) {
+  bool _applyRealtimeDeleted(MessageItemDto payload) {
     if (payload.replyRootId == null) {
-      _applyRootPatched(payload);
-      return;
+      return _applyRootPatched(payload);
     }
 
     final index = _indexOfThread(payload.replyRootId!);
     if (index < 0) {
-      _refreshForUnknownRealtimeThread();
-      return;
+      return true;
     }
 
     final previous = state.threads[index];
     final isCurrentPreview = matchesThreadPreview(previous.lastReply, payload);
     if (isCurrentPreview) {
-      _refreshForUnknownRealtimeThread();
-      return;
+      return true;
     }
 
     final updated = previous.copyWith(
       replyCount: previous.replyCount > 0 ? previous.replyCount - 1 : 0,
     );
     _replaceState(threads: replaceThreadAt(state.threads, index, updated));
+    return false;
   }
 
   int get _currentUserId => ref.read(authSessionProvider).currentUserId;
@@ -199,10 +190,10 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
     );
   }
 
-  void _applyRootPatched(MessageItemDto payload) {
+  bool _applyRootPatched(MessageItemDto payload) {
     final index = _indexOfThread(payload.id);
     if (index < 0) {
-      return;
+      return false;
     }
 
     final previous = state.threads[index];
@@ -213,6 +204,7 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
         previous.copyWith(threadRootMessage: payload.toDomain()),
       ),
     );
+    return false;
   }
 
   void _replaceState({
@@ -227,20 +219,6 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
       hasMore: hasMore ?? state.hasMore,
       totalUnreadCount: totalUnreadCount ?? state.totalUnreadCount,
     );
-  }
-
-  void _refreshForUnknownRealtimeThread() {
-    if (_isUnknownRealtimeRefreshing) {
-      return;
-    }
-
-    _isUnknownRealtimeRefreshing = true;
-    Future<void>.microtask(() {
-      // TODO(codex): Reconcile the v2 threads list from the backend when a
-      // realtime event references a thread or preview slice we cannot update
-      // precisely from local state.
-      _isUnknownRealtimeRefreshing = false;
-    });
   }
 }
 

@@ -15,8 +15,6 @@ typedef GroupListV2StoreState = ({
 });
 
 class GroupListV2Store extends Notifier<GroupListV2StoreState> {
-  bool _isRealtimeRefreshing = false;
-
   @override
   GroupListV2StoreState build() {
     return (groups: const [], nextCursor: null, hasMore: false);
@@ -65,38 +63,34 @@ class GroupListV2Store extends Notifier<GroupListV2StoreState> {
     );
   }
 
-  void applyRealtimeEvent(ApiWsEvent event) {
+  bool applyRealtimeEvent(ApiWsEvent event) {
     switch (event) {
       case MessageCreatedWsEvent(:final payload):
-        _applyRealtimeCreated(payload);
-        return;
+        return _applyRealtimeCreated(payload);
       case MessageUpdatedWsEvent(:final payload):
-        _applyRealtimePatched(payload);
-        return;
+        return _applyRealtimePatched(payload);
       case MessageDeletedWsEvent(:final payload):
-        _applyRealtimePatched(payload);
-        return;
+        return _applyRealtimePatched(payload);
       default:
-        return;
+        return false;
     }
   }
 
-  void _applyRealtimeCreated(MessageItemDto payload) {
+  bool _applyRealtimeCreated(MessageItemDto payload) {
     final chatId = payload.chatId.toString();
     final index = state.groups.indexWhere((group) => group.id == chatId);
     if (index < 0) {
-      _refreshForRealtimeMiss();
-      return;
+      return true;
     }
 
     final message = payload.toDomain();
     if (!isEligibleChatPreviewMessage(message)) {
-      return;
+      return false;
     }
 
     final previous = state.groups[index];
     if (matchesChatPreview(previous.lastMessage, payload)) {
-      return;
+      return false;
     }
 
     final currentUserId = ref.read(authSessionProvider).currentUserId;
@@ -114,27 +108,27 @@ class GroupListV2Store extends Notifier<GroupListV2StoreState> {
       nextCursor: state.nextCursor,
       hasMore: state.hasMore,
     );
+    return false;
   }
 
-  void _applyRealtimePatched(MessageItemDto payload) {
+  bool _applyRealtimePatched(MessageItemDto payload) {
     if (payload.replyRootId != null) {
-      return;
+      return false;
     }
 
     final chatId = payload.chatId.toString();
     final index = state.groups.indexWhere((group) => group.id == chatId);
     if (index < 0) {
-      return;
+      return false;
     }
 
     final previous = state.groups[index];
     if (!matchesChatPreview(previous.lastMessage, payload)) {
-      return;
+      return false;
     }
 
     if (payload.isDeleted) {
-      _refreshForRealtimeMiss();
-      return;
+      return true;
     }
 
     state = (
@@ -149,20 +143,7 @@ class GroupListV2Store extends Notifier<GroupListV2StoreState> {
       nextCursor: state.nextCursor,
       hasMore: state.hasMore,
     );
-  }
-
-  void _refreshForRealtimeMiss() {
-    if (_isRealtimeRefreshing) {
-      return;
-    }
-
-    _isRealtimeRefreshing = true;
-    Future<void>.microtask(() {
-      // TODO(codex): Reconcile the v2 groups list from the backend when a
-      // realtime event references a group or preview slice we do not have
-      // enough local state to update precisely.
-      _isRealtimeRefreshing = false;
-    });
+    return false;
   }
 }
 
