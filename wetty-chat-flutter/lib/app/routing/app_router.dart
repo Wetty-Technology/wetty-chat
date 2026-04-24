@@ -12,7 +12,6 @@ import 'package:chahua/features/conversation/media/presentation/attachment_viewe
 import 'package:chahua/features/conversation/media/presentation/attachment_viewer_request.dart';
 import 'package:chahua/features/conversation/shared/presentation/chat_detail_v2_view.dart';
 import 'package:chahua/features/conversation/shared/presentation/thread_detail_v2_view.dart';
-import 'package:chahua/features/chats/list/presentation/new_chat_view.dart';
 import 'package:chahua/features/groups/members/presentation/group_members_view.dart';
 import 'package:chahua/features/groups/settings/presentation/group_settings_view.dart';
 import 'package:chahua/features/settings/presentation/cache_settings_view.dart';
@@ -88,11 +87,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             child: AttachmentViewerPage(request: request),
           );
         },
-      ),
-      GoRoute(
-        path: '/chats/new',
-        pageBuilder: (context, state) =>
-            CupertinoPage(key: state.pageKey, child: const NewChatPage()),
       ),
       GoRoute(
         path: '${AppRoutes.stickerPackDetailRoot}/:packId',

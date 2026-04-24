@@ -2,7 +2,6 @@ abstract final class AppRoutes {
   static const bootstrap = '/bootstrap';
   static const login = '/login';
   static const chats = '/';
-  static const newChat = '/chats/new';
   static String chatDetail(String chatId) => '/chat/$chatId';
   static String chatMembers(String chatId) => '/chat/$chatId/members';
   static String chatSettings(String chatId) => '/chat/$chatId/settings';

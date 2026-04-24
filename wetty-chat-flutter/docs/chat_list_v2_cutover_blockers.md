@@ -7,7 +7,6 @@ the visible chats tab is routed through `lib/features/chat_list_v2`.
 
 - `/chats` renders `ChatListV2Page`.
 - The old `ChatPage` shell is not visibly routed.
-- `/chats/new` still renders `NewChatPage` from the old list package.
 
 ## Accepted Feature Gaps
 
@@ -28,7 +27,6 @@ replaced before removing the old package.
   shared read-state code.
 - `ChatListSegment`, `ChatListRow`, and `SwipeToActionRow` are shared UI
   primitives but still live under the old list package.
-- `NewChatPage` is still routed and creates chats through `chatListStateProvider`.
 - V2 thread read state is not reset locally when a thread is read from the
   conversation timeline.
 
