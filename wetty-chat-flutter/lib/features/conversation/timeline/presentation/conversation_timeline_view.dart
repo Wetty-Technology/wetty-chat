@@ -31,6 +31,9 @@ double resolveTopPreferredAnchorAlignment({
     0.0,
     1.0,
   );
+  log(
+    'resolveTopPreferredAnchorAlignment: afterExtent=$afterExtent, viewportExtent=$viewportExtent, visibleFractionBelowAnchor=$visibleFractionBelowAnchor',
+  );
   return 1.0 - visibleFractionBelowAnchor;
 }
 
@@ -113,6 +116,7 @@ class _ConversationTimelineViewState
   late ScrollController _scrollController;
   int _lastHandledViewportCommandGeneration = 0;
   final GlobalKey _centerSliverKey = GlobalKey();
+  final GlobalKey _afterContentSliverKey = GlobalKey();
   final Map<String, GlobalKey> _messageKeys = <String, GlobalKey>{};
   bool _isMeasureScheduled = false;
   double _topPreferredAnchorAlignment = 0;
@@ -156,7 +160,8 @@ class _ConversationTimelineViewState
         return;
       }
 
-      final renderObject = _centerSliverKey.currentContext?.findRenderObject();
+      final renderObject = _afterContentSliverKey.currentContext
+          ?.findRenderObject();
       if (renderObject is! RenderSliver) {
         return;
       }
@@ -567,6 +572,7 @@ class _ConversationTimelineViewState
   /// Build the actual message list (sliver)
   SliverList _buildMessageSliver(
     List<ConversationMessageV2> messages, {
+    Key? key,
     String? highlightedStableKey,
     required Map<String, ({bool showSenderName, bool showAvatar})>
     rowPresentationByStableKey,
@@ -575,6 +581,7 @@ class _ConversationTimelineViewState
       conversationTimelineViewModelProvider(_identity).notifier,
     );
     return SliverList.builder(
+      key: key,
       itemCount: messages.length,
       itemBuilder: (context, index) {
         final message = messages[index];
@@ -686,6 +693,7 @@ class _ConversationTimelineViewState
               if (afterMessages.isNotEmpty)
                 _buildMessageSliver(
                   afterMessages,
+                  key: _afterContentSliverKey,
                   highlightedStableKey: state.highlightedStableKey,
                   rowPresentationByStableKey: rowPresentationByStableKey,
                 ),
