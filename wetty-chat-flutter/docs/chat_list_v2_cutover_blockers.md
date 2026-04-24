@@ -1,12 +1,12 @@
 # Chat List V2 Cutover Blockers
 
-This document tracks what still blocks deleting `lib/features/chats/list` now that
-the visible chats tab is routed through `lib/features/chat_list_v2`.
+This document tracks accepted V2 feature gaps after deleting
+`lib/features/chats/list`.
 
 ## Current Routing
 
 - `/chats` renders `ChatListV2Page`.
-- The old `ChatPage` shell is not visibly routed.
+- The old `ChatPage` shell and `lib/features/chats/list` package were removed.
 
 ## Accepted Feature Gaps
 
@@ -18,19 +18,7 @@ These are not deletion blockers unless product decides otherwise.
 - Thread read/unread swipe actions are visible but currently no-op.
 - Group and all-tab error states have less complete retry UX than old list.
 
-## Deletion Blockers
-
-These are live dependencies on `features/chats/list` that must be moved or
-replaced before removing the old package.
+## Follow-Up Correctness Work
 
 - V2 thread read state is not reset locally when a thread is read from the
   conversation timeline.
-
-## Removal Direction
-
-1. Move shared API and UI primitives out of `features/chats/list`.
-2. Make V2 stores own create, metadata, mute, leave-group, refresh, and realtime
-   reconciliation paths.
-3. Update app-level refresh and websocket fan-out to target V2 owners only.
-4. Remove old presentation/view-model/repository files once no production import
-   reaches `features/chats/list`.
