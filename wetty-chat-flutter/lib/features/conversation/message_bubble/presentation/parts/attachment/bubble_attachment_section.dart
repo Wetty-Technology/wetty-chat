@@ -13,6 +13,7 @@ class BubbleAttachmentSection extends StatelessWidget {
     required this.attachments,
     required this.theme,
     required this.variant,
+    this.maxWidth,
     this.overlayFooter,
     this.clipBorderRadius,
   });
@@ -20,12 +21,13 @@ class BubbleAttachmentSection extends StatelessWidget {
   final List<AttachmentItem> attachments;
   final BubbleThemeV2 theme;
   final BubbleAttachmentSectionVariant variant;
+  final double? maxWidth;
   final Widget? overlayFooter;
   final BorderRadius? clipBorderRadius;
 
   @override
   Widget build(BuildContext context) {
-    final maxAttachmentWidth = theme.maxBubbleWidth - 24;
+    final maxAttachmentWidth = maxWidth ?? theme.maxBubbleWidth - 24;
     if (variant == BubbleAttachmentSectionVariant.visualMedia) {
       return VisualAttachmentGallery(
         attachments: attachments,

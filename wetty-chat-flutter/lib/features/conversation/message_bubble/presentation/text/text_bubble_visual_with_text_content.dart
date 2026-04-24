@@ -40,6 +40,7 @@ class TextBubbleVisualWithTextContent extends StatelessWidget {
           attachments: attachments,
           theme: theme,
           variant: BubbleAttachmentSectionVariant.visualMedia,
+          maxWidth: theme.maxBubbleWidth,
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
