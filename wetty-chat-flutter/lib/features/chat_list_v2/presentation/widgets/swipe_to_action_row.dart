@@ -28,6 +28,7 @@ class SwipeToActionRow extends StatelessWidget {
     return SwipeActionCell(
       key: key!,
       backgroundColor: CupertinoColors.systemBackground.resolveFrom(context),
+      fullSwipeFactor: 0.6,
       leadingActions: [
         SwipeAction(
           performsFirstActionWithFullSwipe: true,
