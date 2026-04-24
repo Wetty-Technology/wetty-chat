@@ -7,7 +7,7 @@ import '../../../../core/settings/app_settings_store.dart';
 import '../../../shared/application/chat_inbox_reconciler.dart';
 import '../../threads/application/thread_list_view_model.dart';
 import '../application/chat_list_view_model.dart';
-import 'chat_list_segment.dart';
+import '../../../chat_list_v2/presentation/widgets/chat_list_segment.dart';
 import 'models/merged_list_item.dart';
 import 'widgets/chat_list_tab_body.dart';
 

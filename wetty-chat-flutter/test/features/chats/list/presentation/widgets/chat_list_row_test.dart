@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:chahua/core/cache/app_cached_network_image.dart';
-import 'package:chahua/features/chats/list/presentation/widgets/chat_list_row.dart';
+import 'package:chahua/features/chat_list_v2/presentation/widgets/chat_list_row.dart';
 
 void main() {
   testWidgets('renders cached avatar image when avatar URL is present', (

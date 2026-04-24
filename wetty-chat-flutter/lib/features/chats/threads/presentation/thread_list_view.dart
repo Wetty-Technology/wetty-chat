@@ -7,7 +7,7 @@ import '../../../../app/routing/route_names.dart';
 import '../../../../app/theme/style_config.dart';
 import '../application/thread_list_view_model.dart';
 import '../models/thread_models.dart';
-import '../../list/presentation/widgets/swipe_to_action_row.dart';
+import '../../../chat_list_v2/presentation/widgets/swipe_to_action_row.dart';
 import 'thread_list_row.dart';
 
 /// Displays a paginated list of threads the current user is subscribed to.

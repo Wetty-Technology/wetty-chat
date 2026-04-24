@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/notifications/unread_badge_provider.dart';
 import '../../../core/settings/app_settings_store.dart';
-import '../../chats/list/presentation/chat_list_segment.dart';
+import 'widgets/chat_list_segment.dart';
 import '../application/all_list_v2_view_model.dart';
 import '../application/group_list_v2_view_model.dart';
 import '../application/thread_list_v2_view_model.dart';

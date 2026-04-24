@@ -14,10 +14,10 @@ import '../../../threads/application/thread_list_view_model.dart';
 import '../../../threads/presentation/thread_list_row.dart';
 import '../../../threads/presentation/thread_list_view.dart';
 import '../../application/chat_list_view_model.dart';
-import '../chat_list_segment.dart';
+import '../../../../chat_list_v2/presentation/widgets/chat_list_segment.dart';
 import '../models/merged_list_item.dart';
-import 'chat_list_row.dart';
-import 'swipe_to_action_row.dart';
+import '../../../../chat_list_v2/presentation/widgets/chat_list_row.dart';
+import '../../../../chat_list_v2/presentation/widgets/swipe_to_action_row.dart';
 
 class ChatListTabBody extends ConsumerWidget {
   const ChatListTabBody({

@@ -23,10 +23,6 @@ These are not deletion blockers unless product decides otherwise.
 These are live dependencies on `features/chats/list` that must be moved or
 replaced before removing the old package.
 
-- `ChatApiService` is still used by V2 group loading, unread badge refresh, and
-  shared read-state code.
-- `ChatListSegment`, `ChatListRow`, and `SwipeToActionRow` are shared UI
-  primitives but still live under the old list package.
 - V2 thread read state is not reset locally when a thread is read from the
   conversation timeline.
 
