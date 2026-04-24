@@ -14,7 +14,7 @@ import '../core/notifications/push_notification_provider.dart';
 import '../core/notifications/unread_badge_provider.dart';
 import '../core/session/dev_session_store.dart';
 import '../core/settings/app_settings_store.dart';
-import '../features/chats/application/chat_inbox_reconciler.dart';
+import '../features/shared/application/chat_inbox_reconciler.dart';
 import 'routing/app_router.dart';
 import 'theme/style_config.dart';
 

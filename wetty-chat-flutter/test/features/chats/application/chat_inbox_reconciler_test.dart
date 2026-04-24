@@ -9,12 +9,12 @@ import 'package:chahua/core/notifications/apns_channel.dart';
 import 'package:chahua/core/notifications/unread_badge_provider.dart';
 import 'package:chahua/core/providers/shared_preferences_provider.dart';
 import 'package:chahua/core/session/dev_session_store.dart';
-import 'package:chahua/features/chats/application/chat_inbox_reconciler.dart';
-import 'package:chahua/features/chats/list/application/chat_list_view_model.dart';
 import 'package:chahua/features/chats/shared/data/chat_api_service.dart';
-import 'package:chahua/features/chats/threads/application/thread_list_view_model.dart';
 import 'package:chahua/features/chats/threads/data/thread_api_service.dart';
 import 'package:chahua/features/chats/threads/models/thread_api_models.dart';
+import 'package:chahua/features/chat_list_v2/application/group_list_v2_view_model.dart';
+import 'package:chahua/features/chat_list_v2/application/thread_list_v2_view_model.dart';
+import 'package:chahua/features/shared/application/chat_inbox_reconciler.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -78,12 +78,12 @@ void main() {
 
       await container.read(chatInboxReconcilerProvider).reconcile();
 
-      final chats = container.read(chatListViewModelProvider).value;
-      final threads = container.read(threadListViewModelProvider).value;
+      final groups = container.read(groupListV2ViewModelProvider).value;
+      final threads = container.read(threadListV2ViewModelProvider).value;
       final badge = container.read(unreadBadgeProvider);
 
-      expect(chats?.chats, hasLength(1));
-      expect(chats?.chats.single.id, '10');
+      expect(groups?.groups, hasLength(1));
+      expect(groups?.groups.single.id, '10');
       expect(threads?.threads, hasLength(1));
       expect(threads?.threads.single.threadRootId, 200);
       expect(badge.chatUnreadTotal, 4);

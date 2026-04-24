@@ -29,8 +29,6 @@ replaced before removing the old package.
 - `ChatListSegment`, `ChatListRow`, and `SwipeToActionRow` are shared UI
   primitives but still live under the old list package.
 - `NewChatPage` is still routed and creates chats through `chatListStateProvider`.
-- `ChatInboxReconciler` refreshes `chatListViewModelProvider`, so resume and
-  notification handling still refresh the old chat list owner.
 - `ws_event_router` still fans message events into `chatListStateProvider`.
 - Group metadata updates, mute/unmute, and leave-group flows still mutate
   `chatListStateProvider`.
