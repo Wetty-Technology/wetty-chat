@@ -29,8 +29,6 @@ replaced before removing the old package.
 - `ChatListSegment`, `ChatListRow`, and `SwipeToActionRow` are shared UI
   primitives but still live under the old list package.
 - `NewChatPage` is still routed and creates chats through `chatListStateProvider`.
-- Group metadata updates, mute/unmute, and leave-group flows still mutate
-  `chatListStateProvider`.
 - V2 thread read state is not reset locally when a thread is read from the
   conversation timeline.
 

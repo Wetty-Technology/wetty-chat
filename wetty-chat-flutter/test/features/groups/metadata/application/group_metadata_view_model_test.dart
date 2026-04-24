@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:chahua/core/api/models/group_info_api_models.dart';
+import 'package:chahua/features/chat_list_v2/application/group_list_v2_store.dart';
 import 'package:chahua/features/chats/models/chat_models.dart';
-import 'package:chahua/features/chats/list/data/chat_repository.dart';
 import 'package:chahua/features/groups/metadata/application/group_metadata_view_model.dart';
 import 'package:chahua/features/groups/metadata/data/group_metadata_api_service.dart';
 import 'package:chahua/features/groups/metadata/data/group_metadata_repository.dart';
@@ -26,8 +26,10 @@ void main() {
       addTearDown(container.dispose);
 
       container
-          .read(chatListStateProvider.notifier)
-          .insertChat(ChatListItem(id: '42', name: 'Stale Name'));
+          .read(groupListV2StoreProvider.notifier)
+          .replacePage(
+            groups: const [ChatListItem(id: '42', name: 'Stale Name')],
+          );
 
       final provider = groupMetadataViewModelProvider('42');
       final initial = await container.read(provider.future);
@@ -45,7 +47,7 @@ void main() {
       expect(updated.name, 'Updated Name');
       expect(container.read(provider).value?.name, 'Updated Name');
       expect(
-        container.read(chatListStateProvider).chats.first.name,
+        container.read(groupListV2StoreProvider).groups.first.name,
         'Updated Name',
       );
     },

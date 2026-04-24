@@ -41,6 +41,51 @@ class GroupListV2Store extends Notifier<GroupListV2StoreState> {
     );
   }
 
+  void updateGroupMetadata({
+    required String chatId,
+    required String name,
+    DateTime? mutedUntil,
+  }) {
+    final index = state.groups.indexWhere((group) => group.id == chatId);
+    if (index < 0) {
+      return;
+    }
+
+    final groups = [...state.groups];
+    groups[index] = groups[index].copyWith(name: name, mutedUntil: mutedUntil);
+    state = (
+      groups: groups,
+      nextCursor: state.nextCursor,
+      hasMore: state.hasMore,
+    );
+  }
+
+  void updateGroupMutedUntil({
+    required String chatId,
+    required DateTime? mutedUntil,
+  }) {
+    final index = state.groups.indexWhere((group) => group.id == chatId);
+    if (index < 0) {
+      return;
+    }
+
+    final groups = [...state.groups];
+    groups[index] = groups[index].copyWith(mutedUntil: mutedUntil);
+    state = (
+      groups: groups,
+      nextCursor: state.nextCursor,
+      hasMore: state.hasMore,
+    );
+  }
+
+  void removeGroup(String chatId) {
+    state = (
+      groups: state.groups.where((group) => group.id != chatId).toList(),
+      nextCursor: state.nextCursor,
+      hasMore: state.hasMore,
+    );
+  }
+
   void applyServerReadState({
     required String chatId,
     required int messageId,

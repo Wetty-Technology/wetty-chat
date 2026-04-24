@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../chats/list/data/chat_repository.dart';
+import '../../../chat_list_v2/application/group_list_v2_store.dart';
 import '../data/group_metadata_models.dart';
 import '../data/group_metadata_repository.dart';
 
@@ -42,8 +42,8 @@ class GroupMetadataViewModel extends AsyncNotifier<ChatMetadata> {
       );
       state = AsyncData(updated);
       ref
-          .read(chatListStateProvider.notifier)
-          .updateChatMetadata(
+          .read(groupListV2StoreProvider.notifier)
+          .updateGroupMetadata(
             chatId: updated.id,
             name: updated.name,
             mutedUntil: updated.mutedUntil,
@@ -72,8 +72,8 @@ class GroupMetadataViewModel extends AsyncNotifier<ChatMetadata> {
     }
     // Sync to chat list
     ref
-        .read(chatListStateProvider.notifier)
-        .updateChatMutedUntil(chatId: arg, mutedUntil: mutedUntil);
+        .read(groupListV2StoreProvider.notifier)
+        .updateGroupMutedUntil(chatId: arg, mutedUntil: mutedUntil);
   }
 
   Future<void> unmuteChat() async {
@@ -86,8 +86,8 @@ class GroupMetadataViewModel extends AsyncNotifier<ChatMetadata> {
     }
     // Sync to chat list (clear mute)
     ref
-        .read(chatListStateProvider.notifier)
-        .updateChatMutedUntil(chatId: arg, mutedUntil: null);
+        .read(groupListV2StoreProvider.notifier)
+        .updateGroupMutedUntil(chatId: arg, mutedUntil: null);
   }
 }
 
