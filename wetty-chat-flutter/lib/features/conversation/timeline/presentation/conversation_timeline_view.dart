@@ -147,13 +147,16 @@ class _ConversationTimelineViewState
     super.dispose();
   }
 
-  void _scheduleTopPreferredMeasurement() {
+  void _scheduleTopPreferredMeasurement({bool resetResolution = false}) {
+    if (resetResolution) {
+      _topPreferredAnchorAlignment = 0;
+      _isTopPreferredAnchorResolved = false;
+    }
     if (_isMeasureScheduled) {
       return;
     }
     _isMeasureScheduled = true;
 
-    _isTopPreferredAnchorResolved = false;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _isMeasureScheduled = false;
       if (!mounted) {
@@ -335,7 +338,7 @@ class _ConversationTimelineViewState
         _scrollViewKey = UniqueKey();
         if (state.viewportCommand.placement ==
             ConversationTimelineViewportPlacement.topPreferred) {
-          _scheduleTopPreferredMeasurement();
+          _scheduleTopPreferredMeasurement(resetResolution: true);
         }
         break;
       case ConversationTimelineViewportCommandKind.scrollToBottom:
