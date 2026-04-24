@@ -4,7 +4,6 @@ import 'dart:async';
 import '../../features/conversation/shared/data/conversation_realtime_message_applier.dart';
 import '../../features/chat_list_v2/application/group_list_v2_store.dart';
 import '../../features/chat_list_v2/application/thread_list_v2_store.dart';
-import '../../features/chats/threads/data/thread_repository.dart';
 import '../../features/shared/application/chat_inbox_reconciler.dart';
 import '../../features/stickers/data/sticker_pack_order_store.dart';
 import '../api/models/websocket_api_models.dart';
@@ -109,7 +108,6 @@ final wsEventRouterProvider = Provider<void>((ref) {
         final shouldReconcileThreads = ref
             .read(threadListV2StoreProvider.notifier)
             .applyRealtimeEvent(event);
-        ref.read(threadListStateProvider.notifier).applyRealtimeEvent(event);
         ref.read(unreadBadgeProvider.notifier).scheduleReconcile();
         reconcileListProjectionIfNeeded(
           shouldReconcileGroups || shouldReconcileThreads,
@@ -119,7 +117,6 @@ final wsEventRouterProvider = Provider<void>((ref) {
         final shouldReconcileThreads = ref
             .read(threadListV2StoreProvider.notifier)
             .applyRealtimeEvent(event);
-        ref.read(threadListStateProvider.notifier).applyRealtimeEvent(event);
         reconcileListProjectionIfNeeded(shouldReconcileThreads);
         return;
       case ReactionUpdatedWsEvent():

@@ -38,6 +38,7 @@ class UnreadBadgeState {
   }
 }
 
+// TODO: check if this function is used
 int chatBadgeContribution({
   required int unreadCount,
   required DateTime? mutedUntil,
