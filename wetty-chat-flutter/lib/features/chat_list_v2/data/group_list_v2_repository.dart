@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../chats/list/data/chat_api_service.dart';
+import '../../chats/shared/data/chat_api_service.dart';
 import '../../chats/models/chat_api_mapper.dart';
 import '../application/group_list_v2_store.dart';
 

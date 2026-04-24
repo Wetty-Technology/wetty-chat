@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../conversation/compose/data/message_api_service_v2.dart';
-import '../../list/data/chat_api_service.dart';
 import '../../threads/data/thread_api_service.dart';
+import 'chat_api_service.dart';
 
 typedef ChatReadStateUpdate = ({String? lastReadMessageId, int unreadCount});
 

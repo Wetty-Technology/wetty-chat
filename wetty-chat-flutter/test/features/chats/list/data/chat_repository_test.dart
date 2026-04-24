@@ -7,7 +7,7 @@ import 'package:chahua/core/api/models/chats_api_models.dart';
 import 'package:chahua/core/api/models/messages_api_models.dart';
 import 'package:chahua/core/api/models/websocket_api_models.dart';
 import 'package:chahua/core/providers/shared_preferences_provider.dart';
-import 'package:chahua/features/chats/list/data/chat_api_service.dart';
+import 'package:chahua/features/chats/shared/data/chat_api_service.dart';
 import 'package:chahua/features/chats/list/data/chat_repository.dart';
 
 void main() {

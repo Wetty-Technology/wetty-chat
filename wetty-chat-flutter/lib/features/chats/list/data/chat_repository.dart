@@ -12,7 +12,7 @@ import '../../models/chat_api_mapper.dart';
 import '../../models/chat_models.dart';
 import '../../models/message_api_mapper.dart';
 import 'package:chahua/features/conversation/compose/data/message_api_service_v2.dart';
-import 'chat_api_service.dart';
+import '../../shared/data/chat_api_service.dart';
 
 typedef ChatListState = ({
   List<ChatListItem> chats,

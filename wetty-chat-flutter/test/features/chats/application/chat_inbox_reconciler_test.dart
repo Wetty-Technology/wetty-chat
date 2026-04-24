@@ -11,7 +11,7 @@ import 'package:chahua/core/providers/shared_preferences_provider.dart';
 import 'package:chahua/core/session/dev_session_store.dart';
 import 'package:chahua/features/chats/application/chat_inbox_reconciler.dart';
 import 'package:chahua/features/chats/list/application/chat_list_view_model.dart';
-import 'package:chahua/features/chats/list/data/chat_api_service.dart';
+import 'package:chahua/features/chats/shared/data/chat_api_service.dart';
 import 'package:chahua/features/chats/threads/application/thread_list_view_model.dart';
 import 'package:chahua/features/chats/threads/data/thread_api_service.dart';
 import 'package:chahua/features/chats/threads/models/thread_api_models.dart';
