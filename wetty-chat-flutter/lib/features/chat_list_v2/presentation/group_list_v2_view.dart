@@ -6,6 +6,7 @@ import '../../../app/routing/route_names.dart';
 import 'package:chahua/features/conversation/shared/domain/launch_request.dart';
 import '../../chats/chat_timestamp_formatter.dart';
 import 'widgets/chat_list_row.dart';
+import 'widgets/swipe_to_action_row.dart';
 import '../../chats/models/chat_models.dart';
 import '../../chats/models/message_models.dart';
 import '../../chats/models/message_preview_formatter.dart';
@@ -98,22 +99,31 @@ class _GroupListV2Row extends StatelessWidget {
     final lastMessage = chat.lastMessage;
     final isMuted =
         chat.mutedUntil != null && chat.mutedUntil!.isAfter(DateTime.now());
+    final isUnread = chat.unreadCount > 0;
 
     return Consumer(
-      builder: (context, ref, _) => ChatListRow(
-        chatName: chatName,
-        avatarUrl: chat.avatarUrl,
-        timestampText: dateText,
-        unreadCount: chat.unreadCount,
-        senderName: lastMessage?.sender.name,
-        lastMessageText: _messagePreviewText(lastMessage),
-        isMuted: isMuted,
-        onTap: () {
-          context.push(
-            AppRoutes.chatDetail(chat.id),
-            extra: {'launchRequest': _launchRequestForChat(chat)},
-          );
-        },
+      builder: (context, ref, _) => SwipeToActionRow(
+        key: ValueKey('group-v2-${chat.id}'),
+        icon: isUnread ? CupertinoIcons.checkmark_alt : CupertinoIcons.mail,
+        label: isUnread ? 'Read' : 'Unread',
+        onAction: () => ref
+            .read(groupListV2ViewModelProvider.notifier)
+            .toggleGroupReadState(chatId: chat.id),
+        child: ChatListRow(
+          chatName: chatName,
+          avatarUrl: chat.avatarUrl,
+          timestampText: dateText,
+          unreadCount: chat.unreadCount,
+          senderName: lastMessage?.sender.name,
+          lastMessageText: _messagePreviewText(lastMessage),
+          isMuted: isMuted,
+          onTap: () {
+            context.push(
+              AppRoutes.chatDetail(chat.id),
+              extra: {'launchRequest': _launchRequestForChat(chat)},
+            );
+          },
+        ),
       ),
     );
   }

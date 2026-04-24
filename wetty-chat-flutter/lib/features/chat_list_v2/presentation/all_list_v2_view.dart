@@ -120,21 +120,32 @@ class _AllGroupListV2Row extends StatelessWidget {
     final lastMessage = group.lastMessage;
     final isMuted =
         group.mutedUntil != null && group.mutedUntil!.isAfter(DateTime.now());
+    final isUnread = group.unreadCount > 0;
 
-    return ChatListRow(
-      chatName: chatName,
-      avatarUrl: group.avatarUrl,
-      timestampText: dateText,
-      unreadCount: group.unreadCount,
-      senderName: lastMessage?.sender.name,
-      lastMessageText: _messagePreviewText(lastMessage),
-      isMuted: isMuted,
-      onTap: () {
-        context.push(
-          AppRoutes.chatDetail(group.id),
-          extra: {'launchRequest': _launchRequestForChat(group)},
-        );
-      },
+    return Consumer(
+      builder: (context, ref, _) => SwipeToActionRow(
+        key: ValueKey('group-all-v2-${group.id}'),
+        icon: isUnread ? CupertinoIcons.checkmark_alt : CupertinoIcons.mail,
+        label: isUnread ? 'Read' : 'Unread',
+        onAction: () => ref
+            .read(groupListV2ViewModelProvider.notifier)
+            .toggleGroupReadState(chatId: group.id),
+        child: ChatListRow(
+          chatName: chatName,
+          avatarUrl: group.avatarUrl,
+          timestampText: dateText,
+          unreadCount: group.unreadCount,
+          senderName: lastMessage?.sender.name,
+          lastMessageText: _messagePreviewText(lastMessage),
+          isMuted: isMuted,
+          onTap: () {
+            context.push(
+              AppRoutes.chatDetail(group.id),
+              extra: {'launchRequest': _launchRequestForChat(group)},
+            );
+          },
+        ),
+      ),
     );
   }
 
@@ -171,26 +182,13 @@ class _AllThreadListV2Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SwipeToActionRow(
-      key: ValueKey('thread-all-v2-${thread.chatId}-${thread.threadRootId}'),
-      icon: thread.unreadCount > 0
-          ? CupertinoIcons.checkmark_alt
-          : CupertinoIcons.mail,
-      label: thread.unreadCount > 0 ? 'Read' : 'Unread',
-      onAction: () {
-        // TODO: implement when backend supports thread mark-read/unread from list
+    return ThreadListRow(
+      thread: thread,
+      onTap: () {
+        context.push(
+          AppRoutes.threadDetail(thread.chatId, thread.threadRootId.toString()),
+        );
       },
-      child: ThreadListRow(
-        thread: thread,
-        onTap: () {
-          context.push(
-            AppRoutes.threadDetail(
-              thread.chatId,
-              thread.threadRootId.toString(),
-            ),
-          );
-        },
-      ),
     );
   }
 }

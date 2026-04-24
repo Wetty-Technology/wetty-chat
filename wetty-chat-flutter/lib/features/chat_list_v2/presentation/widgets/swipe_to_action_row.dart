@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_swipe_action_cell/flutter_swipe_action_cell.dart';
 
@@ -16,7 +18,7 @@ class SwipeToActionRow extends StatelessWidget {
   final Widget child;
   final IconData icon;
   final String label;
-  final VoidCallback onAction;
+  final FutureOr<void> Function() onAction;
   final Color? actionColor;
 
   @override
@@ -30,7 +32,7 @@ class SwipeToActionRow extends StatelessWidget {
         SwipeAction(
           performsFirstActionWithFullSwipe: true,
           onTap: (handler) async {
-            onAction();
+            await onAction();
             await handler(false);
           },
           color: color,

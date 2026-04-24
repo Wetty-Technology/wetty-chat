@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../chats/models/chat_models.dart';
+import '../../chats/shared/data/read_state_repository.dart';
 import '../data/group_list_v2_repository.dart';
 import 'group_list_v2_store.dart';
 
@@ -130,6 +131,42 @@ class GroupListV2ViewModel extends AsyncNotifier<GroupListV2ViewState> {
         ));
       }
     }
+  }
+
+  Future<void> toggleGroupReadState({required String chatId}) async {
+    final group = ref
+        .read(groupListV2StoreProvider)
+        .groups
+        .where((group) => group.id == chatId)
+        .firstOrNull;
+    if (group == null) {
+      return;
+    }
+
+    if (group.unreadCount > 0) {
+      final lastMessageId = group.lastMessage?.id;
+      if (lastMessageId == null) {
+        return;
+      }
+      final response = await ref
+          .read(readStateRepositoryProvider)
+          .markChatRead(chatId: chatId, messageId: lastMessageId);
+      ref
+          .read(groupListV2StoreProvider.notifier)
+          .applyServerReadState(
+            chatId: chatId,
+            messageId: lastMessageId,
+            response: response,
+          );
+      return;
+    }
+
+    final response = await ref
+        .read(readStateRepositoryProvider)
+        .markChatUnread(chatId: chatId);
+    ref
+        .read(groupListV2StoreProvider.notifier)
+        .applyServerReadState(chatId: chatId, response: response);
   }
 }
 

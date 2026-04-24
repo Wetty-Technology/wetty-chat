@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/routing/route_names.dart';
 import '../../../app/theme/style_config.dart';
-import 'widgets/swipe_to_action_row.dart';
 import '../../chats/threads/models/thread_models.dart';
 import '../../chats/threads/presentation/thread_list_row.dart';
 import '../application/thread_list_v2_view_model.dart';
@@ -126,26 +125,13 @@ class _ThreadListV2Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SwipeToActionRow(
-      key: ValueKey('thread-v2-${thread.chatId}-${thread.threadRootId}'),
-      icon: thread.unreadCount > 0
-          ? CupertinoIcons.checkmark_alt
-          : CupertinoIcons.mail,
-      label: thread.unreadCount > 0 ? 'Read' : 'Unread',
-      onAction: () {
-        // TODO: implement when backend supports thread mark-read/unread from list
+    return ThreadListRow(
+      thread: thread,
+      onTap: () {
+        context.push(
+          AppRoutes.threadDetail(thread.chatId, thread.threadRootId.toString()),
+        );
       },
-      child: ThreadListRow(
-        thread: thread,
-        onTap: () {
-          context.push(
-            AppRoutes.threadDetail(
-              thread.chatId,
-              thread.threadRootId.toString(),
-            ),
-          );
-        },
-      ),
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/models/messages_api_models.dart';
 import '../../../core/api/models/websocket_api_models.dart';
+import '../../../core/notifications/unread_badge_provider.dart';
 import '../../../core/session/dev_session_store.dart';
 import '../../chats/list_projection/domain/list_projection_helpers.dart';
 import '../../chats/models/chat_models.dart';
@@ -88,7 +89,7 @@ class GroupListV2Store extends Notifier<GroupListV2StoreState> {
 
   void applyServerReadState({
     required String chatId,
-    required int messageId,
+    int? messageId,
     required ChatReadStateUpdate response,
   }) {
     final index = state.groups.indexWhere((group) => group.id == chatId);
@@ -96,16 +97,19 @@ class GroupListV2Store extends Notifier<GroupListV2StoreState> {
       return;
     }
 
+    final previous = state.groups[index];
     final groups = [...state.groups];
-    groups[index] = groups[index].copyWith(
+    final updated = previous.copyWith(
       unreadCount: response.unreadCount,
-      lastReadMessageId: response.lastReadMessageId ?? messageId.toString(),
+      lastReadMessageId: response.lastReadMessageId ?? messageId?.toString(),
     );
+    groups[index] = updated;
     state = (
       groups: groups,
       nextCursor: state.nextCursor,
       hasMore: state.hasMore,
     );
+    _applyUnreadBadgeDelta(previous: previous, updated: updated);
   }
 
   bool applyRealtimeEvent(ApiWsEvent event) {
@@ -153,6 +157,7 @@ class GroupListV2Store extends Notifier<GroupListV2StoreState> {
       nextCursor: state.nextCursor,
       hasMore: state.hasMore,
     );
+    _applyUnreadBadgeDelta(previous: previous, updated: updated);
     return false;
   }
 
@@ -189,6 +194,23 @@ class GroupListV2Store extends Notifier<GroupListV2StoreState> {
       hasMore: state.hasMore,
     );
     return false;
+  }
+
+  void _applyUnreadBadgeDelta({
+    required ChatListItem previous,
+    required ChatListItem updated,
+  }) {
+    final previousContribution = chatBadgeContribution(
+      unreadCount: previous.unreadCount,
+      mutedUntil: previous.mutedUntil,
+    );
+    final nextContribution = chatBadgeContribution(
+      unreadCount: updated.unreadCount,
+      mutedUntil: updated.mutedUntil,
+    );
+    ref
+        .read(unreadBadgeProvider.notifier)
+        .applyChatUnreadDelta(nextContribution - previousContribution);
   }
 }
 
