@@ -4,7 +4,7 @@ import 'package:chahua/core/api/models/thread_api_models.dart';
 import 'package:chahua/core/api/services/thread_api_service.dart';
 import 'package:chahua/core/notifications/unread_badge_provider.dart';
 
-import '../../chats/threads/models/thread_api_mapper.dart';
+import '../../chats/threads/models/thread_models.dart';
 import '../application/thread_list_v2_store.dart';
 
 class ThreadListV2Repository {
@@ -20,7 +20,7 @@ class ThreadListV2Repository {
     final response = results[0] as ListThreadsResponseDto;
     final unreadResponse = results[1] as UnreadThreadCountResponseDto;
     final threads = response.threads
-        .map((thread) => thread.toDomain())
+        .map(ThreadListItem.fromDto)
         .toList(growable: false);
     ref
         .read(threadListV2StoreProvider.notifier)
@@ -44,7 +44,7 @@ class ThreadListV2Repository {
         .read(threadApiServiceProvider)
         .fetchThreads(limit: limit, before: current.nextCursor);
     final threads = response.threads
-        .map((thread) => thread.toDomain())
+        .map(ThreadListItem.fromDto)
         .toList(growable: false);
     ref
         .read(threadListV2StoreProvider.notifier)

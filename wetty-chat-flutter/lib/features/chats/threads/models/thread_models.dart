@@ -1,5 +1,8 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'package:chahua/core/api/models/thread_api_models.dart';
+import 'package:chahua/features/chats/models/message_api_mapper.dart';
+
 import '../../models/message_models.dart';
 
 part 'thread_models.freezed.dart';
@@ -11,6 +14,9 @@ abstract class ThreadParticipant with _$ThreadParticipant {
     String? name,
     String? avatarUrl,
   }) = _ThreadParticipant;
+
+  factory ThreadParticipant.fromDto(ThreadParticipantDto dto) =>
+      ThreadParticipant(uid: dto.uid, name: dto.name, avatarUrl: dto.avatarUrl);
 }
 
 @freezed
@@ -26,6 +32,21 @@ abstract class ThreadReplyPreview with _$ThreadReplyPreview {
     @Default(false) bool isDeleted,
     @Default([]) List<MentionInfo> mentions,
   }) = _ThreadReplyPreview;
+
+  factory ThreadReplyPreview.fromDto(ThreadReplyPreviewDto dto) =>
+      ThreadReplyPreview(
+        messageId: dto.id,
+        clientGeneratedId: dto.clientGeneratedId.isEmpty
+            ? null
+            : dto.clientGeneratedId,
+        sender: ThreadParticipant.fromDto(dto.sender),
+        message: dto.message,
+        messageType: dto.messageType,
+        stickerEmoji: dto.stickerEmoji,
+        firstAttachmentKind: dto.firstAttachmentKind,
+        isDeleted: dto.isDeleted,
+        mentions: dto.mentions.map((mention) => mention.toDomain()).toList(),
+      );
 }
 
 @freezed
@@ -47,4 +68,21 @@ abstract class ThreadListItem with _$ThreadListItem {
 
   /// Thread root message ID used as the unique key for this thread.
   int get threadRootId => threadRootMessage.id;
+
+  factory ThreadListItem.fromDto(ThreadListItemDto dto) => ThreadListItem(
+    chatId: dto.chatId.toString(),
+    chatName: dto.chatName,
+    chatAvatar: dto.chatAvatar,
+    threadRootMessage: dto.threadRootMessage.toDomain(),
+    participants: dto.participants
+        .map((participant) => ThreadParticipant.fromDto(participant))
+        .toList(),
+    lastReply: dto.lastReply == null
+        ? null
+        : ThreadReplyPreview.fromDto(dto.lastReply!),
+    replyCount: dto.replyCount,
+    lastReplyAt: dto.lastReplyAt,
+    unreadCount: dto.unreadCount,
+    subscribedAt: dto.subscribedAt,
+  );
 }

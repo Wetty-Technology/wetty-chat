@@ -3,7 +3,7 @@ import 'package:chahua/features/conversation/compose/data/message_api_service_v2
 import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_timeline_v2_canonical_scope.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
-import 'package:chahua/features/chats/shared/data/read_state_repository.dart';
+import 'package:chahua/features/shared/data/read_state_repository.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

@@ -7,7 +7,7 @@ import '../../../core/session/dev_session_store.dart';
 import '../../chats/list_projection/domain/list_projection_helpers.dart';
 import '../model/chat_list_item.dart';
 import '../../chats/models/message_api_mapper.dart';
-import '../../chats/shared/data/read_state_models.dart';
+import '../../shared/data/read_state_models.dart';
 
 typedef GroupListV2StoreState = ({
   List<ChatListItem> groups,

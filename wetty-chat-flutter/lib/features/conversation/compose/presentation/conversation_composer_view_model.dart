@@ -20,7 +20,7 @@ import 'package:chahua/features/conversation/compose/data/message_api_service_v2
 import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
 import 'package:chahua/features/conversation/shared/data/conversation_timeline_v2_repository.dart';
-import 'package:chahua/features/chats/shared/data/attachment_service.dart';
+import 'package:chahua/features/shared/data/attachment_service.dart';
 import 'package:chahua/features/conversation/compose/domain/audio_recorder_service.dart';
 import 'package:chahua/features/conversation/media/application/audio_waveform_cache_service.dart';
 

@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:chahua/features/chats/shared/data/read_state_repository.dart';
+import 'package:chahua/features/shared/data/read_state_repository.dart';
 import '../model/chat_list_item.dart';
 import '../data/group_list_v2_repository.dart';
 import 'group_list_v2_store.dart';
