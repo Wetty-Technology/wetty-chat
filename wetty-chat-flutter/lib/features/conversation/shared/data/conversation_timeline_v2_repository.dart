@@ -190,18 +190,10 @@ class ConversationTimelineV2Repository {
   }
 
   Future<void> refreshLatestSegment({required int limit}) async {
-    final existingScope = ref.read(
-      conversationTimelineMessageStoreProvider,
-    )[identity];
-    if (existingScope?.hasLatestSegment ?? false) {
-      return;
-    }
-
     final response = await ref
         .read(messageApiServiceV2Provider)
         .fetchConversationMessages(identity, max: limit);
 
-    // If the response is empty, means we are at latest but there is just simply no message
     if (response.messages.isEmpty) {
       ref
           .read(conversationTimelineMessageStoreProvider.notifier)

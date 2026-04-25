@@ -218,6 +218,10 @@ class ConversationTimelineViewModel
     _renderSplitPolicy = const _TimelineRenderSplitPolicy.none();
   }
 
+  Future<void> recoverLatestAfterRefresh() {
+    return _repository.refreshLatestSegment(limit: _initialLoadedWindowSize);
+  }
+
   /// Ensures the viewport is anchored to the tail of the latest segment.
   /// No-op when the user is already on the latest slice near the bottom —
   /// the realtime applier's auto-scroll will handle surfacing the echo.

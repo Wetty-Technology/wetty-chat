@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/notifications/unread_badge_provider.dart';
-import '../../features/shared/application/chat_inbox_reconciler.dart';
+import '../../features/shared/application/app_refresh_coordinator.dart';
 import '../theme/style_config.dart';
 
 /// Shell widget for the [StatefulShellRoute.indexedStack].
@@ -41,8 +41,8 @@ class HomeShell extends ConsumerWidget {
                 // read-state sync points are fully defined.
                 unawaited(
                   ref
-                      .read(chatInboxReconcilerProvider)
-                      .reconcile(userInitiated: true),
+                      .read(appRefreshCoordinatorProvider)
+                      .recover(AppRefreshReason.tabReselected),
                 );
               }
               navigationShell.goBranch(

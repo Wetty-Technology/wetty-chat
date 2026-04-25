@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:chahua/app/theme/style_config.dart';
+import 'package:chahua/features/shared/application/app_refresh_coordinator.dart';
 import 'package:chahua/features/conversation/timeline/presentation/conversation_timeline_view_model.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
@@ -34,6 +35,45 @@ class ConversationSurfaceV2 extends ConsumerStatefulWidget {
 class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
   final GlobalKey<ConversationComposeV2State> _composeKey =
       GlobalKey<ConversationComposeV2State>();
+
+  @override
+  void initState() {
+    super.initState();
+    _registerRecovery();
+  }
+
+  @override
+  void didUpdateWidget(ConversationSurfaceV2 oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.identity == widget.identity) {
+      return;
+    }
+    ref
+        .read(appRefreshCoordinatorProvider)
+        .unregisterConversationRecovery(oldWidget.identity);
+    _registerRecovery();
+  }
+
+  @override
+  void dispose() {
+    ref
+        .read(appRefreshCoordinatorProvider)
+        .unregisterConversationRecovery(widget.identity);
+    super.dispose();
+  }
+
+  void _registerRecovery() {
+    ref
+        .read(appRefreshCoordinatorProvider)
+        .registerConversationRecovery(
+          identity: widget.identity,
+          recover: (_) => ref
+              .read(
+                conversationTimelineViewModelProvider(widget.identity).notifier,
+              )
+              .recoverLatestAfterRefresh(),
+        );
+  }
 
   Future<void> _handleMessageSent() async {
     ref
