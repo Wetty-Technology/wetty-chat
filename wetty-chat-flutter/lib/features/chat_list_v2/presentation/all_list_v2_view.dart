@@ -9,7 +9,7 @@ import '../../shared/presentation/chat_timestamp_formatter.dart';
 import 'widgets/chat_list_row.dart';
 import 'widgets/swipe_to_action_row.dart';
 import '../model/chat_list_item.dart';
-import '../../chats/threads/models/thread_models.dart';
+import '../model/thread_list_item.dart';
 import 'widgets/thread_list_row.dart';
 import '../application/all_list_v2_models.dart';
 import '../application/all_list_v2_projection.dart';

@@ -1,5 +1,5 @@
 import '../model/chat_list_item.dart';
-import '../../chats/threads/models/thread_models.dart';
+import '../model/thread_list_item.dart';
 
 sealed class AllListV2Item {
   DateTime? get activityAt;

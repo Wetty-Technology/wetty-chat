@@ -1,7 +1,7 @@
 import '../../../../core/api/models/messages_api_models.dart';
 import '../../../chat_list_v2/model/chat_list_item.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
-import '../../threads/models/thread_models.dart';
+import '../../../chat_list_v2/model/thread_list_item.dart';
 
 bool isEligibleChatPreviewMessage(MessageItem message) {
   return message.replyRootId == null && !message.isDeleted;

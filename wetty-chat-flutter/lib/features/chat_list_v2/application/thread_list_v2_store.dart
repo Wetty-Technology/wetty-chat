@@ -6,7 +6,7 @@ import '../../../core/notifications/unread_badge_provider.dart';
 import '../../../core/session/dev_session_store.dart';
 import '../../chats/list_projection/domain/list_projection_helpers.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
-import '../../chats/threads/models/thread_models.dart';
+import '../model/thread_list_item.dart';
 
 typedef ThreadListV2StoreState = ({
   List<ThreadListItem> threads,

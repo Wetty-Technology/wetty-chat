@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../chats/threads/models/thread_models.dart';
+import '../model/thread_list_item.dart';
 import '../data/thread_list_v2_repository.dart';
 import 'thread_list_v2_store.dart';
 

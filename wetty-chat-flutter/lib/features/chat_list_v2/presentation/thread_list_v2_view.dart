@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/routing/route_names.dart';
 import '../../../app/theme/style_config.dart';
-import '../../chats/threads/models/thread_models.dart';
+import '../model/thread_list_item.dart';
 import 'widgets/thread_list_row.dart';
 import '../application/thread_list_v2_view_model.dart';
 
