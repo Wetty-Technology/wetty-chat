@@ -165,14 +165,18 @@ class ConversationTimelineViewModel
       return;
     }
     _initialLaunchRequest = launchRequest;
+    _resetLastReadReportForLaunch();
 
     switch (launchRequest) {
       case LatestLaunchRequest():
         jumpToLatest();
+        break;
       case UnreadLaunchRequest(:final lastReadMessageId):
         jumpToUnread(lastReadMessageId);
+        break;
       case MessageLaunchRequest(:final messageId, :final highlight):
         jumpToMessageServerId(messageId, highlight: highlight);
+        break;
     }
   }
 
@@ -295,6 +299,10 @@ class ConversationTimelineViewModel
 
   void jumpToUnread(int lastReadMessageId) {
     _markRepositoryTodo('jumpToUnread(lastReadMessageId: $lastReadMessageId)');
+  }
+
+  void _resetLastReadReportForLaunch() {
+    _lastReadReportedMessageId = null;
   }
 
   Future<void> _bootstrapLatestSegment() async {
@@ -546,11 +554,6 @@ class ConversationTimelineViewModel
     // store-backed repository and active-segment model.
     assert(operation.isNotEmpty);
     debugPrint('markRepositoryTodo: $operation');
-    unawaited(
-      Future<void>.microtask(() {
-        ref.invalidateSelf();
-      }),
-    );
   }
 
   Future<void> _flushLastVisibleMessageIdReport() async {
