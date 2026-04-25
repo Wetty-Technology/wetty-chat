@@ -4,9 +4,9 @@ import '../../../core/api/models/messages_api_models.dart';
 import '../../../core/api/models/websocket_api_models.dart';
 import '../../../core/notifications/unread_badge_provider.dart';
 import '../../../core/session/dev_session_store.dart';
-import '../../chats/list_projection/domain/list_projection_helpers.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
 import '../model/thread_list_item.dart';
+import 'realtime_projection_policy.dart';
 
 typedef ThreadListV2StoreState = ({
   List<ThreadListItem> threads,
@@ -103,7 +103,7 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
           : previous.unreadCount,
     );
     _replaceState(
-      threads: reinsertThreadByActivity(state.threads, index, updated),
+      threads: _reinsertThreadByActivity(state.threads, index, updated),
     );
     if (shouldIncrementUnread) {
       _replaceState(totalUnreadCount: state.totalUnreadCount + 1);
@@ -128,7 +128,7 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
     }
 
     _replaceState(
-      threads: replaceThreadAt(
+      threads: _replaceThreadAt(
         state.threads,
         index,
         previous.copyWith(lastReply: _toReplyPreview(payload)),
@@ -156,7 +156,7 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
     final updated = previous.copyWith(
       replyCount: previous.replyCount > 0 ? previous.replyCount - 1 : 0,
     );
-    _replaceState(threads: replaceThreadAt(state.threads, index, updated));
+    _replaceState(threads: _replaceThreadAt(state.threads, index, updated));
     return false;
   }
 
@@ -196,7 +196,7 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
 
     final previous = state.threads[index];
     _replaceState(
-      threads: replaceThreadAt(
+      threads: _replaceThreadAt(
         state.threads,
         index,
         previous.copyWith(
@@ -205,6 +205,43 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
       ),
     );
     return false;
+  }
+
+  List<ThreadListItem> _replaceThreadAt(
+    List<ThreadListItem> threads,
+    int index,
+    ThreadListItem updated,
+  ) {
+    final next = [...threads];
+    next[index] = updated;
+    return next;
+  }
+
+  List<ThreadListItem> _reinsertThreadByActivity(
+    List<ThreadListItem> threads,
+    int index,
+    ThreadListItem updated,
+  ) {
+    final updatedActivity = updated.lastReplyAt;
+    final next = [...threads]..removeAt(index);
+    if (updatedActivity == null) {
+      next.add(updated);
+      return next;
+    }
+
+    final insertAt = next.indexWhere((candidate) {
+      final candidateActivity = candidate.lastReplyAt;
+      if (candidateActivity == null) {
+        return true;
+      }
+      return updatedActivity.isAfter(candidateActivity);
+    });
+    if (insertAt < 0) {
+      next.add(updated);
+    } else {
+      next.insert(insertAt, updated);
+    }
+    return next;
   }
 
   void _replaceState({

@@ -4,10 +4,10 @@ import '../../../core/api/models/messages_api_models.dart';
 import '../../../core/api/models/websocket_api_models.dart';
 import '../../../core/notifications/unread_badge_provider.dart';
 import '../../../core/session/dev_session_store.dart';
-import '../../chats/list_projection/domain/list_projection_helpers.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
 import '../model/chat_list_item.dart';
 import '../../shared/data/read_state_models.dart';
+import 'realtime_projection_policy.dart';
 
 typedef GroupListV2StoreState = ({
   List<ChatListItem> groups,
@@ -132,8 +132,7 @@ class GroupListV2Store extends Notifier<GroupListV2StoreState> {
       return true;
     }
 
-    final message = MessageItem.fromDto(payload);
-    if (!isEligibleChatPreviewMessage(message)) {
+    if (!isEligibleChatPreviewPayload(payload)) {
       return false;
     }
 
@@ -142,6 +141,7 @@ class GroupListV2Store extends Notifier<GroupListV2StoreState> {
       return false;
     }
 
+    final message = MessageItem.fromDto(payload);
     final currentUserId = ref.read(authSessionProvider).currentUserId;
     final shouldIncrementUnread = payload.sender.uid != currentUserId;
     final updated = previous.copyWith(
@@ -153,7 +153,7 @@ class GroupListV2Store extends Notifier<GroupListV2StoreState> {
     );
 
     state = (
-      groups: moveChatToFront(state.groups, index, updated),
+      groups: _moveChatToFront(state.groups, index, updated),
       nextCursor: state.nextCursor,
       hasMore: state.hasMore,
     );
@@ -182,7 +182,7 @@ class GroupListV2Store extends Notifier<GroupListV2StoreState> {
     }
 
     state = (
-      groups: replaceChatAt(
+      groups: _replaceChatAt(
         state.groups,
         index,
         previous.copyWith(
@@ -194,6 +194,26 @@ class GroupListV2Store extends Notifier<GroupListV2StoreState> {
       hasMore: state.hasMore,
     );
     return false;
+  }
+
+  List<ChatListItem> _replaceChatAt(
+    List<ChatListItem> chats,
+    int index,
+    ChatListItem updated,
+  ) {
+    final next = [...chats];
+    next[index] = updated;
+    return next;
+  }
+
+  List<ChatListItem> _moveChatToFront(
+    List<ChatListItem> chats,
+    int index,
+    ChatListItem updated,
+  ) {
+    final next = [...chats]..removeAt(index);
+    next.insert(0, updated);
+    return next;
   }
 
   void _applyUnreadBadgeDelta({
