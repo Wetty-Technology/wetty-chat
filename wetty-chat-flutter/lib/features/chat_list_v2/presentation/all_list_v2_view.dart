@@ -7,7 +7,7 @@ import 'package:chahua/features/conversation/shared/domain/launch_request.dart';
 import '../../chats/chat_timestamp_formatter.dart';
 import 'widgets/chat_list_row.dart';
 import 'widgets/swipe_to_action_row.dart';
-import '../../chats/models/chat_models.dart';
+import '../model/chat_list_item.dart';
 import '../../chats/models/message_models.dart';
 import '../../chats/models/message_preview_formatter.dart';
 import '../../chats/threads/models/thread_models.dart';

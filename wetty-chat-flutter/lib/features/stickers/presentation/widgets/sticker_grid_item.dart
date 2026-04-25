@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 
 import '../../../../app/theme/style_config.dart';
-import 'package:chahua/features/chats/shared/presentation/sticker_image_widget.dart';
+import 'package:chahua/features/shared/presentation/sticker_image_widget.dart';
 import '../../../chats/models/message_models.dart';
 
 class StickerGridItem extends StatelessWidget {

@@ -1,5 +1,5 @@
 import '../../../../core/api/models/messages_api_models.dart';
-import '../../models/chat_models.dart';
+import '../../../chat_list_v2/model/chat_list_item.dart';
 import '../../models/message_models.dart';
 import '../../threads/models/thread_models.dart';
 

@@ -1,4 +1,4 @@
-import '../../chats/models/chat_models.dart';
+import '../model/chat_list_item.dart';
 import '../../chats/threads/models/thread_models.dart';
 
 sealed class AllListV2Item {

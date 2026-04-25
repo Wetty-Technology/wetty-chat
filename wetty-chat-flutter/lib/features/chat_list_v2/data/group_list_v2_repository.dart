@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../chats/shared/data/chat_api_service.dart';
-import '../../chats/models/chat_api_mapper.dart';
 import '../application/group_list_v2_store.dart';
+import '../model/chat_list_item.dart';
 
 class GroupListV2Repository {
   GroupListV2Repository(this.ref);
@@ -14,7 +14,7 @@ class GroupListV2Repository {
         .read(chatApiServiceProvider)
         .fetchChats(limit: limit);
     final groups = response.chats
-        .map((chat) => chat.toDomain())
+        .map(ChatListItem.fromDto)
         .toList(growable: false);
     ref
         .read(groupListV2StoreProvider.notifier)
@@ -31,7 +31,7 @@ class GroupListV2Repository {
         .read(chatApiServiceProvider)
         .fetchChats(limit: limit, after: current.groups.last.id);
     final groups = response.chats
-        .map((chat) => chat.toDomain())
+        .map(ChatListItem.fromDto)
         .toList(growable: false);
     ref
         .read(groupListV2StoreProvider.notifier)

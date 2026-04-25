@@ -524,7 +524,7 @@ return $default(_that.isNearTop,_that.isNearBottom);case _:
 
 
 class _TimelineViewportFacts with DiagnosticableTreeMixin implements TimelineViewportFacts {
-  const _TimelineViewportFacts({this.isNearTop = false, this.isNearBottom = false});
+  const _TimelineViewportFacts({this.isNearTop = false, this.isNearBottom = true});
   
 
 @override@JsonKey() final  bool isNearTop;
