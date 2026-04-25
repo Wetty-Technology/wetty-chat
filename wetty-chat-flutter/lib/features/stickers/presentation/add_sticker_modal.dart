@@ -4,7 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/style_config.dart';
-import '../../chats/models/message_api_mapper.dart';
+import '../../chats/models/message_models.dart';
 import '../application/sticker_pack_detail_view_model.dart';
 import '../data/sticker_api_service.dart';
 
@@ -85,7 +85,7 @@ class _AddStickerPageState extends ConsumerState<AddStickerPage> {
             emoji: emoji,
             name: name.isNotEmpty ? name : null,
           );
-      final sticker = dto.toDomain();
+      final sticker = StickerSummary.fromDto(dto);
 
       ref
           .read(stickerPackDetailViewModelProvider(widget.packId).notifier)

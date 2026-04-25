@@ -5,8 +5,8 @@ import '../../../core/api/models/websocket_api_models.dart';
 import '../../../core/notifications/unread_badge_provider.dart';
 import '../../../core/session/dev_session_store.dart';
 import '../../chats/list_projection/domain/list_projection_helpers.dart';
+import '../../chats/models/message_models.dart';
 import '../model/chat_list_item.dart';
-import '../../chats/models/message_api_mapper.dart';
 import '../../shared/data/read_state_models.dart';
 
 typedef GroupListV2StoreState = ({
@@ -132,7 +132,7 @@ class GroupListV2Store extends Notifier<GroupListV2StoreState> {
       return true;
     }
 
-    final message = payload.toDomain();
+    final message = MessageItem.fromDto(payload);
     if (!isEligibleChatPreviewMessage(message)) {
       return false;
     }
@@ -186,7 +186,7 @@ class GroupListV2Store extends Notifier<GroupListV2StoreState> {
         state.groups,
         index,
         previous.copyWith(
-          lastMessage: payload.toDomain(),
+          lastMessage: MessageItem.fromDto(payload),
           lastMessageAt: payload.createdAt,
         ),
       ),

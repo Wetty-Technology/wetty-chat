@@ -1,5 +1,4 @@
 import 'package:chahua/core/api/models/messages_api_models.dart';
-import 'package:chahua/features/chats/models/message_api_mapper.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
 
 enum ConversationDeliveryState {
@@ -28,25 +27,31 @@ class ConversationMessageV2 {
 
   factory ConversationMessageV2.fromMessageItemDto(MessageItemDto dto) {
     final attachments = dto.attachments
-        .map((attachment) => attachment.toDomain())
+        .map(AttachmentItem.fromDto)
         .toList(growable: false);
     final mentions = dto.mentions
-        .map((mention) => mention.toDomain())
+        .map(MentionInfo.fromDto)
         .toList(growable: false);
-    final sticker = dto.sticker?.toDomain();
+    final sticker = dto.sticker == null
+        ? null
+        : StickerSummary.fromDto(dto.sticker!);
 
     return ConversationMessageV2(
       serverMessageId: dto.id,
       clientGeneratedId: dto.clientGeneratedId,
-      sender: dto.sender.toDomain(),
+      sender: Sender.fromDto(dto.sender),
       createdAt: dto.createdAt,
       isEdited: dto.isEdited,
       isDeleted: dto.isDeleted,
-      replyToMessage: dto.replyToMessage?.toDomain(),
+      replyToMessage: dto.replyToMessage == null
+          ? null
+          : ReplyToMessage.fromDto(dto.replyToMessage!),
       reactions: dto.reactions
-          .map((reaction) => reaction.toDomain())
+          .map(ReactionSummary.fromDto)
           .toList(growable: false),
-      threadInfo: dto.threadInfo?.toDomain(),
+      threadInfo: dto.threadInfo == null
+          ? null
+          : ThreadInfo.fromDto(dto.threadInfo!),
       deliveryState: ConversationDeliveryState.confirmed,
       content: _contentFromMessageItemDto(
         messageType: dto.messageType,

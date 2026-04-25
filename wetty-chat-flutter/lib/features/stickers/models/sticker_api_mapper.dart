@@ -1,11 +1,13 @@
 import '../../../core/api/models/stickers_api_models.dart';
-import '../../chats/models/message_api_mapper.dart';
 import '../../chats/models/message_models.dart';
 import 'sticker_models.dart';
 
 extension StickerPackPreviewStickerDtoMapper on StickerPackPreviewStickerDto {
-  StickerPackPreviewSticker toDomain() =>
-      StickerPackPreviewSticker(id: id, media: media.toDomain(), emoji: emoji);
+  StickerPackPreviewSticker toDomain() => StickerPackPreviewSticker(
+    id: id,
+    media: StickerMedia.fromDto(media),
+    emoji: emoji,
+  );
 }
 
 extension StickerPackSummaryDtoMapper on StickerPackSummaryDto {
@@ -35,14 +37,14 @@ extension StickerPackDetailResponseDtoMapper on StickerPackDetailResponseDto {
     stickerCount: stickerCount,
     isSubscribed: isSubscribed,
     previewSticker: previewSticker?.toDomain(),
-    stickers: stickers.map((s) => s.toDomain()).toList(),
+    stickers: stickers.map(StickerSummary.fromDto).toList(),
   );
 }
 
 extension StickerDetailResponseDtoMapper on StickerDetailResponseDto {
   StickerSummary toStickerSummary() => StickerSummary(
     id: id ?? (throw StateError('StickerDetailResponseDto.id is required')),
-    media: media?.toDomain(),
+    media: media == null ? null : StickerMedia.fromDto(media!),
     emoji: emoji,
     name: name,
     description: description,

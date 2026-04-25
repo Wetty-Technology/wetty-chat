@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../chats/models/message_api_mapper.dart';
 import '../../chats/models/message_models.dart';
 import '../data/sticker_api_service.dart';
 import '../data/sticker_pack_order_store.dart';
@@ -140,7 +139,7 @@ class StickerPickerViewModel extends Notifier<StickerPickerState> {
   Future<void> loadFavorites() async {
     try {
       final response = await _api.fetchFavorites();
-      final favorites = response.stickers.map((s) => s.toDomain()).toList();
+      final favorites = response.stickers.map(StickerSummary.fromDto).toList();
       state = state.copyWith(favorites: favorites);
     } catch (e, st) {
       debugPrint('Failed to load favorite stickers: $e');
@@ -159,7 +158,7 @@ class StickerPickerViewModel extends Notifier<StickerPickerState> {
     }
     try {
       final detail = await _api.fetchPackDetail(packId);
-      final stickers = detail.stickers.map((s) => s.toDomain()).toList();
+      final stickers = detail.stickers.map(StickerSummary.fromDto).toList();
       state = state.copyWith(
         packStickers: {...state.packStickers, packId: stickers},
         loadingPackId: null,

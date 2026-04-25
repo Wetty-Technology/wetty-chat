@@ -5,7 +5,7 @@ import '../../../core/api/models/websocket_api_models.dart';
 import '../../../core/notifications/unread_badge_provider.dart';
 import '../../../core/session/dev_session_store.dart';
 import '../../chats/list_projection/domain/list_projection_helpers.dart';
-import '../../chats/models/message_api_mapper.dart';
+import '../../chats/models/message_models.dart';
 import '../../chats/threads/models/thread_models.dart';
 
 typedef ThreadListV2StoreState = ({
@@ -186,7 +186,7 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
           ? payload.attachments.first.kind
           : null,
       isDeleted: payload.isDeleted,
-      mentions: payload.mentions.map((mention) => mention.toDomain()).toList(),
+      mentions: payload.mentions.map(MentionInfo.fromDto).toList(),
     );
   }
 
@@ -201,7 +201,7 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
       threads: replaceThreadAt(
         state.threads,
         index,
-        previous.copyWith(threadRootMessage: payload.toDomain()),
+        previous.copyWith(threadRootMessage: MessageItem.fromDto(payload)),
       ),
     );
     return false;

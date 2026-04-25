@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../chats/models/message_api_mapper.dart';
 import '../../chats/models/message_models.dart';
 import '../data/sticker_api_service.dart';
 import '../models/sticker_api_mapper.dart';
@@ -61,7 +60,7 @@ class StickerDetailViewModel extends AsyncNotifier<StickerDetailState> {
     // Fetch full pack detail to get all stickers.
     final packDetailDto = await api.fetchPackDetail(packSummary.id);
     final packStickers = packDetailDto.stickers
-        .map((s) => s.toDomain())
+        .map(StickerSummary.fromDto)
         .toList();
 
     return StickerDetailState(

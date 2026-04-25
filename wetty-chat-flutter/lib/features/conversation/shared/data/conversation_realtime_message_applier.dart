@@ -3,7 +3,6 @@ import 'package:chahua/core/api/models/websocket_api_models.dart';
 import 'package:chahua/features/conversation/shared/data/conversation_canonical_message_store.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
-import 'package:chahua/features/chats/models/message_api_mapper.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -96,7 +95,7 @@ class ConversationTimelineV2RealtimeApplier {
     final scopes = ref.read(conversationTimelineMessageStoreProvider);
     final store = ref.read(conversationTimelineMessageStoreProvider.notifier);
     final nextReactions = payload.reactions
-        .map((reaction) => reaction.toDomain())
+        .map(ReactionSummary.fromDto)
         .toList(growable: false);
 
     for (final entry in scopes.entries) {

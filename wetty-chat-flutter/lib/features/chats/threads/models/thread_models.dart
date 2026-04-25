@@ -1,7 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'package:chahua/core/api/models/thread_api_models.dart';
-import 'package:chahua/features/chats/models/message_api_mapper.dart';
 
 import '../../models/message_models.dart';
 
@@ -45,7 +44,7 @@ abstract class ThreadReplyPreview with _$ThreadReplyPreview {
         stickerEmoji: dto.stickerEmoji,
         firstAttachmentKind: dto.firstAttachmentKind,
         isDeleted: dto.isDeleted,
-        mentions: dto.mentions.map((mention) => mention.toDomain()).toList(),
+        mentions: dto.mentions.map(MentionInfo.fromDto).toList(),
       );
 }
 
@@ -73,7 +72,7 @@ abstract class ThreadListItem with _$ThreadListItem {
     chatId: dto.chatId.toString(),
     chatName: dto.chatName,
     chatAvatar: dto.chatAvatar,
-    threadRootMessage: dto.threadRootMessage.toDomain(),
+    threadRootMessage: MessageItem.fromDto(dto.threadRootMessage),
     participants: dto.participants
         .map((participant) => ThreadParticipant.fromDto(participant))
         .toList(),
