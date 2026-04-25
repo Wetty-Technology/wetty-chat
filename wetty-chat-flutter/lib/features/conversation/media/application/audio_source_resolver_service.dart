@@ -2,7 +2,7 @@ import 'dart:developer';
 import 'dart:io';
 
 import 'package:chahua/core/cache/media_cache_service.dart';
-import 'package:chahua/features/chats/models/message_models.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';

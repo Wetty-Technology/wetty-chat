@@ -2,7 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/core/cache/app_cached_network_image.dart';
-import 'package:chahua/features/chats/models/message_models.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:chahua/features/conversation/media/presentation/attachment_viewer_request.dart';
 import 'package:flutter/cupertino.dart';
 

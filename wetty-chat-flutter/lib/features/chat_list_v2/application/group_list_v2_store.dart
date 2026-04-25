@@ -5,7 +5,7 @@ import '../../../core/api/models/websocket_api_models.dart';
 import '../../../core/notifications/unread_badge_provider.dart';
 import '../../../core/session/dev_session_store.dart';
 import '../../chats/list_projection/domain/list_projection_helpers.dart';
-import '../../chats/models/message_models.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 import '../model/chat_list_item.dart';
 import '../../shared/data/read_state_models.dart';
 

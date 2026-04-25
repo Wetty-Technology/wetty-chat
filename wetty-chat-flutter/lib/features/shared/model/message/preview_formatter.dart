@@ -1,4 +1,7 @@
-import 'message_models.dart';
+import 'attachment.dart';
+import 'mention.dart';
+import 'reply_to_message.dart';
+import 'sticker.dart';
 
 const String deletedPreviewLabel = '[Deleted]';
 const String invitePreviewLabel = '[Invite]';

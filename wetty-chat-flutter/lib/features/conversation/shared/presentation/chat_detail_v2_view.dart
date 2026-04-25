@@ -1,6 +1,6 @@
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
 import 'package:chahua/features/conversation/shared/domain/launch_request.dart';
-import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:chahua/features/conversation/shared/presentation/conversation_surface_v2.dart';
 import 'package:chahua/features/chat_list_v2/application/group_list_v2_store.dart';
 import 'package:flutter/cupertino.dart';

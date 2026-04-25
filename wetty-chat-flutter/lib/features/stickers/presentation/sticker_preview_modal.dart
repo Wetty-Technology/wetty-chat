@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/routing/route_names.dart';
 import '../../../app/theme/style_config.dart';
 import 'package:chahua/features/shared/presentation/sticker_image_widget.dart';
-import '../../chats/models/message_models.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 import '../application/sticker_detail_view_model.dart';
 import 'widgets/preview_action_button.dart';
 import 'widgets/preview_header.dart';

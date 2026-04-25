@@ -9,7 +9,7 @@ import 'package:video_player/video_player.dart';
 import '../../../../core/cache/app_cached_network_image.dart';
 import '../../../../core/cache/image_cache_service.dart';
 import '../../../../core/network/api_config.dart';
-import 'package:chahua/features/chats/models/message_models.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 import '../application/media_save_service.dart';
 import 'attachment_viewer_request.dart';
 import 'package:chahua/features/conversation/message_bubble/presentation/parts/attachment/video_attachment_thumbnail.dart';

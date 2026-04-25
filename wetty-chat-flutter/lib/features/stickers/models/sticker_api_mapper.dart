@@ -1,5 +1,5 @@
 import '../../../core/api/models/stickers_api_models.dart';
-import '../../chats/models/message_models.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 import 'sticker_models.dart';
 
 extension StickerPackPreviewStickerDtoMapper on StickerPackPreviewStickerDto {

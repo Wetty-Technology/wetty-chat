@@ -10,7 +10,7 @@ import 'package:video_thumbnail/video_thumbnail.dart';
 
 import '../../../../core/cache/media_cache_service.dart';
 import '../../../../core/network/dio_client.dart';
-import 'package:chahua/features/chats/models/message_models.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 
 class VideoThumbnailService {
   VideoThumbnailService(this._mediaCacheService, this._dio);

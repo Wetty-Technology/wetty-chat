@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/features/shared/presentation/chat_timestamp_formatter.dart';
-import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:flutter/cupertino.dart';
 
 const double _maxRowWidthFactor = 0.80;

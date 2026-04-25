@@ -1,4 +1,4 @@
-import 'package:chahua/features/chats/models/message_models.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:chahua/features/conversation/message_bubble/presentation/parts/attachment/attachment_gallery_layout_plan.dart';
 import 'package:chahua/features/conversation/message_bubble/presentation/parts/attachment/attachment_gallery_layout_planner.dart';
 import 'package:flutter_test/flutter_test.dart';

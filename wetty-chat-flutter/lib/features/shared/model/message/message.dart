@@ -1,5 +1,22 @@
 import 'package:chahua/core/api/models/messages_api_models.dart';
-import 'package:chahua/features/chats/models/message_models.dart';
+
+import 'attachment.dart';
+import 'mention.dart';
+import 'reaction.dart';
+import 'reply_to_message.dart';
+import 'sender.dart';
+import 'sticker.dart';
+import 'thread_info.dart';
+
+export 'attachment.dart';
+export 'mention.dart';
+export 'message_item.dart';
+export 'preview_formatter.dart';
+export 'reaction.dart';
+export 'reply_to_message.dart';
+export 'sender.dart';
+export 'sticker.dart';
+export 'thread_info.dart';
 
 enum ConversationDeliveryState {
   sending,

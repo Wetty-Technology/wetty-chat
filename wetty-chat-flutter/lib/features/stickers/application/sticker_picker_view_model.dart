@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../chats/models/message_models.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 import '../data/sticker_api_service.dart';
 import '../data/sticker_pack_order_store.dart';
 import '../models/sticker_api_mapper.dart';

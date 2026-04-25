@@ -2,7 +2,7 @@ import 'package:flutter/cupertino.dart';
 
 import '../../../../app/theme/style_config.dart';
 import 'package:chahua/features/shared/presentation/sticker_image_widget.dart';
-import '../../../chats/models/message_models.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 
 class StickerGridItem extends StatelessWidget {
   const StickerGridItem({super.key, required this.sticker, this.onTap});

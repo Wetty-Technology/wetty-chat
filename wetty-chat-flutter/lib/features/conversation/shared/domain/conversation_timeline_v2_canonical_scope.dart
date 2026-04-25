@@ -1,5 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 
 part 'conversation_timeline_v2_canonical_scope.freezed.dart';
 

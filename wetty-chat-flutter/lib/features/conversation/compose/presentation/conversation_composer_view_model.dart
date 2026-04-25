@@ -3,7 +3,7 @@ import 'dart:developer' as developer;
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:chahua/features/chats/models/message_models.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,7 +17,6 @@ import 'package:chahua/features/conversation/compose/presentation/conversation_l
 import 'package:chahua/features/conversation/shared/data/conversation_canonical_message_store.dart';
 import 'package:chahua/features/conversation/compose/data/attachment_picker_service.dart';
 import 'package:chahua/features/conversation/compose/data/message_api_service_v2.dart';
-import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
 import 'package:chahua/features/conversation/shared/data/conversation_timeline_v2_repository.dart';
 import 'package:chahua/features/shared/data/attachment_service.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 
 import 'package:chahua/app/theme/style_config.dart';
-import 'package:chahua/features/chats/models/message_models.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 import 'message_attachment_previews.dart';
 import 'video_attachment_thumbnail.dart';
 

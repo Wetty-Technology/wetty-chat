@@ -2,7 +2,7 @@ import 'package:flutter/cupertino.dart';
 
 import '../../../../app/theme/style_config.dart';
 import 'package:chahua/features/shared/presentation/sticker_image_widget.dart';
-import '../../../chats/models/message_models.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 import 'sticker_grid_layout.dart';
 
 class PreviewStickerGrid extends StatelessWidget {

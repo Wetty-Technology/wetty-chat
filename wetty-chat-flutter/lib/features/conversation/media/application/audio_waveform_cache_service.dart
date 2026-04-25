@@ -3,7 +3,7 @@ import 'dart:developer';
 import 'dart:math' as math;
 
 import 'package:chahua/core/cache/media_cache_service.dart';
-import 'package:chahua/features/chats/models/message_models.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:voice_message/voice_message.dart';
 

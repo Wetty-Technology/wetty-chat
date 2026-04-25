@@ -1,6 +1,6 @@
 import 'package:chahua/core/settings/app_settings_store.dart';
 import 'package:chahua/features/conversation/media/presentation/attachment_viewer_request.dart';
-import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

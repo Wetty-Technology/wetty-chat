@@ -9,7 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../../../core/cache/media_cache_service.dart';
 import '../../../../core/network/api_config.dart';
 import '../../../../core/network/dio_client.dart';
-import 'package:chahua/features/chats/models/message_models.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 
 class MediaSaveException implements Exception {
   const MediaSaveException(this.message);

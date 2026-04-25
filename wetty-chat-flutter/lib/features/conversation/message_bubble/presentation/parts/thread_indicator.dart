@@ -1,5 +1,5 @@
 import 'package:chahua/app/theme/style_config.dart';
-import 'package:chahua/features/chats/models/message_models.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:flutter/cupertino.dart';
 
 import '../../domain/bubble_theme_v2.dart';
@@ -30,7 +30,11 @@ class ThreadIndicator extends StatelessWidget {
               ? MainAxisAlignment.end
               : MainAxisAlignment.start,
           children: [
-            Icon(CupertinoIcons.chat_bubble_2, size: 12, color: theme.textColor),
+            Icon(
+              CupertinoIcons.chat_bubble_2,
+              size: 12,
+              color: theme.textColor,
+            ),
             const SizedBox(width: 4),
             Text(
               '${threadInfo.replyCount} repl${threadInfo.replyCount == 1 ? 'y' : 'ies'}',

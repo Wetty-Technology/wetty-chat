@@ -1,6 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-import '../../chats/models/message_models.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 
 part 'sticker_models.freezed.dart';
 

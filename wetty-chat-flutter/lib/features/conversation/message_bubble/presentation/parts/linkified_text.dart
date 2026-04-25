@@ -2,7 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:chahua/features/chats/models/message_models.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 
 import '../../domain/bubble_theme_v2.dart';
 
@@ -41,9 +41,7 @@ class LinkifiedText extends StatelessWidget {
       TextSpan(
         children: [
           ..._buildLinkedSpans(context, theme),
-          WidgetSpan(
-            child: SizedBox(width: theme.timeSpacerWidth, height: 14),
-          ),
+          WidgetSpan(child: SizedBox(width: theme.timeSpacerWidth, height: 14)),
         ],
       ),
     );
@@ -122,7 +120,10 @@ class LinkifiedText extends StatelessWidget {
             ? (TapGestureRecognizer()
                 ..onTap = () {
                   final uri = url.startsWith('http') ? url : 'https://$url';
-                  launchUrl(Uri.parse(uri), mode: LaunchMode.externalApplication);
+                  launchUrl(
+                    Uri.parse(uri),
+                    mode: LaunchMode.externalApplication,
+                  );
                 })
             : null;
         spans.add(

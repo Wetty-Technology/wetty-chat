@@ -5,11 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../../app/routing/route_names.dart';
 import 'package:chahua/features/chat_list_v2/presentation/widgets/swipe_to_action_row.dart';
 import 'package:chahua/features/conversation/shared/domain/launch_request.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 import '../../shared/presentation/chat_timestamp_formatter.dart';
 import 'widgets/chat_list_row.dart';
 import '../model/chat_list_item.dart';
-import '../../chats/models/message_models.dart';
-import '../../chats/models/message_preview_formatter.dart';
 import '../application/group_list_v2_view_model.dart';
 
 class GroupListV2View extends ConsumerWidget {

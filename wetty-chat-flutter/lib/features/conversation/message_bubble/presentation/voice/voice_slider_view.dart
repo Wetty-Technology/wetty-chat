@@ -1,5 +1,5 @@
 import 'package:chahua/features/conversation/timeline/presentation/voice_message_playback_controller_v2.dart';
-import 'package:chahua/features/chats/models/message_models.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:flutter/cupertino.dart';
 
 import 'voice_utils.dart';
@@ -68,14 +68,12 @@ class VoiceSliderView extends StatelessWidget {
             activeColor: accentColor,
             onChanged: duration == null || !isActive
                 ? null
-                : (value) => onSeekPreview(
-                    Duration(milliseconds: value.round()),
-                  ),
+                : (value) =>
+                      onSeekPreview(Duration(milliseconds: value.round())),
             onChangeEnd: duration == null || !isActive
                 ? null
-                : (value) => onSeekCommit(
-                    Duration(milliseconds: value.round()),
-                  ),
+                : (value) =>
+                      onSeekCommit(Duration(milliseconds: value.round())),
           ),
         ),
       ],

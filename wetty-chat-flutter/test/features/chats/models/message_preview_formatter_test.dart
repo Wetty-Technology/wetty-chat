@@ -1,6 +1,5 @@
+import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:chahua/features/chats/models/message_models.dart';
-import 'package:chahua/features/chats/models/message_preview_formatter.dart';
 
 void main() {
   group('formatReplyPreview', () {

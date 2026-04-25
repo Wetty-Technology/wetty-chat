@@ -8,7 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 
-import '../../features/chats/models/message_models.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 
 class MediaCacheUsageSummary {
   const MediaCacheUsageSummary({required this.totalBytes});

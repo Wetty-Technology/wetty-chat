@@ -1,7 +1,6 @@
 import 'package:chahua/app/theme/style_config.dart';
-import 'package:chahua/features/chats/models/message_models.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:chahua/features/conversation/media/presentation/attachment_viewer_request.dart';
-import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
 import 'package:flutter/cupertino.dart';
 
 import '../../domain/bubble_theme_v2.dart';

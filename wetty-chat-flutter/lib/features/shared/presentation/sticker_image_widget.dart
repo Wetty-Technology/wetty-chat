@@ -1,5 +1,5 @@
 import 'package:chahua/core/cache/app_cached_network_image.dart';
-import 'package:chahua/features/chats/models/message_models.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:flutter/cupertino.dart';
 
 /// Renders a sticker image or video placeholder.

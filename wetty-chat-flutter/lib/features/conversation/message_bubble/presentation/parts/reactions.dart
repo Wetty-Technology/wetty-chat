@@ -1,6 +1,6 @@
 import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/shared/presentation/app_avatar.dart';
-import 'package:chahua/features/chats/models/message_models.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:flutter/cupertino.dart';
 
 import '../../domain/bubble_theme_v2.dart';
@@ -117,7 +117,10 @@ class BubbleReactions extends StatelessWidget {
     return width;
   }
 
-  double _preferredReactionRowWidth(BuildContext context, double maxBubbleWidth) {
+  double _preferredReactionRowWidth(
+    BuildContext context,
+    double maxBubbleWidth,
+  ) {
     final maxContentWidth = maxBubbleWidth - 24;
     if (reactions.isEmpty) {
       return maxContentWidth;
@@ -140,8 +143,16 @@ class BubbleReactions extends StatelessWidget {
     final isInteractive = interactive ?? theme.isInteractive;
     final pills = reactions
         .map((reaction) {
-          final pillBackground = _reactionPillBackground(context, theme, reaction);
-          final pillForeground = _reactionPillForeground(context, theme, reaction);
+          final pillBackground = _reactionPillBackground(
+            context,
+            theme,
+            reaction,
+          );
+          final pillForeground = _reactionPillForeground(
+            context,
+            theme,
+            reaction,
+          );
 
           final pill = Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

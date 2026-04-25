@@ -1,6 +1,6 @@
 import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/features/shared/presentation/sticker_image_widget.dart';
-import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:chahua/features/conversation/shared/presentation/conversation_presentation_scope.dart';
 import 'package:flutter/cupertino.dart';
 

@@ -2,7 +2,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'package:chahua/core/api/models/thread_api_models.dart';
 
-import '../../models/message_models.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 
 part 'thread_models.freezed.dart';
 

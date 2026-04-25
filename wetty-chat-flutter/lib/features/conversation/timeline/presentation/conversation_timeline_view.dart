@@ -5,7 +5,7 @@ import 'package:chahua/app/routing/route_names.dart';
 import 'package:chahua/features/conversation/compose/presentation/conversation_composer_view_model.dart';
 import 'package:chahua/features/conversation/media/presentation/attachment_viewer_request.dart';
 import 'package:chahua/features/conversation/timeline/presentation/conversation_timeline_view_model.dart';
-import 'package:chahua/features/conversation/shared/domain/conversation_message_v2.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
 import 'package:chahua/features/conversation/shared/domain/launch_request.dart';
 import 'package:chahua/features/conversation/timeline/presentation/message_long_press_details_v2.dart';

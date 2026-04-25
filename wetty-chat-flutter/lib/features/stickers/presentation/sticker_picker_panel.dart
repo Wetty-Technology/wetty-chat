@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/style_config.dart';
 import 'package:chahua/features/shared/presentation/sticker_image_widget.dart';
-import '../../chats/models/message_models.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 import '../application/sticker_picker_view_model.dart';
 import 'sticker_pack_tab_bar.dart';
 import 'widgets/sticker_grid_layout.dart';

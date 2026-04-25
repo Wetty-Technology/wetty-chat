@@ -8,7 +8,7 @@ import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/features/conversation/compose/presentation/conversation_composer_view_model.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
 import 'package:chahua/features/conversation/compose/presentation/conversation_v2_composer_bar.dart';
-import 'package:chahua/features/chats/models/message_models.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:chahua/features/stickers/presentation/sticker_picker_panel.dart';
 
 class ConversationComposeV2 extends ConsumerStatefulWidget {

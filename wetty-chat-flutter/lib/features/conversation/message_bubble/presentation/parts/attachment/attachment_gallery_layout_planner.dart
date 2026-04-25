@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:chahua/features/chats/models/message_models.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 
 import 'attachment_gallery_layout_plan.dart';
 

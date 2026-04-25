@@ -1,4 +1,4 @@
-import 'package:chahua/features/chats/models/message_models.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 
 class ComposerMentionEntry {
   const ComposerMentionEntry({
