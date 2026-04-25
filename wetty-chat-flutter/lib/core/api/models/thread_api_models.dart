@@ -7,21 +7,6 @@ import 'package:chahua/core/api/models/messages_api_models.dart';
 part 'thread_api_models.g.dart';
 
 @JsonSerializable(explicitToJson: true)
-class ThreadParticipantDto {
-  const ThreadParticipantDto({required this.uid, this.name, this.avatarUrl});
-
-  @FlexibleIntConverter()
-  final int uid;
-  final String? name;
-  final String? avatarUrl;
-
-  factory ThreadParticipantDto.fromJson(Map<String, dynamic> json) =>
-      _$ThreadParticipantDtoFromJson(json);
-
-  Map<String, dynamic> toJson() => _$ThreadParticipantDtoToJson(this);
-}
-
-@JsonSerializable(explicitToJson: true)
 class ThreadReplyPreviewDto {
   const ThreadReplyPreviewDto({
     this.id,
@@ -39,7 +24,7 @@ class ThreadReplyPreviewDto {
   final int? id;
   @JsonKey(defaultValue: '')
   final String clientGeneratedId;
-  final ThreadParticipantDto sender;
+  final SenderDto sender;
   final String? message;
   @JsonKey(defaultValue: 'text')
   final String messageType;
@@ -63,7 +48,7 @@ class ThreadListItemDto {
     required this.chatName,
     this.chatAvatar,
     required this.threadRootMessage,
-    this.participants = const <ThreadParticipantDto>[],
+    this.participants = const <SenderDto>[],
     this.lastReply,
     this.replyCount = 0,
     required this.lastReplyAt,
@@ -76,8 +61,8 @@ class ThreadListItemDto {
   final String chatName;
   final String? chatAvatar;
   final MessageItemDto threadRootMessage;
-  @JsonKey(defaultValue: <ThreadParticipantDto>[])
-  final List<ThreadParticipantDto> participants;
+  @JsonKey(defaultValue: <SenderDto>[])
+  final List<SenderDto> participants;
   final ThreadReplyPreviewDto? lastReply;
   @JsonKey(defaultValue: 0)
   final int replyCount;

@@ -6,28 +6,12 @@ part of 'thread_api_models.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-ThreadParticipantDto _$ThreadParticipantDtoFromJson(
-  Map<String, dynamic> json,
-) => ThreadParticipantDto(
-  uid: const FlexibleIntConverter().fromJson(json['uid']),
-  name: json['name'] as String?,
-  avatarUrl: json['avatarUrl'] as String?,
-);
-
-Map<String, dynamic> _$ThreadParticipantDtoToJson(
-  ThreadParticipantDto instance,
-) => <String, dynamic>{
-  'uid': const FlexibleIntConverter().toJson(instance.uid),
-  'name': instance.name,
-  'avatarUrl': instance.avatarUrl,
-};
-
 ThreadReplyPreviewDto _$ThreadReplyPreviewDtoFromJson(
   Map<String, dynamic> json,
 ) => ThreadReplyPreviewDto(
   id: const NullableFlexibleIntConverter().fromJson(json['id']),
   clientGeneratedId: json['clientGeneratedId'] as String? ?? '',
-  sender: ThreadParticipantDto.fromJson(json['sender'] as Map<String, dynamic>),
+  sender: SenderDto.fromJson(json['sender'] as Map<String, dynamic>),
   message: json['message'] as String?,
   messageType: json['messageType'] as String? ?? 'text',
   stickerEmoji: json['stickerEmoji'] as String?,
@@ -54,32 +38,33 @@ Map<String, dynamic> _$ThreadReplyPreviewDtoToJson(
   'mentions': instance.mentions.map((e) => e.toJson()).toList(),
 };
 
-ThreadListItemDto _$ThreadListItemDtoFromJson(
-  Map<String, dynamic> json,
-) => ThreadListItemDto(
-  chatId: const FlexibleIntConverter().fromJson(json['chatId']),
-  chatName: json['chatName'] as String,
-  chatAvatar: json['chatAvatar'] as String?,
-  threadRootMessage: MessageItemDto.fromJson(
-    json['threadRootMessage'] as Map<String, dynamic>,
-  ),
-  participants:
-      (json['participants'] as List<dynamic>?)
-          ?.map((e) => ThreadParticipantDto.fromJson(e as Map<String, dynamic>))
-          .toList() ??
-      [],
-  lastReply: json['lastReply'] == null
-      ? null
-      : ThreadReplyPreviewDto.fromJson(
-          json['lastReply'] as Map<String, dynamic>,
-        ),
-  replyCount: (json['replyCount'] as num?)?.toInt() ?? 0,
-  lastReplyAt: const NullableDateTimeConverter().fromJson(json['lastReplyAt']),
-  unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
-  subscribedAt: const NullableDateTimeConverter().fromJson(
-    json['subscribedAt'],
-  ),
-);
+ThreadListItemDto _$ThreadListItemDtoFromJson(Map<String, dynamic> json) =>
+    ThreadListItemDto(
+      chatId: const FlexibleIntConverter().fromJson(json['chatId']),
+      chatName: json['chatName'] as String,
+      chatAvatar: json['chatAvatar'] as String?,
+      threadRootMessage: MessageItemDto.fromJson(
+        json['threadRootMessage'] as Map<String, dynamic>,
+      ),
+      participants:
+          (json['participants'] as List<dynamic>?)
+              ?.map((e) => SenderDto.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      lastReply: json['lastReply'] == null
+          ? null
+          : ThreadReplyPreviewDto.fromJson(
+              json['lastReply'] as Map<String, dynamic>,
+            ),
+      replyCount: (json['replyCount'] as num?)?.toInt() ?? 0,
+      lastReplyAt: const NullableDateTimeConverter().fromJson(
+        json['lastReplyAt'],
+      ),
+      unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
+      subscribedAt: const NullableDateTimeConverter().fromJson(
+        json['subscribedAt'],
+      ),
+    );
 
 Map<String, dynamic> _$ThreadListItemDtoToJson(
   ThreadListItemDto instance,

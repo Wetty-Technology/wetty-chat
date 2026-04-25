@@ -54,7 +54,7 @@ void main() {
                 ),
                 lastReply: const ThreadReplyPreviewDto(
                   id: 201,
-                  sender: ThreadParticipantDto(uid: 2, name: 'sender'),
+                  sender: SenderDto(uid: 2, name: 'sender'),
                   message: 'thread reply',
                 ),
                 lastReplyAt: DateTime.parse('2026-04-12T12:05:00Z'),

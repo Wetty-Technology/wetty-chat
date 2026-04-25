@@ -7,23 +7,11 @@ import '../../models/message_models.dart';
 part 'thread_models.freezed.dart';
 
 @freezed
-abstract class ThreadParticipant with _$ThreadParticipant {
-  const factory ThreadParticipant({
-    required int uid,
-    String? name,
-    String? avatarUrl,
-  }) = _ThreadParticipant;
-
-  factory ThreadParticipant.fromDto(ThreadParticipantDto dto) =>
-      ThreadParticipant(uid: dto.uid, name: dto.name, avatarUrl: dto.avatarUrl);
-}
-
-@freezed
 abstract class ThreadReplyPreview with _$ThreadReplyPreview {
   const factory ThreadReplyPreview({
     int? messageId,
     String? clientGeneratedId,
-    required ThreadParticipant sender,
+    required Sender sender,
     String? message,
     @Default('text') String messageType,
     String? stickerEmoji,
@@ -38,7 +26,7 @@ abstract class ThreadReplyPreview with _$ThreadReplyPreview {
         clientGeneratedId: dto.clientGeneratedId.isEmpty
             ? null
             : dto.clientGeneratedId,
-        sender: ThreadParticipant.fromDto(dto.sender),
+        sender: Sender.fromDto(dto.sender),
         message: dto.message,
         messageType: dto.messageType,
         stickerEmoji: dto.stickerEmoji,
@@ -57,7 +45,7 @@ abstract class ThreadListItem with _$ThreadListItem {
     required String chatName,
     String? chatAvatar,
     required MessageItem threadRootMessage,
-    @Default([]) List<ThreadParticipant> participants,
+    @Default([]) List<Sender> participants,
     ThreadReplyPreview? lastReply,
     @Default(0) int replyCount,
     DateTime? lastReplyAt,
@@ -73,9 +61,7 @@ abstract class ThreadListItem with _$ThreadListItem {
     chatName: dto.chatName,
     chatAvatar: dto.chatAvatar,
     threadRootMessage: MessageItem.fromDto(dto.threadRootMessage),
-    participants: dto.participants
-        .map((participant) => ThreadParticipant.fromDto(participant))
-        .toList(),
+    participants: dto.participants.map(Sender.fromDto).toList(),
     lastReply: dto.lastReply == null
         ? null
         : ThreadReplyPreview.fromDto(dto.lastReply!),

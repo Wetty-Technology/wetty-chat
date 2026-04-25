@@ -12,272 +12,9 @@ part of 'thread_models.dart';
 // dart format off
 T _$identity<T>(T value) => value;
 /// @nodoc
-mixin _$ThreadParticipant {
-
- int get uid; String? get name; String? get avatarUrl;
-/// Create a copy of ThreadParticipant
-/// with the given fields replaced by the non-null parameter values.
-@JsonKey(includeFromJson: false, includeToJson: false)
-@pragma('vm:prefer-inline')
-$ThreadParticipantCopyWith<ThreadParticipant> get copyWith => _$ThreadParticipantCopyWithImpl<ThreadParticipant>(this as ThreadParticipant, _$identity);
-
-
-
-@override
-bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ThreadParticipant&&(identical(other.uid, uid) || other.uid == uid)&&(identical(other.name, name) || other.name == name)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl));
-}
-
-
-@override
-int get hashCode => Object.hash(runtimeType,uid,name,avatarUrl);
-
-@override
-String toString() {
-  return 'ThreadParticipant(uid: $uid, name: $name, avatarUrl: $avatarUrl)';
-}
-
-
-}
-
-/// @nodoc
-abstract mixin class $ThreadParticipantCopyWith<$Res>  {
-  factory $ThreadParticipantCopyWith(ThreadParticipant value, $Res Function(ThreadParticipant) _then) = _$ThreadParticipantCopyWithImpl;
-@useResult
-$Res call({
- int uid, String? name, String? avatarUrl
-});
-
-
-
-
-}
-/// @nodoc
-class _$ThreadParticipantCopyWithImpl<$Res>
-    implements $ThreadParticipantCopyWith<$Res> {
-  _$ThreadParticipantCopyWithImpl(this._self, this._then);
-
-  final ThreadParticipant _self;
-  final $Res Function(ThreadParticipant) _then;
-
-/// Create a copy of ThreadParticipant
-/// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? uid = null,Object? name = freezed,Object? avatarUrl = freezed,}) {
-  return _then(_self.copyWith(
-uid: null == uid ? _self.uid : uid // ignore: cast_nullable_to_non_nullable
-as int,name: freezed == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
-as String?,avatarUrl: freezed == avatarUrl ? _self.avatarUrl : avatarUrl // ignore: cast_nullable_to_non_nullable
-as String?,
-  ));
-}
-
-}
-
-
-/// Adds pattern-matching-related methods to [ThreadParticipant].
-extension ThreadParticipantPatterns on ThreadParticipant {
-/// A variant of `map` that fallback to returning `orElse`.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case _:
-///     return orElse();
-/// }
-/// ```
-
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _ThreadParticipant value)?  $default,{required TResult orElse(),}){
-final _that = this;
-switch (_that) {
-case _ThreadParticipant() when $default != null:
-return $default(_that);case _:
-  return orElse();
-
-}
-}
-/// A `switch`-like method, using callbacks.
-///
-/// Callbacks receives the raw object, upcasted.
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case final Subclass2 value:
-///     return ...;
-/// }
-/// ```
-
-@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _ThreadParticipant value)  $default,){
-final _that = this;
-switch (_that) {
-case _ThreadParticipant():
-return $default(_that);case _:
-  throw StateError('Unexpected subclass');
-
-}
-}
-/// A variant of `map` that fallback to returning `null`.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case _:
-///     return null;
-/// }
-/// ```
-
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _ThreadParticipant value)?  $default,){
-final _that = this;
-switch (_that) {
-case _ThreadParticipant() when $default != null:
-return $default(_that);case _:
-  return null;
-
-}
-}
-/// A variant of `when` that fallback to an `orElse` callback.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case _:
-///     return orElse();
-/// }
-/// ```
-
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int uid,  String? name,  String? avatarUrl)?  $default,{required TResult orElse(),}) {final _that = this;
-switch (_that) {
-case _ThreadParticipant() when $default != null:
-return $default(_that.uid,_that.name,_that.avatarUrl);case _:
-  return orElse();
-
-}
-}
-/// A `switch`-like method, using callbacks.
-///
-/// As opposed to `map`, this offers destructuring.
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case Subclass2(:final field2):
-///     return ...;
-/// }
-/// ```
-
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int uid,  String? name,  String? avatarUrl)  $default,) {final _that = this;
-switch (_that) {
-case _ThreadParticipant():
-return $default(_that.uid,_that.name,_that.avatarUrl);case _:
-  throw StateError('Unexpected subclass');
-
-}
-}
-/// A variant of `when` that fallback to returning `null`
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case _:
-///     return null;
-/// }
-/// ```
-
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int uid,  String? name,  String? avatarUrl)?  $default,) {final _that = this;
-switch (_that) {
-case _ThreadParticipant() when $default != null:
-return $default(_that.uid,_that.name,_that.avatarUrl);case _:
-  return null;
-
-}
-}
-
-}
-
-/// @nodoc
-
-
-class _ThreadParticipant implements ThreadParticipant {
-  const _ThreadParticipant({required this.uid, this.name, this.avatarUrl});
-  
-
-@override final  int uid;
-@override final  String? name;
-@override final  String? avatarUrl;
-
-/// Create a copy of ThreadParticipant
-/// with the given fields replaced by the non-null parameter values.
-@override @JsonKey(includeFromJson: false, includeToJson: false)
-@pragma('vm:prefer-inline')
-_$ThreadParticipantCopyWith<_ThreadParticipant> get copyWith => __$ThreadParticipantCopyWithImpl<_ThreadParticipant>(this, _$identity);
-
-
-
-@override
-bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ThreadParticipant&&(identical(other.uid, uid) || other.uid == uid)&&(identical(other.name, name) || other.name == name)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl));
-}
-
-
-@override
-int get hashCode => Object.hash(runtimeType,uid,name,avatarUrl);
-
-@override
-String toString() {
-  return 'ThreadParticipant(uid: $uid, name: $name, avatarUrl: $avatarUrl)';
-}
-
-
-}
-
-/// @nodoc
-abstract mixin class _$ThreadParticipantCopyWith<$Res> implements $ThreadParticipantCopyWith<$Res> {
-  factory _$ThreadParticipantCopyWith(_ThreadParticipant value, $Res Function(_ThreadParticipant) _then) = __$ThreadParticipantCopyWithImpl;
-@override @useResult
-$Res call({
- int uid, String? name, String? avatarUrl
-});
-
-
-
-
-}
-/// @nodoc
-class __$ThreadParticipantCopyWithImpl<$Res>
-    implements _$ThreadParticipantCopyWith<$Res> {
-  __$ThreadParticipantCopyWithImpl(this._self, this._then);
-
-  final _ThreadParticipant _self;
-  final $Res Function(_ThreadParticipant) _then;
-
-/// Create a copy of ThreadParticipant
-/// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? uid = null,Object? name = freezed,Object? avatarUrl = freezed,}) {
-  return _then(_ThreadParticipant(
-uid: null == uid ? _self.uid : uid // ignore: cast_nullable_to_non_nullable
-as int,name: freezed == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
-as String?,avatarUrl: freezed == avatarUrl ? _self.avatarUrl : avatarUrl // ignore: cast_nullable_to_non_nullable
-as String?,
-  ));
-}
-
-
-}
-
-/// @nodoc
 mixin _$ThreadReplyPreview {
 
- int? get messageId; String? get clientGeneratedId; ThreadParticipant get sender; String? get message; String get messageType; String? get stickerEmoji; String? get firstAttachmentKind; bool get isDeleted; List<MentionInfo> get mentions;
+ int? get messageId; String? get clientGeneratedId; Sender get sender; String? get message; String get messageType; String? get stickerEmoji; String? get firstAttachmentKind; bool get isDeleted; List<MentionInfo> get mentions;
 /// Create a copy of ThreadReplyPreview
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -308,11 +45,11 @@ abstract mixin class $ThreadReplyPreviewCopyWith<$Res>  {
   factory $ThreadReplyPreviewCopyWith(ThreadReplyPreview value, $Res Function(ThreadReplyPreview) _then) = _$ThreadReplyPreviewCopyWithImpl;
 @useResult
 $Res call({
- int? messageId, String? clientGeneratedId, ThreadParticipant sender, String? message, String messageType, String? stickerEmoji, String? firstAttachmentKind, bool isDeleted, List<MentionInfo> mentions
+ int? messageId, String? clientGeneratedId, Sender sender, String? message, String messageType, String? stickerEmoji, String? firstAttachmentKind, bool isDeleted, List<MentionInfo> mentions
 });
 
 
-$ThreadParticipantCopyWith<$Res> get sender;
+$SenderCopyWith<$Res> get sender;
 
 }
 /// @nodoc
@@ -330,7 +67,7 @@ class _$ThreadReplyPreviewCopyWithImpl<$Res>
 messageId: freezed == messageId ? _self.messageId : messageId // ignore: cast_nullable_to_non_nullable
 as int?,clientGeneratedId: freezed == clientGeneratedId ? _self.clientGeneratedId : clientGeneratedId // ignore: cast_nullable_to_non_nullable
 as String?,sender: null == sender ? _self.sender : sender // ignore: cast_nullable_to_non_nullable
-as ThreadParticipant,message: freezed == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
+as Sender,message: freezed == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
 as String?,messageType: null == messageType ? _self.messageType : messageType // ignore: cast_nullable_to_non_nullable
 as String,stickerEmoji: freezed == stickerEmoji ? _self.stickerEmoji : stickerEmoji // ignore: cast_nullable_to_non_nullable
 as String?,firstAttachmentKind: freezed == firstAttachmentKind ? _self.firstAttachmentKind : firstAttachmentKind // ignore: cast_nullable_to_non_nullable
@@ -343,9 +80,9 @@ as List<MentionInfo>,
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')
-$ThreadParticipantCopyWith<$Res> get sender {
+$SenderCopyWith<$Res> get sender {
   
-  return $ThreadParticipantCopyWith<$Res>(_self.sender, (value) {
+  return $SenderCopyWith<$Res>(_self.sender, (value) {
     return _then(_self.copyWith(sender: value));
   });
 }
@@ -430,7 +167,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int? messageId,  String? clientGeneratedId,  ThreadParticipant sender,  String? message,  String messageType,  String? stickerEmoji,  String? firstAttachmentKind,  bool isDeleted,  List<MentionInfo> mentions)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int? messageId,  String? clientGeneratedId,  Sender sender,  String? message,  String messageType,  String? stickerEmoji,  String? firstAttachmentKind,  bool isDeleted,  List<MentionInfo> mentions)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ThreadReplyPreview() when $default != null:
 return $default(_that.messageId,_that.clientGeneratedId,_that.sender,_that.message,_that.messageType,_that.stickerEmoji,_that.firstAttachmentKind,_that.isDeleted,_that.mentions);case _:
@@ -451,7 +188,7 @@ return $default(_that.messageId,_that.clientGeneratedId,_that.sender,_that.messa
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int? messageId,  String? clientGeneratedId,  ThreadParticipant sender,  String? message,  String messageType,  String? stickerEmoji,  String? firstAttachmentKind,  bool isDeleted,  List<MentionInfo> mentions)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int? messageId,  String? clientGeneratedId,  Sender sender,  String? message,  String messageType,  String? stickerEmoji,  String? firstAttachmentKind,  bool isDeleted,  List<MentionInfo> mentions)  $default,) {final _that = this;
 switch (_that) {
 case _ThreadReplyPreview():
 return $default(_that.messageId,_that.clientGeneratedId,_that.sender,_that.message,_that.messageType,_that.stickerEmoji,_that.firstAttachmentKind,_that.isDeleted,_that.mentions);case _:
@@ -471,7 +208,7 @@ return $default(_that.messageId,_that.clientGeneratedId,_that.sender,_that.messa
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int? messageId,  String? clientGeneratedId,  ThreadParticipant sender,  String? message,  String messageType,  String? stickerEmoji,  String? firstAttachmentKind,  bool isDeleted,  List<MentionInfo> mentions)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int? messageId,  String? clientGeneratedId,  Sender sender,  String? message,  String messageType,  String? stickerEmoji,  String? firstAttachmentKind,  bool isDeleted,  List<MentionInfo> mentions)?  $default,) {final _that = this;
 switch (_that) {
 case _ThreadReplyPreview() when $default != null:
 return $default(_that.messageId,_that.clientGeneratedId,_that.sender,_that.message,_that.messageType,_that.stickerEmoji,_that.firstAttachmentKind,_that.isDeleted,_that.mentions);case _:
@@ -491,7 +228,7 @@ class _ThreadReplyPreview implements ThreadReplyPreview {
 
 @override final  int? messageId;
 @override final  String? clientGeneratedId;
-@override final  ThreadParticipant sender;
+@override final  Sender sender;
 @override final  String? message;
 @override@JsonKey() final  String messageType;
 @override final  String? stickerEmoji;
@@ -535,11 +272,11 @@ abstract mixin class _$ThreadReplyPreviewCopyWith<$Res> implements $ThreadReplyP
   factory _$ThreadReplyPreviewCopyWith(_ThreadReplyPreview value, $Res Function(_ThreadReplyPreview) _then) = __$ThreadReplyPreviewCopyWithImpl;
 @override @useResult
 $Res call({
- int? messageId, String? clientGeneratedId, ThreadParticipant sender, String? message, String messageType, String? stickerEmoji, String? firstAttachmentKind, bool isDeleted, List<MentionInfo> mentions
+ int? messageId, String? clientGeneratedId, Sender sender, String? message, String messageType, String? stickerEmoji, String? firstAttachmentKind, bool isDeleted, List<MentionInfo> mentions
 });
 
 
-@override $ThreadParticipantCopyWith<$Res> get sender;
+@override $SenderCopyWith<$Res> get sender;
 
 }
 /// @nodoc
@@ -557,7 +294,7 @@ class __$ThreadReplyPreviewCopyWithImpl<$Res>
 messageId: freezed == messageId ? _self.messageId : messageId // ignore: cast_nullable_to_non_nullable
 as int?,clientGeneratedId: freezed == clientGeneratedId ? _self.clientGeneratedId : clientGeneratedId // ignore: cast_nullable_to_non_nullable
 as String?,sender: null == sender ? _self.sender : sender // ignore: cast_nullable_to_non_nullable
-as ThreadParticipant,message: freezed == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
+as Sender,message: freezed == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
 as String?,messageType: null == messageType ? _self.messageType : messageType // ignore: cast_nullable_to_non_nullable
 as String,stickerEmoji: freezed == stickerEmoji ? _self.stickerEmoji : stickerEmoji // ignore: cast_nullable_to_non_nullable
 as String?,firstAttachmentKind: freezed == firstAttachmentKind ? _self.firstAttachmentKind : firstAttachmentKind // ignore: cast_nullable_to_non_nullable
@@ -571,9 +308,9 @@ as List<MentionInfo>,
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')
-$ThreadParticipantCopyWith<$Res> get sender {
+$SenderCopyWith<$Res> get sender {
   
-  return $ThreadParticipantCopyWith<$Res>(_self.sender, (value) {
+  return $SenderCopyWith<$Res>(_self.sender, (value) {
     return _then(_self.copyWith(sender: value));
   });
 }
@@ -582,7 +319,7 @@ $ThreadParticipantCopyWith<$Res> get sender {
 /// @nodoc
 mixin _$ThreadListItem {
 
- String get chatId; String get chatName; String? get chatAvatar; MessageItem get threadRootMessage; List<ThreadParticipant> get participants; ThreadReplyPreview? get lastReply; int get replyCount; DateTime? get lastReplyAt; int get unreadCount; DateTime? get subscribedAt;
+ String get chatId; String get chatName; String? get chatAvatar; MessageItem get threadRootMessage; List<Sender> get participants; ThreadReplyPreview? get lastReply; int get replyCount; DateTime? get lastReplyAt; int get unreadCount; DateTime? get subscribedAt;
 /// Create a copy of ThreadListItem
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -613,7 +350,7 @@ abstract mixin class $ThreadListItemCopyWith<$Res>  {
   factory $ThreadListItemCopyWith(ThreadListItem value, $Res Function(ThreadListItem) _then) = _$ThreadListItemCopyWithImpl;
 @useResult
 $Res call({
- String chatId, String chatName, String? chatAvatar, MessageItem threadRootMessage, List<ThreadParticipant> participants, ThreadReplyPreview? lastReply, int replyCount, DateTime? lastReplyAt, int unreadCount, DateTime? subscribedAt
+ String chatId, String chatName, String? chatAvatar, MessageItem threadRootMessage, List<Sender> participants, ThreadReplyPreview? lastReply, int replyCount, DateTime? lastReplyAt, int unreadCount, DateTime? subscribedAt
 });
 
 
@@ -637,7 +374,7 @@ as String,chatName: null == chatName ? _self.chatName : chatName // ignore: cast
 as String,chatAvatar: freezed == chatAvatar ? _self.chatAvatar : chatAvatar // ignore: cast_nullable_to_non_nullable
 as String?,threadRootMessage: null == threadRootMessage ? _self.threadRootMessage : threadRootMessage // ignore: cast_nullable_to_non_nullable
 as MessageItem,participants: null == participants ? _self.participants : participants // ignore: cast_nullable_to_non_nullable
-as List<ThreadParticipant>,lastReply: freezed == lastReply ? _self.lastReply : lastReply // ignore: cast_nullable_to_non_nullable
+as List<Sender>,lastReply: freezed == lastReply ? _self.lastReply : lastReply // ignore: cast_nullable_to_non_nullable
 as ThreadReplyPreview?,replyCount: null == replyCount ? _self.replyCount : replyCount // ignore: cast_nullable_to_non_nullable
 as int,lastReplyAt: freezed == lastReplyAt ? _self.lastReplyAt : lastReplyAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,unreadCount: null == unreadCount ? _self.unreadCount : unreadCount // ignore: cast_nullable_to_non_nullable
@@ -748,7 +485,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String chatId,  String chatName,  String? chatAvatar,  MessageItem threadRootMessage,  List<ThreadParticipant> participants,  ThreadReplyPreview? lastReply,  int replyCount,  DateTime? lastReplyAt,  int unreadCount,  DateTime? subscribedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String chatId,  String chatName,  String? chatAvatar,  MessageItem threadRootMessage,  List<Sender> participants,  ThreadReplyPreview? lastReply,  int replyCount,  DateTime? lastReplyAt,  int unreadCount,  DateTime? subscribedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ThreadListItem() when $default != null:
 return $default(_that.chatId,_that.chatName,_that.chatAvatar,_that.threadRootMessage,_that.participants,_that.lastReply,_that.replyCount,_that.lastReplyAt,_that.unreadCount,_that.subscribedAt);case _:
@@ -769,7 +506,7 @@ return $default(_that.chatId,_that.chatName,_that.chatAvatar,_that.threadRootMes
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String chatId,  String chatName,  String? chatAvatar,  MessageItem threadRootMessage,  List<ThreadParticipant> participants,  ThreadReplyPreview? lastReply,  int replyCount,  DateTime? lastReplyAt,  int unreadCount,  DateTime? subscribedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String chatId,  String chatName,  String? chatAvatar,  MessageItem threadRootMessage,  List<Sender> participants,  ThreadReplyPreview? lastReply,  int replyCount,  DateTime? lastReplyAt,  int unreadCount,  DateTime? subscribedAt)  $default,) {final _that = this;
 switch (_that) {
 case _ThreadListItem():
 return $default(_that.chatId,_that.chatName,_that.chatAvatar,_that.threadRootMessage,_that.participants,_that.lastReply,_that.replyCount,_that.lastReplyAt,_that.unreadCount,_that.subscribedAt);case _:
@@ -789,7 +526,7 @@ return $default(_that.chatId,_that.chatName,_that.chatAvatar,_that.threadRootMes
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String chatId,  String chatName,  String? chatAvatar,  MessageItem threadRootMessage,  List<ThreadParticipant> participants,  ThreadReplyPreview? lastReply,  int replyCount,  DateTime? lastReplyAt,  int unreadCount,  DateTime? subscribedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String chatId,  String chatName,  String? chatAvatar,  MessageItem threadRootMessage,  List<Sender> participants,  ThreadReplyPreview? lastReply,  int replyCount,  DateTime? lastReplyAt,  int unreadCount,  DateTime? subscribedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _ThreadListItem() when $default != null:
 return $default(_that.chatId,_that.chatName,_that.chatAvatar,_that.threadRootMessage,_that.participants,_that.lastReply,_that.replyCount,_that.lastReplyAt,_that.unreadCount,_that.subscribedAt);case _:
@@ -804,15 +541,15 @@ return $default(_that.chatId,_that.chatName,_that.chatAvatar,_that.threadRootMes
 
 
 class _ThreadListItem extends ThreadListItem {
-  const _ThreadListItem({required this.chatId, required this.chatName, this.chatAvatar, required this.threadRootMessage, final  List<ThreadParticipant> participants = const [], this.lastReply, this.replyCount = 0, this.lastReplyAt, this.unreadCount = 0, this.subscribedAt}): _participants = participants,super._();
+  const _ThreadListItem({required this.chatId, required this.chatName, this.chatAvatar, required this.threadRootMessage, final  List<Sender> participants = const [], this.lastReply, this.replyCount = 0, this.lastReplyAt, this.unreadCount = 0, this.subscribedAt}): _participants = participants,super._();
   
 
 @override final  String chatId;
 @override final  String chatName;
 @override final  String? chatAvatar;
 @override final  MessageItem threadRootMessage;
- final  List<ThreadParticipant> _participants;
-@override@JsonKey() List<ThreadParticipant> get participants {
+ final  List<Sender> _participants;
+@override@JsonKey() List<Sender> get participants {
   if (_participants is EqualUnmodifiableListView) return _participants;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableListView(_participants);
@@ -854,7 +591,7 @@ abstract mixin class _$ThreadListItemCopyWith<$Res> implements $ThreadListItemCo
   factory _$ThreadListItemCopyWith(_ThreadListItem value, $Res Function(_ThreadListItem) _then) = __$ThreadListItemCopyWithImpl;
 @override @useResult
 $Res call({
- String chatId, String chatName, String? chatAvatar, MessageItem threadRootMessage, List<ThreadParticipant> participants, ThreadReplyPreview? lastReply, int replyCount, DateTime? lastReplyAt, int unreadCount, DateTime? subscribedAt
+ String chatId, String chatName, String? chatAvatar, MessageItem threadRootMessage, List<Sender> participants, ThreadReplyPreview? lastReply, int replyCount, DateTime? lastReplyAt, int unreadCount, DateTime? subscribedAt
 });
 
 
@@ -878,7 +615,7 @@ as String,chatName: null == chatName ? _self.chatName : chatName // ignore: cast
 as String,chatAvatar: freezed == chatAvatar ? _self.chatAvatar : chatAvatar // ignore: cast_nullable_to_non_nullable
 as String?,threadRootMessage: null == threadRootMessage ? _self.threadRootMessage : threadRootMessage // ignore: cast_nullable_to_non_nullable
 as MessageItem,participants: null == participants ? _self._participants : participants // ignore: cast_nullable_to_non_nullable
-as List<ThreadParticipant>,lastReply: freezed == lastReply ? _self.lastReply : lastReply // ignore: cast_nullable_to_non_nullable
+as List<Sender>,lastReply: freezed == lastReply ? _self.lastReply : lastReply // ignore: cast_nullable_to_non_nullable
 as ThreadReplyPreview?,replyCount: null == replyCount ? _self.replyCount : replyCount // ignore: cast_nullable_to_non_nullable
 as int,lastReplyAt: freezed == lastReplyAt ? _self.lastReplyAt : lastReplyAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,unreadCount: null == unreadCount ? _self.unreadCount : unreadCount // ignore: cast_nullable_to_non_nullable

@@ -174,11 +174,7 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
       clientGeneratedId: payload.clientGeneratedId.isEmpty
           ? null
           : payload.clientGeneratedId,
-      sender: ThreadParticipant(
-        uid: payload.sender.uid,
-        name: payload.sender.name,
-        avatarUrl: payload.sender.avatarUrl,
-      ),
+      sender: Sender.fromDto(payload.sender),
       message: payload.message,
       messageType: payload.messageType,
       stickerEmoji: payload.sticker?.emoji,
