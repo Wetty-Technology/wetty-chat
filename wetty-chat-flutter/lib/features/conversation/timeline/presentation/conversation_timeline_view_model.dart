@@ -12,9 +12,6 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'conversation_timeline_view_model.freezed.dart';
 
-const _readTraceColor = '\x1B[36m';
-const _logResetColor = '\x1B[0m';
-
 // ============ Private Types ============
 @immutable
 /// Internal policy for splitting messages into before and after segments.
@@ -90,7 +87,6 @@ class ConversationTimelineViewModel
     extends Notifier<ConversationTimelineState> {
   // Mostly temproary, we will remove these later
   static const int _initialLoadedWindowSize = 50;
-  static const Duration _readReportDebounce = Duration(milliseconds: 150);
 
   /// Identity (ChatID, threadID) for this VM
   final ConversationIdentity identity;
@@ -99,7 +95,6 @@ class ConversationTimelineViewModel
   late ConversationTimelineV2Repository _repository;
 
   LaunchRequest? _initialLaunchRequest;
-  bool _didRegisterDispose = false;
 
   /// Active segment containing the messages and some metadata
   ConversationTimelineActiveSegment? _activeSegment;
@@ -118,9 +113,6 @@ class ConversationTimelineViewModel
     kind: ConversationTimelineViewportCommandKind.none,
     placement: ConversationTimelineViewportPlacement.bottomPreferred,
   );
-  Timer? _pendingReadReportTimer;
-  int? _queuedLastVisibleMessageId;
-  int? _lastReadReportedMessageId;
 
   /// Make sure to use `_setActiveSegmentMode` instead of assigning directly
   /// to avoid forgetting `ref.invalidateSelf()`.
@@ -131,12 +123,6 @@ class ConversationTimelineViewModel
 
   @override
   ConversationTimelineState build() {
-    if (!_didRegisterDispose) {
-      _didRegisterDispose = true;
-      ref.onDispose(() {
-        _pendingReadReportTimer?.cancel();
-      });
-    }
     _repository = ref.read(conversationTimelineV2RepositoryProvider(identity));
     _activeSegment = ref.watch(
       conversationTimelineActiveSegmentProvider((
@@ -165,7 +151,6 @@ class ConversationTimelineViewModel
       return;
     }
     _initialLaunchRequest = launchRequest;
-    _resetLastReadReportForLaunch();
 
     switch (launchRequest) {
       case LatestLaunchRequest():
@@ -215,37 +200,9 @@ class ConversationTimelineViewModel
 
   void reportLastVisibleMessageId(int messageId) {
     if (state.isBootstrapping) {
-      debugPrint(
-        '$_readTraceColor'
-        'timeline read report ignored while bootstrapping: messageId=$messageId'
-        '$_logResetColor',
-      );
       return;
     }
-    if ((_lastReadReportedMessageId != null &&
-            messageId <= _lastReadReportedMessageId!) ||
-        (_queuedLastVisibleMessageId != null &&
-            messageId < _queuedLastVisibleMessageId!)) {
-      debugPrint(
-        '$_readTraceColor'
-        'timeline read report ignored as stale: messageId=$messageId, '
-        'lastReported=$_lastReadReportedMessageId, queued=$_queuedLastVisibleMessageId'
-        '$_logResetColor',
-      );
-      return;
-    }
-
-    debugPrint(
-      '$_readTraceColor'
-      'timeline read report queued: messageId=$messageId, '
-      'lastReported=$_lastReadReportedMessageId'
-      '$_logResetColor',
-    );
-    _queuedLastVisibleMessageId = messageId;
-    _pendingReadReportTimer?.cancel();
-    _pendingReadReportTimer = Timer(_readReportDebounce, () {
-      unawaited(_flushLastVisibleMessageIdReport());
-    });
+    _repository.markVisibleMessageRead(messageId);
   }
 
   Future<void> jumpToLatest() async {
@@ -299,10 +256,6 @@ class ConversationTimelineViewModel
 
   void jumpToUnread(int lastReadMessageId) {
     _markRepositoryTodo('jumpToUnread(lastReadMessageId: $lastReadMessageId)');
-  }
-
-  void _resetLastReadReportForLaunch() {
-    _lastReadReportedMessageId = null;
   }
 
   Future<void> _bootstrapLatestSegment() async {
@@ -554,32 +507,6 @@ class ConversationTimelineViewModel
     // store-backed repository and active-segment model.
     assert(operation.isNotEmpty);
     debugPrint('markRepositoryTodo: $operation');
-  }
-
-  Future<void> _flushLastVisibleMessageIdReport() async {
-    final queuedLastVisibleMessageId = _queuedLastVisibleMessageId;
-    if (queuedLastVisibleMessageId == null ||
-        (_lastReadReportedMessageId != null &&
-            queuedLastVisibleMessageId <= _lastReadReportedMessageId!)) {
-      return;
-    }
-
-    try {
-      debugPrint(
-        '$_readTraceColor'
-        'timeline read report flushing: messageId=$queuedLastVisibleMessageId'
-        '$_logResetColor',
-      );
-      await _repository.markVisibleMessageRead(queuedLastVisibleMessageId);
-      _lastReadReportedMessageId = queuedLastVisibleMessageId;
-      debugPrint(
-        '$_readTraceColor'
-        'timeline read report flushed: messageId=$queuedLastVisibleMessageId'
-        '$_logResetColor',
-      );
-    } catch (error) {
-      debugPrint('markVisibleMessageRead failed: $error');
-    }
   }
 }
 

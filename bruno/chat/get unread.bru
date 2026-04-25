@@ -1,0 +1,22 @@
+meta {
+  name: get unread
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseURL}}/chats/116143034872496128/read
+  body: json
+  auth: none
+}
+
+headers {
+  X-User-Id: 1
+  X-Client-Id: 1
+}
+
+body:json {
+  {
+    "messageId": "116279952182280192"
+  }
+}

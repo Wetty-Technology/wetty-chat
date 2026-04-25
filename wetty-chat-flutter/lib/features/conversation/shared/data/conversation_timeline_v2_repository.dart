@@ -4,14 +4,8 @@ import 'package:chahua/features/conversation/shared/domain/conversation_message_
 import 'package:chahua/features/conversation/shared/domain/conversation_timeline_v2_canonical_scope.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
 import 'package:chahua/features/chats/shared/data/read_state_repository.dart';
-import 'package:chahua/features/chat_list_v2/application/group_list_v2_store.dart';
 import 'package:chahua/features/chats/models/message_models.dart';
-import 'package:chahua/core/notifications/unread_badge_provider.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-const _readTraceColor = '\x1B[36m';
-const _logResetColor = '\x1B[0m';
 
 class ConversationTimelineV2Repository {
   ConversationTimelineV2Repository(this.ref, this.identity);
@@ -125,45 +119,10 @@ class ConversationTimelineV2Repository {
     }
   }
 
-  Future<void> markVisibleMessageRead(int messageId) async {
-    if (identity.threadRootId case final threadRootId?) {
-      debugPrint(
-        '$_readTraceColor'
-        'markVisibleMessageRead thread: chatId=${identity.chatId}, '
-        'threadRootId=$threadRootId, messageId=$messageId'
-        '$_logResetColor',
-      );
-      await ref
-          .read(readStateRepositoryProvider)
-          .markThreadRead(threadRootId: threadRootId, messageId: messageId);
-      ref.read(unreadBadgeProvider.notifier).scheduleReconcile();
-      return;
-    }
-
-    final chatId = identity.chatId.toString();
-    debugPrint(
-      '$_readTraceColor'
-      'markVisibleMessageRead group: chatId=$chatId, messageId=$messageId'
-      '$_logResetColor',
-    );
-    final response = await ref
-        .read(readStateRepositoryProvider)
-        .markChatRead(chatId: chatId, messageId: messageId);
-    debugPrint(
-      '$_readTraceColor'
-      'markVisibleMessageRead group response: chatId=$chatId, '
-      'lastReadMessageId=${response.lastReadMessageId}, '
-      'unreadCount=${response.unreadCount}'
-      '$_logResetColor',
-    );
+  void markVisibleMessageRead(int messageId) {
     ref
-        .read(groupListV2StoreProvider.notifier)
-        .applyServerReadState(
-          chatId: chatId,
-          messageId: messageId,
-          response: response,
-        );
-    ref.read(unreadBadgeProvider.notifier).scheduleReconcile();
+        .read(readStateRepositoryProvider)
+        .reportVisibleMessageRead(identity: identity, messageId: messageId);
   }
 
   String _messageTypeFor(ConversationMessageV2 message) {
