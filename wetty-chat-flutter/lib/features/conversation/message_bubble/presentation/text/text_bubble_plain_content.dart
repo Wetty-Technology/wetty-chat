@@ -133,7 +133,8 @@ class TextBubbleMessageBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final messageText = messageTextForBubble(message.content);
+    // final messageText = messageTextForBubble(message.content);
+    final messageText = messageTextForBubble(TextMessageContent(text: message.serverMessageId.toString()));
     final mentions = mentionsForBubble(message.content);
     final metaWidget = MetaFooter(message: message);
 

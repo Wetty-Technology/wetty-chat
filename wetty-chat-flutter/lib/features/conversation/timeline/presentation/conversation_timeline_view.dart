@@ -19,6 +19,9 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+const _readTraceColor = '\x1B[36m';
+const _logResetColor = '\x1B[0m';
+
 @visibleForTesting
 double resolveTopPreferredAnchorAlignment({
   required double afterExtent,

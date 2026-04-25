@@ -98,6 +98,8 @@ final wsEventRouterProvider = Provider<void>((ref) {
   }
 
   void applyListProjectionEvent(ApiWsEvent event) {
+    // TODO: Handle backend read-state websocket events here once the API
+    // exposes them, so external read/unread changes update v2 stores live.
     switch (event) {
       case MessageCreatedWsEvent():
       case MessageUpdatedWsEvent():

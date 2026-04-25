@@ -12,6 +12,9 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'conversation_timeline_view_model.freezed.dart';
 
+const _readTraceColor = '\x1B[36m';
+const _logResetColor = '\x1B[0m';
+
 // ============ Private Types ============
 @immutable
 /// Internal policy for splitting messages into before and after segments.
@@ -208,15 +211,32 @@ class ConversationTimelineViewModel
 
   void reportLastVisibleMessageId(int messageId) {
     if (state.isBootstrapping) {
+      debugPrint(
+        '$_readTraceColor'
+        'timeline read report ignored while bootstrapping: messageId=$messageId'
+        '$_logResetColor',
+      );
       return;
     }
     if ((_lastReadReportedMessageId != null &&
             messageId <= _lastReadReportedMessageId!) ||
         (_queuedLastVisibleMessageId != null &&
             messageId < _queuedLastVisibleMessageId!)) {
+      debugPrint(
+        '$_readTraceColor'
+        'timeline read report ignored as stale: messageId=$messageId, '
+        'lastReported=$_lastReadReportedMessageId, queued=$_queuedLastVisibleMessageId'
+        '$_logResetColor',
+      );
       return;
     }
 
+    debugPrint(
+      '$_readTraceColor'
+      'timeline read report queued: messageId=$messageId, '
+      'lastReported=$_lastReadReportedMessageId'
+      '$_logResetColor',
+    );
     _queuedLastVisibleMessageId = messageId;
     _pendingReadReportTimer?.cancel();
     _pendingReadReportTimer = Timer(_readReportDebounce, () {
@@ -542,8 +562,18 @@ class ConversationTimelineViewModel
     }
 
     try {
+      debugPrint(
+        '$_readTraceColor'
+        'timeline read report flushing: messageId=$queuedLastVisibleMessageId'
+        '$_logResetColor',
+      );
       await _repository.markVisibleMessageRead(queuedLastVisibleMessageId);
       _lastReadReportedMessageId = queuedLastVisibleMessageId;
+      debugPrint(
+        '$_readTraceColor'
+        'timeline read report flushed: messageId=$queuedLastVisibleMessageId'
+        '$_logResetColor',
+      );
     } catch (error) {
       debugPrint('markVisibleMessageRead failed: $error');
     }

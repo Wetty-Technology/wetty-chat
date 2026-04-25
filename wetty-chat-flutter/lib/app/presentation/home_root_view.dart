@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/notifications/unread_badge_provider.dart';
+import '../../features/shared/application/chat_inbox_reconciler.dart';
 import '../theme/style_config.dart';
 
 /// Shell widget for the [StatefulShellRoute.indexedStack].
@@ -32,10 +35,21 @@ class HomeShell extends ConsumerWidget {
           _BottomNavBar(
             items: tabs,
             selectedIndex: navigationShell.currentIndex,
-            onTap: (index) => navigationShell.goBranch(
-              index,
-              initialLocation: index == navigationShell.currentIndex,
-            ),
+            onTap: (index) {
+              if (index == 0) {
+                // TODO: Revisit whether tab-tap reconcile is needed once v2
+                // read-state sync points are fully defined.
+                unawaited(
+                  ref
+                      .read(chatInboxReconcilerProvider)
+                      .reconcile(userInitiated: true),
+                );
+              }
+              navigationShell.goBranch(
+                index,
+                initialLocation: index == navigationShell.currentIndex,
+              );
+            },
           ),
         ],
       ),
