@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
 
-import '../../l10n/app_localizations.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// Formats a message timestamp as local time (HH:mm or h:mm AM/PM).
 String formatChatMessageTime(BuildContext context, DateTime? timestamp) {

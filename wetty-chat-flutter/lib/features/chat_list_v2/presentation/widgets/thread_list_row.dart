@@ -2,7 +2,7 @@ import 'package:flutter/cupertino.dart';
 
 import '../../../../app/theme/style_config.dart';
 import '../../../../shared/presentation/app_avatar.dart';
-import '../../../chats/chat_timestamp_formatter.dart';
+import '../../../shared/presentation/chat_timestamp_formatter.dart';
 import '../../../chats/models/message_models.dart';
 import '../../../chats/models/message_preview_formatter.dart';
 import '../../../chats/threads/models/thread_models.dart';
