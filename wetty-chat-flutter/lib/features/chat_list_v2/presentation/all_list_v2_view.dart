@@ -11,7 +11,7 @@ import '../model/chat_list_item.dart';
 import '../../chats/models/message_models.dart';
 import '../../chats/models/message_preview_formatter.dart';
 import '../../chats/threads/models/thread_models.dart';
-import '../../chats/threads/presentation/thread_list_row.dart';
+import 'widgets/thread_list_row.dart';
 import '../application/all_list_v2_models.dart';
 import '../application/all_list_v2_projection.dart';
 import '../application/all_list_v2_view_model.dart';
