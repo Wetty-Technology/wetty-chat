@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/network/dio_client.dart';
-import '../models/thread_api_models.dart';
+import 'package:chahua/core/api/models/thread_api_models.dart';
+import 'package:chahua/core/network/dio_client.dart';
 
 /// Raw HTTP calls for thread endpoints. No state.
 class ThreadApiService {

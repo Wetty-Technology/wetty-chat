@@ -1,8 +1,8 @@
 import 'package:json_annotation/json_annotation.dart';
 
-import '../../../../core/api/converters/flexible_int_converter.dart';
-import '../../../../core/api/converters/nullable_date_time_converter.dart';
-import '../../../../core/api/models/messages_api_models.dart';
+import 'package:chahua/core/api/converters/flexible_int_converter.dart';
+import 'package:chahua/core/api/converters/nullable_date_time_converter.dart';
+import 'package:chahua/core/api/models/messages_api_models.dart';
 
 part 'thread_api_models.g.dart';
 

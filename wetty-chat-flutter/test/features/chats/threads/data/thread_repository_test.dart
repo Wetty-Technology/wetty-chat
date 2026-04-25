@@ -4,11 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:chahua/core/api/models/messages_api_models.dart';
+import 'package:chahua/core/api/models/thread_api_models.dart';
 import 'package:chahua/core/api/models/websocket_api_models.dart';
+import 'package:chahua/core/api/services/thread_api_service.dart';
 import 'package:chahua/core/providers/shared_preferences_provider.dart';
-import 'package:chahua/features/chats/threads/data/thread_api_service.dart';
 import 'package:chahua/features/chats/threads/data/thread_repository.dart';
-import 'package:chahua/features/chats/threads/models/thread_api_models.dart';
 
 void main() {
   group('ThreadListNotifier realtime', () {

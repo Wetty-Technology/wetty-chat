@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../chats/shared/data/chat_api_service.dart';
+import 'package:chahua/core/api/services/chat_api_service.dart';
+
 import '../application/group_list_v2_store.dart';
 import '../model/chat_list_item.dart';
 

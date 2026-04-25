@@ -3,12 +3,13 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:chahua/core/api/services/chat_api_service.dart';
+import 'package:chahua/core/api/services/thread_api_service.dart';
+
 import '../../../chat_list_v2/application/group_list_v2_store.dart';
 import '../../../conversation/shared/domain/conversation_identity.dart';
 import '../../../conversation/compose/data/message_api_service_v2.dart';
 import '../../../../core/notifications/unread_badge_provider.dart';
-import '../../threads/data/thread_api_service.dart';
-import 'chat_api_service.dart';
 import 'read_state_models.dart';
 
 enum _ReadReportKind { chat, thread }

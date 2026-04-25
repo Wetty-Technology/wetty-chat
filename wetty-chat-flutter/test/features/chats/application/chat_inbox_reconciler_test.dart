@@ -5,13 +5,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:chahua/core/api/models/chats_api_models.dart';
 import 'package:chahua/core/api/models/messages_api_models.dart';
+import 'package:chahua/core/api/models/thread_api_models.dart';
+import 'package:chahua/core/api/services/chat_api_service.dart';
+import 'package:chahua/core/api/services/thread_api_service.dart';
 import 'package:chahua/core/notifications/apns_channel.dart';
 import 'package:chahua/core/notifications/unread_badge_provider.dart';
 import 'package:chahua/core/providers/shared_preferences_provider.dart';
 import 'package:chahua/core/session/dev_session_store.dart';
-import 'package:chahua/features/chats/shared/data/chat_api_service.dart';
-import 'package:chahua/features/chats/threads/data/thread_api_service.dart';
-import 'package:chahua/features/chats/threads/models/thread_api_models.dart';
 import 'package:chahua/features/chat_list_v2/application/group_list_v2_view_model.dart';
 import 'package:chahua/features/chat_list_v2/application/thread_list_v2_view_model.dart';
 import 'package:chahua/features/shared/application/chat_inbox_reconciler.dart';

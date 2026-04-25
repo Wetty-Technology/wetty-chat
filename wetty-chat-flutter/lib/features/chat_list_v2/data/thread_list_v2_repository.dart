@@ -1,8 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/notifications/unread_badge_provider.dart';
-import '../../chats/threads/data/thread_api_service.dart';
-import '../../chats/threads/models/thread_api_models.dart';
+import 'package:chahua/core/api/models/thread_api_models.dart';
+import 'package:chahua/core/api/services/thread_api_service.dart';
+import 'package:chahua/core/notifications/unread_badge_provider.dart';
+
 import '../../chats/threads/models/thread_api_mapper.dart';
 import '../application/thread_list_v2_store.dart';
 

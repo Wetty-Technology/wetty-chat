@@ -1,5 +1,6 @@
+import 'package:chahua/core/api/models/thread_api_models.dart';
+
 import '../../models/message_api_mapper.dart';
-import 'thread_api_models.dart';
 import 'thread_models.dart';
 
 extension ThreadParticipantDtoMapper on ThreadParticipantDto {

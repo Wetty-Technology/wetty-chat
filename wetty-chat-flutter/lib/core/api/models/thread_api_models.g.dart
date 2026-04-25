@@ -128,9 +128,7 @@ Map<String, dynamic> _$UnreadThreadCountResponseDtoToJson(
 
 MarkThreadReadResponseDto _$MarkThreadReadResponseDtoFromJson(
   Map<String, dynamic> json,
-) => MarkThreadReadResponseDto(
-  updated: json['updated'] as bool? ?? false,
-);
+) => MarkThreadReadResponseDto(updated: json['updated'] as bool? ?? false);
 
 Map<String, dynamic> _$MarkThreadReadResponseDtoToJson(
   MarkThreadReadResponseDto instance,

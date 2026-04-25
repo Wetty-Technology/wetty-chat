@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/models/messages_api_models.dart';
+import '../../../../core/api/services/thread_api_service.dart';
 import '../../../../core/api/models/websocket_api_models.dart';
 import '../../../../core/notifications/unread_badge_provider.dart';
 import '../../../../core/session/dev_session_store.dart';
@@ -10,7 +11,6 @@ import '../../list_projection/domain/list_projection_helpers.dart';
 import '../../models/message_api_mapper.dart';
 import '../models/thread_api_mapper.dart';
 import '../models/thread_models.dart';
-import 'thread_api_service.dart';
 
 typedef ThreadListState = ({
   List<ThreadListItem> threads,

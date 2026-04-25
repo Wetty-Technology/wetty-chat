@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:chahua/core/api/models/chats_api_models.dart';
+import 'package:chahua/core/api/models/thread_api_models.dart';
+import 'package:chahua/core/api/services/chat_api_service.dart';
+import 'package:chahua/core/api/services/thread_api_service.dart';
 import 'package:chahua/core/notifications/apns_channel.dart';
 import 'package:chahua/core/notifications/unread_badge_provider.dart';
 import 'package:chahua/core/session/dev_session_store.dart';
-import 'package:chahua/features/chats/shared/data/chat_api_service.dart';
-import 'package:chahua/features/chats/threads/data/thread_api_service.dart';
-import 'package:chahua/features/chats/threads/models/thread_api_models.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

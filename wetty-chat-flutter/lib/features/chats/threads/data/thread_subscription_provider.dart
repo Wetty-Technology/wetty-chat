@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'thread_api_service.dart';
+import '../../../../core/api/services/thread_api_service.dart';
 
 typedef ThreadSubscriptionArgs = ({String chatId, int threadRootId});
 

@@ -7,9 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/models/chats_api_models.dart';
 import '../session/dev_session_store.dart';
-import '../../features/chats/shared/data/chat_api_service.dart';
-import '../../features/chats/threads/data/thread_api_service.dart';
-import '../../features/chats/threads/models/thread_api_models.dart';
+import '../api/models/thread_api_models.dart';
+import '../api/services/chat_api_service.dart';
+import '../api/services/thread_api_service.dart';
 import 'apns_channel.dart';
 
 class UnreadBadgeState {
