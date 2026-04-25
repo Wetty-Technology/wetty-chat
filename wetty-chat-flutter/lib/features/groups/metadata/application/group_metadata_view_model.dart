@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../chat_list_v2/application/group_list_v2_store.dart';
+import '../../../chat_list/application/group_list_v2_store.dart';
 import '../data/group_metadata_models.dart';
 import '../data/group_metadata_repository.dart';
 

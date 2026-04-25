@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:chahua/core/api/models/group_info_api_models.dart';
-import 'package:chahua/features/chat_list_v2/application/group_list_v2_store.dart';
-import 'package:chahua/features/chat_list_v2/model/chat_list_item.dart';
+import 'package:chahua/features/chat_list/application/group_list_v2_store.dart';
+import 'package:chahua/features/chat_list/model/chat_list_item.dart';
 import 'package:chahua/features/groups/metadata/application/group_metadata_view_model.dart';
 import 'package:chahua/features/groups/metadata/data/group_metadata_api_service.dart';
 import 'package:chahua/features/groups/metadata/data/group_metadata_repository.dart';

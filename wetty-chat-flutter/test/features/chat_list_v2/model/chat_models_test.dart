@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:chahua/core/api/models/chats_api_models.dart';
-import 'package:chahua/features/chat_list_v2/model/chat_list_item.dart';
+import 'package:chahua/features/chat_list/model/chat_list_item.dart';
 
 void main() {
   test('maps chat avatar from DTO to domain model', () {

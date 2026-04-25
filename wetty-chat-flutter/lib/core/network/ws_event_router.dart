@@ -2,8 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 
 import '../../features/conversation/shared/data/conversation_realtime_message_applier.dart';
-import '../../features/chat_list_v2/application/group_list_v2_store.dart';
-import '../../features/chat_list_v2/application/thread_list_v2_store.dart';
+import '../../features/chat_list/application/group_list_v2_store.dart';
+import '../../features/chat_list/application/thread_list_v2_store.dart';
 import '../../features/shared/application/chat_inbox_reconciler.dart';
 import '../../features/stickers/data/sticker_pack_order_store.dart';
 import '../api/models/websocket_api_models.dart';

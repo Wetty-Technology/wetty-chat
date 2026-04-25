@@ -1,7 +1,7 @@
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
 import 'package:chahua/features/conversation/shared/domain/launch_request.dart';
 import 'package:chahua/features/conversation/shared/presentation/conversation_surface_v2.dart';
-import 'package:chahua/features/chat_list_v2/application/thread_list_v2_view_model.dart';
+import 'package:chahua/features/chat_list/application/thread_list_v2_view_model.dart';
 import 'package:chahua/app/theme/style_config.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

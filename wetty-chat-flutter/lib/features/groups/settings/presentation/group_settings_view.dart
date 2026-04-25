@@ -8,7 +8,7 @@ import 'package:intl/intl.dart';
 import '../../../../app/routing/route_names.dart';
 import '../../../../app/theme/style_config.dart';
 import '../../../../core/session/dev_session_store.dart';
-import '../../../chat_list_v2/application/group_list_v2_store.dart';
+import '../../../chat_list/application/group_list_v2_store.dart';
 import '../../members/data/group_member_repository.dart';
 import '../../../../shared/presentation/app_avatar.dart';
 import '../../members/presentation/widgets/group_member_actions.dart';
