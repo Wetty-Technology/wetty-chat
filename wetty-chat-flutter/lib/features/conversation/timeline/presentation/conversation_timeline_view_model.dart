@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:chahua/features/conversation/shared/data/conversation_canonical_message_store.dart';
+import 'package:chahua/features/conversation/shared/application/conversation_canonical_message_store.dart';
 import 'package:chahua/features/conversation/shared/data/conversation_timeline_v2_repository.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_timeline_v2_active_segment.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';

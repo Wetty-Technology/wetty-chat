@@ -14,7 +14,7 @@ import 'package:chahua/core/network/dio_client.dart';
 import 'package:chahua/core/session/dev_session_store.dart';
 import 'package:chahua/features/conversation/compose/presentation/conversation_draft_store.dart';
 import 'package:chahua/features/conversation/compose/presentation/conversation_local_mutation_registry.dart';
-import 'package:chahua/features/conversation/shared/data/conversation_canonical_message_store.dart';
+import 'package:chahua/features/conversation/shared/application/conversation_canonical_message_store.dart';
 import 'package:chahua/features/conversation/compose/data/attachment_picker_service.dart';
 import 'package:chahua/features/conversation/compose/data/message_api_service_v2.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';

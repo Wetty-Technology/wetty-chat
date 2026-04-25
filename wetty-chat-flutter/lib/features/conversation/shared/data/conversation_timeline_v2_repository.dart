@@ -1,4 +1,4 @@
-import 'package:chahua/features/conversation/shared/data/conversation_canonical_message_store.dart';
+import 'package:chahua/features/conversation/shared/application/conversation_canonical_message_store.dart';
 import 'package:chahua/features/conversation/compose/data/message_api_service_v2.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_timeline_v2_canonical_scope.dart';
