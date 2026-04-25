@@ -22,7 +22,7 @@ bool matchesChatPreview(MessageItem? preview, MessageItemDto payload) {
       preview.clientGeneratedId == payload.clientGeneratedId;
 }
 
-bool matchesThreadPreview(ThreadReplyPreview? preview, MessageItemDto payload) {
+bool matchesThreadPreview(MessagePreview? preview, MessageItemDto payload) {
   if (preview == null) {
     return false;
   }

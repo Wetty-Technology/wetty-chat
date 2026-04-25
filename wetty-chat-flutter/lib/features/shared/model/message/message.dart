@@ -11,6 +11,7 @@ import 'thread_info.dart';
 export 'attachment.dart';
 export 'mention.dart';
 export 'message_item.dart';
+export 'message_preview.dart';
 export 'preview_formatter.dart';
 export 'reaction.dart';
 export 'reply_to_message.dart';

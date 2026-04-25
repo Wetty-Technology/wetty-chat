@@ -1,5 +1,6 @@
 import 'attachment.dart';
 import 'mention.dart';
+import 'message_preview.dart';
 import 'reply_to_message.dart';
 import 'sticker.dart';
 
@@ -12,10 +13,32 @@ const String videoPreviewLabel = '[Video]';
 const String attachmentPreviewLabel = '[Attachment]';
 
 String formatReplyPreview(ReplyToMessage preview) {
+  return formatMessagePreviewSummary(
+    MessagePreview(
+      messageId: preview.id,
+      sender: preview.sender,
+      message: preview.message,
+      messageType: preview.messageType,
+      sticker: preview.sticker,
+      attachments: preview.attachments,
+      reactions: preview.reactions,
+      firstAttachmentKind: preview.firstAttachmentKind,
+      isDeleted: preview.isDeleted,
+      mentions: preview.mentions,
+    ),
+  );
+}
+
+String formatMessagePreviewSummary(MessagePreview preview) {
+  final stickerEmoji = preview.previewStickerEmoji;
   return formatMessagePreview(
     message: preview.message,
     messageType: preview.messageType,
-    sticker: preview.sticker,
+    sticker:
+        preview.sticker ??
+        (stickerEmoji == null
+            ? null
+            : StickerSummary(id: 'message-preview', emoji: stickerEmoji)),
     attachments: preview.attachments,
     firstAttachmentKind: preview.firstAttachmentKind,
     isDeleted: preview.isDeleted,

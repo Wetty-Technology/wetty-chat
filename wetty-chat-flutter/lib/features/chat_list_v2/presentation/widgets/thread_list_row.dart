@@ -114,35 +114,58 @@ class ThreadListRow extends StatelessWidget {
   /// Root message preview for line 1, falls back to sender name.
   String _rootMessagePreview() {
     final root = thread.threadRootMessage;
-    final preview = formatMessagePreview(
-      message: root.message,
-      messageType: root.messageType,
-      sticker: root.sticker,
-      attachments: root.attachments,
-      isDeleted: root.isDeleted,
-      mentions: root.mentions,
-    );
+    final preview = _contentPreview(root.content, isDeleted: root.isDeleted);
     if (preview.isNotEmpty) return preview;
     return root.sender.name ?? 'Unknown';
+  }
+
+  String _contentPreview(MessageContent content, {required bool isDeleted}) {
+    return switch (content) {
+      TextMessageContent(:final text, :final mentions) => formatMessagePreview(
+        message: text,
+        messageType: 'text',
+        isDeleted: isDeleted,
+        mentions: mentions,
+      ),
+      AudioMessageContent(:final text, :final mentions) => formatMessagePreview(
+        message: text,
+        messageType: 'audio',
+        isDeleted: isDeleted,
+        mentions: mentions,
+      ),
+      FileMessageContent(:final text, :final attachments, :final mentions) =>
+        formatMessagePreview(
+          message: text,
+          messageType: 'file',
+          attachments: attachments,
+          isDeleted: isDeleted,
+          mentions: mentions,
+        ),
+      StickerMessageContent(:final sticker) => formatMessagePreview(
+        messageType: 'sticker',
+        sticker: sticker,
+        isDeleted: isDeleted,
+      ),
+      InviteMessageContent(:final text, :final mentions) =>
+        formatMessagePreview(
+          message: text,
+          messageType: 'invite',
+          isDeleted: isDeleted,
+          mentions: mentions,
+        ),
+      SystemMessageContent(:final text) => formatMessagePreview(
+        message: text,
+        messageType: 'system',
+        isDeleted: isDeleted,
+      ),
+    };
   }
 
   /// Last reply preview text for line 2.
   String _lastReplyPreviewText() {
     final lastReply = thread.lastReply;
     if (lastReply == null) return '';
-    return formatMessagePreview(
-      message: lastReply.message,
-      messageType: lastReply.messageType,
-      sticker: lastReply.stickerEmoji != null
-          ? StickerSummary(
-              id: 'thread-preview-${thread.threadRootId}',
-              emoji: lastReply.stickerEmoji,
-            )
-          : null,
-      firstAttachmentKind: lastReply.firstAttachmentKind,
-      isDeleted: lastReply.isDeleted,
-      mentions: lastReply.mentions,
-    );
+    return formatMessagePreviewSummary(lastReply);
   }
 
   Widget _buildLastReplyLine(

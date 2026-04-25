@@ -168,8 +168,8 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
     );
   }
 
-  ThreadReplyPreview _toReplyPreview(MessageItemDto payload) {
-    return ThreadReplyPreview(
+  MessagePreview _toReplyPreview(MessageItemDto payload) {
+    return MessagePreview(
       messageId: payload.id,
       clientGeneratedId: payload.clientGeneratedId.isEmpty
           ? null
@@ -177,7 +177,9 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
       sender: Sender.fromDto(payload.sender),
       message: payload.message,
       messageType: payload.messageType,
-      stickerEmoji: payload.sticker?.emoji,
+      sticker: payload.sticker == null
+          ? null
+          : StickerSummary.fromDto(payload.sticker!),
       firstAttachmentKind: payload.attachments.isNotEmpty
           ? payload.attachments.first.kind
           : null,
@@ -197,7 +199,9 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
       threads: replaceThreadAt(
         state.threads,
         index,
-        previous.copyWith(threadRootMessage: MessageItem.fromDto(payload)),
+        previous.copyWith(
+          threadRootMessage: ConversationMessageV2.fromMessageItemDto(payload),
+        ),
       ),
     );
     return false;

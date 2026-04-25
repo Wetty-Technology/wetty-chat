@@ -7,36 +7,6 @@ import 'package:chahua/features/shared/model/message/message.dart';
 part 'thread_models.freezed.dart';
 
 @freezed
-abstract class ThreadReplyPreview with _$ThreadReplyPreview {
-  const factory ThreadReplyPreview({
-    int? messageId,
-    String? clientGeneratedId,
-    required Sender sender,
-    String? message,
-    @Default('text') String messageType,
-    String? stickerEmoji,
-    String? firstAttachmentKind,
-    @Default(false) bool isDeleted,
-    @Default([]) List<MentionInfo> mentions,
-  }) = _ThreadReplyPreview;
-
-  factory ThreadReplyPreview.fromDto(ThreadReplyPreviewDto dto) =>
-      ThreadReplyPreview(
-        messageId: dto.id,
-        clientGeneratedId: dto.clientGeneratedId.isEmpty
-            ? null
-            : dto.clientGeneratedId,
-        sender: Sender.fromDto(dto.sender),
-        message: dto.message,
-        messageType: dto.messageType,
-        stickerEmoji: dto.stickerEmoji,
-        firstAttachmentKind: dto.firstAttachmentKind,
-        isDeleted: dto.isDeleted,
-        mentions: dto.mentions.map(MentionInfo.fromDto).toList(),
-      );
-}
-
-@freezed
 abstract class ThreadListItem with _$ThreadListItem {
   const ThreadListItem._();
 
@@ -44,9 +14,9 @@ abstract class ThreadListItem with _$ThreadListItem {
     required String chatId,
     required String chatName,
     String? chatAvatar,
-    required MessageItem threadRootMessage,
+    required ConversationMessageV2 threadRootMessage,
     @Default([]) List<Sender> participants,
-    ThreadReplyPreview? lastReply,
+    MessagePreview? lastReply,
     @Default(0) int replyCount,
     DateTime? lastReplyAt,
     @Default(0) int unreadCount,
@@ -54,17 +24,19 @@ abstract class ThreadListItem with _$ThreadListItem {
   }) = _ThreadListItem;
 
   /// Thread root message ID used as the unique key for this thread.
-  int get threadRootId => threadRootMessage.id;
+  int get threadRootId => threadRootMessage.serverMessageId ?? 0;
 
   factory ThreadListItem.fromDto(ThreadListItemDto dto) => ThreadListItem(
     chatId: dto.chatId.toString(),
     chatName: dto.chatName,
     chatAvatar: dto.chatAvatar,
-    threadRootMessage: MessageItem.fromDto(dto.threadRootMessage),
+    threadRootMessage: ConversationMessageV2.fromMessageItemDto(
+      dto.threadRootMessage,
+    ),
     participants: dto.participants.map(Sender.fromDto).toList(),
     lastReply: dto.lastReply == null
         ? null
-        : ThreadReplyPreview.fromDto(dto.lastReply!),
+        : MessagePreview.fromThreadReplyPreviewDto(dto.lastReply!),
     replyCount: dto.replyCount,
     lastReplyAt: dto.lastReplyAt,
     unreadCount: dto.unreadCount,
