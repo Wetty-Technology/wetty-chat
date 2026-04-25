@@ -35,10 +35,12 @@ class ConversationSurfaceV2 extends ConsumerStatefulWidget {
 class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
   final GlobalKey<ConversationComposeV2State> _composeKey =
       GlobalKey<ConversationComposeV2State>();
+  late final AppRefreshCoordinator _refreshCoordinator;
 
   @override
   void initState() {
     super.initState();
+    _refreshCoordinator = ref.read(appRefreshCoordinatorProvider);
     _registerRecovery();
   }
 
@@ -48,31 +50,29 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
     if (oldWidget.identity == widget.identity) {
       return;
     }
-    ref
-        .read(appRefreshCoordinatorProvider)
-        .unregisterConversationRecovery(oldWidget.identity);
+    _refreshCoordinator.unregisterConversationRecovery(oldWidget.identity);
     _registerRecovery();
   }
 
   @override
   void dispose() {
-    ref
-        .read(appRefreshCoordinatorProvider)
-        .unregisterConversationRecovery(widget.identity);
+    _refreshCoordinator.unregisterConversationRecovery(widget.identity);
     super.dispose();
   }
 
   void _registerRecovery() {
-    ref
-        .read(appRefreshCoordinatorProvider)
-        .registerConversationRecovery(
-          identity: widget.identity,
-          recover: (_) => ref
-              .read(
-                conversationTimelineViewModelProvider(widget.identity).notifier,
-              )
-              .recoverLatestAfterRefresh(),
-        );
+    final identity = widget.identity;
+    _refreshCoordinator.registerConversationRecovery(
+      identity: identity,
+      recover: (_) {
+        if (!mounted) {
+          return Future.value();
+        }
+        return ref
+            .read(conversationTimelineViewModelProvider(identity).notifier)
+            .recoverLatestAfterRefresh();
+      },
+    );
   }
 
   Future<void> _handleMessageSent() async {
