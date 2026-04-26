@@ -235,6 +235,12 @@
   "unpinMessage": "Unpin",
   "@unpinMessage": { "description": "Message action label for unpinning a message" },
 
+  "unpinMessageTitle": "Unpin message?",
+  "@unpinMessageTitle": { "description": "Confirmation dialog title for unpinning a pinned message" },
+
+  "unpinMessageBody": "This removes it from pinned messages for everyone.",
+  "@unpinMessageBody": { "description": "Confirmation dialog body for unpinning a pinned message" },
+
   "pinnedMessages": "Pinned Messages",
   "@pinnedMessages": { "description": "Title for the pinned messages list" },
 

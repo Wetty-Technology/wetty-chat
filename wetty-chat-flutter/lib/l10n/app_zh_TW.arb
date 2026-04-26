@@ -84,6 +84,8 @@
   "startThread": "開始話題",
   "pinMessage": "置頂",
   "unpinMessage": "取消置頂",
+  "unpinMessageTitle": "取消置頂這則訊息？",
+  "unpinMessageBody": "這會為所有人從置頂訊息中移除它。",
   "pinnedMessages": "置頂訊息",
   "newThreadInstruction": "回覆這則訊息以開始話題。",
   "noGroupsYet": "暫無群組",

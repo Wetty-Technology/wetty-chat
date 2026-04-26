@@ -246,6 +246,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unpinMessage => 'Unpin';
 
   @override
+  String get unpinMessageTitle => 'Unpin message?';
+
+  @override
+  String get unpinMessageBody =>
+      'This removes it from pinned messages for everyone.';
+
+  @override
   String get pinnedMessages => 'Pinned Messages';
 
   @override

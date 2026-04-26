@@ -567,6 +567,18 @@ abstract class AppLocalizations {
   /// **'Unpin'**
   String get unpinMessage;
 
+  /// Confirmation dialog title for unpinning a pinned message
+  ///
+  /// In en, this message translates to:
+  /// **'Unpin message?'**
+  String get unpinMessageTitle;
+
+  /// Confirmation dialog body for unpinning a pinned message
+  ///
+  /// In en, this message translates to:
+  /// **'This removes it from pinned messages for everyone.'**
+  String get unpinMessageBody;
+
   /// Title for the pinned messages list
   ///
   /// In en, this message translates to:
