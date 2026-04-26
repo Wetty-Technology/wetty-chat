@@ -1,6 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:chahua/shared/presentation/app_divider.dart';
+import 'package:chahua/features/shared/presentation/app_divider.dart';
 
 import '../../../app/theme/style_config.dart';
 import '../../../core/settings/app_settings_store.dart';

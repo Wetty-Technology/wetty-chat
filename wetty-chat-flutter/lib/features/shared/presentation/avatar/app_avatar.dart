@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 
-import '../../app/theme/style_config.dart';
-import '../../core/cache/app_cached_network_image.dart';
+import '../../../../app/theme/style_config.dart';
+import '../../../../core/cache/app_cached_network_image.dart';
 
 class AppAvatar extends StatelessWidget {
   const AppAvatar({

@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:chahua/core/cache/app_cached_network_image.dart';
 import 'package:chahua/core/cache/image_cache_service.dart';
-import 'package:chahua/shared/presentation/app_avatar.dart';
+import 'package:chahua/features/shared/presentation/avatar/app_avatar.dart';
 
 import '../../test_utils/path_provider_mock.dart';
 

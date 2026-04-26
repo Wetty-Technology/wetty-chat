@@ -1,6 +1,6 @@
 import 'package:chahua/core/network/api_config.dart';
 import 'package:chahua/features/conversation/media/presentation/attachment_viewer_request.dart';
-import 'package:chahua/shared/presentation/app_avatar.dart';
+import 'package:chahua/features/shared/presentation/avatar/app_avatar.dart';
 import 'package:chahua/features/shared/model/message/message.dart'
     hide MessageItem;
 import 'package:flutter/foundation.dart';

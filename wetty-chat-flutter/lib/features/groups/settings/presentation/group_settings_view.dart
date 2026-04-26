@@ -10,7 +10,7 @@ import '../../../../app/theme/style_config.dart';
 import '../../../../core/session/dev_session_store.dart';
 import '../../../chat_list/application/group_list_v2_store.dart';
 import '../../members/data/group_member_repository.dart';
-import '../../../../shared/presentation/app_avatar.dart';
+import '../../../shared/presentation/avatar/app_avatar.dart';
 import '../../members/presentation/widgets/group_member_actions.dart';
 import '../../metadata/application/group_metadata_view_model.dart';
 import '../../metadata/data/group_metadata_models.dart';

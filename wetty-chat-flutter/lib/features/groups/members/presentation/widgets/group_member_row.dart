@@ -1,6 +1,6 @@
 import 'package:flutter/cupertino.dart';
 
-import '../../../../../shared/presentation/app_avatar.dart';
+import '../../../../shared/presentation/avatar/app_avatar.dart';
 import '../../data/group_member_models.dart';
 
 class GroupMemberRow extends StatelessWidget {

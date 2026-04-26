@@ -1,5 +1,5 @@
 import 'package:chahua/app/theme/style_config.dart';
-import 'package:chahua/shared/presentation/app_avatar.dart';
+import 'package:chahua/features/shared/presentation/avatar/app_avatar.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:flutter/cupertino.dart';
 
