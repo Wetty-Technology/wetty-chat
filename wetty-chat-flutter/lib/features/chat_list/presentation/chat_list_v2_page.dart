@@ -22,6 +22,7 @@ class ChatListV2Page extends ConsumerStatefulWidget {
 class _ChatListV2PageState extends ConsumerState<ChatListV2Page> {
   late final ScrollController _scrollController;
   ChatListTab? _activeTab;
+  bool _isScrolledUnder = false;
 
   bool get _supportsPullToRefresh {
     if (kIsWeb) return false;
@@ -62,6 +63,8 @@ class _ChatListV2PageState extends ConsumerState<ChatListV2Page> {
   }
 
   void _onScroll() {
+    _updateScrolledUnder();
+
     final position = _scrollController.position;
     if (position.pixels < position.maxScrollExtent - 200) {
       return;
@@ -98,6 +101,15 @@ class _ChatListV2PageState extends ConsumerState<ChatListV2Page> {
     }
   }
 
+  void _updateScrolledUnder() {
+    final isScrolledUnder =
+        _scrollController.hasClients && _scrollController.offset > 0;
+    if (_isScrolledUnder == isScrolledUnder) {
+      return;
+    }
+    setState(() => _isScrolledUnder = isScrolledUnder);
+  }
+
   Future<void> _refreshActiveTab(ChatListTab activeTab) {
     return switch (activeTab) {
       ChatListTab.groups =>
@@ -120,9 +132,15 @@ class _ChatListV2PageState extends ConsumerState<ChatListV2Page> {
     final groupsUnread = unreadState.chatUnreadTotal;
     final threadsUnread = unreadState.threadUnreadTotal;
     final allUnread = unreadState.combinedUnreadTotal;
+    final chromeBackgroundColor = _isScrolledUnder
+        ? CupertinoTheme.of(context).barBackgroundColor
+        : CupertinoColors.systemBackground;
 
     return CupertinoPageScaffold(
-      navigationBar: const CupertinoNavigationBar(middle: Text('Chats V2')),
+      navigationBar: CupertinoNavigationBar(
+        backgroundColor: chromeBackgroundColor,
+        middle: const Text('Chats V2'),
+      ),
       child: SafeArea(
         bottom: false,
         child: CustomScrollView(
@@ -138,7 +156,7 @@ class _ChatListV2PageState extends ConsumerState<ChatListV2Page> {
               delegate: _ChatListSegmentHeaderDelegate(
                 activeTab: activeTab,
                 showAllTab: showAllTab,
-                scrollController: _scrollController,
+                isScrolledUnder: _isScrolledUnder,
                 allUnreadCount: allUnread,
                 groupsUnreadCount: groupsUnread,
                 threadsUnreadCount: threadsUnread,
@@ -161,7 +179,7 @@ class _ChatListSegmentHeaderDelegate extends SliverPersistentHeaderDelegate {
   _ChatListSegmentHeaderDelegate({
     required this.activeTab,
     required this.showAllTab,
-    required this.scrollController,
+    required this.isScrolledUnder,
     required this.allUnreadCount,
     required this.groupsUnreadCount,
     required this.threadsUnreadCount,
@@ -172,7 +190,7 @@ class _ChatListSegmentHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   final ChatListTab activeTab;
   final bool showAllTab;
-  final ScrollController scrollController;
+  final bool isScrolledUnder;
   final int allUnreadCount;
   final int groupsUnreadCount;
   final int threadsUnreadCount;
@@ -190,40 +208,32 @@ class _ChatListSegmentHeaderDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    return AnimatedBuilder(
-      animation: scrollController,
-      builder: (context, _) {
-        final isScrolledUnder =
-            scrollController.hasClients && scrollController.offset > 0;
-        final backgroundColor = isScrolledUnder
-            ? CupertinoTheme.of(context).barBackgroundColor
-            : CupertinoColors.systemBackground;
+    final backgroundColor = isScrolledUnder
+        ? CupertinoTheme.of(context).barBackgroundColor
+        : CupertinoColors.systemBackground;
+    final resolvedBackgroundColor = CupertinoDynamicColor.resolve(
+      backgroundColor,
+      context,
+    );
 
-        final resolvedBackgroundColor = CupertinoDynamicColor.resolve(
-          backgroundColor,
-          context,
-        );
-
-        return ClipRect(
-          child: BackdropFilter(
-            enabled: resolvedBackgroundColor.a < 1,
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: ColoredBox(
-              color: resolvedBackgroundColor,
-              child: SizedBox.expand(
-                child: ChatListSegment(
-                  activeTab: activeTab,
-                  showAllTab: showAllTab,
-                  allUnreadCount: allUnreadCount,
-                  groupsUnreadCount: groupsUnreadCount,
-                  threadsUnreadCount: threadsUnreadCount,
-                  onTabChanged: onTabChanged,
-                ),
-              ),
+    return ClipRect(
+      child: BackdropFilter(
+        enabled: resolvedBackgroundColor.a < 1,
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: ColoredBox(
+          color: resolvedBackgroundColor,
+          child: SizedBox.expand(
+            child: ChatListSegment(
+              activeTab: activeTab,
+              showAllTab: showAllTab,
+              allUnreadCount: allUnreadCount,
+              groupsUnreadCount: groupsUnreadCount,
+              threadsUnreadCount: threadsUnreadCount,
+              onTabChanged: onTabChanged,
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -231,7 +241,7 @@ class _ChatListSegmentHeaderDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(covariant _ChatListSegmentHeaderDelegate oldDelegate) {
     return activeTab != oldDelegate.activeTab ||
         showAllTab != oldDelegate.showAllTab ||
-        scrollController != oldDelegate.scrollController ||
+        isScrolledUnder != oldDelegate.isScrolledUnder ||
         allUnreadCount != oldDelegate.allUnreadCount ||
         groupsUnreadCount != oldDelegate.groupsUnreadCount ||
         threadsUnreadCount != oldDelegate.threadsUnreadCount ||
