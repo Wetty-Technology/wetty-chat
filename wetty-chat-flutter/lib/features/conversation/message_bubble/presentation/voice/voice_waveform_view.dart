@@ -1,4 +1,4 @@
-import 'package:chahua/features/conversation/media/application/audio_waveform_cache_service.dart';
+import 'package:chahua/features/audio/application/audio_waveform_cache_service.dart';
 import 'package:chahua/features/conversation/timeline/presentation/voice_message_playback_controller_v2.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:flutter/cupertino.dart';

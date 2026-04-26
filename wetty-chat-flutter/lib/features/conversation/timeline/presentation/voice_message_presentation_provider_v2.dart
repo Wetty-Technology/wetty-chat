@@ -1,6 +1,6 @@
-import 'package:chahua/features/conversation/media/application/audio_duration_probe_service.dart';
-import 'package:chahua/features/conversation/media/application/audio_source_resolver_service.dart';
-import 'package:chahua/features/conversation/media/application/audio_waveform_cache_service.dart';
+import 'package:chahua/features/audio/application/audio_duration_probe_service.dart';
+import 'package:chahua/features/audio/application/audio_source_resolver_service.dart';
+import 'package:chahua/features/audio/application/audio_waveform_cache_service.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

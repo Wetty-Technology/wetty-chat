@@ -12,7 +12,7 @@ import 'package:chahua/features/conversation/timeline/presentation/message_long_
 import 'package:chahua/features/conversation/timeline/presentation/message_overlay_v2.dart';
 import 'package:chahua/features/conversation/message_bubble/presentation/message_row_v2.dart';
 import 'package:chahua/core/session/dev_session_store.dart';
-import 'package:chahua/features/conversation/timeline/presentation/parts/jump_to_latest_fab.dart';
+import 'package:chahua/features/conversation/timeline/presentation/jump_to_latest_fab.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/rendering.dart';

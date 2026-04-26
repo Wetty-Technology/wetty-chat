@@ -4,7 +4,7 @@ import 'dart:developer';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 
-import '../../../../core/cache/media_cache_service.dart';
+import '../../../core/cache/media_cache_service.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
 import 'audio_source_resolver_service.dart';
 
