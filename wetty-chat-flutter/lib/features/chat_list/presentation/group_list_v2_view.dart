@@ -12,72 +12,50 @@ import '../model/chat_list_item.dart';
 import '../application/group_list_v2_view_model.dart';
 
 class GroupListV2View extends ConsumerWidget {
-  const GroupListV2View({
-    super.key,
-    this.scrollController,
-    this.supportsPullToRefresh = false,
-  });
-
-  final ScrollController? scrollController;
-  final bool supportsPullToRefresh;
+  const GroupListV2View({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncState = ref.watch(groupListV2ViewModelProvider);
 
     return asyncState.when(
-      loading: () => const Center(child: CupertinoActivityIndicator()),
-      error: (error, _) => Center(child: Text(error.toString())),
+      loading: () => const SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(child: CupertinoActivityIndicator()),
+      ),
+      error: (error, _) => SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(child: Text(error.toString())),
+      ),
       data: (viewState) {
         if (viewState.errorMessage != null && viewState.groups.isEmpty) {
-          return Center(child: Text(viewState.errorMessage!));
+          return SliverFillRemaining(
+            hasScrollBody: false,
+            child: Center(child: Text(viewState.errorMessage!)),
+          );
         }
         if (viewState.groups.isEmpty) {
-          return const Center(child: Text('No groups yet'));
-        }
-
-        if (supportsPullToRefresh) {
-          return CustomScrollView(
-            controller: scrollController,
-            physics: const AlwaysScrollableScrollPhysics(
-              parent: BouncingScrollPhysics(),
-            ),
-            slivers: [
-              CupertinoSliverRefreshControl(
-                onRefresh: () => ref
-                    .read(groupListV2ViewModelProvider.notifier)
-                    .refreshGroups(),
-              ),
-              SliverList.builder(
-                itemCount: viewState.groups.length,
-                itemBuilder: (context, index) =>
-                    _GroupListV2Row(chat: viewState.groups[index]),
-              ),
-              if (viewState.isLoadingMore)
-                const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Center(child: CupertinoActivityIndicator()),
-                  ),
-                ),
-            ],
+          return const SliverFillRemaining(
+            hasScrollBody: false,
+            child: Center(child: Text('No groups yet')),
           );
         }
 
-        return ListView.builder(
-          controller: scrollController,
-          physics: const AlwaysScrollableScrollPhysics(),
-          itemCount:
-              viewState.groups.length + (viewState.isLoadingMore ? 1 : 0),
-          itemBuilder: (context, index) {
-            if (index >= viewState.groups.length) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: Center(child: CupertinoActivityIndicator()),
-              );
-            }
-            return _GroupListV2Row(chat: viewState.groups[index]);
-          },
+        return SliverMainAxisGroup(
+          slivers: [
+            SliverList.builder(
+              itemCount: viewState.groups.length,
+              itemBuilder: (context, index) =>
+                  _GroupListV2Row(chat: viewState.groups[index]),
+            ),
+            if (viewState.isLoadingMore)
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Center(child: CupertinoActivityIndicator()),
+                ),
+              ),
+          ],
         );
       },
     );

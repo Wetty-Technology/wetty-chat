@@ -18,14 +18,7 @@ import '../application/group_list_v2_view_model.dart';
 import '../application/thread_list_v2_view_model.dart';
 
 class AllListV2View extends ConsumerWidget {
-  const AllListV2View({
-    super.key,
-    this.scrollController,
-    this.supportsPullToRefresh = false,
-  });
-
-  final ScrollController? scrollController;
-  final bool supportsPullToRefresh;
+  const AllListV2View({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -37,56 +30,40 @@ class AllListV2View extends ConsumerWidget {
         items.isEmpty && groupAsync.isLoading && threadAsync.isLoading;
 
     if (isInitialLoading) {
-      return const Center(child: CupertinoActivityIndicator());
-    }
-
-    if (uiState.errorMessage != null && items.isEmpty) {
-      return Center(child: Text(uiState.errorMessage!));
-    }
-
-    if (items.isEmpty) {
-      return const Center(child: Text('No chats or threads yet'));
-    }
-
-    if (supportsPullToRefresh) {
-      return CustomScrollView(
-        controller: scrollController,
-        physics: const AlwaysScrollableScrollPhysics(
-          parent: BouncingScrollPhysics(),
-        ),
-        slivers: [
-          CupertinoSliverRefreshControl(
-            onRefresh: () =>
-                ref.read(allListV2ViewModelProvider.notifier).refreshAll(),
-          ),
-          SliverList.builder(
-            itemCount: items.length,
-            itemBuilder: (context, index) => _AllListV2Row(item: items[index]),
-          ),
-          if (uiState.isLoadingMore)
-            const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: Center(child: CupertinoActivityIndicator()),
-              ),
-            ),
-        ],
+      return const SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(child: CupertinoActivityIndicator()),
       );
     }
 
-    return ListView.builder(
-      controller: scrollController,
-      physics: const AlwaysScrollableScrollPhysics(),
-      itemCount: items.length + (uiState.isLoadingMore ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index >= items.length) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Center(child: CupertinoActivityIndicator()),
-          );
-        }
-        return _AllListV2Row(item: items[index]);
-      },
+    if (uiState.errorMessage != null && items.isEmpty) {
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(child: Text(uiState.errorMessage!)),
+      );
+    }
+
+    if (items.isEmpty) {
+      return const SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(child: Text('No chats or threads yet')),
+      );
+    }
+
+    return SliverMainAxisGroup(
+      slivers: [
+        SliverList.builder(
+          itemCount: items.length,
+          itemBuilder: (context, index) => _AllListV2Row(item: items[index]),
+        ),
+        if (uiState.isLoadingMore)
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Center(child: CupertinoActivityIndicator()),
+            ),
+          ),
+      ],
     );
   }
 }

@@ -7,32 +7,16 @@ import '../thread_list_v2_view.dart';
 import 'chat_list_segment.dart';
 
 class ChatListV2TabBody extends ConsumerWidget {
-  const ChatListV2TabBody({
-    super.key,
-    required this.activeTab,
-    required this.scrollController,
-    required this.supportsPullToRefresh,
-  });
+  const ChatListV2TabBody({super.key, required this.activeTab});
 
   final ChatListTab activeTab;
-  final ScrollController scrollController;
-  final bool supportsPullToRefresh;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return switch (activeTab) {
-      ChatListTab.groups => GroupListV2View(
-        scrollController: scrollController,
-        supportsPullToRefresh: supportsPullToRefresh,
-      ),
-      ChatListTab.threads => ThreadListV2View(
-        scrollController: scrollController,
-        supportsPullToRefresh: supportsPullToRefresh,
-      ),
-      ChatListTab.all => AllListV2View(
-        scrollController: scrollController,
-        supportsPullToRefresh: supportsPullToRefresh,
-      ),
+      ChatListTab.groups => const GroupListV2View(),
+      ChatListTab.threads => const ThreadListV2View(),
+      ChatListTab.all => const AllListV2View(),
     };
   }
 }

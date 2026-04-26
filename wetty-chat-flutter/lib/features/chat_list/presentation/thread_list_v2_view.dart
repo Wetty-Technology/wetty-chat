@@ -9,22 +9,19 @@ import 'widgets/thread_list_row.dart';
 import '../application/thread_list_v2_view_model.dart';
 
 class ThreadListV2View extends ConsumerWidget {
-  const ThreadListV2View({
-    super.key,
-    this.scrollController,
-    this.supportsPullToRefresh = false,
-  });
-
-  final ScrollController? scrollController;
-  final bool supportsPullToRefresh;
+  const ThreadListV2View({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncState = ref.watch(threadListV2ViewModelProvider);
 
     return asyncState.when(
-      loading: () => const Center(child: CupertinoActivityIndicator()),
-      error: (error, _) => Center(
+      loading: () => const SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(child: CupertinoActivityIndicator()),
+      ),
+      error: (error, _) => SliverFillRemaining(
+        hasScrollBody: false,
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -42,7 +39,8 @@ class ThreadListV2View extends ConsumerWidget {
       ),
       data: (viewState) {
         if (viewState.errorMessage != null && viewState.threads.isEmpty) {
-          return Center(
+          return SliverFillRemaining(
+            hasScrollBody: false,
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: Column(
@@ -62,56 +60,32 @@ class ThreadListV2View extends ConsumerWidget {
         }
 
         if (viewState.threads.isEmpty) {
-          return Center(
-            child: Text(
-              'No threads yet',
-              style: appSecondaryTextStyle(context),
+          return SliverFillRemaining(
+            hasScrollBody: false,
+            child: Center(
+              child: Text(
+                'No threads yet',
+                style: appSecondaryTextStyle(context),
+              ),
             ),
           );
         }
 
-        if (supportsPullToRefresh) {
-          return CustomScrollView(
-            controller: scrollController,
-            physics: const AlwaysScrollableScrollPhysics(
-              parent: BouncingScrollPhysics(),
+        return SliverMainAxisGroup(
+          slivers: [
+            SliverList.builder(
+              itemCount: viewState.threads.length,
+              itemBuilder: (context, index) =>
+                  _ThreadListV2Row(thread: viewState.threads[index]),
             ),
-            slivers: [
-              CupertinoSliverRefreshControl(
-                onRefresh: () => ref
-                    .read(threadListV2ViewModelProvider.notifier)
-                    .refreshThreads(),
-              ),
-              SliverList.builder(
-                itemCount: viewState.threads.length,
-                itemBuilder: (context, index) =>
-                    _ThreadListV2Row(thread: viewState.threads[index]),
-              ),
-              if (viewState.isLoadingMore)
-                const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Center(child: CupertinoActivityIndicator()),
-                  ),
+            if (viewState.isLoadingMore)
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Center(child: CupertinoActivityIndicator()),
                 ),
-            ],
-          );
-        }
-
-        return ListView.builder(
-          controller: scrollController,
-          physics: const AlwaysScrollableScrollPhysics(),
-          itemCount:
-              viewState.threads.length + (viewState.isLoadingMore ? 1 : 0),
-          itemBuilder: (context, index) {
-            if (index >= viewState.threads.length) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: Center(child: CupertinoActivityIndicator()),
-              );
-            }
-            return _ThreadListV2Row(thread: viewState.threads[index]);
-          },
+              ),
+          ],
         );
       },
     );

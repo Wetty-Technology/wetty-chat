@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -96,6 +98,17 @@ class _ChatListV2PageState extends ConsumerState<ChatListV2Page> {
     }
   }
 
+  Future<void> _refreshActiveTab(ChatListTab activeTab) {
+    return switch (activeTab) {
+      ChatListTab.groups =>
+        ref.read(groupListV2ViewModelProvider.notifier).refreshGroups(),
+      ChatListTab.threads =>
+        ref.read(threadListV2ViewModelProvider.notifier).refreshThreads(),
+      ChatListTab.all =>
+        ref.read(allListV2ViewModelProvider.notifier).refreshAll(),
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(appSettingsProvider);
@@ -112,26 +125,116 @@ class _ChatListV2PageState extends ConsumerState<ChatListV2Page> {
       navigationBar: const CupertinoNavigationBar(middle: Text('Chats V2')),
       child: SafeArea(
         bottom: false,
-        child: Column(
-          children: [
-            ChatListSegment(
-              activeTab: activeTab,
-              showAllTab: showAllTab,
-              allUnreadCount: allUnread,
-              groupsUnreadCount: groupsUnread,
-              threadsUnreadCount: threadsUnread,
-              onTabChanged: (tab) => setState(() => _activeTab = tab),
-            ),
-            Expanded(
-              child: ChatListV2TabBody(
+        child: CustomScrollView(
+          controller: _scrollController,
+          physics: _supportsPullToRefresh
+              ? const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
+                )
+              : const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _ChatListSegmentHeaderDelegate(
                 activeTab: activeTab,
+                showAllTab: showAllTab,
                 scrollController: _scrollController,
-                supportsPullToRefresh: _supportsPullToRefresh,
+                allUnreadCount: allUnread,
+                groupsUnreadCount: groupsUnread,
+                threadsUnreadCount: threadsUnread,
+                onTabChanged: (tab) => setState(() => _activeTab = tab),
               ),
             ),
+            if (_supportsPullToRefresh)
+              CupertinoSliverRefreshControl(
+                onRefresh: () => _refreshActiveTab(activeTab),
+              ),
+            ChatListV2TabBody(activeTab: activeTab),
           ],
         ),
       ),
     );
+  }
+}
+
+class _ChatListSegmentHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _ChatListSegmentHeaderDelegate({
+    required this.activeTab,
+    required this.showAllTab,
+    required this.scrollController,
+    required this.allUnreadCount,
+    required this.groupsUnreadCount,
+    required this.threadsUnreadCount,
+    required this.onTabChanged,
+  });
+
+  static const double _extent = 48;
+
+  final ChatListTab activeTab;
+  final bool showAllTab;
+  final ScrollController scrollController;
+  final int allUnreadCount;
+  final int groupsUnreadCount;
+  final int threadsUnreadCount;
+  final ValueChanged<ChatListTab> onTabChanged;
+
+  @override
+  double get minExtent => _extent;
+
+  @override
+  double get maxExtent => _extent;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return AnimatedBuilder(
+      animation: scrollController,
+      builder: (context, _) {
+        final isScrolledUnder =
+            scrollController.hasClients && scrollController.offset > 0;
+        final backgroundColor = isScrolledUnder
+            ? CupertinoTheme.of(context).barBackgroundColor
+            : CupertinoColors.systemBackground;
+
+        final resolvedBackgroundColor = CupertinoDynamicColor.resolve(
+          backgroundColor,
+          context,
+        );
+
+        return ClipRect(
+          child: BackdropFilter(
+            enabled: resolvedBackgroundColor.a < 1,
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: ColoredBox(
+              color: resolvedBackgroundColor,
+              child: SizedBox.expand(
+                child: ChatListSegment(
+                  activeTab: activeTab,
+                  showAllTab: showAllTab,
+                  allUnreadCount: allUnreadCount,
+                  groupsUnreadCount: groupsUnreadCount,
+                  threadsUnreadCount: threadsUnreadCount,
+                  onTabChanged: onTabChanged,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _ChatListSegmentHeaderDelegate oldDelegate) {
+    return activeTab != oldDelegate.activeTab ||
+        showAllTab != oldDelegate.showAllTab ||
+        scrollController != oldDelegate.scrollController ||
+        allUnreadCount != oldDelegate.allUnreadCount ||
+        groupsUnreadCount != oldDelegate.groupsUnreadCount ||
+        threadsUnreadCount != oldDelegate.threadsUnreadCount ||
+        onTabChanged != oldDelegate.onTabChanged;
   }
 }
