@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:chahua/core/cache/media_cache_service.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:voice_message/voice_message.dart';
@@ -48,9 +47,18 @@ class AudioSourceResolverService {
       return null;
     }
 
-    final playbackFile = _requiresTranscode(attachment)
-        ? await _resolvePreparedLocalFile(attachment)
-        : await _mediaCacheService.getOrFetchOriginal(attachment);
+    final preparation = VoiceMessage.playbackPreparationFor(
+      contentType: attachment.kind,
+      fileName: attachment.fileName,
+      urlPath: Uri.tryParse(attachment.url)?.path,
+    );
+    final playbackFile = switch (preparation) {
+      VoiceMessagePlaybackPreparation.passthrough =>
+        await _mediaCacheService.getOrFetchOriginal(attachment),
+      VoiceMessagePlaybackPreparation.convertOggOpusToM4a =>
+        await _resolvePreparedLocalFile(attachment),
+      VoiceMessagePlaybackPreparation.unsupported => null,
+    };
     if (playbackFile == null) {
       return null;
     }
@@ -65,13 +73,6 @@ class AudioSourceResolverService {
     return source?.localWaveformPath;
   }
 
-  bool _requiresTranscode(AttachmentItem attachment) {
-    return audioAttachmentNeedsAppleTranscode(
-      attachment,
-      isApplePlatform: Platform.isIOS || Platform.isMacOS,
-    );
-  }
-
   Future<File?> _resolvePreparedLocalFile(AttachmentItem attachment) async {
     try {
       return await _mediaCacheService.getOrCreateDerived(
@@ -82,14 +83,21 @@ class AudioSourceResolverService {
           final tempDirectory = await getTemporaryDirectory();
           final cacheKey = _mediaCacheService.cacheKeyForAttachment(attachment);
           final outputFile = File('${tempDirectory.path}/$cacheKey.m4a');
-          await VoiceMessage.convertOggToM4a(
-            srcPath: originalFile.path,
-            destPath: outputFile.path,
+          final prepared = await VoiceMessage.preparePlaybackFile(
+            inputPath: originalFile.path,
+            outputPath: outputFile.path,
+            contentType: attachment.kind,
+            fileName: attachment.fileName,
+            urlPath: Uri.tryParse(attachment.url)?.path,
           );
-          if (!await outputFile.exists()) {
+          if (prepared == null || !prepared.isTranscoded) {
             return null;
           }
-          return outputFile;
+          final preparedFile = File(prepared.path);
+          if (!await preparedFile.exists()) {
+            return null;
+          }
+          return preparedFile;
         },
       );
     } catch (error, stackTrace) {
@@ -102,49 +110,6 @@ class AudioSourceResolverService {
       return null;
     }
   }
-}
-
-@visibleForTesting
-bool audioAttachmentNeedsAppleTranscode(
-  AttachmentItem attachment, {
-  required bool isApplePlatform,
-}) {
-  if (!isApplePlatform || !attachment.isAudio || attachment.url.isEmpty) {
-    return false;
-  }
-
-  final kind = attachment.kind.toLowerCase();
-  final fileName = attachment.fileName.toLowerCase();
-  final urlPath = Uri.tryParse(attachment.url)?.path.toLowerCase() ?? '';
-  final extension = _audioFileExtension(fileName, urlPath);
-
-  if (kind.contains('webm') || extension == 'webm') {
-    return true;
-  }
-  if (kind.contains('ogg') ||
-      extension == 'ogg' ||
-      extension == 'oga' ||
-      extension == 'opus') {
-    return true;
-  }
-
-  return false;
-}
-
-String? _audioFileExtension(String fileName, String urlPath) {
-  final candidates = <String>[fileName, urlPath];
-  for (final candidate in candidates) {
-    final trimmed = candidate.trim();
-    if (trimmed.isEmpty) {
-      continue;
-    }
-    final dotIndex = trimmed.lastIndexOf('.');
-    if (dotIndex == -1 || dotIndex == trimmed.length - 1) {
-      continue;
-    }
-    return trimmed.substring(dotIndex + 1).toLowerCase();
-  }
-  return null;
 }
 
 final audioSourceResolverServiceProvider = Provider<AudioSourceResolverService>(

@@ -204,11 +204,11 @@ class AudioWaveformCacheService {
     required String audioFilePath,
     Duration? duration,
   }) async {
-    final samples = await VoiceMessage.extractWaveform(
+    final samples = await VoiceMessage.tryExtractWaveform(
       path: audioFilePath,
       samplesCount: targetBarCount,
     );
-    if (samples.isEmpty) {
+    if (samples == null || samples.isEmpty) {
       return null;
     }
 
