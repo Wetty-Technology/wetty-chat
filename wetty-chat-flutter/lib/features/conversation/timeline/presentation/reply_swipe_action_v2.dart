@@ -76,6 +76,7 @@ class _ReplySwipeActionV2State extends State<ReplySwipeActionV2> {
         : 0.0;
 
     return GestureDetector(
+      behavior: HitTestBehavior.translucent,
       onHorizontalDragUpdate: widget.enabled
           ? _handleHorizontalDragUpdate
           : null,
