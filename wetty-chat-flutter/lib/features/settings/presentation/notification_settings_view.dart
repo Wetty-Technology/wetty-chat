@@ -42,10 +42,10 @@ class NotificationSettingsPage extends ConsumerWidget {
                                 : CupertinoColors.systemRed,
                           ),
                   ),
-                  if (pushState.apnsEnvironment != null)
+                  if (pushState.environment != null)
                     CupertinoListTile(
                       title: const Text('Environment'),
-                      additionalInfo: Text(pushState.apnsEnvironment!),
+                      additionalInfo: Text(pushState.environment!),
                     ),
                   if (pushState.deviceToken != null)
                     CupertinoListTile(
@@ -99,6 +99,12 @@ class NotificationSettingsPage extends ConsumerWidget {
     WidgetRef ref,
     PushNotificationState pushState,
   ) {
+    if (pushState.isUnsupported) {
+      return const CupertinoListTile(
+        title: Text('Notifications Unavailable'),
+        subtitle: Text('Push notifications are not supported on this platform'),
+      );
+    }
     if (pushState.isAuthorized) {
       return const CupertinoListTile(
         title: Text('Notifications Enabled'),

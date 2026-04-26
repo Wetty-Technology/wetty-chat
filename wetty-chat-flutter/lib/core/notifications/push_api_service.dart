@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../network/dio_client.dart';
+import 'push_platform_client.dart';
 
 /// Raw HTTP calls for push subscription endpoints. No state.
 class PushApiService {
@@ -9,47 +10,23 @@ class PushApiService {
 
   PushApiService(this._dio);
 
-  /// Register an APNs device token with the backend.
-  Future<void> subscribe({
-    required String deviceToken,
-    required String environment,
-  }) async {
-    await _dio.post<void>(
-      '/push/subscribe',
-      data: {
-        'provider': 'apns',
-        'deviceToken': deviceToken,
-        'environment': environment,
-      },
-    );
+  /// Register a platform push token with the backend.
+  Future<void> subscribe(PushSubscriptionDescriptor descriptor) async {
+    await _dio.post<void>('/push/subscribe', data: descriptor.toJson());
   }
 
-  /// Remove an APNs device token from the backend.
-  Future<void> unsubscribe({
-    required String deviceToken,
-    required String environment,
-  }) async {
-    await _dio.post<void>(
-      '/push/unsubscribe',
-      data: {
-        'provider': 'apns',
-        'deviceToken': deviceToken,
-        'environment': environment,
-      },
-    );
+  /// Remove a platform push token from the backend.
+  Future<void> unsubscribe(PushSubscriptionDescriptor descriptor) async {
+    await _dio.post<void>('/push/unsubscribe', data: descriptor.toJson());
   }
 
   /// Check whether a specific device token is registered.
   Future<SubscriptionStatusResponse> getSubscriptionStatus({
-    String? deviceToken,
-    String? environment,
+    required PushSubscriptionDescriptor descriptor,
   }) async {
-    final query = <String, String>{'provider': 'apns'};
-    if (deviceToken != null) query['deviceToken'] = deviceToken;
-    if (environment != null) query['environment'] = environment;
     final response = await _dio.get<Map<String, dynamic>>(
       '/push/subscription-status',
-      queryParameters: query,
+      queryParameters: descriptor.toQueryParameters(),
     );
     return SubscriptionStatusResponse.fromJson(response.data!);
   }

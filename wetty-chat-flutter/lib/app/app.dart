@@ -8,8 +8,8 @@ import '../core/network/api_config.dart';
 import '../core/network/ws_app_visibility.dart';
 import '../core/network/ws_event_router.dart';
 import '../core/network/websocket_service.dart';
-import '../core/notifications/apns_channel.dart';
 import '../core/notifications/notification_tap_handler.dart';
+import '../core/notifications/push_platform_client.dart';
 import '../core/notifications/push_notification_provider.dart';
 import '../core/notifications/unread_badge_provider.dart';
 import '../core/session/dev_session_store.dart';
@@ -61,10 +61,10 @@ class _WettyChatAppState extends ConsumerState<WettyChatApp>
     if (_pushInitialized) return;
     _pushInitialized = true;
 
-    final apns = ref.read(apnsChannelProvider);
+    final pushClient = ref.read(pushPlatformClientProvider);
     final router = ref.read(appRouterProvider);
     _tapHandler = NotificationTapHandler(
-      apns,
+      pushClient,
       router,
       onNotificationHandled: () => ref
           .read(appRefreshCoordinatorProvider)

@@ -5,30 +5,30 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/routing/route_names.dart';
 import '../../features/conversation/shared/domain/launch_request.dart';
-import 'apns_channel.dart';
+import 'push_platform_client.dart';
 
 /// Handles push notification taps by navigating to the relevant chat or thread.
 ///
 /// Initialize this once in the app widget via [ref.listen] or by reading the
-/// provider. It subscribes to [ApnsChannel.onNotificationTapped] and uses
+/// provider. It subscribes to platform notification taps and uses
 /// [GoRouter] to navigate.
 class NotificationTapHandler {
   NotificationTapHandler(
-    this._apns,
+    this._pushClient,
     this._router, {
     this.onNotificationHandled,
   }) {
-    _sub = _apns.onNotificationTapped.listen(_handleTap);
+    _sub = _pushClient.onNotificationTapped.listen(_handleTap);
   }
 
-  final ApnsChannel _apns;
+  final PushPlatformClient _pushClient;
   final GoRouter _router;
   final Future<void> Function()? onNotificationHandled;
   StreamSubscription<Map<String, dynamic>>? _sub;
 
   /// Process the launch notification that cold-started the app, if any.
   Future<void> handleLaunchNotification() async {
-    final payload = await _apns.getLaunchNotification();
+    final payload = await _pushClient.getLaunchNotification();
     if (payload != null) {
       _handleTap(payload);
     }
