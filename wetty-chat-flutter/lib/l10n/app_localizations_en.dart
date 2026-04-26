@@ -240,6 +240,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get startThread => 'Start Thread';
 
   @override
+  String get pinMessage => 'Pin';
+
+  @override
+  String get unpinMessage => 'Unpin';
+
+  @override
+  String get pinnedMessages => 'Pinned Messages';
+
+  @override
   String get newThreadInstruction =>
       'Reply to this message to start the thread.';
 

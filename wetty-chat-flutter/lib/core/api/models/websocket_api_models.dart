@@ -2,6 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 import '../converters/flexible_int_converter.dart';
 import 'messages_api_models.dart';
+import 'pins_api_models.dart';
 
 part 'websocket_api_models.g.dart';
 
@@ -82,6 +83,10 @@ sealed class ApiWsEvent {
         return ReactionUpdatedWsEvent.fromJson(json);
       case 'threadUpdate':
         return ThreadUpdatedWsEvent.fromJson(json);
+      case 'pinAdded':
+        return PinAddedWsEvent.fromJson(json);
+      case 'pinRemoved':
+        return PinRemovedWsEvent.fromJson(json);
       case 'stickerPackOrderUpdated':
         final payload = StickerPackOrderUpdatePayloadDto.fromJson(
           json['payload'] as Map<String, dynamic>,
@@ -216,6 +221,34 @@ class ThreadUpdatedWsEvent extends ApiWsEvent {
       _$ThreadUpdatedWsEventFromJson(json);
 
   Map<String, dynamic> toJson() => _$ThreadUpdatedWsEventToJson(this);
+}
+
+class PinAddedWsEvent extends ApiWsEvent {
+  const PinAddedWsEvent({required this.payload});
+
+  factory PinAddedWsEvent.fromJson(Map<String, dynamic> json) {
+    return PinAddedWsEvent(
+      payload: PinUpdatePayloadDto.fromJson(
+        json['payload'] as Map<String, dynamic>,
+      ),
+    );
+  }
+
+  final PinUpdatePayloadDto payload;
+}
+
+class PinRemovedWsEvent extends ApiWsEvent {
+  const PinRemovedWsEvent({required this.payload});
+
+  factory PinRemovedWsEvent.fromJson(Map<String, dynamic> json) {
+    return PinRemovedWsEvent(
+      payload: PinUpdatePayloadDto.fromJson(
+        json['payload'] as Map<String, dynamic>,
+      ),
+    );
+  }
+
+  final PinUpdatePayloadDto payload;
 }
 
 @JsonSerializable(explicitToJson: true)

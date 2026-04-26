@@ -229,6 +229,15 @@
   "startThread": "Start Thread",
   "@startThread": { "description": "Message action label for starting a thread" },
 
+  "pinMessage": "Pin",
+  "@pinMessage": { "description": "Message action label for pinning a message" },
+
+  "unpinMessage": "Unpin",
+  "@unpinMessage": { "description": "Message action label for unpinning a message" },
+
+  "pinnedMessages": "Pinned Messages",
+  "@pinnedMessages": { "description": "Title for the pinned messages list" },
+
   "newThreadInstruction": "Reply to this message to start the thread.",
   "@newThreadInstruction": { "description": "Instruction shown above a new thread composer" },
 

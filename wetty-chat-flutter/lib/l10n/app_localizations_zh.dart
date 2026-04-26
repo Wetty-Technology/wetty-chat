@@ -237,6 +237,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get startThread => '创建话题';
 
   @override
+  String get pinMessage => '置顶';
+
+  @override
+  String get unpinMessage => '取消置顶';
+
+  @override
+  String get pinnedMessages => '置顶消息';
+
+  @override
   String get newThreadInstruction => '回复这条消息以开始话题。';
 
   @override
@@ -612,6 +621,15 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get startThread => '開始話題';
+
+  @override
+  String get pinMessage => '置頂';
+
+  @override
+  String get unpinMessage => '取消置頂';
+
+  @override
+  String get pinnedMessages => '置頂訊息';
 
   @override
   String get newThreadInstruction => '回覆這則訊息以開始話題。';

@@ -7,14 +7,18 @@ import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/core/session/dev_session_store.dart';
 import 'package:chahua/features/shared/application/app_refresh_coordinator.dart';
 import 'package:chahua/features/conversation/compose/presentation/conversation_composer_view_model.dart';
+import 'package:chahua/features/conversation/pins/application/pinned_messages_provider.dart';
+import 'package:chahua/features/conversation/pins/domain/pinned_message.dart';
+import 'package:chahua/features/conversation/pins/presentation/pinned_message_banner.dart';
 import 'package:chahua/features/conversation/timeline/presentation/conversation_timeline_view_model.dart';
+import 'package:chahua/features/conversation/timeline/presentation/conversation_timeline_view.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
+import 'package:chahua/features/groups/metadata/application/group_metadata_view_model.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:chahua/features/conversation/shared/domain/launch_request.dart';
 import 'package:chahua/features/conversation/compose/presentation/conversation_compose_v2.dart';
 import 'package:chahua/features/conversation/timeline/presentation/message_long_press_details_v2.dart';
 import 'package:chahua/features/conversation/timeline/presentation/message_overlay_v2.dart';
-import 'package:chahua/features/conversation/timeline/presentation/conversation_timeline_view.dart';
 import 'package:chahua/features/conversation/shared/presentation/conversation_presentation_scope.dart';
 import 'package:chahua/l10n/app_localizations.dart';
 
@@ -53,6 +57,7 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
       GlobalKey<ConversationComposeV2State>();
   late final AppRefreshCoordinator _refreshCoordinator;
   MessageLongPressDetailsV2? _activeOverlay;
+  MessageVisibilityWindow? _visibleMessages;
 
   @override
   void initState() {
@@ -68,6 +73,7 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
       return;
     }
     _refreshCoordinator.unregisterConversationRecovery(oldWidget.identity);
+    _visibleMessages = null;
     _registerRecovery();
   }
 
@@ -173,6 +179,36 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
     }
   }
 
+  Future<void> _pinMessage(ConversationMessageV2 message) async {
+    final messageId = message.serverMessageId;
+    if (messageId == null) {
+      return;
+    }
+    try {
+      await ref
+          .read(pinnedMessagesProvider(widget.identity).notifier)
+          .pinMessage(messageId);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      _showErrorDialog('$error');
+    }
+  }
+
+  Future<void> _unpinMessage(PinnedMessage pin) async {
+    try {
+      await ref
+          .read(pinnedMessagesProvider(widget.identity).notifier)
+          .unpin(pin);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      _showErrorDialog('$error');
+    }
+  }
+
   void _confirmDelete(ConversationMessageV2 message) {
     final l10n = AppLocalizations.of(context)!;
     showCupertinoDialog<void>(
@@ -219,6 +255,8 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
     final l10n = AppLocalizations.of(context)!;
     final currentUserId = ref.read(authSessionProvider).currentUserId;
     final isOwn = message.sender.uid == currentUserId;
+    final canManagePins = _canManagePins;
+    final pinnedPin = _pinForMessage(message);
     final composerNotifier = ref.read(
       conversationComposerViewModelProvider(widget.identity).notifier,
     );
@@ -238,6 +276,19 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
           onPressed: () {
             _dismissMessageOverlay();
             widget.onStartThread!(message);
+          },
+        ),
+      if (canManagePins && _canPinMessage(message))
+        MessageOverlayActionV2(
+          label: pinnedPin == null ? l10n.pinMessage : l10n.unpinMessage,
+          icon: pinnedPin == null ? CupertinoIcons.pin : CupertinoIcons.xmark,
+          onPressed: () {
+            _dismissMessageOverlay();
+            if (pinnedPin == null) {
+              unawaited(_pinMessage(message));
+            } else {
+              unawaited(_unpinMessage(pinnedPin));
+            }
           },
         ),
       if (isOwn && message.content is! AudioMessageContent)
@@ -269,10 +320,100 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
         message.threadInfo == null;
   }
 
+  bool _canPinMessage(ConversationMessageV2 message) {
+    return widget.identity.threadRootId == null &&
+        message.serverMessageId != null &&
+        !message.isDeleted &&
+        message.content is! SystemMessageContent;
+  }
+
+  bool get _canManagePins {
+    if (widget.identity.threadRootId != null) {
+      return false;
+    }
+    final metadata = ref
+        .watch(
+          groupMetadataViewModelProvider(widget.identity.chatId.toString()),
+        )
+        .value;
+    return metadata?.myRole?.toLowerCase() == 'admin';
+  }
+
+  PinnedMessage? _pinForMessage(ConversationMessageV2 message) {
+    final messageId = message.serverMessageId;
+    if (messageId == null) {
+      return null;
+    }
+    final pins = ref.watch(pinnedMessagesProvider(widget.identity)).value;
+    if (pins == null) {
+      return null;
+    }
+    for (final pin in pins) {
+      if (pin.messageId == messageId) {
+        return pin;
+      }
+    }
+    return null;
+  }
+
+  PinnedMessage? _activePin(List<PinnedMessage> pins) {
+    if (pins.isEmpty) {
+      return null;
+    }
+    final firstVisibleMessageId = _visibleMessages?.firstVisibleMessageId;
+    if (firstVisibleMessageId == null) {
+      return pins.first;
+    }
+    for (final pin in pins) {
+      final pinMessageId = pin.messageId;
+      if (pinMessageId != null && pinMessageId <= firstVisibleMessageId) {
+        return pin;
+      }
+    }
+    return pins.last;
+  }
+
+  void _openPinnedMessage(PinnedMessage pin) {
+    final messageId = pin.messageId;
+    if (messageId == null) {
+      return;
+    }
+    ref
+        .read(conversationTimelineViewModelProvider(widget.identity).notifier)
+        .jumpToMessageServerId(messageId, highlight: true);
+  }
+
+  void _showPinnedMessageList({
+    required List<PinnedMessage> pins,
+    required bool canManagePins,
+  }) {
+    showCupertinoModalPopup<void>(
+      context: context,
+      builder: (context) => PinnedMessageListModal(
+        pins: pins,
+        canManagePins: canManagePins,
+        onOpenPin: (pin) {
+          Navigator.pop(context);
+          _openPinnedMessage(pin);
+        },
+        onUnpin: (pin) => unawaited(_unpinMessage(pin)),
+        onOpenThread: widget.onOpenThread == null
+            ? null
+            : (pin) {
+                Navigator.pop(context);
+                widget.onOpenThread!(pin.message);
+              },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final isThreadView = widget.identity.threadRootId != null;
+    final canManagePins = _canManagePins;
+    final pins = ref.watch(pinnedMessagesProvider(widget.identity)).value;
+    final activePin = pins == null ? null : _activePin(pins);
 
     return ConversationPresentationScope(
       isThreadView: isThreadView,
@@ -287,6 +428,25 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (activePin != null && pins != null)
+                  PinnedMessageBanner(
+                    pin: activePin,
+                    pinCount: pins.length,
+                    canManagePins: canManagePins,
+                    onOpenPin: () => _openPinnedMessage(activePin),
+                    onOpenPinList: () => _showPinnedMessageList(
+                      pins: pins,
+                      canManagePins: canManagePins,
+                    ),
+                    onUnpin: () => unawaited(_unpinMessage(activePin)),
+                    onOpenThread:
+                        activePin.message.threadInfo != null &&
+                            (activePin.message.threadInfo?.replyCount ?? 0) >
+                                0 &&
+                            widget.onOpenThread != null
+                        ? () => widget.onOpenThread!(activePin.message)
+                        : null,
+                  ),
                 Expanded(
                   child: Container(
                     color: colors.chatBackground,
@@ -297,6 +457,14 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
                       onOpenThread: widget.onOpenThread,
                       onStartThread: widget.onStartThread,
                       onMessageLongPress: _handleMessageLongPress,
+                      onMessageVisibilityChanged: (window) {
+                        if (_visibleMessages == window) {
+                          return;
+                        }
+                        setState(() {
+                          _visibleMessages = window;
+                        });
+                      },
                     ),
                   ),
                 ),

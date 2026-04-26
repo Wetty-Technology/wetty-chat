@@ -15,5 +15,55 @@ void main() {
 
       expect(dto.toJson(), {'type': 'appState', 'state': 'active'});
     });
+
+    test('ApiWsEvent parses pinAdded payloads', () {
+      final event =
+          ApiWsEvent.fromJson(<String, Object?>{
+                'type': 'pinAdded',
+                'payload': <String, Object?>{
+                  'chatId': '10',
+                  'pinId': '100',
+                  'messageId': '200',
+                  'pin': <String, Object?>{
+                    'id': '100',
+                    'chatId': '10',
+                    'message': <String, Object?>{
+                      'id': '200',
+                      'chatId': '10',
+                      'message': 'Pinned hello',
+                      'sender': <String, Object?>{'uid': 2, 'name': 'Ada'},
+                    },
+                    'pinnedBy': 2,
+                    'pinnedAt': '2026-04-26T10:15:00Z',
+                  },
+                },
+              })
+              as PinAddedWsEvent?;
+
+      expect(event, isNotNull);
+      expect(event!.payload.chatId, 10);
+      expect(event.payload.pinId, 100);
+      expect(event.payload.messageId, 200);
+      expect(event.payload.pin?.message.message, 'Pinned hello');
+    });
+
+    test('ApiWsEvent parses pinRemoved payloads', () {
+      final event =
+          ApiWsEvent.fromJson(<String, Object?>{
+                'type': 'pinRemoved',
+                'payload': <String, Object?>{
+                  'chatId': '10',
+                  'pinId': '100',
+                  'messageId': '200',
+                },
+              })
+              as PinRemovedWsEvent?;
+
+      expect(event, isNotNull);
+      expect(event!.payload.chatId, 10);
+      expect(event.payload.pinId, 100);
+      expect(event.payload.messageId, 200);
+      expect(event.payload.pin, isNull);
+    });
   });
 }

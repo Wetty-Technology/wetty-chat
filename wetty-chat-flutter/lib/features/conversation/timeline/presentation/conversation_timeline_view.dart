@@ -79,6 +79,54 @@ int? _resolveLastVisibleMessageIdAtViewportMidpoint({
   return lastVisibleMessageId;
 }
 
+class MessageVisibilityWindow {
+  const MessageVisibilityWindow({
+    required this.firstVisibleMessageId,
+    required this.lastVisibleMessageId,
+  });
+
+  final int firstVisibleMessageId;
+  final int lastVisibleMessageId;
+
+  @override
+  bool operator ==(Object other) {
+    return other is MessageVisibilityWindow &&
+        other.firstVisibleMessageId == firstVisibleMessageId &&
+        other.lastVisibleMessageId == lastVisibleMessageId;
+  }
+
+  @override
+  int get hashCode => Object.hash(firstVisibleMessageId, lastVisibleMessageId);
+}
+
+MessageVisibilityWindow? _resolveMessageVisibilityWindow({
+  required Iterable<({int? messageId, double top, double bottom})> measurements,
+  required double viewportTop,
+  required double viewportBottom,
+}) {
+  final visible = <({int messageId, double top})>[];
+  for (final measurement in measurements) {
+    final messageId = measurement.messageId;
+    if (messageId == null) {
+      continue;
+    }
+    final visibleTop = measurement.top.clamp(viewportTop, viewportBottom);
+    final visibleBottom = measurement.bottom.clamp(viewportTop, viewportBottom);
+    if (visibleBottom <= visibleTop) {
+      continue;
+    }
+    visible.add((messageId: messageId, top: visibleTop));
+  }
+  if (visible.isEmpty) {
+    return null;
+  }
+  visible.sort((a, b) => a.top.compareTo(b.top));
+  return MessageVisibilityWindow(
+    firstVisibleMessageId: visible.first.messageId,
+    lastVisibleMessageId: visible.last.messageId,
+  );
+}
+
 class ConversationTimelineView extends ConsumerStatefulWidget {
   const ConversationTimelineView({
     super.key,
@@ -88,6 +136,7 @@ class ConversationTimelineView extends ConsumerStatefulWidget {
     this.onOpenThread,
     this.onStartThread,
     this.onMessageLongPress,
+    this.onMessageVisibilityChanged,
   });
 
   final int chatId;
@@ -96,6 +145,7 @@ class ConversationTimelineView extends ConsumerStatefulWidget {
   final void Function(ConversationMessageV2 message)? onOpenThread;
   final void Function(ConversationMessageV2 message)? onStartThread;
   final ValueChanged<MessageLongPressDetailsV2>? onMessageLongPress;
+  final ValueChanged<MessageVisibilityWindow?>? onMessageVisibilityChanged;
 
   @override
   ConsumerState<ConversationTimelineView> createState() =>
@@ -120,6 +170,7 @@ class _ConversationTimelineViewState
       const <String, ConversationMessageV2>{};
   bool _isViewportMeasurementScheduled = false;
   int? _lastVisibleMessageId;
+  MessageVisibilityWindow? _lastVisibilityWindow;
 
   ConversationIdentity get _identity =>
       (chatId: widget.chatId, threadRootId: widget.threadRootId);
@@ -193,6 +244,8 @@ class _ConversationTimelineViewState
         oldWidget.threadRootId != widget.threadRootId) {
       _lastHandledViewportCommandGeneration = 0;
       _lastVisibleMessageId = null;
+      _lastVisibilityWindow = null;
+      widget.onMessageVisibilityChanged?.call(null);
     }
     if (oldWidget.launchRequest != widget.launchRequest) {
       _scheduleInitializeLaunchRequest();
@@ -291,6 +344,19 @@ class _ConversationTimelineViewState
           viewportTop: viewportTop,
           viewportBottom: viewportBottom,
         );
+    final nextVisibilityWindow = _resolveMessageVisibilityWindow(
+      measurements: measurements,
+      viewportTop: viewportTop,
+      viewportBottom: viewportBottom,
+    );
+
+    if (nextVisibilityWindow != _lastVisibilityWindow) {
+      setState(() {
+        _lastVisibilityWindow = nextVisibilityWindow;
+      });
+      widget.onMessageVisibilityChanged?.call(nextVisibilityWindow);
+    }
+
     if (nextLastVisibleMessageId == _lastVisibleMessageId) {
       return;
     }

@@ -4,79 +4,12 @@ import 'dart:async';
 import '../../features/conversation/shared/data/conversation_realtime_message_applier.dart';
 import '../../features/chat_list/application/group_list_v2_store.dart';
 import '../../features/chat_list/application/thread_list_v2_store.dart';
+import '../../features/conversation/pins/application/pinned_messages_provider.dart';
 import '../../features/shared/application/chat_inbox_reconciler.dart';
 import '../../features/stickers/data/sticker_pack_order_store.dart';
 import '../api/models/websocket_api_models.dart';
 import '../notifications/unread_badge_provider.dart';
 import 'websocket_service.dart';
-
-class _WsEventDeduplicator {
-  String? _lastEventKey;
-
-  bool shouldHandle(ApiWsEvent event) {
-    final eventKey = switch (event) {
-      MessageCreatedWsEvent(:final payload) => [
-        'messageCreated',
-        payload.id,
-        payload.chatId,
-        payload.replyRootId,
-        payload.clientGeneratedId,
-        payload.createdAt?.millisecondsSinceEpoch,
-        payload.isDeleted,
-      ].join(':'),
-      MessageUpdatedWsEvent(:final payload) => [
-        'messageUpdated',
-        payload.id,
-        payload.chatId,
-        payload.replyRootId,
-        payload.clientGeneratedId,
-        payload.createdAt?.millisecondsSinceEpoch,
-        payload.isDeleted,
-      ].join(':'),
-      MessageDeletedWsEvent(:final payload) => [
-        'messageDeleted',
-        payload.id,
-        payload.chatId,
-        payload.replyRootId,
-        payload.clientGeneratedId,
-        payload.createdAt?.millisecondsSinceEpoch,
-        payload.isDeleted,
-      ].join(':'),
-      ReactionUpdatedWsEvent(:final payload) => [
-        'reactionUpdated',
-        payload.chatId,
-        payload.messageId,
-        payload.reactions
-            .map((reaction) => '${reaction.emoji}:${reaction.count}')
-            .join(','),
-      ].join(':'),
-      ThreadUpdatedWsEvent(:final payload) => [
-        'threadUpdated',
-        payload.chatId,
-        payload.threadRootId,
-        payload.lastReplyAt.millisecondsSinceEpoch,
-        payload.replyCount,
-      ].join(':'),
-      StickerPackOrderUpdatedWsEvent(:final payload) => [
-        'stickerPackOrderUpdated',
-        payload.order
-            .map((item) => '${item.stickerPackId}:${item.lastUsedOn}')
-            .join(','),
-      ].join(':'),
-      PongWsEvent() => 'pong',
-    };
-
-    if (_lastEventKey == eventKey) {
-      return false;
-    }
-    _lastEventKey = eventKey;
-    return true;
-  }
-}
-
-final _wsEventDeduplicatorProvider = Provider<_WsEventDeduplicator>((ref) {
-  return _WsEventDeduplicator();
-});
 
 /// Centralizes websocket event fan-out to app subsystems.
 final wsEventRouterProvider = Provider<void>((ref) {
@@ -122,6 +55,8 @@ final wsEventRouterProvider = Provider<void>((ref) {
         reconcileListProjectionIfNeeded(shouldReconcileThreads);
         return;
       case ReactionUpdatedWsEvent():
+      case PinAddedWsEvent():
+      case PinRemovedWsEvent():
         return;
       case StickerPackOrderUpdatedWsEvent():
         return;
@@ -143,6 +78,26 @@ final wsEventRouterProvider = Provider<void>((ref) {
             .toList(growable: false);
         ref.read(stickerPackOrderProvider.notifier).replaceOrderFromWs(order);
         return;
+      case PinAddedWsEvent(:final payload):
+        ref
+            .read(
+              pinnedMessagesProvider((
+                chatId: payload.chatId,
+                threadRootId: null,
+              )).notifier,
+            )
+            .applyPinAdded(payload);
+        return;
+      case PinRemovedWsEvent(:final payload):
+        ref
+            .read(
+              pinnedMessagesProvider((
+                chatId: payload.chatId,
+                threadRootId: null,
+              )).notifier,
+            )
+            .applyPinRemoved(payload);
+        return;
       case MessageCreatedWsEvent():
       case MessageUpdatedWsEvent():
       case MessageDeletedWsEvent():
@@ -156,9 +111,6 @@ final wsEventRouterProvider = Provider<void>((ref) {
   void bind(WebSocketService service) {
     subscription?.cancel();
     subscription = service.events.listen((event) {
-      if (!ref.read(_wsEventDeduplicatorProvider).shouldHandle(event)) {
-        return;
-      }
       ref.read(conversationTimelineV2RealtimeApplierProvider).apply(event);
       applyListProjectionEvent(event);
       applyAuxiliaryEvent(event);

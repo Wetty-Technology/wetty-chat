@@ -555,6 +555,24 @@ abstract class AppLocalizations {
   /// **'Start Thread'**
   String get startThread;
 
+  /// Message action label for pinning a message
+  ///
+  /// In en, this message translates to:
+  /// **'Pin'**
+  String get pinMessage;
+
+  /// Message action label for unpinning a message
+  ///
+  /// In en, this message translates to:
+  /// **'Unpin'**
+  String get unpinMessage;
+
+  /// Title for the pinned messages list
+  ///
+  /// In en, this message translates to:
+  /// **'Pinned Messages'**
+  String get pinnedMessages;
+
   /// Instruction shown above a new thread composer
   ///
   /// In en, this message translates to:

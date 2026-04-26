@@ -1,5 +1,6 @@
 import 'package:chahua/core/api/models/messages_api_models.dart';
 import 'package:chahua/core/api/models/websocket_api_models.dart';
+import 'package:chahua/features/conversation/pins/application/pinned_messages_provider.dart';
 import 'package:chahua/features/conversation/shared/application/conversation_canonical_message_store.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
@@ -17,14 +18,18 @@ class ConversationTimelineV2RealtimeApplier {
         return;
       case MessageUpdatedWsEvent(:final payload):
         _updateMessage(payload);
+        _patchPins(payload);
         return;
       case MessageDeletedWsEvent(:final payload):
         _deleteMessage(payload);
+        _patchPins(payload);
         return;
       case ReactionUpdatedWsEvent(:final payload):
         _updateReaction(payload);
         return;
       case ThreadUpdatedWsEvent():
+      case PinAddedWsEvent():
+      case PinRemovedWsEvent():
       case StickerPackOrderUpdatedWsEvent():
       case PongWsEvent():
         return;
@@ -118,6 +123,16 @@ class ConversationTimelineV2RealtimeApplier {
         ),
       );
     }
+  }
+
+  void _patchPins(MessageItemDto payload) {
+    final identity = (chatId: payload.chatId, threadRootId: null);
+    if (!ref
+        .read(conversationTimelineMessageStoreProvider)
+        .containsKey(identity)) {
+      return;
+    }
+    ref.read(pinnedMessagesProvider(identity).notifier).patchMessage(payload);
   }
 
   List<ReactionSummary> _mergeReactions(
