@@ -307,26 +307,34 @@ void main() {
     },
   );
 
-  test('bootstrap falls back to unauthenticated when request throws', () async {
-    container = ProviderContainer(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(
-          await SharedPreferences.getInstance(),
-        ),
-        authBootstrapApiProvider.overrideWithValue(
-          _FakeAuthBootstrapApi(
-            onFetchAuthToken: (headers) => throw Exception('network failed'),
+  test(
+    'bootstrap preserves stored jwt when verification request fails',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        'auth_session_jwt_token': 'persisted-token',
+      });
+      final prefs = await SharedPreferences.getInstance();
+      container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          authBootstrapApiProvider.overrideWithValue(
+            _FakeAuthBootstrapApi(
+              onFetchAuthToken: (headers) => throw DioException(
+                requestOptions: RequestOptions(path: '/users/auth-token'),
+              ),
+            ),
           ),
-        ),
-      ],
-    );
+        ],
+      );
 
-    await container.read(authSessionProvider.notifier).bootstrap();
+      await container.read(authSessionProvider.notifier).bootstrap();
 
-    final session = container.read(authSessionProvider);
-    expect(session.status, AuthBootstrapStatus.unauthenticated);
-    expect(session.mode, AuthSessionMode.none);
-  });
+      final session = container.read(authSessionProvider);
+      expect(session.status, AuthBootstrapStatus.bootstrapping);
+      expect(session.mode, AuthSessionMode.none);
+      expect(prefs.getString('auth_session_jwt_token'), 'persisted-token');
+    },
+  );
 
   test(
     'bootstrap can run again after a previous bootstrap completed',

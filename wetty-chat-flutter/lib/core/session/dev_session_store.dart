@@ -146,7 +146,7 @@ class AuthSessionNotifier extends Notifier<AuthSessionState> {
     } catch (error, stackTrace) {
       debugPrint('[auth:bootstrap] exception during bootstrap: $error');
       debugPrintStack(label: '[auth:bootstrap] stack', stackTrace: stackTrace);
-      await _prefs.remove(_jwtTokenStorageKey);
+      return;
     }
 
     state = AuthSessionState(
@@ -280,7 +280,10 @@ class AuthBootstrapApi {
         return null;
       }
       return token.trim();
-    } on DioException {
+    } on DioException catch (error) {
+      if (!_isUnauthorized(error)) {
+        rethrow;
+      }
       return null;
     }
   }
@@ -296,7 +299,10 @@ class AuthBootstrapApi {
         return null;
       }
       return AuthBootstrapMe(uid);
-    } on DioException {
+    } on DioException catch (error) {
+      if (!_isUnauthorized(error)) {
+        rethrow;
+      }
       return null;
     }
   }
@@ -328,6 +334,8 @@ class AuthBootstrapApi {
     }
   }
 }
+
+bool _isUnauthorized(DioException error) => error.response?.statusCode == 401;
 
 class _MeResponse {
   const _MeResponse(this.uid);
