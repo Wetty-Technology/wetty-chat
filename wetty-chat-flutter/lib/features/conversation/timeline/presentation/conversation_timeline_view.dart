@@ -9,9 +9,7 @@ import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
 import 'package:chahua/features/conversation/shared/domain/launch_request.dart';
 import 'package:chahua/features/conversation/timeline/presentation/message_long_press_details_v2.dart';
-import 'package:chahua/features/conversation/timeline/presentation/message_overlay_v2.dart';
 import 'package:chahua/features/conversation/message_bubble/presentation/message_row_v2.dart';
-import 'package:chahua/core/session/dev_session_store.dart';
 import 'package:chahua/features/conversation/timeline/presentation/jump_to_latest_fab.dart';
 import 'package:chahua/l10n/app_localizations.dart';
 import 'package:flutter/foundation.dart';
@@ -89,6 +87,7 @@ class ConversationTimelineView extends ConsumerStatefulWidget {
     this.threadRootId,
     this.onOpenThread,
     this.onStartThread,
+    this.onMessageLongPress,
   });
 
   final int chatId;
@@ -96,6 +95,7 @@ class ConversationTimelineView extends ConsumerStatefulWidget {
   final LaunchRequest launchRequest;
   final void Function(ConversationMessageV2 message)? onOpenThread;
   final void Function(ConversationMessageV2 message)? onStartThread;
+  final ValueChanged<MessageLongPressDetailsV2>? onMessageLongPress;
 
   @override
   ConsumerState<ConversationTimelineView> createState() =>
@@ -106,14 +106,6 @@ class _ConversationTimelineViewState
     extends ConsumerState<ConversationTimelineView> {
   static const double _edgeThreshold = 80;
   static const double _jumpToLatestInset = 16;
-  static const List<String> _quickReactionEmojis = <String>[
-    '👍',
-    '❤️',
-    '😂',
-    '😮',
-    '😢',
-  ];
-
   late ScrollController _scrollController;
   int _lastHandledViewportCommandGeneration = 0;
   final GlobalKey _centerSliverKey = GlobalKey();
@@ -123,7 +115,6 @@ class _ConversationTimelineViewState
   double _topPreferredAnchorAlignment = 0;
   bool _isTopPreferredAnchorResolved = false;
   UniqueKey _scrollViewKey = UniqueKey();
-  MessageLongPressDetailsV2? _activeOverlay;
   TimelineViewportFacts _latestViewportFacts = const TimelineViewportFacts();
   Map<String, ConversationMessageV2> _renderedMessagesByStableKey =
       const <String, ConversationMessageV2>{};
@@ -370,32 +361,7 @@ class _ConversationTimelineViewState
     if (details.message.isDeleted) {
       return;
     }
-    final viewportBox = context.findRenderObject();
-    if (viewportBox is! RenderBox || !viewportBox.attached) {
-      return;
-    }
-    final viewportGlobalOrigin = viewportBox.localToGlobal(Offset.zero);
-    final viewportGlobalRect = viewportGlobalOrigin & viewportBox.size;
-    final bubbleGlobalRect = details.bubbleRect;
-    final visibleGlobalRect = bubbleGlobalRect.intersect(viewportGlobalRect);
-    if (visibleGlobalRect.isEmpty) {
-      return;
-    }
-    setState(() {
-      _activeOverlay = details.copyWith(
-        bubbleRect: bubbleGlobalRect.shift(-viewportGlobalOrigin),
-        visibleRect: visibleGlobalRect.shift(-viewportGlobalOrigin),
-      );
-    });
-  }
-
-  void _dismissMessageOverlay() {
-    if (_activeOverlay == null) {
-      return;
-    }
-    setState(() {
-      _activeOverlay = null;
-    });
+    widget.onMessageLongPress?.call(details);
   }
 
   Future<void> _toggleReaction(
@@ -412,44 +378,6 @@ class _ConversationTimelineViewState
       }
       _showErrorDialog('$error');
     }
-  }
-
-  Future<void> _deleteMessage(ConversationMessageV2 message) async {
-    try {
-      await ref
-          .read(conversationTimelineViewModelProvider(_identity).notifier)
-          .deleteMessage(message);
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-      _showErrorDialog('$error');
-    }
-  }
-
-  void _confirmDelete(ConversationMessageV2 message) {
-    final l10n = AppLocalizations.of(context)!;
-    showCupertinoDialog<void>(
-      context: context,
-      builder: (context) => CupertinoAlertDialog(
-        title: Text(l10n.deleteMessageTitle),
-        content: Text(l10n.deleteMessageBody),
-        actions: [
-          CupertinoDialogAction(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.cancel),
-          ),
-          CupertinoDialogAction(
-            isDestructiveAction: true,
-            onPressed: () {
-              Navigator.pop(context);
-              unawaited(_deleteMessage(message));
-            },
-            child: Text(l10n.deleteMessageAction),
-          ),
-        ],
-      ),
-    );
   }
 
   void _showErrorDialog(String message) {
@@ -521,60 +449,6 @@ class _ConversationTimelineViewState
   }
 
   // ============ Build & Build Helpers ============
-
-  List<MessageOverlayActionV2> _overlayActions(ConversationMessageV2 message) {
-    final l10n = AppLocalizations.of(context)!;
-    final currentUserId = ref.read(authSessionProvider).currentUserId;
-    final isOwn = message.sender.uid == currentUserId;
-    final composerNotifier = ref.read(
-      conversationComposerViewModelProvider(_identity).notifier,
-    );
-    return <MessageOverlayActionV2>[
-      MessageOverlayActionV2(
-        label: l10n.reply,
-        icon: CupertinoIcons.reply,
-        onPressed: () {
-          _dismissMessageOverlay();
-          composerNotifier.beginReply(message);
-        },
-      ),
-      if (_canStartThreadFrom(message))
-        MessageOverlayActionV2(
-          label: l10n.startThread,
-          icon: CupertinoIcons.chat_bubble_2,
-          onPressed: () {
-            _dismissMessageOverlay();
-            widget.onStartThread!(message);
-          },
-        ),
-      if (isOwn && message.content is! AudioMessageContent)
-        MessageOverlayActionV2(
-          label: l10n.edit,
-          icon: CupertinoIcons.pencil,
-          onPressed: () {
-            _dismissMessageOverlay();
-            composerNotifier.clearAttachments();
-            composerNotifier.beginEdit(message);
-          },
-        ),
-      if (isOwn)
-        MessageOverlayActionV2(
-          label: l10n.deleteMessageAction,
-          icon: CupertinoIcons.delete,
-          onPressed: () {
-            _dismissMessageOverlay();
-            _confirmDelete(message);
-          },
-        ),
-    ];
-  }
-
-  bool _canStartThreadFrom(ConversationMessageV2 message) {
-    return widget.threadRootId == null &&
-        widget.onStartThread != null &&
-        message.serverMessageId != null &&
-        message.threadInfo == null;
-  }
 
   /// Build the actual message list (sliver)
   SliverList _buildMessageSliver(
@@ -739,18 +613,6 @@ class _ConversationTimelineViewState
                   )
                   .jumpToLatest(),
             ),
-          ),
-        if (_activeOverlay case final overlay?)
-          MessageOverlayV2(
-            details: overlay,
-            visible: true,
-            actions: _overlayActions(overlay.message),
-            quickReactionEmojis: _quickReactionEmojis,
-            onDismiss: _dismissMessageOverlay,
-            onToggleReaction: (emoji) {
-              _dismissMessageOverlay();
-              unawaited(_toggleReaction(overlay.message, emoji));
-            },
           ),
       ],
     );

@@ -23,12 +23,14 @@ class ConversationV2ComposerBar extends ConsumerStatefulWidget {
     required this.identity,
     this.onMessageSent,
     this.onToggleStickerPicker,
+    this.onInputFocusChanged,
     this.isStickerPickerOpen = false,
   });
 
   final ConversationIdentity identity;
   final Future<void> Function()? onMessageSent;
   final VoidCallback? onToggleStickerPicker;
+  final ValueChanged<bool>? onInputFocusChanged;
   final bool isStickerPickerOpen;
 
   @override
@@ -101,6 +103,7 @@ class _ConversationV2ComposerBarState
   }
 
   void _handleInputFocusChanged() {
+    widget.onInputFocusChanged?.call(_inputFocusNode.hasFocus);
     if (_inputFocusNode.hasFocus) {
       _refreshMentionSuggestions();
       return;

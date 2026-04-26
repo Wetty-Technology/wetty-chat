@@ -27,6 +27,9 @@ class ConversationComposeV2 extends ConsumerStatefulWidget {
 
 class ConversationComposeV2State extends ConsumerState<ConversationComposeV2> {
   bool _isStickerPickerOpen = false;
+  bool _isInputFocused = false;
+
+  bool get hasActiveInputFocus => _isInputFocused;
 
   void dismissTransientUi() {
     if (!_isStickerPickerOpen) {
@@ -43,6 +46,15 @@ class ConversationComposeV2State extends ConsumerState<ConversationComposeV2> {
       if (_isStickerPickerOpen) {
         FocusScope.of(context).unfocus();
       }
+    });
+  }
+
+  void _handleInputFocusChanged(bool hasFocus) {
+    if (_isInputFocused == hasFocus) {
+      return;
+    }
+    setState(() {
+      _isInputFocused = hasFocus;
     });
   }
 
@@ -77,6 +89,7 @@ class ConversationComposeV2State extends ConsumerState<ConversationComposeV2> {
               identity: widget.identity,
               onMessageSent: widget.onMessageSent,
               onToggleStickerPicker: _toggleStickerPicker,
+              onInputFocusChanged: _handleInputFocusChanged,
               isStickerPickerOpen: _isStickerPickerOpen,
             ),
             if (_isStickerPickerOpen)
