@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 
 import '../../../../app/theme/style_config.dart';
-import '../../../shared/presentation/avatar/app_avatar.dart';
+import '../../../shared/presentation/app_avatar.dart';
 import '../../../shared/presentation/chat_timestamp_formatter.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
 import '../../model/thread_list_item.dart';

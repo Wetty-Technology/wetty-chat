@@ -2,7 +2,7 @@ import 'package:flutter/cupertino.dart';
 
 import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/features/groups/members/data/group_member_models.dart';
-import 'package:chahua/features/shared/presentation/avatar/app_avatar.dart';
+import 'package:chahua/features/shared/presentation/app_avatar.dart';
 
 class ComposerMentionAutocomplete extends StatelessWidget {
   const ComposerMentionAutocomplete({
