@@ -58,7 +58,6 @@ class _MessageRowV2State extends State<MessageRowV2> {
         TextMessageContent() ||
         AudioMessageContent() ||
         StickerMessageContent() ||
-        FileMessageContent() ||
         InviteMessageContent() => true,
         SystemMessageContent() => false,
       };

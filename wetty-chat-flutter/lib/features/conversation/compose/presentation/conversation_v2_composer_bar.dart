@@ -281,7 +281,6 @@ class _ConversationV2ComposerBarState
       switch (mode.message.content) {
         TextMessageContent(:final text) => text,
         AudioMessageContent(:final text) => text ?? '',
-        FileMessageContent(:final text) => text ?? '',
         InviteMessageContent(:final text) => text ?? '',
         SystemMessageContent(:final text) => text,
         StickerMessageContent() => '',
@@ -289,7 +288,6 @@ class _ConversationV2ComposerBarState
       switch (mode.message.content) {
         TextMessageContent(:final mentions) => mentions,
         AudioMessageContent(:final mentions) => mentions,
-        FileMessageContent(:final mentions) => mentions,
         InviteMessageContent(:final mentions) => mentions,
         _ => const <MentionInfo>[],
       },

@@ -56,9 +56,7 @@ class MessageItem extends ConsumerWidget {
           onOpenThread: onOpenThread,
           onToggleReaction: onToggleReaction,
         ),
-        TextMessageContent() ||
-        FileMessageContent() ||
-        InviteMessageContent() => TextBubbleV2(
+        TextMessageContent() || InviteMessageContent() => TextBubbleV2(
           message: message,
           showSenderName: showSenderName,
           onTapReply: onTapReply,

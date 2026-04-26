@@ -128,7 +128,6 @@ String? _previewTextFor(MessageContent content) {
   return switch (content) {
     TextMessageContent(:final text) => text,
     AudioMessageContent(:final text) => text,
-    FileMessageContent(:final text) => text,
     InviteMessageContent(:final text) => text,
     SystemMessageContent(:final text) => text,
     StickerMessageContent() => null,
@@ -139,7 +138,6 @@ String _previewMessageTypeFor(MessageContent content) {
   return switch (content) {
     TextMessageContent() => 'text',
     AudioMessageContent() => 'audio',
-    FileMessageContent() => 'text',
     InviteMessageContent() => 'invite',
     StickerMessageContent() => 'sticker',
     SystemMessageContent() => 'system',
@@ -156,7 +154,7 @@ StickerSummary? _previewStickerFor(MessageContent content) {
 List<AttachmentItem> _previewAttachmentsFor(MessageContent content) {
   return switch (content) {
     AudioMessageContent(:final audio) => [audio],
-    FileMessageContent(:final attachments) => attachments,
+    TextMessageContent(:final attachments) => attachments,
     _ => const <AttachmentItem>[],
   };
 }
@@ -165,7 +163,6 @@ List<MentionInfo> _previewMentionsFor(MessageContent content) {
   return switch (content) {
     TextMessageContent(:final mentions) => mentions,
     AudioMessageContent(:final mentions) => mentions,
-    FileMessageContent(:final mentions) => mentions,
     InviteMessageContent(:final mentions) => mentions,
     _ => const <MentionInfo>[],
   };

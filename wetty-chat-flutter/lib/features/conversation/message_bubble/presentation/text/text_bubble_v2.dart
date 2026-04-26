@@ -12,7 +12,6 @@ import 'text_bubble_visual_with_text_content.dart';
 String messageTextForBubble(MessageContent content) => switch (content) {
   TextMessageContent(:final text) => text,
   AudioMessageContent(:final text) => text ?? '',
-  FileMessageContent(:final text) => text ?? '',
   InviteMessageContent(:final text) => text ?? '',
   SystemMessageContent(:final text) => text,
   StickerMessageContent() => '',
@@ -22,14 +21,13 @@ List<MentionInfo> mentionsForBubble(MessageContent content) =>
     switch (content) {
       TextMessageContent(:final mentions) => mentions,
       AudioMessageContent(:final mentions) => mentions,
-      FileMessageContent(:final mentions) => mentions,
       InviteMessageContent(:final mentions) => mentions,
       _ => const <MentionInfo>[],
     };
 
 List<AttachmentItem> attachmentsForBubble(MessageContent content) =>
     switch (content) {
-      FileMessageContent(:final attachments) => attachments,
+      TextMessageContent(:final attachments) => attachments,
       _ => const <AttachmentItem>[],
     };
 

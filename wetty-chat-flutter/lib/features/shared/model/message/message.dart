@@ -151,21 +151,21 @@ MessageContent _contentFromMessageItemDto({
   if (messageType == 'invite') {
     return InviteMessageContent(text: message, mentions: mentions);
   }
-  if (attachments.length == 1 && attachments.single.isAudio) {
+  if (messageType == 'audio') {
+    if (attachments.isEmpty) {
+      throw StateError('Audio messages must include an audio attachment');
+    }
     return AudioMessageContent(
-      audio: attachments.single,
+      audio: attachments.first,
       text: message,
       mentions: mentions,
     );
   }
-  if (attachments.isNotEmpty) {
-    return FileMessageContent(
-      text: message,
-      attachments: attachments,
-      mentions: mentions,
-    );
-  }
-  return TextMessageContent(text: message ?? '', mentions: mentions);
+  return TextMessageContent(
+    text: message ?? '',
+    attachments: attachments,
+    mentions: mentions,
+  );
 }
 
 sealed class MessageContent {
@@ -175,10 +175,12 @@ sealed class MessageContent {
 class TextMessageContent extends MessageContent {
   const TextMessageContent({
     required this.text,
+    this.attachments = const <AttachmentItem>[],
     this.mentions = const <MentionInfo>[],
   });
 
   final String text;
+  final List<AttachmentItem> attachments;
   final List<MentionInfo> mentions;
 }
 
@@ -191,18 +193,6 @@ class AudioMessageContent extends MessageContent {
 
   final AttachmentItem audio;
   final String? text;
-  final List<MentionInfo> mentions;
-}
-
-class FileMessageContent extends MessageContent {
-  const FileMessageContent({
-    this.text,
-    this.attachments = const <AttachmentItem>[],
-    this.mentions = const <MentionInfo>[],
-  });
-
-  final String? text;
-  final List<AttachmentItem> attachments;
   final List<MentionInfo> mentions;
 }
 

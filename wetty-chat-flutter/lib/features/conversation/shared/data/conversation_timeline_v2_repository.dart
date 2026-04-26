@@ -128,7 +128,6 @@ class ConversationTimelineV2Repository {
     return switch (message.content) {
       TextMessageContent() => 'text',
       AudioMessageContent() => 'audio',
-      FileMessageContent() => 'text',
       StickerMessageContent() => 'sticker',
       InviteMessageContent() => 'invite',
       SystemMessageContent() => 'system',
@@ -139,7 +138,6 @@ class ConversationTimelineV2Repository {
     return switch (message.content) {
       TextMessageContent(:final text) => text,
       AudioMessageContent(:final text) => text ?? '',
-      FileMessageContent(:final text) => text ?? '',
       InviteMessageContent(:final text) => text ?? '',
       SystemMessageContent(:final text) => text,
       StickerMessageContent() => '',

@@ -132,13 +132,15 @@ class ThreadListRow extends StatelessWidget {
     required AppLocalizations l10n,
   }) {
     return switch (content) {
-      TextMessageContent(:final text, :final mentions) => formatMessagePreview(
-        message: text,
-        messageType: 'text',
-        isDeleted: isDeleted,
-        mentions: mentions,
-        l10n: l10n,
-      ),
+      TextMessageContent(:final text, :final attachments, :final mentions) =>
+        formatMessagePreview(
+          message: text,
+          messageType: 'text',
+          attachments: attachments,
+          isDeleted: isDeleted,
+          mentions: mentions,
+          l10n: l10n,
+        ),
       AudioMessageContent(:final text, :final mentions) => formatMessagePreview(
         message: text,
         messageType: 'audio',
@@ -146,15 +148,6 @@ class ThreadListRow extends StatelessWidget {
         mentions: mentions,
         l10n: l10n,
       ),
-      FileMessageContent(:final text, :final attachments, :final mentions) =>
-        formatMessagePreview(
-          message: text,
-          messageType: 'file',
-          attachments: attachments,
-          isDeleted: isDeleted,
-          mentions: mentions,
-          l10n: l10n,
-        ),
       StickerMessageContent(:final sticker) => formatMessagePreview(
         messageType: 'sticker',
         sticker: sticker,

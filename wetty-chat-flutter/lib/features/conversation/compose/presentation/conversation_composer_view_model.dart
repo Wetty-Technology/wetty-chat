@@ -1020,13 +1020,10 @@ class ConversationComposerViewModel
         text: request.text,
       );
     }
-    if (request.optimisticAttachments.isNotEmpty) {
-      return FileMessageContent(
-        text: request.text,
-        attachments: request.optimisticAttachments,
-      );
-    }
-    return TextMessageContent(text: request.text);
+    return TextMessageContent(
+      text: request.text,
+      attachments: request.optimisticAttachments,
+    );
   }
 
   ReplyToMessage? _replyToMessageForMode(ConversationComposerMode mode) {
@@ -1148,21 +1145,17 @@ ConversationMessageV2 _optimisticallyEditedMessage(
 
 MessageContent _editedContent(MessageContent content, String newText) {
   return switch (content) {
-    TextMessageContent(:final mentions) => TextMessageContent(
-      text: newText,
-      mentions: mentions,
-    ),
+    TextMessageContent(:final attachments, :final mentions) =>
+      TextMessageContent(
+        text: newText,
+        attachments: attachments,
+        mentions: mentions,
+      ),
     AudioMessageContent(:final audio, :final mentions) => AudioMessageContent(
       audio: audio,
       text: newText,
       mentions: mentions,
     ),
-    FileMessageContent(:final attachments, :final mentions) =>
-      FileMessageContent(
-        text: newText,
-        attachments: attachments,
-        mentions: mentions,
-      ),
     InviteMessageContent(:final mentions) => InviteMessageContent(
       text: newText,
       mentions: mentions,
@@ -1176,7 +1169,6 @@ String? _messageTextFor(MessageContent content) {
   return switch (content) {
     TextMessageContent(:final text) => text,
     AudioMessageContent(:final text) => text,
-    FileMessageContent(:final text) => text,
     InviteMessageContent(:final text) => text,
     SystemMessageContent(:final text) => text,
     StickerMessageContent() => null,
@@ -1187,7 +1179,6 @@ String _messageTypeFor(MessageContent content) {
   return switch (content) {
     TextMessageContent() => 'text',
     AudioMessageContent() => 'audio',
-    FileMessageContent() => 'text',
     InviteMessageContent() => 'invite',
     StickerMessageContent() => 'sticker',
     SystemMessageContent() => 'system',
@@ -1204,7 +1195,7 @@ StickerSummary? _stickerFor(MessageContent content) {
 List<AttachmentItem> _attachmentsFor(MessageContent content) {
   return switch (content) {
     AudioMessageContent(:final audio) => [audio],
-    FileMessageContent(:final attachments) => attachments,
+    TextMessageContent(:final attachments) => attachments,
     _ => const <AttachmentItem>[],
   };
 }
@@ -1213,7 +1204,6 @@ List<MentionInfo> _mentionsFor(MessageContent content) {
   return switch (content) {
     TextMessageContent(:final mentions) => mentions,
     AudioMessageContent(:final mentions) => mentions,
-    FileMessageContent(:final mentions) => mentions,
     InviteMessageContent(:final mentions) => mentions,
     _ => const <MentionInfo>[],
   };
