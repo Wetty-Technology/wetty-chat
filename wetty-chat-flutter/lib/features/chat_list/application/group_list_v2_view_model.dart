@@ -107,8 +107,7 @@ class GroupListV2ViewModel extends AsyncNotifier<GroupListV2ViewState> {
       errorMessage: current.errorMessage,
     ));
     try {
-      final limit = current.groups.isEmpty ? 20 : current.groups.length;
-      await ref.read(groupListV2RepositoryProvider).loadGroups(limit: limit);
+      await ref.read(groupListV2RepositoryProvider).loadGroups();
       final storeState = ref.read(groupListV2StoreProvider);
       state = AsyncData((
         groups: storeState.groups,
