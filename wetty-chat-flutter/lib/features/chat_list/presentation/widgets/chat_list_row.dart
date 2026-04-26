@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:chahua/l10n/app_localizations.dart';
 
 import '../../../../app/theme/style_config.dart';
 import '../../../shared/presentation/app_avatar.dart';
@@ -148,6 +149,7 @@ class _Subtitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (_hasDraft) {
       return Row(
         children: [
@@ -156,7 +158,7 @@ class _Subtitle extends StatelessWidget {
               TextSpan(
                 children: [
                   TextSpan(
-                    text: '[Draft] ',
+                    text: '${l10n.draftPrefix} ',
                     style: appTextStyle(
                       context,
                       fontSize: AppFontSizes.bodySmall,
@@ -208,7 +210,7 @@ class _Subtitle extends StatelessWidget {
                   ),
                 )
               : Text(
-                  'No messages yet',
+                  l10n.noMessagesYet,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: appSecondaryTextStyle(

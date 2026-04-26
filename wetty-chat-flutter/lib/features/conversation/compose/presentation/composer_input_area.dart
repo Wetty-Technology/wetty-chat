@@ -87,23 +87,27 @@ class ComposerPreviewBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final mode = composer.mode;
+    final l10n = AppLocalizations.of(context)!;
     return switch (mode) {
       ComposerReplying(:final message) => _PreviewBar(
         title:
-            '${AppLocalizations.of(context)!.reply} ${message.sender.name ?? 'User ${message.sender.uid}'}',
-        body: _formatMessagePreview(message),
+            '${l10n.reply} ${message.sender.name ?? l10n.userFallbackName(message.sender.uid)}',
+        body: _formatMessagePreview(message, l10n),
         onClearMode: onClearMode,
       ),
       ComposerEditing(:final message) => _PreviewBar(
-        title: AppLocalizations.of(context)!.edit,
-        body: _formatMessagePreview(message),
+        title: l10n.edit,
+        body: _formatMessagePreview(message, l10n),
         onClearMode: onClearMode,
       ),
       ComposerIdle() => const SizedBox.shrink(),
     };
   }
 
-  String _formatMessagePreview(ConversationMessageV2 message) {
+  String _formatMessagePreview(
+    ConversationMessageV2 message,
+    AppLocalizations l10n,
+  ) {
     final attachments = _previewAttachmentsFor(message.content);
     return formatMessagePreview(
       message: _previewTextFor(message.content),
@@ -115,6 +119,7 @@ class ComposerPreviewBar extends StatelessWidget {
           : null,
       isDeleted: message.isDeleted,
       mentions: _previewMentionsFor(message.content),
+      l10n: l10n,
     );
   }
 }

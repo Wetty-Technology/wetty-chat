@@ -3,6 +3,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:chahua/l10n/app_localizations.dart';
 
 import '../../../core/notifications/unread_badge_provider.dart';
 import '../../../core/settings/app_settings_store.dart';
@@ -123,6 +124,7 @@ class _ChatListV2PageState extends ConsumerState<ChatListV2Page> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final settings = ref.watch(appSettingsProvider);
     final showAllTab = settings.showAllTab;
     final activeTab = _effectiveTab(showAllTab);
@@ -139,7 +141,7 @@ class _ChatListV2PageState extends ConsumerState<ChatListV2Page> {
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
         backgroundColor: chromeBackgroundColor,
-        middle: const Text('Chats V2'),
+        middle: Text(l10n.tabChats),
       ),
       child: SafeArea(
         bottom: false,

@@ -213,10 +213,107 @@ class AppLocalizationsEn extends AppLocalizations {
   String get delete => 'Delete';
 
   @override
+  String get deleteMessageAction => 'Delete';
+
+  @override
   String get deleteMessageTitle => 'Delete message?';
 
   @override
   String get deleteMessageBody => 'This cannot be undone.';
+
+  @override
+  String get all => 'All';
+
+  @override
+  String get groups => 'Groups';
+
+  @override
+  String get threads => 'Threads';
+
+  @override
+  String get thread => 'Thread';
+
+  @override
+  String get newThread => 'New Thread';
+
+  @override
+  String get startThread => 'Start Thread';
+
+  @override
+  String get newThreadInstruction =>
+      'Reply to this message to start the thread.';
+
+  @override
+  String get noGroupsYet => 'No groups yet';
+
+  @override
+  String get noThreadsYet => 'No threads yet';
+
+  @override
+  String get noChatsOrThreadsYet => 'No chats or threads yet';
+
+  @override
+  String threadReplyCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count replies',
+      one: '1 reply',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String chatFallbackName(String id) {
+    return 'Chat $id';
+  }
+
+  @override
+  String userFallbackName(int uid) {
+    return 'User $uid';
+  }
+
+  @override
+  String get unknownUser => 'Unknown';
+
+  @override
+  String get draftPrefix => '[Draft]';
+
+  @override
+  String get previewDeleted => '[Deleted]';
+
+  @override
+  String get previewInvite => '[Invite]';
+
+  @override
+  String get previewSticker => '[Sticker]';
+
+  @override
+  String get previewVoiceMessage => '[Voice message]';
+
+  @override
+  String get previewImage => '[Image]';
+
+  @override
+  String get previewVideo => '[Video]';
+
+  @override
+  String get previewAttachment => '[Attachment]';
+
+  @override
+  String get mediaImageSaved => 'Image saved to Photos.';
+
+  @override
+  String get mediaVideoSaved => 'Video saved to Photos.';
+
+  @override
+  String get mediaSaveFailed => 'Failed to save media.';
+
+  @override
+  String get mediaImageLoadFailed => 'Failed to load image';
+
+  @override
+  String get mediaVideoLoadFailed => 'Failed to load video';
 
   @override
   String get voiceMessage => 'Voice message';

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:chahua/l10n/app_localizations.dart';
 
 import '../../core/notifications/unread_badge_provider.dart';
 import '../../features/shared/application/app_refresh_coordinator.dart';
@@ -18,14 +19,15 @@ class HomeShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.appColors;
+    final l10n = AppLocalizations.of(context)!;
     final unreadState = ref.watch(unreadBadgeProvider);
     final tabs = [
       _HomeTabData(
         icon: CupertinoIcons.chat_bubble_2_fill,
-        label: 'Chats',
+        label: l10n.tabChats,
         badgeCount: unreadState.combinedUnreadTotal,
       ),
-      const _HomeTabData(icon: CupertinoIcons.gear_alt_fill, label: 'Settings'),
+      _HomeTabData(icon: CupertinoIcons.gear_alt_fill, label: l10n.tabSettings),
     ];
     return DecoratedBox(
       decoration: BoxDecoration(color: colors.backgroundPrimary),

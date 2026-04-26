@@ -501,6 +501,12 @@ abstract class AppLocalizations {
   /// **'Delete'**
   String get delete;
 
+  /// Action label for deleting/recalling a chat message
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get deleteMessageAction;
+
   /// Delete confirmation title for a message
   ///
   /// In en, this message translates to:
@@ -512,6 +518,168 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This cannot be undone.'**
   String get deleteMessageBody;
+
+  /// Chat list segment for all conversations
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get all;
+
+  /// Chat list segment for group chats
+  ///
+  /// In en, this message translates to:
+  /// **'Groups'**
+  String get groups;
+
+  /// Chat list segment for threads
+  ///
+  /// In en, this message translates to:
+  /// **'Threads'**
+  String get threads;
+
+  /// Thread detail page title
+  ///
+  /// In en, this message translates to:
+  /// **'Thread'**
+  String get thread;
+
+  /// New thread detail page title
+  ///
+  /// In en, this message translates to:
+  /// **'New Thread'**
+  String get newThread;
+
+  /// Message action label for starting a thread
+  ///
+  /// In en, this message translates to:
+  /// **'Start Thread'**
+  String get startThread;
+
+  /// Instruction shown above a new thread composer
+  ///
+  /// In en, this message translates to:
+  /// **'Reply to this message to start the thread.'**
+  String get newThreadInstruction;
+
+  /// Empty state for the group chat list
+  ///
+  /// In en, this message translates to:
+  /// **'No groups yet'**
+  String get noGroupsYet;
+
+  /// Empty state for the thread list
+  ///
+  /// In en, this message translates to:
+  /// **'No threads yet'**
+  String get noThreadsYet;
+
+  /// Empty state for the combined chat/thread list
+  ///
+  /// In en, this message translates to:
+  /// **'No chats or threads yet'**
+  String get noChatsOrThreadsYet;
+
+  /// Fallback summary for a thread reply count
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 reply} other{{count} replies}}'**
+  String threadReplyCount(int count);
+
+  /// Fallback display name for a chat when no name is available
+  ///
+  /// In en, this message translates to:
+  /// **'Chat {id}'**
+  String chatFallbackName(String id);
+
+  /// Fallback display name for a user when no name is available
+  ///
+  /// In en, this message translates to:
+  /// **'User {uid}'**
+  String userFallbackName(int uid);
+
+  /// Fallback label for an unknown user
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown'**
+  String get unknownUser;
+
+  /// Prefix shown before a draft message preview
+  ///
+  /// In en, this message translates to:
+  /// **'[Draft]'**
+  String get draftPrefix;
+
+  /// Message preview label for a deleted message
+  ///
+  /// In en, this message translates to:
+  /// **'[Deleted]'**
+  String get previewDeleted;
+
+  /// Message preview label for an invite message
+  ///
+  /// In en, this message translates to:
+  /// **'[Invite]'**
+  String get previewInvite;
+
+  /// Message preview label for a sticker message
+  ///
+  /// In en, this message translates to:
+  /// **'[Sticker]'**
+  String get previewSticker;
+
+  /// Message preview label for a voice message
+  ///
+  /// In en, this message translates to:
+  /// **'[Voice message]'**
+  String get previewVoiceMessage;
+
+  /// Message preview label for an image attachment
+  ///
+  /// In en, this message translates to:
+  /// **'[Image]'**
+  String get previewImage;
+
+  /// Message preview label for a video attachment
+  ///
+  /// In en, this message translates to:
+  /// **'[Video]'**
+  String get previewVideo;
+
+  /// Message preview label for a generic attachment
+  ///
+  /// In en, this message translates to:
+  /// **'[Attachment]'**
+  String get previewAttachment;
+
+  /// Status shown after saving an image attachment
+  ///
+  /// In en, this message translates to:
+  /// **'Image saved to Photos.'**
+  String get mediaImageSaved;
+
+  /// Status shown after saving a video attachment
+  ///
+  /// In en, this message translates to:
+  /// **'Video saved to Photos.'**
+  String get mediaVideoSaved;
+
+  /// Status shown when saving media fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to save media.'**
+  String get mediaSaveFailed;
+
+  /// Error shown when an image attachment cannot load
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load image'**
+  String get mediaImageLoadFailed;
+
+  /// Error shown when a video attachment cannot load
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load video'**
+  String get mediaVideoLoadFailed;
 
   /// Label for an audio message
   ///

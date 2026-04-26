@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:chahua/l10n/app_localizations.dart';
 
 import '../../../app/routing/route_names.dart';
 import '../../../app/theme/style_config.dart';
@@ -13,6 +14,7 @@ class ThreadListV2View extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final asyncState = ref.watch(threadListV2ViewModelProvider);
 
     return asyncState.when(
@@ -31,7 +33,7 @@ class ThreadListV2View extends ConsumerWidget {
               const SizedBox(height: 16),
               CupertinoButton.filled(
                 onPressed: () => ref.invalidate(threadListV2ViewModelProvider),
-                child: const Text('Retry'),
+                child: Text(l10n.retry),
               ),
             ],
           ),
@@ -51,7 +53,7 @@ class ThreadListV2View extends ConsumerWidget {
                   CupertinoButton.filled(
                     onPressed: () =>
                         ref.invalidate(threadListV2ViewModelProvider),
-                    child: const Text('Retry'),
+                    child: Text(l10n.retry),
                   ),
                 ],
               ),
@@ -64,7 +66,7 @@ class ThreadListV2View extends ConsumerWidget {
             hasScrollBody: false,
             child: Center(
               child: Text(
-                'No threads yet',
+                l10n.noThreadsYet,
                 style: appSecondaryTextStyle(context),
               ),
             ),

@@ -13,6 +13,7 @@ import 'package:chahua/features/conversation/timeline/presentation/message_overl
 import 'package:chahua/features/conversation/message_bubble/presentation/message_row_v2.dart';
 import 'package:chahua/core/session/dev_session_store.dart';
 import 'package:chahua/features/conversation/timeline/presentation/jump_to_latest_fab.dart';
+import 'package:chahua/l10n/app_localizations.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/rendering.dart';
@@ -427,15 +428,16 @@ class _ConversationTimelineViewState
   }
 
   void _confirmDelete(ConversationMessageV2 message) {
+    final l10n = AppLocalizations.of(context)!;
     showCupertinoDialog<void>(
       context: context,
       builder: (context) => CupertinoAlertDialog(
-        title: const Text('Delete message?'),
-        content: const Text('This cannot be undone.'),
+        title: Text(l10n.deleteMessageTitle),
+        content: Text(l10n.deleteMessageBody),
         actions: [
           CupertinoDialogAction(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           CupertinoDialogAction(
             isDestructiveAction: true,
@@ -443,7 +445,7 @@ class _ConversationTimelineViewState
               Navigator.pop(context);
               unawaited(_deleteMessage(message));
             },
-            child: const Text('Delete'),
+            child: Text(l10n.deleteMessageAction),
           ),
         ],
       ),
@@ -451,15 +453,16 @@ class _ConversationTimelineViewState
   }
 
   void _showErrorDialog(String message) {
+    final l10n = AppLocalizations.of(context)!;
     showCupertinoDialog<void>(
       context: context,
       builder: (context) => CupertinoAlertDialog(
-        title: const Text('Error'),
+        title: Text(l10n.error),
         content: Text(message),
         actions: [
           CupertinoDialogAction(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+            child: Text(l10n.ok),
           ),
         ],
       ),
@@ -520,6 +523,7 @@ class _ConversationTimelineViewState
   // ============ Build & Build Helpers ============
 
   List<MessageOverlayActionV2> _overlayActions(ConversationMessageV2 message) {
+    final l10n = AppLocalizations.of(context)!;
     final currentUserId = ref.read(authSessionProvider).currentUserId;
     final isOwn = message.sender.uid == currentUserId;
     final composerNotifier = ref.read(
@@ -527,7 +531,7 @@ class _ConversationTimelineViewState
     );
     return <MessageOverlayActionV2>[
       MessageOverlayActionV2(
-        label: 'Reply',
+        label: l10n.reply,
         icon: CupertinoIcons.reply,
         onPressed: () {
           _dismissMessageOverlay();
@@ -536,7 +540,7 @@ class _ConversationTimelineViewState
       ),
       if (_canStartThreadFrom(message))
         MessageOverlayActionV2(
-          label: 'Start Thread',
+          label: l10n.startThread,
           icon: CupertinoIcons.chat_bubble_2,
           onPressed: () {
             _dismissMessageOverlay();
@@ -545,7 +549,7 @@ class _ConversationTimelineViewState
         ),
       if (isOwn && message.content is! AudioMessageContent)
         MessageOverlayActionV2(
-          label: 'Edit',
+          label: l10n.edit,
           icon: CupertinoIcons.pencil,
           onPressed: () {
             _dismissMessageOverlay();
@@ -555,7 +559,7 @@ class _ConversationTimelineViewState
         ),
       if (isOwn)
         MessageOverlayActionV2(
-          label: 'Delete',
+          label: l10n.deleteMessageAction,
           icon: CupertinoIcons.delete,
           onPressed: () {
             _dismissMessageOverlay();

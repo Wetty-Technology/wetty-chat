@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:chahua/l10n/app_localizations.dart';
 
 import '../../../../app/theme/style_config.dart';
 import '../../../shared/presentation/app_avatar.dart';
@@ -23,14 +24,15 @@ class ThreadListRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final chatName = thread.chatName.isNotEmpty
         ? thread.chatName
-        : 'Chat ${thread.chatId}';
+        : l10n.chatFallbackName(thread.chatId);
 
     final dateText = formatChatListTimestamp(context, thread.lastReplyAt);
-    final rootPreview = _rootMessagePreview();
-    final lastReplyText = _lastReplyPreviewText();
-    final lastReplySender = thread.lastReply?.sender.name ?? 'User';
+    final rootPreview = _rootMessagePreview(l10n);
+    final lastReplyText = _lastReplyPreviewText(l10n);
+    final lastReplySender = thread.lastReply?.sender.name ?? l10n.unknownUser;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -45,7 +47,8 @@ class ThreadListRow extends StatelessWidget {
                 _OverlayAvatar(
                   chatName: chatName,
                   chatAvatar: thread.chatAvatar,
-                  senderName: thread.threadRootMessage.sender.name ?? 'Unknown',
+                  senderName:
+                      thread.threadRootMessage.sender.name ?? l10n.unknownUser,
                   senderAvatar: thread.threadRootMessage.sender.avatarUrl,
                 ),
                 const SizedBox(width: 12),
@@ -112,26 +115,36 @@ class ThreadListRow extends StatelessWidget {
   }
 
   /// Root message preview for line 1, falls back to sender name.
-  String _rootMessagePreview() {
+  String _rootMessagePreview(AppLocalizations l10n) {
     final root = thread.threadRootMessage;
-    final preview = _contentPreview(root.content, isDeleted: root.isDeleted);
+    final preview = _contentPreview(
+      root.content,
+      isDeleted: root.isDeleted,
+      l10n: l10n,
+    );
     if (preview.isNotEmpty) return preview;
-    return root.sender.name ?? 'Unknown';
+    return root.sender.name ?? l10n.unknownUser;
   }
 
-  String _contentPreview(MessageContent content, {required bool isDeleted}) {
+  String _contentPreview(
+    MessageContent content, {
+    required bool isDeleted,
+    required AppLocalizations l10n,
+  }) {
     return switch (content) {
       TextMessageContent(:final text, :final mentions) => formatMessagePreview(
         message: text,
         messageType: 'text',
         isDeleted: isDeleted,
         mentions: mentions,
+        l10n: l10n,
       ),
       AudioMessageContent(:final text, :final mentions) => formatMessagePreview(
         message: text,
         messageType: 'audio',
         isDeleted: isDeleted,
         mentions: mentions,
+        l10n: l10n,
       ),
       FileMessageContent(:final text, :final attachments, :final mentions) =>
         formatMessagePreview(
@@ -140,11 +153,13 @@ class ThreadListRow extends StatelessWidget {
           attachments: attachments,
           isDeleted: isDeleted,
           mentions: mentions,
+          l10n: l10n,
         ),
       StickerMessageContent(:final sticker) => formatMessagePreview(
         messageType: 'sticker',
         sticker: sticker,
         isDeleted: isDeleted,
+        l10n: l10n,
       ),
       InviteMessageContent(:final text, :final mentions) =>
         formatMessagePreview(
@@ -152,20 +167,22 @@ class ThreadListRow extends StatelessWidget {
           messageType: 'invite',
           isDeleted: isDeleted,
           mentions: mentions,
+          l10n: l10n,
         ),
       SystemMessageContent(:final text) => formatMessagePreview(
         message: text,
         messageType: 'system',
         isDeleted: isDeleted,
+        l10n: l10n,
       ),
     };
   }
 
   /// Last reply preview text for line 2.
-  String _lastReplyPreviewText() {
+  String _lastReplyPreviewText(AppLocalizations l10n) {
     final lastReply = thread.lastReply;
     if (lastReply == null) return '';
-    return formatMessagePreviewSummary(lastReply);
+    return formatMessagePreviewSummary(lastReply, l10n: l10n);
   }
 
   Widget _buildLastReplyLine(
@@ -201,7 +218,9 @@ class ThreadListRow extends StatelessWidget {
                   ),
                 )
               : Text(
-                  '${thread.replyCount} repl${thread.replyCount == 1 ? 'y' : 'ies'}',
+                  AppLocalizations.of(
+                    context,
+                  )!.threadReplyCount(thread.replyCount),
                   maxLines: 1,
                   style: appSecondaryTextStyle(
                     context,

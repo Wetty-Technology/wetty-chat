@@ -202,11 +202,104 @@
   "delete": "Delete",
   "@delete": { "description": "Message action label for deleting" },
 
+  "deleteMessageAction": "Delete",
+  "@deleteMessageAction": { "description": "Action label for deleting/recalling a chat message" },
+
   "deleteMessageTitle": "Delete message?",
   "@deleteMessageTitle": { "description": "Delete confirmation title for a message" },
 
   "deleteMessageBody": "This cannot be undone.",
   "@deleteMessageBody": { "description": "Delete confirmation message for a message" },
+
+  "all": "All",
+  "@all": { "description": "Chat list segment for all conversations" },
+
+  "groups": "Groups",
+  "@groups": { "description": "Chat list segment for group chats" },
+
+  "threads": "Threads",
+  "@threads": { "description": "Chat list segment for threads" },
+
+  "thread": "Thread",
+  "@thread": { "description": "Thread detail page title" },
+
+  "newThread": "New Thread",
+  "@newThread": { "description": "New thread detail page title" },
+
+  "startThread": "Start Thread",
+  "@startThread": { "description": "Message action label for starting a thread" },
+
+  "newThreadInstruction": "Reply to this message to start the thread.",
+  "@newThreadInstruction": { "description": "Instruction shown above a new thread composer" },
+
+  "noGroupsYet": "No groups yet",
+  "@noGroupsYet": { "description": "Empty state for the group chat list" },
+
+  "noThreadsYet": "No threads yet",
+  "@noThreadsYet": { "description": "Empty state for the thread list" },
+
+  "noChatsOrThreadsYet": "No chats or threads yet",
+  "@noChatsOrThreadsYet": { "description": "Empty state for the combined chat/thread list" },
+
+  "threadReplyCount": "{count, plural, =1{1 reply} other{{count} replies}}",
+  "@threadReplyCount": {
+    "description": "Fallback summary for a thread reply count",
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "chatFallbackName": "Chat {id}",
+  "@chatFallbackName": {
+    "description": "Fallback display name for a chat when no name is available",
+    "placeholders": { "id": { "type": "String" } }
+  },
+
+  "userFallbackName": "User {uid}",
+  "@userFallbackName": {
+    "description": "Fallback display name for a user when no name is available",
+    "placeholders": { "uid": { "type": "int" } }
+  },
+
+  "unknownUser": "Unknown",
+  "@unknownUser": { "description": "Fallback label for an unknown user" },
+
+  "draftPrefix": "[Draft]",
+  "@draftPrefix": { "description": "Prefix shown before a draft message preview" },
+
+  "previewDeleted": "[Deleted]",
+  "@previewDeleted": { "description": "Message preview label for a deleted message" },
+
+  "previewInvite": "[Invite]",
+  "@previewInvite": { "description": "Message preview label for an invite message" },
+
+  "previewSticker": "[Sticker]",
+  "@previewSticker": { "description": "Message preview label for a sticker message" },
+
+  "previewVoiceMessage": "[Voice message]",
+  "@previewVoiceMessage": { "description": "Message preview label for a voice message" },
+
+  "previewImage": "[Image]",
+  "@previewImage": { "description": "Message preview label for an image attachment" },
+
+  "previewVideo": "[Video]",
+  "@previewVideo": { "description": "Message preview label for a video attachment" },
+
+  "previewAttachment": "[Attachment]",
+  "@previewAttachment": { "description": "Message preview label for a generic attachment" },
+
+  "mediaImageSaved": "Image saved to Photos.",
+  "@mediaImageSaved": { "description": "Status shown after saving an image attachment" },
+
+  "mediaVideoSaved": "Video saved to Photos.",
+  "@mediaVideoSaved": { "description": "Status shown after saving a video attachment" },
+
+  "mediaSaveFailed": "Failed to save media.",
+  "@mediaSaveFailed": { "description": "Status shown when saving media fails" },
+
+  "mediaImageLoadFailed": "Failed to load image",
+  "@mediaImageLoadFailed": { "description": "Error shown when an image attachment cannot load" },
+
+  "mediaVideoLoadFailed": "Failed to load video",
+  "@mediaVideoLoadFailed": { "description": "Error shown when a video attachment cannot load" },
 
   "voiceMessage": "Voice message",
   "@voiceMessage": { "description": "Label for an audio message" },

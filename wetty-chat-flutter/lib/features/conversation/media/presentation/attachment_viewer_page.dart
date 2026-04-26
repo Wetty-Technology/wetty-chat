@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:extended_image/extended_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:chahua/l10n/app_localizations.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../../../core/cache/app_cached_network_image.dart';
@@ -220,6 +221,7 @@ class _AttachmentViewerPageState extends ConsumerState<AttachmentViewerPage> {
   }
 
   Future<void> _saveCurrentItem() async {
+    final l10n = AppLocalizations.of(context)!;
     final attachment = _currentItem.attachment;
     if (_isSaving || attachment.url.isEmpty) {
       return;
@@ -232,14 +234,12 @@ class _AttachmentViewerPageState extends ConsumerState<AttachmentViewerPage> {
     try {
       await ref.read(mediaSaveServiceProvider).saveAttachment(attachment);
       _showStatus(
-        attachment.isVideo
-            ? 'Video saved to Photos.'
-            : 'Image saved to Photos.',
+        attachment.isVideo ? l10n.mediaVideoSaved : l10n.mediaImageSaved,
       );
     } on MediaSaveException catch (error) {
       _showStatus(error.message, isError: true);
     } catch (_) {
-      _showStatus('Failed to save media.', isError: true);
+      _showStatus(l10n.mediaSaveFailed, isError: true);
     } finally {
       if (mounted) {
         setState(() {
@@ -1425,8 +1425,8 @@ class _ImageLoadError extends StatelessWidget {
               color: CupertinoColors.white,
             ),
             const SizedBox(height: 12),
-            const Text(
-              'Failed to load image',
+            Text(
+              AppLocalizations.of(context)!.mediaImageLoadFailed,
               style: TextStyle(
                 color: CupertinoColors.white,
                 fontSize: 17,
@@ -1436,7 +1436,7 @@ class _ImageLoadError extends StatelessWidget {
             const SizedBox(height: 16),
             CupertinoButton.filled(
               onPressed: onRetry,
-              child: const Text('Retry'),
+              child: Text(AppLocalizations.of(context)!.retry),
             ),
           ],
         ),
@@ -1464,8 +1464,8 @@ class _VideoLoadError extends StatelessWidget {
               size: 40,
             ),
             const SizedBox(height: 12),
-            const Text(
-              'Failed to load video',
+            Text(
+              AppLocalizations.of(context)!.mediaVideoLoadFailed,
               style: TextStyle(
                 color: CupertinoColors.white,
                 fontSize: 17,
@@ -1475,7 +1475,7 @@ class _VideoLoadError extends StatelessWidget {
             const SizedBox(height: 16),
             CupertinoButton.filled(
               onPressed: onRetry,
-              child: const Text('Retry'),
+              child: Text(AppLocalizations.of(context)!.retry),
             ),
           ],
         ),

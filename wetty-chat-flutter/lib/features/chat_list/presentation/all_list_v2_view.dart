@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:chahua/l10n/app_localizations.dart';
 
 import '../../../app/routing/route_names.dart';
 import 'package:chahua/features/conversation/shared/domain/launch_request.dart';
@@ -22,6 +23,7 @@ class AllListV2View extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final items = ref.watch(allListV2ItemsProvider);
     final uiState = ref.watch(allListV2ViewModelProvider);
     final groupAsync = ref.watch(groupListV2ViewModelProvider);
@@ -44,9 +46,9 @@ class AllListV2View extends ConsumerWidget {
     }
 
     if (items.isEmpty) {
-      return const SliverFillRemaining(
+      return SliverFillRemaining(
         hasScrollBody: false,
-        child: Center(child: Text('No chats or threads yet')),
+        child: Center(child: Text(l10n.noChatsOrThreadsYet)),
       );
     }
 
@@ -91,7 +93,7 @@ class _AllGroupListV2Row extends StatelessWidget {
   Widget build(BuildContext context) {
     final chatName = group.name?.isNotEmpty == true
         ? group.name!
-        : 'Chat ${group.id}';
+        : AppLocalizations.of(context)!.chatFallbackName(group.id);
     final dateText = formatChatListTimestamp(context, group.lastMessageAt);
     final lastMessage = group.lastMessage;
     final isMuted =
@@ -102,7 +104,9 @@ class _AllGroupListV2Row extends StatelessWidget {
       builder: (context, ref, _) => SwipeToActionRow(
         key: ValueKey('group-all-v2-${group.id}'),
         icon: isUnread ? CupertinoIcons.checkmark_alt : CupertinoIcons.mail,
-        label: isUnread ? 'Read' : 'Unread',
+        label: isUnread
+            ? AppLocalizations.of(context)!.swipeActionMarkRead
+            : AppLocalizations.of(context)!.swipeActionMarkUnread,
         onAction: () => ref
             .read(groupListV2ViewModelProvider.notifier)
             .toggleGroupReadState(chatId: group.id),
@@ -112,7 +116,10 @@ class _AllGroupListV2Row extends StatelessWidget {
           timestampText: dateText,
           unreadCount: group.unreadCount,
           senderName: lastMessage?.sender.name,
-          lastMessageText: _messagePreviewText(lastMessage),
+          lastMessageText: _messagePreviewText(
+            lastMessage,
+            AppLocalizations.of(context)!,
+          ),
           isMuted: isMuted,
           onTap: () {
             context.push(
@@ -133,7 +140,10 @@ class _AllGroupListV2Row extends StatelessWidget {
     return LaunchRequest.unread(lastReadMessageId: lastReadMessageId);
   }
 
-  static String _messagePreviewText(MessageItem? message) {
+  static String _messagePreviewText(
+    MessageItem? message,
+    AppLocalizations l10n,
+  ) {
     if (message == null) {
       return '';
     }
@@ -147,6 +157,7 @@ class _AllGroupListV2Row extends StatelessWidget {
           : null,
       isDeleted: message.isDeleted,
       mentions: message.mentions,
+      l10n: l10n,
     );
   }
 }

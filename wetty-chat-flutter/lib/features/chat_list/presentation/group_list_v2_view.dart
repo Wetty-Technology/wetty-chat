@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:chahua/l10n/app_localizations.dart';
 
 import '../../../app/routing/route_names.dart';
 import 'package:chahua/features/chat_list/presentation/widgets/swipe_to_action_row.dart';
@@ -16,6 +17,7 @@ class GroupListV2View extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final asyncState = ref.watch(groupListV2ViewModelProvider);
 
     return asyncState.when(
@@ -35,9 +37,9 @@ class GroupListV2View extends ConsumerWidget {
           );
         }
         if (viewState.groups.isEmpty) {
-          return const SliverFillRemaining(
+          return SliverFillRemaining(
             hasScrollBody: false,
-            child: Center(child: Text('No groups yet')),
+            child: Center(child: Text(l10n.noGroupsYet)),
           );
         }
 
@@ -71,7 +73,7 @@ class _GroupListV2Row extends StatelessWidget {
   Widget build(BuildContext context) {
     final chatName = chat.name?.isNotEmpty == true
         ? chat.name!
-        : 'Chat ${chat.id}';
+        : AppLocalizations.of(context)!.chatFallbackName(chat.id);
     final dateText = formatChatListTimestamp(context, chat.lastMessageAt);
     final lastMessage = chat.lastMessage;
     final isMuted =
@@ -82,7 +84,9 @@ class _GroupListV2Row extends StatelessWidget {
       builder: (context, ref, _) => SwipeToActionRow(
         key: ValueKey('group-v2-${chat.id}'),
         icon: isUnread ? CupertinoIcons.checkmark_alt : CupertinoIcons.mail,
-        label: isUnread ? 'Read' : 'Unread',
+        label: isUnread
+            ? AppLocalizations.of(context)!.swipeActionMarkRead
+            : AppLocalizations.of(context)!.swipeActionMarkUnread,
         onAction: () => ref
             .read(groupListV2ViewModelProvider.notifier)
             .toggleGroupReadState(chatId: chat.id),
@@ -92,7 +96,10 @@ class _GroupListV2Row extends StatelessWidget {
           timestampText: dateText,
           unreadCount: chat.unreadCount,
           senderName: lastMessage?.sender.name,
-          lastMessageText: _messagePreviewText(lastMessage),
+          lastMessageText: _messagePreviewText(
+            lastMessage,
+            AppLocalizations.of(context)!,
+          ),
           isMuted: isMuted,
           onTap: () {
             context.push(
@@ -113,7 +120,10 @@ class _GroupListV2Row extends StatelessWidget {
     return LaunchRequest.unread(lastReadMessageId: lastReadMessageId);
   }
 
-  static String _messagePreviewText(MessageItem? message) {
+  static String _messagePreviewText(
+    MessageItem? message,
+    AppLocalizations l10n,
+  ) {
     if (message == null) {
       return '';
     }
@@ -127,6 +137,7 @@ class _GroupListV2Row extends StatelessWidget {
           : null,
       isDeleted: message.isDeleted,
       mentions: message.mentions,
+      l10n: l10n,
     );
   }
 }

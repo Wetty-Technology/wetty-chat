@@ -3,6 +3,7 @@ import 'package:chahua/features/conversation/shared/domain/launch_request.dart';
 import 'package:chahua/features/conversation/shared/presentation/conversation_surface_v2.dart';
 import 'package:chahua/features/chat_list/application/thread_list_v2_view_model.dart';
 import 'package:chahua/app/theme/style_config.dart';
+import 'package:chahua/l10n/app_localizations.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -41,6 +42,7 @@ class _ThreadDetailV2PageState extends ConsumerState<ThreadDetailV2Page> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final ConversationIdentity identity = (
       chatId: widget.chatId,
       threadRootId: widget.threadRootId,
@@ -48,7 +50,7 @@ class _ThreadDetailV2PageState extends ConsumerState<ThreadDetailV2Page> {
     return CupertinoPageScaffold(
       resizeToAvoidBottomInset: false,
       navigationBar: CupertinoNavigationBar(
-        middle: Text(_isNewThread ? 'New Thread' : 'Thread'),
+        middle: Text(_isNewThread ? l10n.newThread : l10n.thread),
         // TODO: Add the thread subscribe button here once the Flutter UI is ready.
       ),
       child: SafeArea(
@@ -77,6 +79,7 @@ class _NewThreadInstruction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final l10n = AppLocalizations.of(context)!;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.backgroundSecondary,
@@ -89,7 +92,7 @@ class _NewThreadInstruction extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         child: Text(
-          'Reply to this message to start the thread.',
+          l10n.newThreadInstruction,
           textAlign: TextAlign.center,
           style: TextStyle(
             color: colors.textSecondary,

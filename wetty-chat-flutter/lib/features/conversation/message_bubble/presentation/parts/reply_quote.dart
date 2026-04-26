@@ -1,5 +1,6 @@
 import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
+import 'package:chahua/l10n/app_localizations.dart';
 import 'package:flutter/cupertino.dart';
 
 import '../../domain/bubble_theme_v2.dart';
@@ -21,7 +22,9 @@ class ReplyQuote extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = BubbleThemeV2.of(context);
-    final replySender = reply.sender.name ?? 'User ${reply.sender.uid}';
+    final l10n = AppLocalizations.of(context)!;
+    final replySender =
+        reply.sender.name ?? l10n.userFallbackName(reply.sender.uid);
     final (backgroundColor, borderColor) = switch (variant) {
       ReplyQuoteVariant.inBubble => (
         theme.isMe
@@ -60,7 +63,7 @@ class ReplyQuote extends StatelessWidget {
             ),
           ),
           Text(
-            formatReplyPreview(reply),
+            formatReplyPreview(reply, l10n: l10n),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: appBubbleTextStyle(

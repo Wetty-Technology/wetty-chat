@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:chahua/features/shared/presentation/app_divider.dart';
+import 'package:chahua/l10n/app_localizations.dart';
 
 import '../../../app/theme/style_config.dart';
 import '../../../core/settings/app_settings_store.dart';
@@ -11,10 +12,11 @@ class FontSizeSettingsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final messageFontSize = ref.watch(appSettingsProvider).fontSize;
     return CupertinoPageScaffold(
       backgroundColor: const Color(0xFFF2F2F7),
-      navigationBar: const CupertinoNavigationBar(middle: Text('Font Size')),
+      navigationBar: CupertinoNavigationBar(middle: Text(l10n.fontSize)),
       child: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -29,7 +31,7 @@ class FontSizeSettingsPage extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Messages Font Size',
+                    l10n.messagesFontSize,
                     style: appSectionTitleTextStyle(context),
                   ),
                   const SizedBox(height: 10),
@@ -80,7 +82,7 @@ class FontSizeSettingsPage extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Sample User',
+                                l10n.sampleUser,
                                 style: appSecondaryTextStyle(
                                   context,
                                   fontSize: AppFontSizes.meta,
@@ -89,7 +91,7 @@ class FontSizeSettingsPage extends ConsumerWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'This is how your messages will look in chat.',
+                                l10n.fontSizePreviewMessage,
                                 style: appTextStyle(
                                   context,
                                   fontSize: messageFontSize,

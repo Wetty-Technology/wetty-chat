@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:chahua/l10n/app_localizations.dart';
 
 import '../../../../app/theme/style_config.dart';
 
@@ -29,18 +30,19 @@ class ChatListSegment extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final children = <ChatListTab, Widget>{
       if (showAllTab)
         ChatListTab.all: _SegmentLabel(
-          label: 'All',
+          label: l10n.all,
           unreadCount: allUnreadCount,
         ),
       ChatListTab.groups: _SegmentLabel(
-        label: 'Groups',
+        label: l10n.groups,
         unreadCount: groupsUnreadCount,
       ),
       ChatListTab.threads: _SegmentLabel(
-        label: 'Threads',
+        label: l10n.threads,
         unreadCount: threadsUnreadCount,
       ),
     };

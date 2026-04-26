@@ -210,10 +210,100 @@ class AppLocalizationsZh extends AppLocalizations {
   String get delete => '删除';
 
   @override
-  String get deleteMessageTitle => '删除消息？';
+  String get deleteMessageAction => '撤回';
+
+  @override
+  String get deleteMessageTitle => '撤回消息？';
 
   @override
   String get deleteMessageBody => '此操作无法撤销。';
+
+  @override
+  String get all => '全部';
+
+  @override
+  String get groups => '群组';
+
+  @override
+  String get threads => '话题';
+
+  @override
+  String get thread => '话题';
+
+  @override
+  String get newThread => '新话题';
+
+  @override
+  String get startThread => '创建话题';
+
+  @override
+  String get newThreadInstruction => '回复这条消息以开始话题。';
+
+  @override
+  String get noGroupsYet => '暂无群组';
+
+  @override
+  String get noThreadsYet => '暂无话题';
+
+  @override
+  String get noChatsOrThreadsYet => '暂无聊天或话题';
+
+  @override
+  String threadReplyCount(int count) {
+    return '$count 条回复';
+  }
+
+  @override
+  String chatFallbackName(String id) {
+    return '聊天 $id';
+  }
+
+  @override
+  String userFallbackName(int uid) {
+    return '用户 $uid';
+  }
+
+  @override
+  String get unknownUser => '未知用户';
+
+  @override
+  String get draftPrefix => '[草稿]';
+
+  @override
+  String get previewDeleted => '[已删除]';
+
+  @override
+  String get previewInvite => '[邀请]';
+
+  @override
+  String get previewSticker => '[表情]';
+
+  @override
+  String get previewVoiceMessage => '[语音消息]';
+
+  @override
+  String get previewImage => '[图片]';
+
+  @override
+  String get previewVideo => '[视频]';
+
+  @override
+  String get previewAttachment => '[附件]';
+
+  @override
+  String get mediaImageSaved => '图片已保存到照片。';
+
+  @override
+  String get mediaVideoSaved => '视频已保存到照片。';
+
+  @override
+  String get mediaSaveFailed => '媒体保存失败。';
+
+  @override
+  String get mediaImageLoadFailed => '图片加载失败';
+
+  @override
+  String get mediaVideoLoadFailed => '视频加载失败';
 
   @override
   String get voiceMessage => '语音消息';
@@ -497,10 +587,100 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get delete => '刪除';
 
   @override
-  String get deleteMessageTitle => '刪除訊息？';
+  String get deleteMessageAction => '撤回';
+
+  @override
+  String get deleteMessageTitle => '撤回訊息？';
 
   @override
   String get deleteMessageBody => '此操作無法復原。';
+
+  @override
+  String get all => '全部';
+
+  @override
+  String get groups => '群組';
+
+  @override
+  String get threads => '話題';
+
+  @override
+  String get thread => '話題';
+
+  @override
+  String get newThread => '新話題';
+
+  @override
+  String get startThread => '開始話題';
+
+  @override
+  String get newThreadInstruction => '回覆這則訊息以開始話題。';
+
+  @override
+  String get noGroupsYet => '暫無群組';
+
+  @override
+  String get noThreadsYet => '暫無話題';
+
+  @override
+  String get noChatsOrThreadsYet => '暫無聊天或話題';
+
+  @override
+  String threadReplyCount(int count) {
+    return '$count 則回覆';
+  }
+
+  @override
+  String chatFallbackName(String id) {
+    return '聊天 $id';
+  }
+
+  @override
+  String userFallbackName(int uid) {
+    return '使用者 $uid';
+  }
+
+  @override
+  String get unknownUser => '未知使用者';
+
+  @override
+  String get draftPrefix => '[草稿]';
+
+  @override
+  String get previewDeleted => '[已刪除]';
+
+  @override
+  String get previewInvite => '[邀請]';
+
+  @override
+  String get previewSticker => '[表情]';
+
+  @override
+  String get previewVoiceMessage => '[語音訊息]';
+
+  @override
+  String get previewImage => '[圖片]';
+
+  @override
+  String get previewVideo => '[影片]';
+
+  @override
+  String get previewAttachment => '[附件]';
+
+  @override
+  String get mediaImageSaved => '圖片已儲存到照片。';
+
+  @override
+  String get mediaVideoSaved => '影片已儲存到照片。';
+
+  @override
+  String get mediaSaveFailed => '媒體儲存失敗。';
+
+  @override
+  String get mediaImageLoadFailed => '圖片載入失敗';
+
+  @override
+  String get mediaVideoLoadFailed => '影片載入失敗';
 
   @override
   String get voiceMessage => '語音訊息';

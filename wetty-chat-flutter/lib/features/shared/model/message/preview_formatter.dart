@@ -1,3 +1,5 @@
+import 'package:chahua/l10n/app_localizations.dart';
+
 import 'attachment.dart';
 import 'mention.dart';
 import 'message_preview.dart';
@@ -12,7 +14,7 @@ const String imagePreviewLabel = '[Image]';
 const String videoPreviewLabel = '[Video]';
 const String attachmentPreviewLabel = '[Attachment]';
 
-String formatReplyPreview(ReplyToMessage preview) {
+String formatReplyPreview(ReplyToMessage preview, {AppLocalizations? l10n}) {
   return formatMessagePreviewSummary(
     MessagePreview(
       messageId: preview.id,
@@ -26,10 +28,14 @@ String formatReplyPreview(ReplyToMessage preview) {
       isDeleted: preview.isDeleted,
       mentions: preview.mentions,
     ),
+    l10n: l10n,
   );
 }
 
-String formatMessagePreviewSummary(MessagePreview preview) {
+String formatMessagePreviewSummary(
+  MessagePreview preview, {
+  AppLocalizations? l10n,
+}) {
   final stickerEmoji = preview.previewStickerEmoji;
   return formatMessagePreview(
     message: preview.message,
@@ -43,6 +49,7 @@ String formatMessagePreviewSummary(MessagePreview preview) {
     firstAttachmentKind: preview.firstAttachmentKind,
     isDeleted: preview.isDeleted,
     mentions: preview.mentions,
+    l10n: l10n,
   );
 }
 
@@ -54,24 +61,26 @@ String formatMessagePreview({
   String? firstAttachmentKind,
   bool isDeleted = false,
   List<MentionInfo> mentions = const <MentionInfo>[],
+  AppLocalizations? l10n,
 }) {
+  final labels = _PreviewLabels(l10n);
   if (isDeleted) {
-    return deletedPreviewLabel;
+    return labels.deleted;
   }
 
   if (messageType == 'invite') {
-    return invitePreviewLabel;
+    return labels.invite;
   }
 
   if (messageType == 'sticker') {
     final emoji = sticker?.emoji?.trim();
     return emoji == null || emoji.isEmpty
-        ? stickerPreviewLabel
-        : '$stickerPreviewLabel $emoji';
+        ? labels.sticker
+        : '${labels.sticker} $emoji';
   }
 
   if (messageType == 'audio') {
-    return voiceMessagePreviewLabel;
+    return labels.voiceMessage;
   }
 
   final text = message?.trim();
@@ -81,24 +90,39 @@ String formatMessagePreview({
 
   if (_containsAttachmentKind(attachments, 'audio/') ||
       (firstAttachmentKind?.startsWith('audio/') ?? false)) {
-    return voiceMessagePreviewLabel;
+    return labels.voiceMessage;
   }
 
   if (_containsAttachmentKind(attachments, 'image/') ||
       (firstAttachmentKind?.startsWith('image/') ?? false)) {
-    return imagePreviewLabel;
+    return labels.image;
   }
 
   if (_containsAttachmentKind(attachments, 'video/') ||
       (firstAttachmentKind?.startsWith('video/') ?? false)) {
-    return videoPreviewLabel;
+    return labels.video;
   }
 
   if (attachments.isNotEmpty || firstAttachmentKind != null) {
-    return attachmentPreviewLabel;
+    return labels.attachment;
   }
 
   return '';
+}
+
+class _PreviewLabels {
+  const _PreviewLabels(this.l10n);
+
+  final AppLocalizations? l10n;
+
+  String get deleted => l10n?.previewDeleted ?? deletedPreviewLabel;
+  String get invite => l10n?.previewInvite ?? invitePreviewLabel;
+  String get sticker => l10n?.previewSticker ?? stickerPreviewLabel;
+  String get voiceMessage =>
+      l10n?.previewVoiceMessage ?? voiceMessagePreviewLabel;
+  String get image => l10n?.previewImage ?? imagePreviewLabel;
+  String get video => l10n?.previewVideo ?? videoPreviewLabel;
+  String get attachment => l10n?.previewAttachment ?? attachmentPreviewLabel;
 }
 
 bool _containsAttachmentKind(List<AttachmentItem> attachments, String prefix) {
