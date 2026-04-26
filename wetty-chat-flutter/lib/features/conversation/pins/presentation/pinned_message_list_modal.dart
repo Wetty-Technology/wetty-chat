@@ -4,21 +4,84 @@ import 'package:chahua/features/conversation/pins/presentation/pinned_message_li
 import 'package:chahua/l10n/app_localizations.dart';
 import 'package:flutter/cupertino.dart';
 
-class PinnedMessageListModal extends StatelessWidget {
+class PinnedMessageListModal extends StatefulWidget {
   const PinnedMessageListModal({
     super.key,
     required this.pins,
     required this.canManagePins,
     required this.onOpenPin,
-    required this.onUnpin,
+    required this.onConfirmUnpin,
     this.onOpenThread,
   });
 
   final List<PinnedMessage> pins;
   final bool canManagePins;
   final ValueChanged<PinnedMessage> onOpenPin;
-  final ValueChanged<PinnedMessage> onUnpin;
+  final Future<void> Function(PinnedMessage pin) onConfirmUnpin;
   final ValueChanged<PinnedMessage>? onOpenThread;
+
+  @override
+  State<PinnedMessageListModal> createState() => _PinnedMessageListModalState();
+}
+
+class _PinnedMessageListModalState extends State<PinnedMessageListModal> {
+  late List<PinnedMessage> _pins;
+
+  @override
+  void initState() {
+    super.initState();
+    _pins = widget.pins;
+  }
+
+  @override
+  void didUpdateWidget(covariant PinnedMessageListModal oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.pins != widget.pins) {
+      _pins = widget.pins;
+    }
+  }
+
+  void _confirmUnpin(PinnedMessage pin) {
+    final l10n = AppLocalizations.of(context)!;
+    showCupertinoDialog<void>(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: Text(l10n.unpinMessageTitle),
+        content: Text(l10n.unpinMessageBody),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.cancel),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () {
+              Navigator.pop(context);
+              _optimisticallyUnpin(pin);
+            },
+            child: Text(l10n.unpinMessage),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _optimisticallyUnpin(PinnedMessage pin) async {
+    final previousPins = _pins;
+    setState(() {
+      _pins = _pins.where((item) => item.id != pin.id).toList(growable: false);
+    });
+    try {
+      await widget.onConfirmUnpin(pin);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _pins = previousPins;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -99,24 +162,24 @@ class PinnedMessageListModal extends StatelessWidget {
                 Expanded(
                   child: ListView.separated(
                     padding: const EdgeInsets.symmetric(vertical: 6),
-                    itemCount: pins.length,
+                    itemCount: _pins.length,
                     separatorBuilder: (context, index) => Container(
                       height: 1,
                       margin: const EdgeInsets.only(left: 62),
                       color: colors.separator,
                     ),
                     itemBuilder: (context, index) {
-                      final pin = pins[index];
+                      final pin = _pins[index];
                       return PinnedMessageListItem(
                         pin: pin,
-                        canManagePins: canManagePins,
-                        onOpenPin: () => onOpenPin(pin),
-                        onUnpin: () => onUnpin(pin),
+                        canManagePins: widget.canManagePins,
+                        onOpenPin: () => widget.onOpenPin(pin),
+                        onUnpin: () => _confirmUnpin(pin),
                         onOpenThread:
                             pin.message.threadInfo != null &&
                                 (pin.message.threadInfo?.replyCount ?? 0) > 0 &&
-                                onOpenThread != null
-                            ? () => onOpenThread!(pin)
+                                widget.onOpenThread != null
+                            ? () => widget.onOpenThread!(pin)
                             : null,
                       );
                     },

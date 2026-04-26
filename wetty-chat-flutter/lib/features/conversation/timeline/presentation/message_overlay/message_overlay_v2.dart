@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-import 'package:chahua/features/conversation/timeline/presentation/message_long_press_details_v2.dart';
+import 'package:chahua/features/conversation/timeline/model/message_long_press_details_v2.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:flutter/cupertino.dart';
 

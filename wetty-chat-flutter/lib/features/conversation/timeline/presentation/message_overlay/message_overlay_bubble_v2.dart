@@ -1,5 +1,5 @@
 import 'package:chahua/features/conversation/message_bubble/presentation/message_item.dart';
-import 'package:chahua/features/conversation/timeline/presentation/message_long_press_details_v2.dart';
+import 'package:chahua/features/conversation/timeline/model/message_long_press_details_v2.dart';
 import 'package:flutter/cupertino.dart';
 
 class MessageOverlayBubbleV2 extends StatelessWidget {

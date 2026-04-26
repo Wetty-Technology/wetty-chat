@@ -1,6 +1,6 @@
 import 'package:chahua/core/api/models/messages_api_models.dart';
 import 'package:chahua/core/api/models/pins_api_models.dart';
-import 'package:chahua/features/conversation/pins/data/pinned_messages_api_service.dart';
+import 'package:chahua/core/api/services/pinned_messages_api_service.dart';
 import 'package:chahua/features/conversation/pins/domain/pinned_message.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
@@ -32,14 +32,47 @@ class PinnedMessagesNotifier extends AsyncNotifier<List<PinnedMessage>> {
     _upsert(created);
   }
 
-  Future<void> unpin(PinnedMessage pin) async {
+  Future<void> refresh() async {
+    if (_identity.threadRootId != null) {
+      state = const AsyncData(<PinnedMessage>[]);
+      return;
+    }
+    state = await AsyncValue.guard(() async {
+      final pins = await ref
+          .read(pinnedMessagesApiServiceProvider)
+          .listPins(_identity.chatId);
+      return _sortedPins(pins);
+    });
+  }
+
+  Future<void> unpin(
+    PinnedMessage pin, {
+    bool optimistic = false,
+    bool refreshAfter = false,
+  }) async {
     if (_identity.threadRootId != null) {
       return;
     }
-    await ref
-        .read(pinnedMessagesApiServiceProvider)
-        .unpinMessage(chatId: _identity.chatId, pinId: pin.id);
-    _removePin(pin.id);
+    final previousPins = state.value;
+    if (optimistic) {
+      _removePin(pin.id);
+    }
+    try {
+      await ref
+          .read(pinnedMessagesApiServiceProvider)
+          .unpinMessage(chatId: _identity.chatId, pinId: pin.id);
+      if (!optimistic) {
+        _removePin(pin.id);
+      }
+      if (refreshAfter) {
+        await refresh();
+      }
+    } catch (_) {
+      if (optimistic && previousPins != null) {
+        state = AsyncData(_sortedPins(previousPins));
+      }
+      rethrow;
+    }
   }
 
   void applyPinAdded(PinUpdatePayloadDto payload) {

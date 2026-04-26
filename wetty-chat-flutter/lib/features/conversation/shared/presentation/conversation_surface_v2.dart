@@ -13,12 +13,13 @@ import 'package:chahua/features/conversation/pins/presentation/pinned_message_ba
 import 'package:chahua/features/conversation/pins/presentation/pinned_message_list_modal.dart';
 import 'package:chahua/features/conversation/timeline/presentation/conversation_timeline_view_model.dart';
 import 'package:chahua/features/conversation/timeline/presentation/conversation_timeline_view.dart';
+import 'package:chahua/features/conversation/timeline/model/message_visibility_window.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
 import 'package:chahua/features/groups/metadata/application/group_metadata_view_model.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:chahua/features/conversation/shared/domain/launch_request.dart';
 import 'package:chahua/features/conversation/compose/presentation/conversation_compose_v2.dart';
-import 'package:chahua/features/conversation/timeline/presentation/message_long_press_details_v2.dart';
+import 'package:chahua/features/conversation/timeline/model/message_long_press_details_v2.dart';
 import 'package:chahua/features/conversation/timeline/presentation/message_overlay_v2.dart';
 import 'package:chahua/features/conversation/shared/presentation/conversation_presentation_scope.dart';
 import 'package:chahua/l10n/app_localizations.dart';
@@ -197,17 +198,60 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
     }
   }
 
-  Future<void> _unpinMessage(PinnedMessage pin) async {
+  Future<void> _unpinMessage(
+    PinnedMessage pin, {
+    bool optimistic = false,
+    bool refreshAfter = false,
+    bool rethrowError = false,
+  }) async {
     try {
       await ref
           .read(pinnedMessagesProvider(widget.identity).notifier)
-          .unpin(pin);
+          .unpin(pin, optimistic: optimistic, refreshAfter: refreshAfter);
     } catch (error) {
       if (!mounted) {
         return;
       }
       _showErrorDialog('$error');
+      if (rethrowError) {
+        rethrow;
+      }
     }
+  }
+
+  void _confirmUnpinMessage(
+    PinnedMessage pin, {
+    bool optimistic = false,
+    bool refreshAfter = false,
+  }) {
+    final l10n = AppLocalizations.of(context)!;
+    showCupertinoDialog<void>(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: Text(l10n.unpinMessageTitle),
+        content: Text(l10n.unpinMessageBody),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.cancel),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () {
+              Navigator.pop(context);
+              unawaited(
+                _unpinMessage(
+                  pin,
+                  optimistic: optimistic,
+                  refreshAfter: refreshAfter,
+                ),
+              );
+            },
+            child: Text(l10n.unpinMessage),
+          ),
+        ],
+      ),
+    );
   }
 
   void _confirmDelete(ConversationMessageV2 message) {
@@ -288,7 +332,7 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
             if (pinnedPin == null) {
               unawaited(_pinMessage(message));
             } else {
-              unawaited(_unpinMessage(pinnedPin));
+              _confirmUnpinMessage(pinnedPin);
             }
           },
         ),
@@ -397,7 +441,14 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
           Navigator.pop(context);
           _openPinnedMessage(pin);
         },
-        onUnpin: (pin) => unawaited(_unpinMessage(pin)),
+        onConfirmUnpin: (pin) async {
+          await _unpinMessage(
+            pin,
+            optimistic: true,
+            refreshAfter: true,
+            rethrowError: true,
+          );
+        },
         onOpenThread: widget.onOpenThread == null
             ? null
             : (pin) {
@@ -439,7 +490,7 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
                       pins: pins,
                       canManagePins: canManagePins,
                     ),
-                    onUnpin: () => unawaited(_unpinMessage(activePin)),
+                    onUnpin: () => _confirmUnpinMessage(activePin),
                     onOpenThread:
                         activePin.message.threadInfo != null &&
                             (activePin.message.threadInfo?.replyCount ?? 0) >

@@ -8,7 +8,8 @@ import 'package:chahua/features/conversation/timeline/presentation/conversation_
 import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
 import 'package:chahua/features/conversation/shared/domain/launch_request.dart';
-import 'package:chahua/features/conversation/timeline/presentation/message_long_press_details_v2.dart';
+import 'package:chahua/features/conversation/timeline/model/message_long_press_details_v2.dart';
+import 'package:chahua/features/conversation/timeline/model/message_visibility_window.dart';
 import 'package:chahua/features/conversation/message_bubble/presentation/message_row_v2.dart';
 import 'package:chahua/features/conversation/timeline/presentation/jump_to_latest_fab.dart';
 import 'package:chahua/l10n/app_localizations.dart';
@@ -34,69 +35,6 @@ double resolveTopPreferredAnchorAlignment({
     'resolveTopPreferredAnchorAlignment: afterExtent=$afterExtent, viewportExtent=$viewportExtent, visibleFractionBelowAnchor=$visibleFractionBelowAnchor',
   );
   return 1.0 - visibleFractionBelowAnchor;
-}
-
-int? _resolveLastVisibleMessageIdAtViewportMidpoint({
-  required Iterable<({int? messageId, double top, double bottom})> measurements,
-  required double viewportTop,
-  required double viewportBottom,
-}) {
-  if (viewportBottom <= viewportTop) {
-    return null;
-  }
-
-  int? lastVisibleMessageId;
-  double? lastVisibleTop;
-  double? lastVisibleBottom;
-
-  for (final measurement in measurements) {
-    final messageId = measurement.messageId;
-    if (messageId == null) {
-      continue;
-    }
-
-    final visibleTop = measurement.top.clamp(viewportTop, viewportBottom);
-    final visibleBottom = measurement.bottom.clamp(viewportTop, viewportBottom);
-    if (visibleBottom <= visibleTop) {
-      continue;
-    }
-
-    final bubbleMidpoint = (measurement.top + measurement.bottom) / 2;
-    if (bubbleMidpoint < viewportTop || bubbleMidpoint > viewportBottom) {
-      continue;
-    }
-
-    if (lastVisibleTop == null ||
-        visibleTop > lastVisibleTop ||
-        (visibleTop == lastVisibleTop &&
-            (lastVisibleBottom == null || visibleBottom > lastVisibleBottom))) {
-      lastVisibleMessageId = messageId;
-      lastVisibleTop = visibleTop;
-      lastVisibleBottom = visibleBottom;
-    }
-  }
-
-  return lastVisibleMessageId;
-}
-
-class MessageVisibilityWindow {
-  const MessageVisibilityWindow({
-    required this.firstVisibleMessageId,
-    required this.lastVisibleMessageId,
-  });
-
-  final int firstVisibleMessageId;
-  final int lastVisibleMessageId;
-
-  @override
-  bool operator ==(Object other) {
-    return other is MessageVisibilityWindow &&
-        other.firstVisibleMessageId == firstVisibleMessageId &&
-        other.lastVisibleMessageId == lastVisibleMessageId;
-  }
-
-  @override
-  int get hashCode => Object.hash(firstVisibleMessageId, lastVisibleMessageId);
 }
 
 MessageVisibilityWindow? _resolveMessageVisibilityWindow({
@@ -169,7 +107,6 @@ class _ConversationTimelineViewState
   Map<String, ConversationMessageV2> _renderedMessagesByStableKey =
       const <String, ConversationMessageV2>{};
   bool _isViewportMeasurementScheduled = false;
-  int? _lastVisibleMessageId;
   MessageVisibilityWindow? _lastVisibilityWindow;
 
   ConversationIdentity get _identity =>
@@ -239,17 +176,16 @@ class _ConversationTimelineViewState
   @override
   void didUpdateWidget(covariant ConversationTimelineView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    debugPrint('didUpdateWidget: ConversationTimelinV2');
     if (oldWidget.chatId != widget.chatId ||
         oldWidget.threadRootId != widget.threadRootId) {
       _lastHandledViewportCommandGeneration = 0;
-      _lastVisibleMessageId = null;
       _lastVisibilityWindow = null;
       widget.onMessageVisibilityChanged?.call(null);
     }
     if (oldWidget.launchRequest != widget.launchRequest) {
       _scheduleInitializeLaunchRequest();
     }
+    _handleScrollChanged();
   }
 
   void _scheduleInitializeLaunchRequest() {
@@ -266,7 +202,7 @@ class _ConversationTimelineViewState
 
   void _handleScrollChanged() {
     _updateViewportFacts();
-    _updateLastVisibleMessageId();
+    _updateMessageVisibilityWindow();
   }
 
   void _scheduleViewportMeasurement() {
@@ -280,7 +216,7 @@ class _ConversationTimelineViewState
         return;
       }
       _updateViewportFacts();
-      _updateLastVisibleMessageId();
+      _updateMessageVisibilityWindow();
     });
   }
 
@@ -308,7 +244,7 @@ class _ConversationTimelineViewState
     }
   }
 
-  void _updateLastVisibleMessageId() {
+  void _updateMessageVisibilityWindow() {
     if (!_scrollController.hasClients || _renderedMessagesByStableKey.isEmpty) {
       return;
     }
@@ -338,12 +274,6 @@ class _ConversationTimelineViewState
       ));
     }
 
-    final nextLastVisibleMessageId =
-        _resolveLastVisibleMessageIdAtViewportMidpoint(
-          measurements: measurements,
-          viewportTop: viewportTop,
-          viewportBottom: viewportBottom,
-        );
     final nextVisibilityWindow = _resolveMessageVisibilityWindow(
       measurements: measurements,
       viewportTop: viewportTop,
@@ -355,20 +285,9 @@ class _ConversationTimelineViewState
         _lastVisibilityWindow = nextVisibilityWindow;
       });
       widget.onMessageVisibilityChanged?.call(nextVisibilityWindow);
-    }
-
-    if (nextLastVisibleMessageId == _lastVisibleMessageId) {
-      return;
-    }
-
-    setState(() {
-      _lastVisibleMessageId = nextLastVisibleMessageId;
-    });
-
-    if (nextLastVisibleMessageId != null) {
       ref
           .read(conversationTimelineViewModelProvider(_identity).notifier)
-          .reportLastVisibleMessageId(nextLastVisibleMessageId);
+          .reportMessageVisibilityWindow(nextVisibilityWindow);
     }
   }
 
@@ -662,7 +581,8 @@ class _ConversationTimelineViewState
                   ' gen: ${state.viewportCommandGeneration}'
                   ' | before=${state.beforeMessages.length}'
                   ' after=${state.afterMessages.length}'
-                  ' | last_visible_id=${_lastVisibleMessageId?.toString() ?? 'null'}',
+                  ' | visible=${_lastVisibilityWindow?.firstVisibleMessageId.toString() ?? 'null'}'
+                  '..${_lastVisibilityWindow?.lastVisibleMessageId.toString() ?? 'null'}',
                 ),
               ),
             ),

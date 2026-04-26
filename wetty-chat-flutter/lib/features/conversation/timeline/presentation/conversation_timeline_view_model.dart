@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:chahua/features/conversation/shared/application/conversation_canonical_message_store.dart';
 import 'package:chahua/features/conversation/shared/data/conversation_timeline_v2_repository.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_timeline_v2_active_segment.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
+import 'package:chahua/features/conversation/timeline/model/message_visibility_window.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:chahua/features/conversation/shared/domain/launch_request.dart';
 import 'package:flutter/foundation.dart';
@@ -198,11 +200,12 @@ class ConversationTimelineViewModel
     return _repository.deleteMessage(messageId);
   }
 
-  void reportLastVisibleMessageId(int messageId) {
-    if (state.isBootstrapping) {
+  void reportMessageVisibilityWindow(MessageVisibilityWindow? window) {
+    if (state.isBootstrapping || window == null) {
       return;
     }
-    _repository.markVisibleMessageRead(messageId);
+    log('reportMessageVisibilityWindow: $window');
+    _repository.markVisibleMessageRead(window.lastVisibleMessageId);
   }
 
   Future<void> jumpToLatest() async {

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -45,15 +46,15 @@ class ReadStateRepository {
     required int messageId,
   }) {
     final target = _targetFor(identity);
-    final baseline = _knownReadBaseline(target);
-    if (baseline != null && messageId <= baseline) {
+    final pending = _pendingReports[target];
+    if (pending != null && messageId <= pending.messageId) {
+      log(
+        'reportVisibleMessageRead: pending: $messageId <= ${pending.messageId}',
+      );
       return;
     }
 
-    final pending = _pendingReports[target];
-    if (pending != null && messageId <= pending.messageId) {
-      return;
-    }
+    log('reportVisibleMessageRead: queueing for $messageId');
 
     pending?.timer.cancel();
     final timer = Timer(_readReportDebounce, () {
@@ -106,28 +107,6 @@ class ReadStateRepository {
     return (kind: _ReadReportKind.chat, id: identity.chatId.toString());
   }
 
-  int? _knownReadBaseline(_ReadReportTarget target) {
-    return switch (target.kind) {
-      _ReadReportKind.chat => _knownChatReadBaseline(target.id),
-      _ReadReportKind.thread => null,
-    };
-  }
-
-  int? _knownChatReadBaseline(String chatId) {
-    final groupState = ref.read(groupListV2StoreProvider);
-    for (final group in groupState.groups) {
-      if (group.id != chatId) {
-        continue;
-      }
-      final lastReadMessageId = int.tryParse(group.lastReadMessageId ?? '');
-      if (group.unreadCount <= 0) {
-        return group.lastMessage?.id ?? lastReadMessageId;
-      }
-      return lastReadMessageId;
-    }
-    return null;
-  }
-
   Future<void> _flushPendingReadReport(_ReadReportTarget target) async {
     final pending = _pendingReports.remove(target);
     if (pending == null) {
@@ -136,10 +115,6 @@ class ReadStateRepository {
 
     pending.timer.cancel();
     final messageId = pending.messageId;
-    final baseline = _knownReadBaseline(target);
-    if (baseline != null && messageId <= baseline) {
-      return;
-    }
 
     try {
       switch (target.kind) {

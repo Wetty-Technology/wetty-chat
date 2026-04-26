@@ -6,7 +6,7 @@ import 'package:chahua/features/shared/model/message/message.dart'
 import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
 
-import '../../timeline/presentation/message_long_press_details_v2.dart';
+import '../../timeline/model/message_long_press_details_v2.dart';
 import '../../timeline/presentation/reply_swipe_action_v2.dart';
 import 'message_item.dart';
 
