@@ -82,7 +82,7 @@ class _BottomNavBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 45,
+          height: 49,
           child: Row(
             children: [
               for (var index = 0; index < items.length; index++)
@@ -123,7 +123,7 @@ class _BottomNavItem extends StatelessWidget {
       onTap: onTap,
       child: Center(
         child: Padding(
-          padding: const EdgeInsets.only(top: 6),
+          padding: const EdgeInsets.only(top: 4, bottom: 2),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

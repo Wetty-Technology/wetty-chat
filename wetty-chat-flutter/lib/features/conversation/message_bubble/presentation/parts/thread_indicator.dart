@@ -1,5 +1,6 @@
 import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
+import 'package:chahua/l10n/app_localizations.dart';
 import 'package:flutter/cupertino.dart';
 
 import '../../domain/bubble_theme_v2.dart';
@@ -13,6 +14,7 @@ class ThreadIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = BubbleThemeV2.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final borderColor = theme.isMe
         ? CupertinoColors.white.withAlpha(51)
         : CupertinoColors.black.withAlpha(20);
@@ -37,7 +39,7 @@ class ThreadIndicator extends StatelessWidget {
             ),
             const SizedBox(width: 4),
             Text(
-              '${threadInfo.replyCount} repl${threadInfo.replyCount == 1 ? 'y' : 'ies'}',
+              l10n.threadReplyCount(threadInfo.replyCount),
               style: appBubbleTextStyle(
                 context,
                 fontSize: 12,

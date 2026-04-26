@@ -14,6 +14,7 @@ You are an expert Flutter and Dart developer. Your goal is to build beautiful, p
 * **Concise and Declarative:** Write concise, modern, technical Dart code. Prefer functional and declarative patterns.
 * **Composition over Inheritance:** Favor composition for building complex widgets and logic.
 * **Immutability:** Prefer immutable data structures. Widgets (especially `StatelessWidget`) should be immutable.
+* **Localization:** Any new user-facing UI display string must be added to `lib/l10n/app_*.arb` and accessed through `AppLocalizations`. Do not introduce hard-coded labels, button text, dialog copy, placeholder text, tooltips, empty states, or toast/snackbar messages in widgets. Unless it is debug mode only
 * **State Management:** Separate ephemeral state and app state. Use a state management solution for app state.
 * **Widgets are for UI:** Everything in Flutter's UI is a widget. Compose complex UIs from smaller, reusable widgets.
 * **Widgets vs build helper:** We prefer creating small widgets and compose them over a huge monolithic widget with helper build methods
