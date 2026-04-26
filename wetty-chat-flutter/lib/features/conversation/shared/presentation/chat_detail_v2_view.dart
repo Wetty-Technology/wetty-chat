@@ -26,6 +26,7 @@ class ChatDetailV2Page extends StatelessWidget {
       resizeToAvoidBottomInset: false,
       navigationBar: CupertinoNavigationBar(
         middle: _ChatDetailTitle(chatId: chatId),
+        trailing: _ChatDetailActions(chatId: chatId),
       ),
       child: SafeArea(
         bottom: false,
@@ -53,6 +54,35 @@ class ChatDetailV2Page extends StatelessWidget {
       return;
     }
     context.push(AppRoutes.nestedNewThread('$chatId', '$threadRootId'));
+  }
+}
+
+class _ChatDetailActions extends StatelessWidget {
+  const _ChatDetailActions({required this.chatId});
+
+  final int chatId;
+
+  @override
+  Widget build(BuildContext context) {
+    final routeChatId = chatId.toString();
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        CupertinoButton(
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          minimumSize: const Size.square(36),
+          onPressed: () => context.push(AppRoutes.chatMembers(routeChatId)),
+          child: const Icon(CupertinoIcons.person_2),
+        ),
+        CupertinoButton(
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          minimumSize: const Size.square(36),
+          onPressed: () => context.push(AppRoutes.chatSettings(routeChatId)),
+          child: const Icon(CupertinoIcons.info_circle),
+        ),
+      ],
+    );
   }
 }
 
