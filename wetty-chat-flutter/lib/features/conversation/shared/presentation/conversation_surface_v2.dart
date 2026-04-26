@@ -10,6 +10,7 @@ import 'package:chahua/features/conversation/compose/presentation/conversation_c
 import 'package:chahua/features/conversation/pins/application/pinned_messages_provider.dart';
 import 'package:chahua/features/conversation/pins/domain/pinned_message.dart';
 import 'package:chahua/features/conversation/pins/presentation/pinned_message_banner.dart';
+import 'package:chahua/features/conversation/pins/presentation/pinned_message_list_modal.dart';
 import 'package:chahua/features/conversation/timeline/presentation/conversation_timeline_view_model.dart';
 import 'package:chahua/features/conversation/timeline/presentation/conversation_timeline_view.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
