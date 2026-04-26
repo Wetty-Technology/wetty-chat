@@ -528,7 +528,6 @@ async fn post_send_invite_message(
             reply_root_id: None,
             client_generated_id: body.client_generated_id,
             attachment_ids: vec![],
-            update_group_last_message: true,
             publish_immediately: true,
         },
     )
@@ -868,7 +867,6 @@ async fn post_redeem_invite(
             reply_root_id: None,
             client_generated_id: uuid::Uuid::new_v4().to_string(),
             attachment_ids: vec![],
-            update_group_last_message: true,
             publish_immediately: true,
         },
     )

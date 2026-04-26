@@ -218,7 +218,6 @@ pub(crate) struct PreparedMessageSend {
     pub reply_root_id: Option<i64>,
     pub client_generated_id: String,
     pub attachment_ids: Vec<i64>,
-    pub update_group_last_message: bool,
     pub publish_immediately: bool,
 }
 
@@ -655,7 +654,7 @@ pub(crate) async fn send_prepared_message(
         .get_result(conn)?;
     state.metrics.record_message(prepared.chat_id);
 
-    if prepared.publish_immediately && prepared.update_group_last_message {
+    if prepared.publish_immediately && prepared.reply_root_id.is_none() {
         use crate::schema::groups::dsl as g_dsl;
         diesel::update(groups::table.filter(g_dsl::id.eq(prepared.chat_id)))
             .set((

@@ -303,7 +303,6 @@ async fn post_add_member(
             reply_root_id: None,
             client_generated_id: uuid::Uuid::new_v4().to_string(),
             attachment_ids: vec![],
-            update_group_last_message: true,
             publish_immediately: true,
         },
     )
@@ -432,7 +431,6 @@ async fn delete_remove_member(
             reply_root_id: None,
             client_generated_id: uuid::Uuid::new_v4().to_string(),
             attachment_ids: vec![],
-            update_group_last_message: true,
             publish_immediately: true,
         },
     )

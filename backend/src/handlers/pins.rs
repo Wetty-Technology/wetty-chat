@@ -241,7 +241,6 @@ async fn create_pin(
             reply_root_id: None,
             client_generated_id: Uuid::new_v4().to_string(),
             attachment_ids: vec![],
-            update_group_last_message: false,
             publish_immediately: true,
         },
     )
@@ -317,7 +316,6 @@ async fn delete_pin(
             reply_root_id: None,
             client_generated_id: Uuid::new_v4().to_string(),
             attachment_ids: vec![],
-            update_group_last_message: false,
             publish_immediately: true,
         },
     )

@@ -406,7 +406,6 @@ async fn post_message(
                 reply_root_id: None,
                 client_generated_id: body.client_generated_id,
                 attachment_ids,
-                update_group_last_message: true,
                 publish_immediately,
             },
         )
@@ -514,7 +513,6 @@ pub(super) async fn post_thread_message(
                 reply_root_id: Some(thread_id),
                 client_generated_id: body.client_generated_id,
                 attachment_ids,
-                update_group_last_message: false,
                 publish_immediately,
             },
         )
