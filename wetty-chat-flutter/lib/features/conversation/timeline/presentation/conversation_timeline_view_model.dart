@@ -103,6 +103,7 @@ class ConversationTimelineViewModel
 
   bool _bootstrapStarted = false;
   int? _highlightedServerMessageId;
+  int? _highlightFirstServerMessageIdAfter;
   TimelineViewportFacts? _latestViewportFacts;
   String? _lastRenderedTailStableKey;
   _TimelineRenderSplitPolicy _renderSplitPolicy =
@@ -218,6 +219,7 @@ class ConversationTimelineViewModel
       placement: ConversationTimelineViewportPlacement.bottomPreferred,
     );
     _highlightedServerMessageId = null;
+    _highlightFirstServerMessageIdAfter = null;
     _renderSplitPolicy = const _TimelineRenderSplitPolicy.none();
   }
 
@@ -252,6 +254,7 @@ class ConversationTimelineViewModel
     final aroundMode = ConversationTimelineActiveSegmentMode.around(messageId);
     _setActiveSegmentMode(aroundMode);
     _highlightedServerMessageId = highlight ? messageId : null;
+    _highlightFirstServerMessageIdAfter = null;
     _renderSplitPolicy = _TimelineRenderSplitPolicy.fromMessageInclusive(
       messageId,
     );
@@ -261,36 +264,27 @@ class ConversationTimelineViewModel
     );
   }
 
-  Future<void> jumpToUnread(int lastReadMessageId) async {
-    state = state.copyWith(isResolvingJump: true);
+  void jumpToUnread(int lastReadMessageId) {
+    unawaited(
+      _repository.refreshAroundServerMessageId(
+        lastReadMessageId,
+        limit: _initialLoadedWindowSize,
+      ),
+    );
 
-    try {
-      final firstUnreadMessageId = await _repository
-          .refreshAfterServerMessageId(
-            lastReadMessageId,
-            limit: _initialLoadedWindowSize,
-          );
-      if (firstUnreadMessageId == null) {
-        await jumpToLatest();
-        return;
-      }
-
-      final aroundMode = ConversationTimelineActiveSegmentMode.around(
-        firstUnreadMessageId,
-      );
-      _setActiveSegmentMode(aroundMode);
-      _highlightedServerMessageId = firstUnreadMessageId;
-      _renderSplitPolicy = _TimelineRenderSplitPolicy.fromMessageInclusive(
-        firstUnreadMessageId,
-      );
-      _issueViewportCommand(
-        kind: ConversationTimelineViewportCommandKind.resetToCenterOrigin,
-        placement: ConversationTimelineViewportPlacement.topPreferred,
-      );
-    } catch (error) {
-      debugPrint('jumpToUnread error: $error');
-      await jumpToLatest();
-    }
+    final aroundMode = ConversationTimelineActiveSegmentMode.around(
+      lastReadMessageId,
+    );
+    _setActiveSegmentMode(aroundMode);
+    _highlightedServerMessageId = null;
+    _highlightFirstServerMessageIdAfter = lastReadMessageId;
+    _renderSplitPolicy = _TimelineRenderSplitPolicy.afterMessage(
+      lastReadMessageId,
+    );
+    _issueViewportCommand(
+      kind: ConversationTimelineViewportCommandKind.resetToCenterOrigin,
+      placement: ConversationTimelineViewportPlacement.topPreferred,
+    );
   }
 
   Future<void> _bootstrapLatestSegment() async {
@@ -382,6 +376,14 @@ class ConversationTimelineViewModel
     if (_highlightedServerMessageId != null) {
       for (final message in segment.orderedMessages) {
         if (message.serverMessageId == _highlightedServerMessageId) {
+          highlightedStableKey = message.stableKey;
+          break;
+        }
+      }
+    } else if (_highlightFirstServerMessageIdAfter case final readBoundary?) {
+      for (final message in segment.orderedMessages) {
+        final serverMessageId = message.serverMessageId;
+        if (serverMessageId != null && serverMessageId > readBoundary) {
           highlightedStableKey = message.stableKey;
           break;
         }
