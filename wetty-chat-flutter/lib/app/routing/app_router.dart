@@ -1,4 +1,5 @@
 import 'package:chahua/features/chat_list/presentation/chat_list_v2_page.dart';
+import 'package:chahua/features/chat_list/presentation/chat_workspace_shell.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -99,86 +100,124 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
       StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) =>
-            HomeShell(navigationShell: navigationShell),
+        builder: (context, state, navigationShell) => HomeShell(
+          navigationShell: navigationShell,
+          location: state.uri.toString(),
+        ),
         branches: [
           // ── Branch 0: Chats ──
           StatefulShellBranch(
             navigatorKey: _chatsBranchNavigatorKey,
             routes: [
-              GoRoute(
-                path: AppRoutes.chats,
-                pageBuilder: (context, state) => CupertinoPage(
-                  key: state.pageKey,
-                  child: const ChatListV2Page(),
+              ShellRoute(
+                builder: (context, state, child) => ChatWorkspaceShell(
+                  location: state.uri.toString(),
+                  child: child,
                 ),
                 routes: [
                   GoRoute(
-                    parentNavigatorKey: _rootNavigatorKey,
-                    path: 'chat/:chatId',
-                    pageBuilder: (context, state) {
-                      final chatId = int.parse(state.pathParameters['chatId']!);
-                      final extra = state.extra as Map<String, dynamic>?;
-                      return CupertinoPage(
-                        key: state.pageKey,
-                        child: ChatDetailV2Page(
-                          chatId: chatId,
-                          launchRequest:
-                              extra?['launchRequest'] as LaunchRequest? ??
-                              const LaunchRequest.latest(),
-                        ),
-                      );
-                    },
+                    path: AppRoutes.chats,
+                    pageBuilder: (context, state) => CupertinoPage(
+                      key: state.pageKey,
+                      child: const ChatListV2Page(),
+                    ),
                     routes: [
                       GoRoute(
-                        parentNavigatorKey: _rootNavigatorKey,
-                        path: 'members',
-                        pageBuilder: (context, state) {
-                          final chatId = state.pathParameters['chatId']!;
-                          return CupertinoPage(
-                            key: state.pageKey,
-                            child: GroupMembersPage(chatId: chatId),
-                          );
-                        },
-                      ),
-                      GoRoute(
-                        parentNavigatorKey: _rootNavigatorKey,
-                        path: 'settings',
-                        pageBuilder: (context, state) {
-                          final chatId = state.pathParameters['chatId']!;
-                          return CupertinoPage(
-                            key: state.pageKey,
-                            child: GroupSettingsPage(chatId: chatId),
-                          );
-                        },
-                      ),
-                      GoRoute(
-                        parentNavigatorKey: _rootNavigatorKey,
-                        path: 'thread/:threadId/new',
+                        path: 'chat/:chatId',
                         pageBuilder: (context, state) {
                           final chatId = int.parse(
                             state.pathParameters['chatId']!,
                           );
-                          final threadId = int.parse(
-                            state.pathParameters['threadId']!,
-                          );
                           final extra = state.extra as Map<String, dynamic>?;
-                          return CupertinoPage(
+                          return _chatWorkspacePage(
                             key: state.pageKey,
-                            child: ThreadDetailV2Page(
+                            disableTransition: _disableTransition(state),
+                            child: ChatDetailV2Page(
                               chatId: chatId,
-                              threadRootId: threadId,
                               launchRequest:
                                   extra?['launchRequest'] as LaunchRequest? ??
                                   const LaunchRequest.latest(),
-                              isNewThread: true,
                             ),
                           );
                         },
+                        routes: [
+                          GoRoute(
+                            parentNavigatorKey: _rootNavigatorKey,
+                            path: 'members',
+                            pageBuilder: (context, state) {
+                              final chatId = state.pathParameters['chatId']!;
+                              return CupertinoPage(
+                                key: state.pageKey,
+                                child: GroupMembersPage(chatId: chatId),
+                              );
+                            },
+                          ),
+                          GoRoute(
+                            parentNavigatorKey: _rootNavigatorKey,
+                            path: 'settings',
+                            pageBuilder: (context, state) {
+                              final chatId = state.pathParameters['chatId']!;
+                              return CupertinoPage(
+                                key: state.pageKey,
+                                child: GroupSettingsPage(chatId: chatId),
+                              );
+                            },
+                          ),
+                          GoRoute(
+                            path: 'thread/:threadId/new',
+                            pageBuilder: (context, state) {
+                              final chatId = int.parse(
+                                state.pathParameters['chatId']!,
+                              );
+                              final threadId = int.parse(
+                                state.pathParameters['threadId']!,
+                              );
+                              final extra =
+                                  state.extra as Map<String, dynamic>?;
+                              return CupertinoPage(
+                                key: state.pageKey,
+                                child: ThreadDetailV2Page(
+                                  chatId: chatId,
+                                  threadRootId: threadId,
+                                  launchRequest:
+                                      extra?['launchRequest']
+                                          as LaunchRequest? ??
+                                      const LaunchRequest.latest(),
+                                  isNewThread: true,
+                                  implyLeadingInSplit: true,
+                                ),
+                              );
+                            },
+                          ),
+                          GoRoute(
+                            path: 'thread/:threadId',
+                            pageBuilder: (context, state) {
+                              final chatId = int.parse(
+                                state.pathParameters['chatId']!,
+                              );
+                              final threadId = int.parse(
+                                state.pathParameters['threadId']!,
+                              );
+                              final extra =
+                                  state.extra as Map<String, dynamic>?;
+                              return CupertinoPage(
+                                key: state.pageKey,
+                                child: ThreadDetailV2Page(
+                                  chatId: chatId,
+                                  threadRootId: threadId,
+                                  launchRequest:
+                                      extra?['launchRequest']
+                                          as LaunchRequest? ??
+                                      const LaunchRequest.latest(),
+                                  implyLeadingInSplit: true,
+                                ),
+                              );
+                            },
+                          ),
+                        ],
                       ),
                       GoRoute(
-                        parentNavigatorKey: _rootNavigatorKey,
-                        path: 'thread/:threadId',
+                        path: 'thread/:chatId/:threadId',
                         pageBuilder: (context, state) {
                           final chatId = int.parse(
                             state.pathParameters['chatId']!,
@@ -187,8 +226,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                             state.pathParameters['threadId']!,
                           );
                           final extra = state.extra as Map<String, dynamic>?;
-                          return CupertinoPage(
+                          return _chatWorkspacePage(
                             key: state.pageKey,
+                            disableTransition: _disableTransition(state),
                             child: ThreadDetailV2Page(
                               chatId: chatId,
                               threadRootId: threadId,
@@ -200,27 +240,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                         },
                       ),
                     ],
-                  ),
-                  GoRoute(
-                    parentNavigatorKey: _rootNavigatorKey,
-                    path: 'thread/:chatId/:threadId',
-                    pageBuilder: (context, state) {
-                      final chatId = int.parse(state.pathParameters['chatId']!);
-                      final threadId = int.parse(
-                        state.pathParameters['threadId']!,
-                      );
-                      final extra = state.extra as Map<String, dynamic>?;
-                      return CupertinoPage(
-                        key: state.pageKey,
-                        child: ThreadDetailV2Page(
-                          chatId: chatId,
-                          threadRootId: threadId,
-                          launchRequest:
-                              extra?['launchRequest'] as LaunchRequest? ??
-                              const LaunchRequest.latest(),
-                        ),
-                      );
-                    },
                   ),
                 ],
               ),
@@ -308,3 +327,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+Page<void> _chatWorkspacePage({
+  required LocalKey key,
+  required Widget child,
+  required bool disableTransition,
+}) {
+  if (disableTransition) {
+    return NoTransitionPage<void>(key: key, child: child);
+  }
+  return CupertinoPage<void>(key: key, child: child);
+}
+
+bool _disableTransition(GoRouterState state) {
+  final extra = state.extra;
+  return extra is Map<String, dynamic> && extra['disableTransition'] == true;
+}

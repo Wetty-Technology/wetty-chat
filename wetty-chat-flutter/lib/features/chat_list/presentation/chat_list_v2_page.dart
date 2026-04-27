@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:chahua/l10n/app_localizations.dart';
 
+import '../../../app/theme/style_config.dart';
 import '../../../core/notifications/unread_badge_provider.dart';
 import '../../../core/settings/app_settings_store.dart';
 import 'widgets/chat_list_segment.dart';
@@ -14,7 +15,16 @@ import '../application/thread_list_v2_view_model.dart';
 import 'widgets/chat_list_v2_tab_body.dart';
 
 class ChatListV2Page extends ConsumerStatefulWidget {
-  const ChatListV2Page({super.key});
+  const ChatListV2Page({
+    super.key,
+    this.embedded = false,
+    this.selectedChatId,
+    this.selectedThreadRootId,
+  });
+
+  final bool embedded;
+  final String? selectedChatId;
+  final int? selectedThreadRootId;
 
   @override
   ConsumerState<ChatListV2Page> createState() => _ChatListV2PageState();
@@ -138,41 +148,59 @@ class _ChatListV2PageState extends ConsumerState<ChatListV2Page> {
         ? CupertinoTheme.of(context).barBackgroundColor
         : CupertinoColors.systemBackground;
 
+    final scrollView = CustomScrollView(
+      controller: _scrollController,
+      physics: _supportsPullToRefresh
+          ? const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics())
+          : const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        SliverPersistentHeader(
+          pinned: true,
+          delegate: _ChatListSegmentHeaderDelegate(
+            activeTab: activeTab,
+            showAllTab: showAllTab,
+            isScrolledUnder: _isScrolledUnder,
+            allUnreadCount: allUnread,
+            groupsUnreadCount: groupsUnread,
+            threadsUnreadCount: threadsUnread,
+            onTabChanged: (tab) => setState(() => _activeTab = tab),
+          ),
+        ),
+        if (_supportsPullToRefresh)
+          CupertinoSliverRefreshControl(
+            onRefresh: () => _refreshActiveTab(activeTab),
+          ),
+        ChatListV2TabBody(
+          activeTab: activeTab,
+          selectedChatId: widget.selectedChatId,
+          selectedThreadRootId: widget.selectedThreadRootId,
+        ),
+      ],
+    );
+
+    if (widget.embedded) {
+      return ColoredBox(
+        color: context.appColors.backgroundPrimary,
+        child: Column(
+          children: [
+            CupertinoNavigationBar(
+              backgroundColor: chromeBackgroundColor,
+              middle: Text(l10n.tabChats),
+            ),
+            Expanded(
+              child: SafeArea(top: false, bottom: false, child: scrollView),
+            ),
+          ],
+        ),
+      );
+    }
+
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
         backgroundColor: chromeBackgroundColor,
         middle: Text(l10n.tabChats),
       ),
-      child: SafeArea(
-        bottom: false,
-        child: CustomScrollView(
-          controller: _scrollController,
-          physics: _supportsPullToRefresh
-              ? const AlwaysScrollableScrollPhysics(
-                  parent: BouncingScrollPhysics(),
-                )
-              : const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _ChatListSegmentHeaderDelegate(
-                activeTab: activeTab,
-                showAllTab: showAllTab,
-                isScrolledUnder: _isScrolledUnder,
-                allUnreadCount: allUnread,
-                groupsUnreadCount: groupsUnread,
-                threadsUnreadCount: threadsUnread,
-                onTabChanged: (tab) => setState(() => _activeTab = tab),
-              ),
-            ),
-            if (_supportsPullToRefresh)
-              CupertinoSliverRefreshControl(
-                onRefresh: () => _refreshActiveTab(activeTab),
-              ),
-            ChatListV2TabBody(activeTab: activeTab),
-          ],
-        ),
-      ),
+      child: SafeArea(bottom: false, child: scrollView),
     );
   }
 }

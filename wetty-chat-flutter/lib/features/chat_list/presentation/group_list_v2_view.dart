@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:chahua/l10n/app_localizations.dart';
 
 import '../../../app/routing/route_names.dart';
+import 'chat_workspace_layout_scope.dart';
 import 'package:chahua/features/chat_list/presentation/widgets/swipe_to_action_row.dart';
 import 'package:chahua/features/conversation/shared/domain/launch_request.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
@@ -13,7 +14,9 @@ import '../model/chat_list_item.dart';
 import '../application/group_list_v2_view_model.dart';
 
 class GroupListV2View extends ConsumerWidget {
-  const GroupListV2View({super.key});
+  const GroupListV2View({super.key, this.selectedChatId});
+
+  final String? selectedChatId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -47,8 +50,13 @@ class GroupListV2View extends ConsumerWidget {
           slivers: [
             SliverList.builder(
               itemCount: viewState.groups.length,
-              itemBuilder: (context, index) =>
-                  _GroupListV2Row(chat: viewState.groups[index]),
+              itemBuilder: (context, index) {
+                final chat = viewState.groups[index];
+                return _GroupListV2Row(
+                  chat: chat,
+                  isActive: chat.id == selectedChatId,
+                );
+              },
             ),
             if (viewState.isLoadingMore)
               const SliverToBoxAdapter(
@@ -65,9 +73,10 @@ class GroupListV2View extends ConsumerWidget {
 }
 
 class _GroupListV2Row extends StatelessWidget {
-  const _GroupListV2Row({required this.chat});
+  const _GroupListV2Row({required this.chat, required this.isActive});
 
   final ChatListItem chat;
+  final bool isActive;
 
   @override
   Widget build(BuildContext context) {
@@ -100,11 +109,17 @@ class _GroupListV2Row extends StatelessWidget {
             lastMessage,
             AppLocalizations.of(context)!,
           ),
+          isActive: isActive,
           isMuted: isMuted,
           onTap: () {
-            context.push(
+            context.go(
               AppRoutes.chatDetail(chat.id),
-              extra: {'launchRequest': _launchRequestForChat(chat)},
+              extra: {
+                'launchRequest': _launchRequestForChat(chat),
+                'disableTransition': ChatWorkspaceLayoutScope.isSplitLayout(
+                  context,
+                ),
+              },
             );
           },
         ),

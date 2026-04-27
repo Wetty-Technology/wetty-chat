@@ -33,6 +33,7 @@ class ReadStateRepository {
 
   final Ref ref;
   final Map<_ReadReportTarget, _PendingReadReport> _pendingReports = {};
+  final Map<ConversationIdentity, int> _knownReadBaseline = {};
 
   void dispose() {
     for (final pending in _pendingReports.values) {
@@ -47,6 +48,13 @@ class ReadStateRepository {
   }) {
     final target = _targetFor(identity);
     final pending = _pendingReports[target];
+
+    final baseline = _knownReadBaseline[identity];
+    if (baseline != null && messageId <= baseline) {
+      log('reportVisibleMessageRead: baseline: $messageId <= $baseline');
+      return;
+    }
+
     if (pending != null && messageId <= pending.messageId) {
       log(
         'reportVisibleMessageRead: pending: $messageId <= ${pending.messageId}',
@@ -64,6 +72,7 @@ class ReadStateRepository {
       messageId: messageId,
       timer: timer,
     );
+    _knownReadBaseline[identity] = messageId;
   }
 
   Future<ChatReadStateUpdate> markChatRead({

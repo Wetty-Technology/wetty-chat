@@ -6,6 +6,7 @@ import '../../../shared/presentation/app_avatar.dart';
 import '../../../shared/presentation/chat_timestamp_formatter.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
 import '../../model/thread_list_item.dart';
+import 'list_row_interaction_surface.dart';
 
 /// A single row in the thread list displaying a thread summary.
 ///
@@ -14,10 +15,16 @@ import '../../model/thread_list_item.dart';
 /// - Line 1: root message preview text (muted color) + timestamp
 /// - Line 2: last reply "sender: message" + unread badge
 class ThreadListRow extends StatelessWidget {
-  const ThreadListRow({super.key, required this.thread, this.onTap});
+  const ThreadListRow({
+    super.key,
+    required this.thread,
+    this.onTap,
+    this.isActive = false,
+  });
 
   final ThreadListItem thread;
   final VoidCallback? onTap;
+  final bool isActive;
 
   static const double _primaryAvatarSize = 48;
   static const double _secondaryAvatarSize = 26;
@@ -34,13 +41,13 @@ class ThreadListRow extends StatelessWidget {
     final lastReplyText = _lastReplyPreviewText(l10n);
     final lastReplySender = thread.lastReply?.sender.name ?? l10n.unknownUser;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: Padding(
+    return ListRowInteractionSurface(
+      isActive: isActive,
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
@@ -102,15 +109,15 @@ class ThreadListRow extends StatelessWidget {
               ],
             ),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(left: 72),
-          child: Container(
-            height: 0.5,
-            color: CupertinoColors.separator.resolveFrom(context),
+          Padding(
+            padding: const EdgeInsets.only(left: 72),
+            child: Container(
+              height: 0.5,
+              color: CupertinoColors.separator.resolveFrom(context),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

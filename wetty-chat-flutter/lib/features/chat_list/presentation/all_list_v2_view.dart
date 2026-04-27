@@ -7,6 +7,7 @@ import '../../../app/routing/route_names.dart';
 import 'package:chahua/features/conversation/shared/domain/launch_request.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
 import '../../shared/presentation/chat_timestamp_formatter.dart';
+import 'chat_workspace_layout_scope.dart';
 import 'widgets/chat_list_row.dart';
 import 'widgets/swipe_to_action_row.dart';
 import '../model/chat_list_item.dart';
@@ -19,7 +20,14 @@ import '../application/group_list_v2_view_model.dart';
 import '../application/thread_list_v2_view_model.dart';
 
 class AllListV2View extends ConsumerWidget {
-  const AllListV2View({super.key});
+  const AllListV2View({
+    super.key,
+    this.selectedChatId,
+    this.selectedThreadRootId,
+  });
+
+  final String? selectedChatId;
+  final int? selectedThreadRootId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -56,7 +64,11 @@ class AllListV2View extends ConsumerWidget {
       slivers: [
         SliverList.builder(
           itemCount: items.length,
-          itemBuilder: (context, index) => _AllListV2Row(item: items[index]),
+          itemBuilder: (context, index) => _AllListV2Row(
+            item: items[index],
+            selectedChatId: selectedChatId,
+            selectedThreadRootId: selectedThreadRootId,
+          ),
         ),
         if (uiState.isLoadingMore)
           const SliverToBoxAdapter(
@@ -71,23 +83,36 @@ class AllListV2View extends ConsumerWidget {
 }
 
 class _AllListV2Row extends StatelessWidget {
-  const _AllListV2Row({required this.item});
+  const _AllListV2Row({
+    required this.item,
+    required this.selectedChatId,
+    required this.selectedThreadRootId,
+  });
 
   final AllListV2Item item;
+  final String? selectedChatId;
+  final int? selectedThreadRootId;
 
   @override
   Widget build(BuildContext context) {
     return switch (item) {
-      AllGroupListV2Item(:final group) => _AllGroupListV2Row(group: group),
-      AllThreadListV2Item(:final thread) => _AllThreadListV2Row(thread: thread),
+      AllGroupListV2Item(:final group) => _AllGroupListV2Row(
+        group: group,
+        isActive: group.id == selectedChatId,
+      ),
+      AllThreadListV2Item(:final thread) => _AllThreadListV2Row(
+        thread: thread,
+        isActive: thread.threadRootId == selectedThreadRootId,
+      ),
     };
   }
 }
 
 class _AllGroupListV2Row extends StatelessWidget {
-  const _AllGroupListV2Row({required this.group});
+  const _AllGroupListV2Row({required this.group, required this.isActive});
 
   final ChatListItem group;
+  final bool isActive;
 
   @override
   Widget build(BuildContext context) {
@@ -120,11 +145,17 @@ class _AllGroupListV2Row extends StatelessWidget {
             lastMessage,
             AppLocalizations.of(context)!,
           ),
+          isActive: isActive,
           isMuted: isMuted,
           onTap: () {
-            context.push(
+            context.go(
               AppRoutes.chatDetail(group.id),
-              extra: {'launchRequest': _launchRequestForChat(group)},
+              extra: {
+                'launchRequest': _launchRequestForChat(group),
+                'disableTransition': ChatWorkspaceLayoutScope.isSplitLayout(
+                  context,
+                ),
+              },
             );
           },
         ),
@@ -163,17 +194,24 @@ class _AllGroupListV2Row extends StatelessWidget {
 }
 
 class _AllThreadListV2Row extends StatelessWidget {
-  const _AllThreadListV2Row({required this.thread});
+  const _AllThreadListV2Row({required this.thread, required this.isActive});
 
   final ThreadListItem thread;
+  final bool isActive;
 
   @override
   Widget build(BuildContext context) {
     return ThreadListRow(
       thread: thread,
+      isActive: isActive,
       onTap: () {
-        context.push(
+        context.go(
           AppRoutes.threadDetail(thread.chatId, thread.threadRootId.toString()),
+          extra: {
+            'disableTransition': ChatWorkspaceLayoutScope.isSplitLayout(
+              context,
+            ),
+          },
         );
       },
     );

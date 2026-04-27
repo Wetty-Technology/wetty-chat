@@ -60,6 +60,8 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
   late final AppRefreshCoordinator _refreshCoordinator;
   MessageLongPressDetailsV2? _activeOverlay;
   MessageVisibilityWindow? _visibleMessages;
+  MessageVisibilityWindow? _pendingVisibilityWindow;
+  bool _isVisibilityWindowUpdateScheduled = false;
 
   @override
   void initState() {
@@ -149,6 +151,26 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
     }
     setState(() {
       _activeOverlay = null;
+    });
+  }
+
+  void _handleMessageVisibilityChanged(MessageVisibilityWindow? window) {
+    if (_visibleMessages == window && !_isVisibilityWindowUpdateScheduled) {
+      return;
+    }
+    _pendingVisibilityWindow = window;
+    if (_isVisibilityWindowUpdateScheduled) {
+      return;
+    }
+    _isVisibilityWindowUpdateScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _isVisibilityWindowUpdateScheduled = false;
+      if (!mounted || _visibleMessages == _pendingVisibilityWindow) {
+        return;
+      }
+      setState(() {
+        _visibleMessages = _pendingVisibilityWindow;
+      });
     });
   }
 
@@ -509,14 +531,8 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
                       onOpenThread: widget.onOpenThread,
                       onStartThread: widget.onStartThread,
                       onMessageLongPress: _handleMessageLongPress,
-                      onMessageVisibilityChanged: (window) {
-                        if (_visibleMessages == window) {
-                          return;
-                        }
-                        setState(() {
-                          _visibleMessages = window;
-                        });
-                      },
+                      onMessageVisibilityChanged:
+                          _handleMessageVisibilityChanged,
                     ),
                   ),
                 ),

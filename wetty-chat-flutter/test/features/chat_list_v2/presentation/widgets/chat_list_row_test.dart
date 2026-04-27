@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:chahua/core/cache/app_cached_network_image.dart';
 import 'package:chahua/features/chat_list/presentation/widgets/chat_list_row.dart';
+import 'package:chahua/l10n/app_localizations.dart';
 
 void main() {
   testWidgets('renders cached avatar image when avatar URL is present', (
@@ -47,6 +48,8 @@ void main() {
 Widget _buildTestApp(Widget child) {
   return ProviderScope(
     child: CupertinoApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: CupertinoPageScaffold(child: ListView(children: [child])),
     ),
   );

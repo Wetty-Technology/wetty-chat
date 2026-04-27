@@ -2,6 +2,7 @@ import 'package:chahua/features/conversation/shared/domain/conversation_identity
 import 'package:chahua/features/conversation/shared/domain/launch_request.dart';
 import 'package:chahua/features/conversation/shared/presentation/conversation_surface_v2.dart';
 import 'package:chahua/features/chat_list/application/thread_list_v2_view_model.dart';
+import 'package:chahua/features/chat_list/presentation/chat_workspace_layout_scope.dart';
 import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/l10n/app_localizations.dart';
 import 'package:flutter/cupertino.dart';
@@ -14,12 +15,14 @@ class ThreadDetailV2Page extends ConsumerStatefulWidget {
     required this.threadRootId,
     this.launchRequest = const LaunchRequest.latest(),
     this.isNewThread = false,
+    this.implyLeadingInSplit = false,
   });
 
   final int chatId;
   final int threadRootId;
   final LaunchRequest launchRequest;
   final bool isNewThread;
+  final bool implyLeadingInSplit;
 
   @override
   ConsumerState<ThreadDetailV2Page> createState() => _ThreadDetailV2PageState();
@@ -43,6 +46,7 @@ class _ThreadDetailV2PageState extends ConsumerState<ThreadDetailV2Page> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final isSplitLayout = ChatWorkspaceLayoutScope.isSplitLayout(context);
     final ConversationIdentity identity = (
       chatId: widget.chatId,
       threadRootId: widget.threadRootId,
@@ -50,6 +54,7 @@ class _ThreadDetailV2PageState extends ConsumerState<ThreadDetailV2Page> {
     return CupertinoPageScaffold(
       resizeToAvoidBottomInset: false,
       navigationBar: CupertinoNavigationBar(
+        automaticallyImplyLeading: !isSplitLayout || widget.implyLeadingInSplit,
         middle: Text(_isNewThread ? l10n.newThread : l10n.thread),
         // TODO: Add the thread subscribe button here once the Flutter UI is ready.
       ),

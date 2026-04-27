@@ -6,11 +6,14 @@ import 'package:chahua/l10n/app_localizations.dart';
 import '../../../app/routing/route_names.dart';
 import '../../../app/theme/style_config.dart';
 import '../model/thread_list_item.dart';
+import 'chat_workspace_layout_scope.dart';
 import 'widgets/thread_list_row.dart';
 import '../application/thread_list_v2_view_model.dart';
 
 class ThreadListV2View extends ConsumerWidget {
-  const ThreadListV2View({super.key});
+  const ThreadListV2View({super.key, this.selectedThreadRootId});
+
+  final int? selectedThreadRootId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -77,8 +80,13 @@ class ThreadListV2View extends ConsumerWidget {
           slivers: [
             SliverList.builder(
               itemCount: viewState.threads.length,
-              itemBuilder: (context, index) =>
-                  _ThreadListV2Row(thread: viewState.threads[index]),
+              itemBuilder: (context, index) {
+                final thread = viewState.threads[index];
+                return _ThreadListV2Row(
+                  thread: thread,
+                  isActive: thread.threadRootId == selectedThreadRootId,
+                );
+              },
             ),
             if (viewState.isLoadingMore)
               const SliverToBoxAdapter(
@@ -95,17 +103,24 @@ class ThreadListV2View extends ConsumerWidget {
 }
 
 class _ThreadListV2Row extends StatelessWidget {
-  const _ThreadListV2Row({required this.thread});
+  const _ThreadListV2Row({required this.thread, required this.isActive});
 
   final ThreadListItem thread;
+  final bool isActive;
 
   @override
   Widget build(BuildContext context) {
     return ThreadListRow(
       thread: thread,
+      isActive: isActive,
       onTap: () {
-        context.push(
+        context.go(
           AppRoutes.threadDetail(thread.chatId, thread.threadRootId.toString()),
+          extra: {
+            'disableTransition': ChatWorkspaceLayoutScope.isSplitLayout(
+              context,
+            ),
+          },
         );
       },
     );

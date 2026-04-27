@@ -17,6 +17,7 @@ class MessageItem extends ConsumerWidget {
     required this.isMe,
     required this.isInteractive,
     required this.showSenderName,
+    this.timelineViewportWidth,
     this.onToggleReaction,
     this.onTapReply,
     this.onOpenThread,
@@ -27,6 +28,7 @@ class MessageItem extends ConsumerWidget {
   final bool isMe;
   final bool isInteractive;
   final bool showSenderName;
+  final double? timelineViewportWidth;
   final ValueChanged<String>? onToggleReaction;
   final VoidCallback? onTapReply;
   final VoidCallback? onOpenThread;
@@ -41,6 +43,7 @@ class MessageItem extends ConsumerWidget {
       isMe: isMe,
       isInteractive: isInteractive,
       chatMessageFontSize: chatMessageFontSize,
+      timelineViewportWidth: timelineViewportWidth,
       child: switch (message.content) {
         SystemMessageContent() => SystemBubbleV2(message: message),
         StickerMessageContent() => StickerBubbleV2(

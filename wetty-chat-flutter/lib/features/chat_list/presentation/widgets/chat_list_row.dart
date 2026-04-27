@@ -3,6 +3,7 @@ import 'package:chahua/l10n/app_localizations.dart';
 
 import '../../../../app/theme/style_config.dart';
 import '../../../shared/presentation/app_avatar.dart';
+import 'list_row_interaction_surface.dart';
 
 class ChatListRow extends StatelessWidget {
   const ChatListRow({
@@ -15,6 +16,7 @@ class ChatListRow extends StatelessWidget {
     this.senderName,
     this.lastMessageText,
     this.draftText,
+    this.isActive = false,
     this.isMuted = false,
   });
 
@@ -26,17 +28,18 @@ class ChatListRow extends StatelessWidget {
   final String? senderName;
   final String? lastMessageText;
   final String? draftText;
+  final bool isActive;
   final bool isMuted;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: Padding(
+    return ListRowInteractionSurface(
+      isActive: isActive,
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
@@ -115,15 +118,15 @@ class ChatListRow extends StatelessWidget {
               ],
             ),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(left: 72),
-          child: Container(
-            height: 0.5,
-            color: CupertinoColors.separator.resolveFrom(context),
+          Padding(
+            padding: const EdgeInsets.only(left: 72),
+            child: Container(
+              height: 0.5,
+              color: CupertinoColors.separator.resolveFrom(context),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

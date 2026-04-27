@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:chahua/l10n/app_localizations.dart';
 
+import '../routing/route_names.dart';
 import '../../core/notifications/unread_badge_provider.dart';
 import '../../features/shared/application/app_refresh_coordinator.dart';
 import '../theme/style_config.dart';
@@ -12,9 +13,16 @@ import '../theme/style_config.dart';
 /// Shell widget for the [StatefulShellRoute.indexedStack].
 /// Renders the active branch content with a custom bottom navigation bar.
 class HomeShell extends ConsumerWidget {
-  const HomeShell({super.key, required this.navigationShell});
+  const HomeShell({
+    super.key,
+    required this.navigationShell,
+    required this.location,
+  });
 
   final StatefulNavigationShell navigationShell;
+  final String location;
+
+  static const double _splitLayoutBreakpoint = 900;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -29,33 +37,50 @@ class HomeShell extends ConsumerWidget {
       ),
       _HomeTabData(icon: CupertinoIcons.gear_alt_fill, label: l10n.tabSettings),
     ];
-    return DecoratedBox(
-      decoration: BoxDecoration(color: colors.backgroundPrimary),
-      child: Column(
-        children: [
-          Expanded(child: navigationShell),
-          _BottomNavBar(
-            items: tabs,
-            selectedIndex: navigationShell.currentIndex,
-            onTap: (index) {
-              if (index == 0) {
-                // TODO: Revisit whether tab-tap reconcile is needed once v2
-                // read-state sync points are fully defined.
-                unawaited(
-                  ref
-                      .read(appRefreshCoordinatorProvider)
-                      .recover(AppRefreshReason.tabReselected),
-                );
-              }
-              navigationShell.goBranch(
-                index,
-                initialLocation: index == navigationShell.currentIndex,
-              );
-            },
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final showBottomNav =
+            constraints.maxWidth < _splitLayoutBreakpoint &&
+            !_isCompactChatDetailRoute;
+
+        return DecoratedBox(
+          decoration: BoxDecoration(color: colors.backgroundPrimary),
+          child: Column(
+            children: [
+              Expanded(child: navigationShell),
+              if (showBottomNav)
+                _BottomNavBar(
+                  items: tabs,
+                  selectedIndex: navigationShell.currentIndex,
+                  onTap: (index) {
+                    if (index == 0) {
+                      // TODO: Revisit whether tab-tap reconcile is needed once v2
+                      // read-state sync points are fully defined.
+                      unawaited(
+                        ref
+                            .read(appRefreshCoordinatorProvider)
+                            .recover(AppRefreshReason.tabReselected),
+                      );
+                    }
+                    navigationShell.goBranch(
+                      index,
+                      initialLocation: index == navigationShell.currentIndex,
+                    );
+                  },
+                ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
+  }
+
+  bool get _isCompactChatDetailRoute {
+    if (navigationShell.currentIndex != 0) {
+      return false;
+    }
+    final path = Uri.parse(location).path;
+    return path != AppRoutes.chats;
   }
 }
 

@@ -32,10 +32,12 @@ class BubbleThemeV2 extends InheritedWidget {
     required bool isMe,
     required bool isInteractive,
     required double chatMessageFontSize,
+    double? timelineViewportWidth,
     required Widget child,
   }) {
     final colors = context.appColors;
-    final screenWidth = MediaQuery.sizeOf(context).width;
+    final viewportWidth =
+        timelineViewportWidth ?? MediaQuery.sizeOf(context).width;
     final timeText = formatChatMessageTime(context, message.createdAt);
     return BubbleThemeV2(
       key: key,
@@ -43,7 +45,7 @@ class BubbleThemeV2 extends InheritedWidget {
       isInteractive: isInteractive,
       maxBubbleWidth: math.max(
         0,
-        (screenWidth * _maxRowWidthFactor) -
+        (viewportWidth * _maxRowWidthFactor) -
             _rowHorizontalPadding -
             _avatarSlotWidth -
             _avatarGap,

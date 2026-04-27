@@ -92,7 +92,7 @@ class AppColors {
   final Color composerReplyPreviewTitle;
 
   static const light = AppColors(
-    backgroundPrimary: Color(0xFFF7F5F2),
+    backgroundPrimary: Color(0xFFF0F0F0),
     backgroundSecondary: Color(0xFFFFFFFF),
     surfaceCard: Color(0xFFFFFFFF),
     surfaceMuted: Color(0xFFF3F4F6),

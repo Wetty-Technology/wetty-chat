@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:chahua/app/routing/route_names.dart';
+import 'package:chahua/features/chat_list/presentation/chat_workspace_layout_scope.dart';
 
 class ChatDetailV2Page extends StatelessWidget {
   const ChatDetailV2Page({
@@ -21,10 +22,12 @@ class ChatDetailV2Page extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isSplitLayout = ChatWorkspaceLayoutScope.isSplitLayout(context);
     final ConversationIdentity identity = (chatId: chatId, threadRootId: null);
     return CupertinoPageScaffold(
       resizeToAvoidBottomInset: false,
       navigationBar: CupertinoNavigationBar(
+        automaticallyImplyLeading: !isSplitLayout,
         middle: _ChatDetailTitle(chatId: chatId),
         trailing: _ChatDetailActions(chatId: chatId),
       ),

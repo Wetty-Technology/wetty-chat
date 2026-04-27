@@ -103,64 +103,74 @@ class _MessageRowV2State extends State<MessageRowV2> {
 
   @override
   Widget build(BuildContext context) {
-    final item = MessageItem(
-      key: _bubbleKey,
-      message: widget.message,
-      isMe: _isMe,
-      isInteractive: true,
-      showSenderName: widget.showSenderName,
-      onToggleReaction: widget.onToggleReaction,
-      onTapReply: widget.onTapReply,
-      onOpenThread: widget.onOpenThread,
-      onOpenAttachment: widget.onOpenAttachment,
-    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final timelineViewportWidth = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : null;
+        final item = MessageItem(
+          key: _bubbleKey,
+          message: widget.message,
+          isMe: _isMe,
+          isInteractive: true,
+          showSenderName: widget.showSenderName,
+          timelineViewportWidth: timelineViewportWidth,
+          onToggleReaction: widget.onToggleReaction,
+          onTapReply: widget.onTapReply,
+          onOpenThread: widget.onOpenThread,
+          onOpenAttachment: widget.onOpenAttachment,
+        );
 
-    // NOTE: Early return here!!!
-    if (_getBubbleLayout() == _BubbleLayout.centered) {
-      return item;
-    }
+        // NOTE: Early return here!!!
+        if (_getBubbleLayout() == _BubbleLayout.centered) {
+          return item;
+        }
 
-    final avatar = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: _avatarGap),
-      child: widget.showAvatar
-          ? AppAvatar(
-              imageUrl: widget.message.sender.avatarUrl,
-              size: _avatarSlotWidth,
-              name: widget.message.sender.name,
-            )
-          : const SizedBox.square(dimension: _avatarSlotWidth),
-    );
+        final avatar = Padding(
+          padding: const EdgeInsets.symmetric(horizontal: _avatarGap),
+          child: widget.showAvatar
+              ? AppAvatar(
+                  imageUrl: widget.message.sender.avatarUrl,
+                  size: _avatarSlotWidth,
+                  name: widget.message.sender.name,
+                )
+              : const SizedBox.square(dimension: _avatarSlotWidth),
+        );
 
-    return GestureDetector(
-      onLongPress: _isDesktopPlatform ? null : _handleLongPress,
-      onSecondaryTapUp: _isDesktopPlatform ? (_) => _handleLongPress() : null,
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: _bottomSpacing),
-        child: ReplySwipeActionV2(
-          enabled: _canReply,
-          onTriggered: widget.onReply,
-          child: DecoratedBox(
-            decoration: widget.isHighlighted
-                ? BoxDecoration(
-                    border: Border.all(
-                      color: CupertinoColors.activeBlue,
-                      width: 1.5,
-                    ),
-                    borderRadius: BorderRadius.circular(14),
-                  )
-                : const BoxDecoration(),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment
-                  .end, // Important for tall message to align avatar at bottom
-              textDirection: _isMe ? TextDirection.rtl : TextDirection.ltr,
-              children: [
-                avatar,
-                Flexible(child: item),
-              ],
+        return GestureDetector(
+          onLongPress: _isDesktopPlatform ? null : _handleLongPress,
+          onSecondaryTapUp: _isDesktopPlatform
+              ? (_) => _handleLongPress()
+              : null,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: _bottomSpacing),
+            child: ReplySwipeActionV2(
+              enabled: _canReply,
+              onTriggered: widget.onReply,
+              child: DecoratedBox(
+                decoration: widget.isHighlighted
+                    ? BoxDecoration(
+                        border: Border.all(
+                          color: CupertinoColors.activeBlue,
+                          width: 1.5,
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                      )
+                    : const BoxDecoration(),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment
+                      .end, // Important for tall message to align avatar at bottom
+                  textDirection: _isMe ? TextDirection.rtl : TextDirection.ltr,
+                  children: [
+                    avatar,
+                    Flexible(child: item),
+                  ],
+                ),
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
