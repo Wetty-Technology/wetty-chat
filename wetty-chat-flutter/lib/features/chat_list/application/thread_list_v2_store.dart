@@ -81,34 +81,30 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
       return false;
     }
 
-    final index = _indexOfThread(threadRootId);
+    final index = _indexOfThread(payload.chatId, threadRootId);
     if (index < 0) {
       return true;
     }
 
     final previous = state.threads[index];
     final alreadyProjected = matchesThreadPreview(previous.lastReply, payload);
-    final shouldIncrementUnread =
-        !alreadyProjected &&
-        !payload.isDeleted &&
-        payload.sender.uid != _currentUserId;
+    final isCurrentUserMessage = payload.sender.uid == _currentUserId;
     final updated = previous.copyWith(
       lastReply: _toReplyPreview(payload),
       lastReplyAt: payload.createdAt ?? previous.lastReplyAt,
       replyCount: alreadyProjected
           ? previous.replyCount
           : previous.replyCount + 1,
-      unreadCount: shouldIncrementUnread
-          ? previous.unreadCount + 1
-          : previous.unreadCount,
+      unreadCount: isCurrentUserMessage
+          ? 0
+          : alreadyProjected
+          ? previous.unreadCount
+          : previous.unreadCount + 1,
     );
     _replaceState(
       threads: _reinsertThreadByActivity(state.threads, index, updated),
     );
-    if (shouldIncrementUnread) {
-      _replaceState(totalUnreadCount: state.totalUnreadCount + 1);
-      ref.read(unreadBadgeProvider.notifier).applyThreadUnreadDelta(1);
-    }
+    _applyThreadUnreadDelta(previous: previous, updated: updated);
     return false;
   }
 
@@ -117,7 +113,7 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
       return _applyRootPatched(payload);
     }
 
-    final index = _indexOfThread(payload.replyRootId!);
+    final index = _indexOfThread(payload.chatId, payload.replyRootId!);
     if (index < 0) {
       return true;
     }
@@ -142,7 +138,7 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
       return _applyRootPatched(payload);
     }
 
-    final index = _indexOfThread(payload.replyRootId!);
+    final index = _indexOfThread(payload.chatId, payload.replyRootId!);
     if (index < 0) {
       return true;
     }
@@ -162,9 +158,11 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
 
   int get _currentUserId => ref.read(authSessionProvider).currentUserId;
 
-  int _indexOfThread(int threadRootId) {
+  int _indexOfThread(int chatId, int threadRootId) {
     return state.threads.indexWhere(
-      (thread) => thread.threadRootId == threadRootId,
+      (thread) =>
+          thread.chatId == chatId.toString() &&
+          thread.threadRootId == threadRootId,
     );
   }
 
@@ -189,7 +187,7 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
   }
 
   bool _applyRootPatched(MessageItemDto payload) {
-    final index = _indexOfThread(payload.id);
+    final index = _indexOfThread(payload.chatId, payload.id);
     if (index < 0) {
       return false;
     }
@@ -242,6 +240,20 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
       next.insert(insertAt, updated);
     }
     return next;
+  }
+
+  void _applyThreadUnreadDelta({
+    required ThreadListItem previous,
+    required ThreadListItem updated,
+  }) {
+    final delta = updated.unreadCount - previous.unreadCount;
+    if (delta == 0) {
+      return;
+    }
+
+    final nextTotal = state.totalUnreadCount + delta;
+    _replaceState(totalUnreadCount: nextTotal < 0 ? 0 : nextTotal);
+    ref.read(unreadBadgeProvider.notifier).applyThreadUnreadDelta(delta);
   }
 
   void _replaceState({

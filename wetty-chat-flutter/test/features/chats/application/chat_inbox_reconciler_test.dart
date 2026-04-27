@@ -12,7 +12,9 @@ import 'package:chahua/core/notifications/apns_channel.dart';
 import 'package:chahua/core/notifications/unread_badge_provider.dart';
 import 'package:chahua/core/providers/shared_preferences_provider.dart';
 import 'package:chahua/core/session/dev_session_store.dart';
+import 'package:chahua/features/chat_list/application/group_list_v2_store.dart';
 import 'package:chahua/features/chat_list/application/group_list_v2_view_model.dart';
+import 'package:chahua/features/chat_list/application/thread_list_v2_store.dart';
 import 'package:chahua/features/chat_list/application/thread_list_v2_view_model.dart';
 import 'package:chahua/features/shared/application/chat_inbox_reconciler.dart';
 
@@ -94,7 +96,118 @@ void main() {
       expect(chatService.fetchUnreadCountCalls, greaterThanOrEqualTo(1));
       expect(threadService.fetchUnreadCountCalls, greaterThanOrEqualTo(1));
     });
+
+    test(
+      'reconcileGroups refreshes only groups and chat unread total',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        final chatService = _FakeChatApiService(
+          unreadCount: 4,
+          chatResponses: [
+            ListChatsResponseDto(
+              chats: [
+                ChatListItemDto(
+                  id: 10,
+                  name: 'General',
+                  unreadCount: 4,
+                  lastMessageAt: DateTime.parse('2026-04-12T12:00:00Z'),
+                  lastMessage: _message(id: 101, chatId: 10, text: 'hello'),
+                ),
+              ],
+            ),
+          ],
+        );
+        final threadService = _FakeThreadApiService(
+          unreadCount: 2,
+          threadResponses: [
+            ListThreadsResponseDto(threads: [_threadDto()]),
+          ],
+        );
+        final container = ProviderContainer(
+          overrides: [
+            authSessionProvider.overrideWith(_AuthenticatedSessionNotifier.new),
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            chatApiServiceProvider.overrideWithValue(chatService),
+            threadApiServiceProvider.overrideWithValue(threadService),
+            apnsChannelProvider.overrideWithValue(_FakeApnsChannel()),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await container.read(chatInboxReconcilerProvider).reconcileGroups();
+
+        expect(container.read(groupListV2StoreProvider).groups, hasLength(1));
+        expect(container.read(threadListV2StoreProvider).threads, isEmpty);
+        expect(container.read(unreadBadgeProvider).chatUnreadTotal, 4);
+        expect(chatService.fetchChatsCalls, 1);
+        expect(threadService.fetchThreadsCalls, 0);
+        expect(chatService.fetchUnreadCountCalls, greaterThanOrEqualTo(1));
+      },
+    );
+
+    test('reconcileThreads refreshes only threads', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final chatService = _FakeChatApiService(
+        unreadCount: 4,
+        chatResponses: [
+          ListChatsResponseDto(
+            chats: [
+              ChatListItemDto(
+                id: 10,
+                name: 'General',
+                unreadCount: 4,
+                lastMessageAt: DateTime.parse('2026-04-12T12:00:00Z'),
+                lastMessage: _message(id: 101, chatId: 10, text: 'hello'),
+              ),
+            ],
+          ),
+        ],
+      );
+      final threadService = _FakeThreadApiService(
+        unreadCount: 2,
+        threadResponses: [
+          ListThreadsResponseDto(threads: [_threadDto()]),
+        ],
+      );
+      final container = ProviderContainer(
+        overrides: [
+          authSessionProvider.overrideWith(_AuthenticatedSessionNotifier.new),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          chatApiServiceProvider.overrideWithValue(chatService),
+          threadApiServiceProvider.overrideWithValue(threadService),
+          apnsChannelProvider.overrideWithValue(_FakeApnsChannel()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(chatInboxReconcilerProvider).reconcileThreads();
+
+      expect(container.read(groupListV2StoreProvider).groups, isEmpty);
+      expect(container.read(threadListV2StoreProvider).threads, hasLength(1));
+      expect(container.read(unreadBadgeProvider).threadUnreadTotal, 2);
+      expect(chatService.fetchChatsCalls, 0);
+      expect(threadService.fetchThreadsCalls, 1);
+      expect(threadService.fetchUnreadCountCalls, greaterThanOrEqualTo(1));
+    });
   });
+}
+
+ThreadListItemDto _threadDto() {
+  return ThreadListItemDto(
+    chatId: 10,
+    chatName: 'General',
+    threadRootMessage: _message(id: 200, chatId: 10, text: 'thread root'),
+    lastReply: const ThreadReplyPreviewDto(
+      id: 201,
+      sender: SenderDto(uid: 2, name: 'sender'),
+      message: 'thread reply',
+    ),
+    lastReplyAt: DateTime.parse('2026-04-12T12:05:00Z'),
+    unreadCount: 2,
+    subscribedAt: null,
+  );
 }
 
 class _AuthenticatedSessionNotifier extends AuthSessionNotifier {

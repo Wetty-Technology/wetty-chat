@@ -14,45 +14,65 @@ import 'websocket_service.dart';
 /// Centralizes websocket event fan-out to app subsystems.
 final wsEventRouterProvider = Provider<void>((ref) {
   StreamSubscription<ApiWsEvent>? subscription;
-  bool isReconcilingListProjection = false;
+  bool isReconcilingGroups = false;
+  bool isReconcilingThreads = false;
 
-  void reconcileListProjectionIfNeeded(bool shouldReconcile) {
-    if (!shouldReconcile || isReconcilingListProjection) {
+  void reconcileGroupsIfNeeded(bool shouldReconcile) {
+    if (!shouldReconcile || isReconcilingGroups) {
       return;
     }
 
-    isReconcilingListProjection = true;
+    isReconcilingGroups = true;
     unawaited(
       ref
           .read(chatInboxReconcilerProvider)
-          .reconcile()
-          .whenComplete(() => isReconcilingListProjection = false),
+          .reconcileGroups()
+          .whenComplete(() => isReconcilingGroups = false),
     );
+  }
+
+  void reconcileThreadsIfNeeded(bool shouldReconcile) {
+    if (!shouldReconcile || isReconcilingThreads) {
+      return;
+    }
+
+    isReconcilingThreads = true;
+    unawaited(
+      ref
+          .read(chatInboxReconcilerProvider)
+          .reconcileThreads()
+          .whenComplete(() => isReconcilingThreads = false),
+    );
+  }
+
+  void applyMessageProjectionEvent(ApiWsEvent event, int? replyRootId) {
+    final shouldReconcile = replyRootId == null
+        ? ref.read(groupListV2StoreProvider.notifier).applyRealtimeEvent(event)
+        : ref
+              .read(threadListV2StoreProvider.notifier)
+              .applyRealtimeEvent(event);
+    ref.read(unreadBadgeProvider.notifier).scheduleReconcile();
+    if (replyRootId == null) {
+      reconcileGroupsIfNeeded(shouldReconcile);
+    } else {
+      reconcileThreadsIfNeeded(shouldReconcile);
+    }
   }
 
   void applyListProjectionEvent(ApiWsEvent event) {
     // TODO: Handle backend read-state websocket events here once the API
     // exposes them, so external read/unread changes update v2 stores live.
     switch (event) {
-      case MessageCreatedWsEvent():
-      case MessageUpdatedWsEvent():
-      case MessageDeletedWsEvent():
-        final shouldReconcileGroups = ref
-            .read(groupListV2StoreProvider.notifier)
-            .applyRealtimeEvent(event);
-        final shouldReconcileThreads = ref
-            .read(threadListV2StoreProvider.notifier)
-            .applyRealtimeEvent(event);
-        ref.read(unreadBadgeProvider.notifier).scheduleReconcile();
-        reconcileListProjectionIfNeeded(
-          shouldReconcileGroups || shouldReconcileThreads,
-        );
+      case MessageCreatedWsEvent(:final payload):
+      case MessageUpdatedWsEvent(:final payload):
+      case MessageDeletedWsEvent(:final payload):
+        applyMessageProjectionEvent(event, payload.replyRootId);
         return;
       case ThreadUpdatedWsEvent():
-        final shouldReconcileThreads = ref
+        final shouldReconcile = ref
             .read(threadListV2StoreProvider.notifier)
             .applyRealtimeEvent(event);
-        reconcileListProjectionIfNeeded(shouldReconcileThreads);
+        reconcileThreadsIfNeeded(shouldReconcile);
         return;
       case ReactionUpdatedWsEvent():
       case PinAddedWsEvent():
@@ -108,10 +128,16 @@ final wsEventRouterProvider = Provider<void>((ref) {
     }
   }
 
+  /// This is the main "entry point" for websocket events.
   void bind(WebSocketService service) {
     subscription?.cancel();
     subscription = service.events.listen((event) {
+      // Registration ROOT
+
+      // Apply the event to the conversation timeline v2 realtime applier.
       ref.read(conversationTimelineV2RealtimeApplierProvider).apply(event);
+
+      // Handle how message event could affect the chat list
       applyListProjectionEvent(event);
       applyAuxiliaryEvent(event);
     });

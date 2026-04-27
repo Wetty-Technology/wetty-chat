@@ -126,6 +126,46 @@ class UnreadBadgeNotifier extends Notifier<UnreadBadgeState> {
     }
   }
 
+  Future<void> refreshChatUnreadTotal() async {
+    if (!ref.read(authSessionProvider).isAuthenticated) {
+      return;
+    }
+    try {
+      final result = await _chatApi.fetchUnreadCount();
+      if (_isDisposed) {
+        return;
+      }
+      _replaceState(
+        state.copyWith(chatUnreadTotal: _clampUnread(result.unreadCount)),
+      );
+    } catch (error, stackTrace) {
+      developer.log(
+        'Failed to refresh chat unread badge total: $error',
+        name: 'UnreadBadge',
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  Future<void> refreshThreadUnreadTotal() async {
+    if (!ref.read(authSessionProvider).isAuthenticated) {
+      return;
+    }
+    try {
+      final result = await _threadApi.fetchUnreadThreadCount();
+      if (_isDisposed) {
+        return;
+      }
+      replaceThreadUnreadTotal(result.unreadThreadCount);
+    } catch (error, stackTrace) {
+      developer.log(
+        'Failed to refresh thread unread badge total: $error',
+        name: 'UnreadBadge',
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
   void scheduleReconcile({Duration delay = const Duration(milliseconds: 800)}) {
     if (!ref.read(authSessionProvider).isAuthenticated) {
       return;

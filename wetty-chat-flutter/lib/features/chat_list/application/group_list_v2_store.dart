@@ -126,30 +126,37 @@ class GroupListV2Store extends Notifier<GroupListV2StoreState> {
   }
 
   bool _applyRealtimeCreated(MessageItemDto payload) {
+    if (!isEligibleChatPreviewPayload(payload)) {
+      return false;
+    }
+
     final chatId = payload.chatId.toString();
     final index = state.groups.indexWhere((group) => group.id == chatId);
     if (index < 0) {
       return true;
     }
 
-    if (!isEligibleChatPreviewPayload(payload)) {
-      return false;
-    }
-
     final previous = state.groups[index];
+    final isCurrentUserMessage =
+        payload.sender.uid == ref.read(authSessionProvider).currentUserId;
     if (matchesChatPreview(previous.lastMessage, payload)) {
+      if (isCurrentUserMessage && previous.unreadCount > 0) {
+        final updated = previous.copyWith(unreadCount: 0);
+        state = (
+          groups: _replaceChatAt(state.groups, index, updated),
+          nextCursor: state.nextCursor,
+          hasMore: state.hasMore,
+        );
+        _applyUnreadBadgeDelta(previous: previous, updated: updated);
+      }
       return false;
     }
 
     final message = MessageItem.fromDto(payload);
-    final currentUserId = ref.read(authSessionProvider).currentUserId;
-    final shouldIncrementUnread = payload.sender.uid != currentUserId;
     final updated = previous.copyWith(
       lastMessage: message,
       lastMessageAt: payload.createdAt,
-      unreadCount: shouldIncrementUnread
-          ? previous.unreadCount + 1
-          : previous.unreadCount,
+      unreadCount: isCurrentUserMessage ? 0 : previous.unreadCount + 1,
     );
 
     state = (

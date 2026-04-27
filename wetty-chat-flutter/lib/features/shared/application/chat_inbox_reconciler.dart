@@ -22,6 +22,25 @@ class ChatInboxReconciler {
     ]);
   }
 
+  Future<void> reconcileGroups() async {
+    if (!_ref.read(authSessionProvider).isAuthenticated) {
+      return;
+    }
+
+    await Future.wait([
+      _refreshGroups(),
+      _ref.read(unreadBadgeProvider.notifier).refreshChatUnreadTotal(),
+    ]);
+  }
+
+  Future<void> reconcileThreads() async {
+    if (!_ref.read(authSessionProvider).isAuthenticated) {
+      return;
+    }
+
+    await _refreshThreads();
+  }
+
   Future<void> _refreshGroups() async {
     final current = _ref.read(groupListV2ViewModelProvider).value;
     if (current == null) {
