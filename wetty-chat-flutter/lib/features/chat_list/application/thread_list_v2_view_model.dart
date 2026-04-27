@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:chahua/features/shared/data/read_state_repository.dart';
+
 import '../model/thread_list_item.dart';
 import '../data/thread_list_v2_repository.dart';
 import 'thread_list_v2_store.dart';
@@ -108,6 +110,7 @@ class ThreadListV2ViewModel extends AsyncNotifier<ThreadListV2ViewState> {
     try {
       final limit = current.threads.isEmpty ? 20 : current.threads.length;
       await ref.read(threadListV2RepositoryProvider).loadThreads(limit: limit);
+      ref.read(readStateRepositoryProvider).resetThreadBaselines();
       final storeState = ref.read(threadListV2StoreProvider);
       state = AsyncData((
         threads: storeState.threads,

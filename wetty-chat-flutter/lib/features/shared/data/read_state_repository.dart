@@ -40,6 +40,19 @@ class ReadStateRepository {
       pending.timer.cancel();
     }
     _pendingReports.clear();
+    _knownReadBaseline.clear();
+  }
+
+  void resetChatBaselines() {
+    _knownReadBaseline.removeWhere((identity, _) {
+      return identity.threadRootId == null;
+    });
+  }
+
+  void resetThreadBaselines() {
+    _knownReadBaseline.removeWhere((identity, _) {
+      return identity.threadRootId != null;
+    });
   }
 
   void reportVisibleMessageRead({

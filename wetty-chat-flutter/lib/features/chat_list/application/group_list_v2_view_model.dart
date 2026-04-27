@@ -108,6 +108,7 @@ class GroupListV2ViewModel extends AsyncNotifier<GroupListV2ViewState> {
     ));
     try {
       await ref.read(groupListV2RepositoryProvider).loadGroups();
+      ref.read(readStateRepositoryProvider).resetChatBaselines();
       final storeState = ref.read(groupListV2StoreProvider);
       state = AsyncData((
         groups: storeState.groups,
