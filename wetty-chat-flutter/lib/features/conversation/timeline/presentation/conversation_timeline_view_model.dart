@@ -101,7 +101,6 @@ class ConversationTimelineViewModel
   /// Active segment containing the messages and some metadata
   ConversationTimelineActiveSegment? _activeSegment;
 
-  bool _bootstrapStarted = false;
   int? _highlightedServerMessageId;
   int? _highlightFirstServerMessageIdAfter;
   TimelineViewportFacts? _latestViewportFacts;
@@ -119,26 +118,25 @@ class ConversationTimelineViewModel
 
   /// Make sure to use `_setActiveSegmentMode` instead of assigning directly
   /// to avoid forgetting `ref.invalidateSelf()`.
-  ConversationTimelineActiveSegmentMode _activeSegmentMode =
-      const ConversationTimelineActiveSegmentMode.latest();
+  ConversationTimelineActiveSegmentMode? _activeSegmentMode;
 
   ConversationTimelineViewModel(this.identity);
 
   @override
   ConversationTimelineState build() {
     _repository = ref.read(conversationTimelineV2RepositoryProvider(identity));
+    final activeSegmentMode = _activeSegmentMode;
+    if (activeSegmentMode == null) {
+      _activeSegment = null;
+      return _loadingState();
+    }
+
     _activeSegment = ref.watch(
       conversationTimelineActiveSegmentProvider((
         identity: identity,
-        mode: _activeSegmentMode,
+        mode: activeSegmentMode,
       )),
     );
-    if (!_bootstrapStarted) {
-      _bootstrapStarted = true;
-      Future<void>.microtask(() async {
-        await _bootstrapLatestSegment();
-      });
-    }
     if (_activeSegment != null) {
       return _stateFromActiveSegment(
         _activeSegment!,
@@ -285,22 +283,6 @@ class ConversationTimelineViewModel
       kind: ConversationTimelineViewportCommandKind.resetToCenterOrigin,
       placement: ConversationTimelineViewportPlacement.topPreferred,
     );
-  }
-
-  Future<void> _bootstrapLatestSegment() async {
-    try {
-      await _repository.refreshLatestSegment(limit: _initialLoadedWindowSize);
-      final latestSegment = _activeSegment;
-      if (latestSegment == null) {
-        debugPrint('bootstrapLatestSegment: latest segment missing after load');
-        state = _loadingState(isBootstrapping: false);
-        return;
-      }
-      state = _stateFromActiveSegment(latestSegment);
-    } catch (error) {
-      debugPrint('bootstrapLatestSegment error: $error');
-      state = _loadingState(isBootstrapping: false);
-    }
   }
 
   Future<void> loadOlder() async {
@@ -494,7 +476,7 @@ class ConversationTimelineViewModel
   void _captureLatestTailSplitIfNeeded(
     ConversationTimelineActiveSegment segment,
   ) {
-    if (!_activeSegmentMode.isLatest ||
+    if (_activeSegmentMode?.isLatest != true ||
         _renderSplitPolicy.anchorServerMessageId != null) {
       return;
     }
