@@ -105,6 +105,16 @@ class ReadStateRepository {
     final response = await ref
         .read(chatApiServiceProvider)
         .markChatAsUnread(chatId);
+    final parsedChatId = int.tryParse(chatId);
+    if (parsedChatId != null) {
+      final identity = (chatId: parsedChatId, threadRootId: null);
+      final lastReadMessageId = int.tryParse(response.lastReadMessageId ?? '');
+      if (lastReadMessageId == null) {
+        _knownReadBaseline.remove(identity);
+      } else {
+        _knownReadBaseline[identity] = lastReadMessageId;
+      }
+    }
     return (
       lastReadMessageId: response.lastReadMessageId,
       unreadCount: response.unreadCount,
