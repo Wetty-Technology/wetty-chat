@@ -261,8 +261,36 @@ class ConversationTimelineViewModel
     );
   }
 
-  void jumpToUnread(int lastReadMessageId) {
-    _markRepositoryTodo('jumpToUnread(lastReadMessageId: $lastReadMessageId)');
+  Future<void> jumpToUnread(int lastReadMessageId) async {
+    state = state.copyWith(isResolvingJump: true);
+
+    try {
+      final firstUnreadMessageId = await _repository
+          .refreshAfterServerMessageId(
+            lastReadMessageId,
+            limit: _initialLoadedWindowSize,
+          );
+      if (firstUnreadMessageId == null) {
+        await jumpToLatest();
+        return;
+      }
+
+      final aroundMode = ConversationTimelineActiveSegmentMode.around(
+        firstUnreadMessageId,
+      );
+      _setActiveSegmentMode(aroundMode);
+      _highlightedServerMessageId = firstUnreadMessageId;
+      _renderSplitPolicy = _TimelineRenderSplitPolicy.fromMessageInclusive(
+        firstUnreadMessageId,
+      );
+      _issueViewportCommand(
+        kind: ConversationTimelineViewportCommandKind.resetToCenterOrigin,
+        placement: ConversationTimelineViewportPlacement.topPreferred,
+      );
+    } catch (error) {
+      debugPrint('jumpToUnread error: $error');
+      await jumpToLatest();
+    }
   }
 
   Future<void> _bootstrapLatestSegment() async {
@@ -507,13 +535,6 @@ class ConversationTimelineViewModel
         beforeMessages.add(message);
       }
     }
-  }
-
-  void _markRepositoryTodo(String operation) {
-    // TODO(codex): Reimplement this operation against the canonical message
-    // store-backed repository and active-segment model.
-    assert(operation.isNotEmpty);
-    debugPrint('markRepositoryTodo: $operation');
   }
 }
 

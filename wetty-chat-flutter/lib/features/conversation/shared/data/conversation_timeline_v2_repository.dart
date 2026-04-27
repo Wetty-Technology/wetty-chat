@@ -237,6 +237,35 @@ class ConversationTimelineV2Repository {
     return _refreshAroundServerMessageId(targetServerMessageId, limit: limit);
   }
 
+  Future<int?> refreshAfterServerMessageId(
+    int anchorServerMessageId, {
+    required int limit,
+  }) async {
+    final response = await ref
+        .read(messageApiServiceV2Provider)
+        .fetchConversationMessages(
+          identity,
+          after: anchorServerMessageId,
+          max: limit,
+        );
+
+    if (response.messages.isEmpty) {
+      return null;
+    }
+
+    final segment = ConversationTimelineCanonicalSegment(
+      orderedMessages: response.messages
+          .map(ConversationMessageV2.fromMessageItemDto)
+          .toList(growable: false),
+    );
+
+    ref
+        .read(conversationTimelineMessageStoreProvider.notifier)
+        .insertAfterAnchor(identity, anchorServerMessageId, segment);
+
+    return segment.firstServerMessageId;
+  }
+
   Future<void> _loadOlderBeforeAnchor(
     int anchorServerMessageId, {
     required int limit,
