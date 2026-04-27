@@ -170,11 +170,10 @@ class ReadStateRepository {
     try {
       switch (target.kind) {
         case _ReadReportKind.chat:
-          await _flushChatReadReport(chatId: target.id, messageId: messageId);
+          await _flushChatReadReport(identity: identity, messageId: messageId);
         case _ReadReportKind.thread:
           await _flushThreadReadReport(
             identity: identity,
-            threadRootId: int.parse(target.id),
             messageId: messageId,
           );
       }
@@ -184,9 +183,10 @@ class ReadStateRepository {
   }
 
   Future<void> _flushChatReadReport({
-    required String chatId,
+    required ConversationIdentity identity,
     required int messageId,
   }) async {
+    final chatId = identity.chatId.toString();
     final response = await markChatRead(chatId: chatId, messageId: messageId);
     ref
         .read(groupListV2StoreProvider.notifier)
@@ -200,9 +200,12 @@ class ReadStateRepository {
 
   Future<void> _flushThreadReadReport({
     required ConversationIdentity identity,
-    required int threadRootId,
     required int messageId,
   }) async {
+    final threadRootId = identity.threadRootId;
+    if (threadRootId == null) {
+      return;
+    }
     await markThreadRead(threadRootId: threadRootId, messageId: messageId);
     _confirmedReadBaseline[identity] = messageId;
     ref.read(unreadBadgeProvider.notifier).scheduleReconcile();
