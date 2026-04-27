@@ -8,6 +8,7 @@ import 'package:chahua/core/api/services/chat_api_service.dart';
 import 'package:chahua/core/api/services/thread_api_service.dart';
 
 import '../../chat_list/application/group_list_v2_store.dart';
+import '../../chat_list/application/thread_list_v2_store.dart';
 import '../../conversation/shared/domain/conversation_identity.dart';
 import '../../conversation/compose/data/message_api_service_v2.dart';
 import '../../../core/notifications/unread_badge_provider.dart';
@@ -141,7 +142,10 @@ class ReadStateRepository {
     final response = await ref
         .read(threadApiServiceProvider)
         .markThreadAsRead(threadRootId, messageId);
-    return (updated: response.updated);
+    return (
+      lastReadMessageId: response.lastReadMessageId,
+      unreadCount: response.unreadCount,
+    );
   }
 
   _ReadReportTarget _targetFor(ConversationIdentity identity) {
@@ -206,8 +210,16 @@ class ReadStateRepository {
     if (threadRootId == null) {
       return;
     }
-    await markThreadRead(threadRootId: threadRootId, messageId: messageId);
-    _confirmedReadBaseline[identity] = messageId;
+    final response = await markThreadRead(
+      threadRootId: threadRootId,
+      messageId: messageId,
+    );
+    final confirmedMessageId =
+        int.tryParse(response.lastReadMessageId ?? '') ?? messageId;
+    _confirmedReadBaseline[identity] = confirmedMessageId;
+    ref
+        .read(threadListV2StoreProvider.notifier)
+        .applyServerReadState(threadRootId: threadRootId, response: response);
     ref.read(unreadBadgeProvider.notifier).scheduleReconcile();
   }
 }

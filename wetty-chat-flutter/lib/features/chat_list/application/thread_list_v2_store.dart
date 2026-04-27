@@ -6,6 +6,7 @@ import '../../../core/notifications/unread_badge_provider.dart';
 import '../../../core/session/dev_session_store.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
 import '../model/thread_list_item.dart';
+import '../../shared/data/read_state_models.dart';
 import 'realtime_projection_policy.dart';
 
 typedef ThreadListV2StoreState = ({
@@ -58,6 +59,23 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
       hasMore: nextCursor != null && nextCursor.isNotEmpty,
       totalUnreadCount: state.totalUnreadCount,
     );
+  }
+
+  void applyServerReadState({
+    required int threadRootId,
+    required ThreadReadStateUpdate response,
+  }) {
+    final index = state.threads.indexWhere(
+      (thread) => thread.threadRootId == threadRootId,
+    );
+    if (index < 0) {
+      return;
+    }
+
+    final previous = state.threads[index];
+    final updated = previous.copyWith(unreadCount: response.unreadCount);
+    _replaceState(threads: _replaceThreadAt(state.threads, index, updated));
+    _applyThreadUnreadDelta(previous: previous, updated: updated);
   }
 
   bool applyRealtimeEvent(ApiWsEvent event) {

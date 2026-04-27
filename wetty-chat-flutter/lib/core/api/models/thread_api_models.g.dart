@@ -113,8 +113,14 @@ Map<String, dynamic> _$UnreadThreadCountResponseDtoToJson(
 
 MarkThreadReadResponseDto _$MarkThreadReadResponseDtoFromJson(
   Map<String, dynamic> json,
-) => MarkThreadReadResponseDto(updated: json['updated'] as bool? ?? false);
+) => MarkThreadReadResponseDto(
+  lastReadMessageId: json['lastReadMessageId'] as String?,
+  unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
+);
 
 Map<String, dynamic> _$MarkThreadReadResponseDtoToJson(
   MarkThreadReadResponseDto instance,
-) => <String, dynamic>{'updated': instance.updated};
+) => <String, dynamic>{
+  'lastReadMessageId': instance.lastReadMessageId,
+  'unreadCount': instance.unreadCount,
+};

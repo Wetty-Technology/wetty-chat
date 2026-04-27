@@ -177,6 +177,27 @@ void main() {
 
       expect(shouldRefresh, isTrue);
     });
+
+    test('server read state updates row and unread totals', () {
+      final container = _container(threadUnreadTotal: 4);
+      addTearDown(container.dispose);
+      container
+          .read(threadListV2StoreProvider.notifier)
+          .replacePage(threads: [_thread(unreadCount: 4)], totalUnreadCount: 4);
+      container.read(unreadBadgeProvider.notifier).replaceThreadUnreadTotal(4);
+
+      container
+          .read(threadListV2StoreProvider.notifier)
+          .applyServerReadState(
+            threadRootId: 200,
+            response: (lastReadMessageId: '203', unreadCount: 1),
+          );
+
+      final state = container.read(threadListV2StoreProvider);
+      expect(state.threads.single.unreadCount, 1);
+      expect(state.totalUnreadCount, 1);
+      expect(container.read(unreadBadgeProvider).threadUnreadTotal, 1);
+    });
   });
 }
 

@@ -111,10 +111,14 @@ class UnreadThreadCountResponseDto {
 
 @JsonSerializable(explicitToJson: true)
 class MarkThreadReadResponseDto {
-  const MarkThreadReadResponseDto({this.updated = false});
+  const MarkThreadReadResponseDto({
+    this.lastReadMessageId,
+    this.unreadCount = 0,
+  });
 
-  @JsonKey(defaultValue: false)
-  final bool updated;
+  final String? lastReadMessageId;
+  @JsonKey(defaultValue: 0)
+  final int unreadCount;
 
   factory MarkThreadReadResponseDto.fromJson(Map<String, dynamic> json) =>
       _$MarkThreadReadResponseDtoFromJson(json);
