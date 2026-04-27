@@ -420,4 +420,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get swipeActionMarkUnread => 'Unread';
+
+  @override
+  String get selectChatPlaceholder => 'Select a chat';
 }

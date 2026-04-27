@@ -394,6 +394,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get swipeActionMarkUnread => '未读';
+
+  @override
+  String get selectChatPlaceholder => '选择一个聊天';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -786,4 +789,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get swipeActionMarkUnread => '未讀';
+
+  @override
+  String get selectChatPlaceholder => '選擇一個聊天';
 }

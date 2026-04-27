@@ -848,6 +848,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unread'**
   String get swipeActionMarkUnread;
+
+  /// Placeholder in the desktop split view when no chat is selected
+  ///
+  /// In en, this message translates to:
+  /// **'Select a chat'**
+  String get selectChatPlaceholder;
 }
 
 class _AppLocalizationsDelegate

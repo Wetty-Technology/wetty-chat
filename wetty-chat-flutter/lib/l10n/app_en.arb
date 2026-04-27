@@ -396,5 +396,8 @@
   "@swipeActionMarkRead": { "description": "Swipe action label to mark a chat as read" },
 
   "swipeActionMarkUnread": "Unread",
-  "@swipeActionMarkUnread": { "description": "Swipe action label to mark a chat as unread" }
+  "@swipeActionMarkUnread": { "description": "Swipe action label to mark a chat as unread" },
+
+  "selectChatPlaceholder": "Select a chat",
+  "@selectChatPlaceholder": { "description": "Placeholder in the desktop split view when no chat is selected" }
 }

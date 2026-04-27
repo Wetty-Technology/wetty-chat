@@ -133,5 +133,6 @@
   "relativeHours": "{count}小時前",
 
   "swipeActionMarkRead": "已讀",
-  "swipeActionMarkUnread": "未讀"
+  "swipeActionMarkUnread": "未讀",
+  "selectChatPlaceholder": "選擇一個聊天"
 }
