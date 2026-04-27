@@ -324,15 +324,23 @@ class AuthBootstrapApi {
           headers: <String, String>{'Accept': 'text/plain'},
         ),
       );
-      final token = response.data?.trim();
-      if (token == null || token.isEmpty) {
+      final token = _nonEmptyPlainBody(response.data);
+      if (token == null) {
         return null;
       }
       return token;
-    } on DioException {
-      return null;
+    } on DioException catch (error) {
+      return _nonEmptyPlainBody(error.response?.data);
     }
   }
+}
+
+String? _nonEmptyPlainBody(Object? data) {
+  if (data is! String) {
+    return null;
+  }
+  final body = data.trim();
+  return body.isEmpty ? null : body;
 }
 
 bool _isUnauthorized(DioException error) => error.response?.statusCode == 401;

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -273,6 +275,22 @@ void main() {
   });
 
   test(
+    'credential login accepts non-empty plain body from non-200 response',
+    () async {
+      final dio = Dio()
+        ..httpClientAdapter = _PlainResponseAdapter(401, 'token');
+      final api = AuthBootstrapApi(dio);
+
+      final token = await api.loginWithCredentials(
+        username: 'alice',
+        password: 'secret',
+      );
+
+      expect(token, 'token');
+    },
+  );
+
+  test(
     'clearJwt re-runs bootstrap and becomes unauthenticated when dev probe fails',
     () async {
       SharedPreferences.setMockInitialValues({
@@ -362,6 +380,31 @@ void main() {
       expect(devProbeCount, 2);
     },
   );
+}
+
+class _PlainResponseAdapter implements HttpClientAdapter {
+  const _PlainResponseAdapter(this.statusCode, this.body);
+
+  final int statusCode;
+  final String body;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    return ResponseBody.fromString(
+      body,
+      statusCode,
+      headers: {
+        Headers.contentTypeHeader: [Headers.textPlainContentType],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
 }
 
 class _FakeAuthBootstrapApi extends AuthBootstrapApi {
