@@ -18,8 +18,13 @@ enum _ReadReportKind { chat, thread }
 typedef _ReadReportTarget = ({_ReadReportKind kind, String id});
 
 class _PendingReadReport {
-  _PendingReadReport({required this.messageId, required this.timer});
+  _PendingReadReport({
+    required this.identity,
+    required this.messageId,
+    required this.timer,
+  });
 
+  final ConversationIdentity identity;
   final int messageId;
   final Timer timer;
 }
@@ -33,24 +38,24 @@ class ReadStateRepository {
 
   final Ref ref;
   final Map<_ReadReportTarget, _PendingReadReport> _pendingReports = {};
-  final Map<ConversationIdentity, int> _knownReadBaseline = {};
+  final Map<ConversationIdentity, int> _confirmedReadBaseline = {};
 
   void dispose() {
     for (final pending in _pendingReports.values) {
       pending.timer.cancel();
     }
     _pendingReports.clear();
-    _knownReadBaseline.clear();
+    _confirmedReadBaseline.clear();
   }
 
   void resetChatBaselines() {
-    _knownReadBaseline.removeWhere((identity, _) {
+    _confirmedReadBaseline.removeWhere((identity, _) {
       return identity.threadRootId == null;
     });
   }
 
   void resetThreadBaselines() {
-    _knownReadBaseline.removeWhere((identity, _) {
+    _confirmedReadBaseline.removeWhere((identity, _) {
       return identity.threadRootId != null;
     });
   }
@@ -62,7 +67,7 @@ class ReadStateRepository {
     final target = _targetFor(identity);
     final pending = _pendingReports[target];
 
-    final baseline = _knownReadBaseline[identity];
+    final baseline = _confirmedReadBaseline[identity];
     if (baseline != null && messageId <= baseline) {
       log('reportVisibleMessageRead: baseline: $messageId <= $baseline');
       return;
@@ -82,10 +87,10 @@ class ReadStateRepository {
       unawaited(_flushPendingReadReport(target));
     });
     _pendingReports[target] = _PendingReadReport(
+      identity: identity,
       messageId: messageId,
       timer: timer,
     );
-    _knownReadBaseline[identity] = messageId;
   }
 
   Future<ChatReadStateUpdate> markChatRead({
@@ -95,6 +100,13 @@ class ReadStateRepository {
     final response = await ref
         .read(messageApiServiceV2Provider)
         .markMessagesAsRead(chatId, messageId);
+    final parsedChatId = int.tryParse(chatId);
+    if (parsedChatId != null) {
+      final confirmedMessageId =
+          int.tryParse(response.lastReadMessageId ?? '') ?? messageId;
+      _confirmedReadBaseline[(chatId: parsedChatId, threadRootId: null)] =
+          confirmedMessageId;
+    }
     return (
       lastReadMessageId: response.lastReadMessageId,
       unreadCount: response.unreadCount,
@@ -108,11 +120,12 @@ class ReadStateRepository {
     final parsedChatId = int.tryParse(chatId);
     if (parsedChatId != null) {
       final identity = (chatId: parsedChatId, threadRootId: null);
+      _cancelPendingReadReport(_targetFor(identity));
       final lastReadMessageId = int.tryParse(response.lastReadMessageId ?? '');
       if (lastReadMessageId == null) {
-        _knownReadBaseline.remove(identity);
+        _confirmedReadBaseline.remove(identity);
       } else {
-        _knownReadBaseline[identity] = lastReadMessageId;
+        _confirmedReadBaseline[identity] = lastReadMessageId;
       }
     }
     return (
@@ -139,6 +152,11 @@ class ReadStateRepository {
     return (kind: _ReadReportKind.chat, id: identity.chatId.toString());
   }
 
+  void _cancelPendingReadReport(_ReadReportTarget target) {
+    final pending = _pendingReports.remove(target);
+    pending?.timer.cancel();
+  }
+
   Future<void> _flushPendingReadReport(_ReadReportTarget target) async {
     final pending = _pendingReports.remove(target);
     if (pending == null) {
@@ -146,6 +164,7 @@ class ReadStateRepository {
     }
 
     pending.timer.cancel();
+    final identity = pending.identity;
     final messageId = pending.messageId;
 
     try {
@@ -154,6 +173,7 @@ class ReadStateRepository {
           await _flushChatReadReport(chatId: target.id, messageId: messageId);
         case _ReadReportKind.thread:
           await _flushThreadReadReport(
+            identity: identity,
             threadRootId: int.parse(target.id),
             messageId: messageId,
           );
@@ -179,10 +199,12 @@ class ReadStateRepository {
   }
 
   Future<void> _flushThreadReadReport({
+    required ConversationIdentity identity,
     required int threadRootId,
     required int messageId,
   }) async {
     await markThreadRead(threadRootId: threadRootId, messageId: messageId);
+    _confirmedReadBaseline[identity] = messageId;
     ref.read(unreadBadgeProvider.notifier).scheduleReconcile();
   }
 }
