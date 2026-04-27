@@ -143,6 +143,41 @@ pub fn mark_thread_as_read(
     Ok(updated > 0)
 }
 
+#[derive(QueryableByName)]
+struct ThreadUnreadCountRow {
+    #[diesel(sql_type = diesel::sql_types::BigInt)]
+    unread_count: i64,
+}
+
+pub fn get_thread_unread_count(
+    conn: &mut PgConnection,
+    thread_root_id: i64,
+    uid: i32,
+    last_read_message_id: Option<i64>,
+) -> Result<i64, diesel::result::Error> {
+    let query = sql_query(
+        "SELECT COUNT(unread_messages.marker)::bigint AS unread_count
+         FROM (
+             SELECT 1 AS marker
+             FROM thread_subscriptions ts
+             JOIN messages m ON m.reply_root_id = ts.thread_root_id
+                            AND m.deleted_at IS NULL
+                            AND m.is_published = TRUE
+                            AND m.id > COALESCE($3, 0)
+             WHERE ts.thread_root_id = $1
+               AND ts.uid = $2
+             LIMIT 100
+         ) AS unread_messages",
+    )
+    .bind::<diesel::sql_types::BigInt, _>(thread_root_id)
+    .bind::<diesel::sql_types::Integer, _>(uid)
+    .bind::<diesel::sql_types::Nullable<diesel::sql_types::BigInt>, _>(last_read_message_id);
+
+    query
+        .get_result::<ThreadUnreadCountRow>(conn)
+        .map(|row| row.unread_count.min(MAX_UNREAD_COUNT))
+}
+
 /// Get all UIDs subscribed to a given thread.
 pub fn get_thread_subscriber_uids(
     conn: &mut PgConnection,

@@ -97,7 +97,10 @@ pub struct MarkThreadReadBody {
 #[derive(Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 struct MarkThreadReadResponse {
-    updated: bool,
+    #[serde(serialize_with = "crate::serde_i64_string::opt::serialize")]
+    #[schema(value_type = Option<String>)]
+    last_read_message_id: Option<i64>,
+    unread_count: i64,
 }
 
 #[derive(serde::Deserialize)]
@@ -128,9 +131,15 @@ async fn mark_thread_read(
 ) -> Result<Json<MarkThreadReadResponse>, AppError> {
     let conn = &mut *conn;
 
-    let updated = thread_svc::mark_thread_as_read(conn, thread_root_id, uid, body.message_id)?;
+    thread_svc::mark_thread_as_read(conn, thread_root_id, uid, body.message_id)?;
 
-    Ok(Json(MarkThreadReadResponse { updated }))
+    let unread_count =
+        thread_svc::get_thread_unread_count(conn, thread_root_id, uid, Some(body.message_id))?;
+
+    Ok(Json(MarkThreadReadResponse {
+        last_read_message_id: Some(body.message_id),
+        unread_count,
+    }))
 }
 
 #[derive(Serialize, utoipa::ToSchema)]

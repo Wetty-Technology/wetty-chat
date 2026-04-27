@@ -62,6 +62,11 @@ export interface ThreadSubscriptionStatusResponse {
   archived: boolean;
 }
 
+export interface MarkThreadReadResponse {
+  lastReadMessageId: string | null;
+  unreadCount: number;
+}
+
 export function getThreads(params?: {
   limit?: number;
   before?: string;
@@ -77,7 +82,7 @@ export function getThreads(params?: {
 export function markThreadAsRead(
   threadRootId: string,
   messageId: string,
-): Promise<AxiosResponse<{ updated: boolean }>> {
+): Promise<AxiosResponse<MarkThreadReadResponse>> {
   return apiClient.post(`/threads/${threadRootId}/read`, { messageId });
 }
 
