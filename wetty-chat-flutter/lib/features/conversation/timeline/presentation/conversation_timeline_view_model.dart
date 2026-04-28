@@ -19,18 +19,26 @@ part 'conversation_timeline_view_model.freezed.dart';
 /// Internal policy for splitting messages into before and after segments.
 class _TimelineRenderSplitPolicy {
   const _TimelineRenderSplitPolicy.none()
-    : anchorServerMessageId = null,
-      includeAnchorInAfter = false;
+    : serverWatermarkMessageId = null,
+      localStableKeys = const <String>{},
+      includeServerWatermarkInAfter = false;
 
   const _TimelineRenderSplitPolicy.fromMessageInclusive(
-    this.anchorServerMessageId,
-  ) : includeAnchorInAfter = true;
+    this.serverWatermarkMessageId,
+  ) : localStableKeys = const <String>{},
+      includeServerWatermarkInAfter = true;
 
-  const _TimelineRenderSplitPolicy.afterMessage(this.anchorServerMessageId)
-    : includeAnchorInAfter = false;
+  const _TimelineRenderSplitPolicy.afterMessage(
+    this.serverWatermarkMessageId, {
+    this.localStableKeys = const <String>{},
+  }) : includeServerWatermarkInAfter = false;
 
-  final int? anchorServerMessageId;
-  final bool includeAnchorInAfter;
+  final int? serverWatermarkMessageId;
+  final Set<String> localStableKeys;
+  final bool includeServerWatermarkInAfter;
+
+  bool get hasBoundary =>
+      serverWatermarkMessageId != null || localStableKeys.isNotEmpty;
 }
 
 // ============ Public Types ============
@@ -114,6 +122,7 @@ class ConversationTimelineViewModel
   String? _lastRenderedTailStableKey;
   _TimelineRenderSplitPolicy _renderSplitPolicy =
       const _TimelineRenderSplitPolicy.none();
+  bool _shouldCaptureLatestTailSplit = false;
 
   /// Generation of the viewport command, incremented on each issuance
   int _viewportCommandGeneration = 0;
@@ -244,6 +253,8 @@ class ConversationTimelineViewModel
     unawaited(
       _repository.refreshLatestSegment(limit: _initialLoadedWindowSize),
     );
+    _renderSplitPolicy = const _TimelineRenderSplitPolicy.none();
+    _shouldCaptureLatestTailSplit = true;
     _setActiveSegmentMode(const ConversationTimelineActiveSegmentMode.latest());
     _issueViewportCommand(
       kind: ConversationTimelineViewportCommandKind.resetToCenterOrigin,
@@ -251,7 +262,6 @@ class ConversationTimelineViewModel
     );
     _highlightedServerMessageId = null;
     _highlightFirstServerMessageIdAfter = null;
-    _renderSplitPolicy = const _TimelineRenderSplitPolicy.none();
   }
 
   Future<void> recoverLatestAfterRefresh() {
@@ -319,6 +329,7 @@ class ConversationTimelineViewModel
         _highlightedServerMessageId = null;
         _highlightFirstServerMessageIdAfter = null;
         _renderSplitPolicy = const _TimelineRenderSplitPolicy.none();
+        _shouldCaptureLatestTailSplit = true;
         _issueViewportCommand(
           kind: ConversationTimelineViewportCommandKind.resetToCenterOrigin,
           placement: ConversationTimelineViewportPlacement.bottomPreferred,
@@ -432,12 +443,16 @@ class ConversationTimelineViewModel
     bool? isLoadingOlder,
     bool? isLoadingNewer,
   }) {
-    _captureLatestTailSplitIfNeeded(segment);
+    if (_shouldCaptureLatestTailSplit) {
+      _captureLatestTailSplit(segment);
+      _shouldCaptureLatestTailSplit = false;
+    } else {
+      _promoteLocalSplitAnchorsIfConfirmed(segment.orderedMessages);
+    }
 
     final beforeMessages = <ConversationMessageV2>[];
     final afterMessages = <ConversationMessageV2>[];
-    final splitAnchorServerMessageId = _renderSplitPolicy.anchorServerMessageId;
-    if (splitAnchorServerMessageId == null) {
+    if (!_renderSplitPolicy.hasBoundary) {
       beforeMessages.addAll(segment.orderedMessages);
     } else {
       _splitMessages(
@@ -604,25 +619,77 @@ class ConversationTimelineViewModel
     ref.invalidateSelf();
   }
 
-  void _captureLatestTailSplitIfNeeded(
-    ConversationTimelineActiveSegment segment,
-  ) {
-    if (_activeSegmentMode?.isLatest != true ||
-        _renderSplitPolicy.anchorServerMessageId != null) {
+  void _captureLatestTailSplit(ConversationTimelineActiveSegment segment) {
+    if (_activeSegmentMode?.isLatest != true) {
       return;
     }
 
-    final tailServerMessageId = _lastServerMessageId(segment.orderedMessages);
-    if (tailServerMessageId == null) {
+    if (segment.orderedMessages.isEmpty) {
+      _renderSplitPolicy = const _TimelineRenderSplitPolicy.none();
       return;
+    }
+
+    final tailMessage = segment.orderedMessages.last;
+    final tailServerMessageId = _lastServerMessageId(segment.orderedMessages);
+    final localStableKeys = tailMessage.serverMessageId == null
+        ? <String>{tailMessage.stableKey}
+        : const <String>{};
+    _renderSplitPolicy = _TimelineRenderSplitPolicy.afterMessage(
+      tailServerMessageId,
+      localStableKeys: localStableKeys,
+    );
+    log(
+      'captureLatestTailSplit: identity=$identity '
+      'tailServerId=$tailServerMessageId localKeys=$localStableKeys',
+      name: 'ConversationTimeline',
+    );
+  }
+
+  void _promoteLocalSplitAnchorsIfConfirmed(
+    List<ConversationMessageV2> messages,
+  ) {
+    if (_renderSplitPolicy.localStableKeys.isEmpty) {
+      return;
+    }
+
+    var serverWatermark = _renderSplitPolicy.serverWatermarkMessageId;
+    final remainingLocalStableKeys = <String>{};
+
+    for (final localStableKey in _renderSplitPolicy.localStableKeys) {
+      ConversationMessageV2? anchoredMessage;
+      for (final message in messages) {
+        if (message.stableKey == localStableKey) {
+          anchoredMessage = message;
+          break;
+        }
+      }
+
+      if (anchoredMessage == null) {
+        continue;
+      }
+
+      final serverMessageId = anchoredMessage.serverMessageId;
+      if (serverMessageId == null) {
+        remainingLocalStableKeys.add(localStableKey);
+        continue;
+      }
+
+      serverWatermark = serverWatermark == null
+          ? serverMessageId
+          : serverWatermark > serverMessageId
+          ? serverWatermark
+          : serverMessageId;
+      log(
+        'promoteLocalSplitAnchor: identity=$identity '
+        'stableKey=$localStableKey serverId=$serverMessageId '
+        'watermark=$serverWatermark',
+        name: 'ConversationTimeline',
+      );
     }
 
     _renderSplitPolicy = _TimelineRenderSplitPolicy.afterMessage(
-      tailServerMessageId,
-    );
-    log(
-      'captureLatestTailSplit: identity=$identity tailServerId=$tailServerMessageId',
-      name: 'ConversationTimeline',
+      serverWatermark,
+      localStableKeys: Set<String>.unmodifiable(remainingLocalStableKeys),
     );
   }
 
@@ -632,22 +699,27 @@ class ConversationTimelineViewModel
     required List<ConversationMessageV2> beforeMessages,
     required List<ConversationMessageV2> afterMessages,
   }) {
-    final anchorServerMessageId = policy.anchorServerMessageId;
-    if (anchorServerMessageId == null) {
+    if (!policy.hasBoundary) {
       beforeMessages.addAll(messages);
       return;
     }
 
     for (final message in messages) {
+      if (policy.localStableKeys.contains(message.stableKey)) {
+        beforeMessages.add(message);
+        continue;
+      }
+
+      final serverWatermarkMessageId = policy.serverWatermarkMessageId;
       final serverMessageId = message.serverMessageId;
-      if (serverMessageId == null) {
+      if (serverWatermarkMessageId == null || serverMessageId == null) {
         afterMessages.add(message);
         continue;
       }
 
-      final belongsAfter = policy.includeAnchorInAfter
-          ? serverMessageId >= anchorServerMessageId
-          : serverMessageId > anchorServerMessageId;
+      final belongsAfter = policy.includeServerWatermarkInAfter
+          ? serverMessageId >= serverWatermarkMessageId
+          : serverMessageId > serverWatermarkMessageId;
       if (belongsAfter) {
         afterMessages.add(message);
       } else {
@@ -665,13 +737,17 @@ class ConversationTimelineViewModel
   }
 
   String _splitLabel(_TimelineRenderSplitPolicy policy) {
-    final anchor = policy.anchorServerMessageId;
-    if (anchor == null) {
+    final anchor = policy.serverWatermarkMessageId;
+    if (!policy.hasBoundary) {
       return 'none';
     }
-    return policy.includeAnchorInAfter
+    final prefix = policy.includeServerWatermarkInAfter
         ? 'fromInclusive($anchor)'
         : 'after($anchor)';
+    if (policy.localStableKeys.isEmpty) {
+      return prefix;
+    }
+    return '$prefix+local(${policy.localStableKeys.length})';
   }
 
   String _commandLabel(ConversationTimelineViewportCommand? command) {
