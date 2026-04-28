@@ -85,6 +85,9 @@ class ConversationTimelineView extends ConsumerStatefulWidget {
   final ValueChanged<MessageLongPressDetailsV2>? onMessageLongPress;
   final ValueChanged<MessageVisibilityWindow?>? onMessageVisibilityChanged;
 
+  ConversationIdentity get _identity =>
+      (chatId: chatId, threadRootId: threadRootId);
+
   @override
   ConsumerState<ConversationTimelineView> createState() =>
       _ConversationTimelineViewState();
@@ -107,10 +110,8 @@ class _ConversationTimelineViewState
   Map<String, ConversationMessageV2> _renderedMessagesByStableKey =
       const <String, ConversationMessageV2>{};
   bool _isViewportMeasurementScheduled = false;
+  bool _hasReportedViewportFacts = false;
   MessageVisibilityWindow? _lastVisibilityWindow;
-
-  ConversationIdentity get _identity =>
-      (chatId: widget.chatId, threadRootId: widget.threadRootId);
 
   @override
   void initState() {
@@ -176,28 +177,25 @@ class _ConversationTimelineViewState
   @override
   void didUpdateWidget(covariant ConversationTimelineView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.chatId != widget.chatId ||
-        oldWidget.threadRootId != widget.threadRootId) {
-      _lastHandledViewportCommandGeneration = 0;
-      _lastVisibilityWindow = null;
-      widget.onMessageVisibilityChanged?.call(null);
-    }
+    assert(oldWidget._identity == widget._identity, 'identity changed');
+    debugPrint('didUpdateWidget: ConversationTimeline');
     if (oldWidget.launchRequest != widget.launchRequest) {
       _scheduleInitializeLaunchRequest();
     }
-    _handleScrollChanged();
   }
 
   void _scheduleInitializeLaunchRequest() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) {
-        return;
-      }
+    if (!mounted) {
+      log(
+        'scheduleInitializeLaunchRequest: not mounted, will not init',
+        name: 'ConversationTimeline',
+      );
+      return;
+    }
 
-      ref
-          .read(conversationTimelineViewModelProvider(_identity).notifier)
-          .initialize(widget.launchRequest);
-    });
+    ref
+        .read(conversationTimelineViewModelProvider(widget._identity).notifier)
+        .initialize(widget.launchRequest);
   }
 
   void _handleScrollChanged() {
@@ -233,13 +231,27 @@ class _ConversationTimelineViewState
           (position.maxScrollExtent - position.pixels) <= _edgeThreshold,
     );
 
-    if (facts != _latestViewportFacts) {
-      setState(() {
-        _latestViewportFacts = facts;
-      });
+    final shouldReport =
+        !_hasReportedViewportFacts || facts != _latestViewportFacts;
+    if (shouldReport) {
+      log(
+        'view viewport facts reported: identity=${widget._identity} '
+        'initial=${!_hasReportedViewportFacts} '
+        'facts=$facts pixels=${position.pixels} '
+        'min=${position.minScrollExtent} max=${position.maxScrollExtent}',
+        name: 'ConversationTimeline',
+      );
+      if (facts != _latestViewportFacts) {
+        setState(() {
+          _latestViewportFacts = facts;
+        });
+      }
+      _hasReportedViewportFacts = true;
 
       ref
-          .read(conversationTimelineViewModelProvider(_identity).notifier)
+          .read(
+            conversationTimelineViewModelProvider(widget._identity).notifier,
+          )
           .onViewportChanged(facts);
     }
   }
@@ -286,7 +298,9 @@ class _ConversationTimelineViewState
       });
       widget.onMessageVisibilityChanged?.call(nextVisibilityWindow);
       ref
-          .read(conversationTimelineViewModelProvider(_identity).notifier)
+          .read(
+            conversationTimelineViewModelProvider(widget._identity).notifier,
+          )
           .reportMessageVisibilityWindow(nextVisibilityWindow);
     }
   }
@@ -299,7 +313,12 @@ class _ConversationTimelineViewState
     }
 
     log(
-      'consumeViewportCommand: generation=$generation, kind=${state.viewportCommand.kind}, placement=${state.viewportCommand.placement}',
+      'consumeViewportCommand: identity=${widget._identity} generation=$generation '
+      'lastHandled=$_lastHandledViewportCommandGeneration '
+      'kind=${state.viewportCommand.kind} '
+      'placement=${state.viewportCommand.placement} '
+      'before=${state.beforeMessages.length} after=${state.afterMessages.length}',
+      name: 'ConversationTimeline',
     );
 
     _lastHandledViewportCommandGeneration = generation;
@@ -320,6 +339,11 @@ class _ConversationTimelineViewState
         break;
       case ConversationTimelineViewportCommandKind.scrollToBottom:
         WidgetsBinding.instance.addPostFrameCallback((_) {
+          log(
+            'consumeViewportCommand post-frame scrollToBottom: '
+            'identity=${widget._identity} generation=$generation',
+            name: 'ConversationTimeline',
+          );
           _scrollToBottom();
         });
         break;
@@ -332,14 +356,48 @@ class _ConversationTimelineViewState
 
   Future<void> _scrollToBottom() async {
     if (!mounted || !_scrollController.hasClients) {
+      log(
+        'scrollToBottom skipped: identity=${widget._identity} '
+        'mounted=$mounted hasClients=${_scrollController.hasClients}',
+        name: 'ConversationTimeline',
+      );
       return;
     }
 
-    await _scrollController.animateTo(
-      _scrollController.position.maxScrollExtent,
-      duration: const Duration(milliseconds: 220),
-      curve: Curves.easeOutCubic,
+    final startPixels = _scrollController.position.pixels;
+    final targetPixels = _scrollController.position.maxScrollExtent;
+    log(
+      'scrollToBottom start: identity=${widget._identity} '
+      'from=$startPixels to=$targetPixels',
+      name: 'ConversationTimeline',
     );
+    try {
+      await _scrollController.animateTo(
+        targetPixels,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+      );
+      if (!mounted || !_scrollController.hasClients) {
+        log(
+          'scrollToBottom completed after detach: identity=${widget._identity}',
+          name: 'ConversationTimeline',
+        );
+        return;
+      }
+      log(
+        'scrollToBottom complete: identity=${widget._identity} '
+        'pixels=${_scrollController.position.pixels} '
+        'max=${_scrollController.position.maxScrollExtent}',
+        name: 'ConversationTimeline',
+      );
+    } catch (error, stackTrace) {
+      log(
+        'scrollToBottom failed: identity=${widget._identity}',
+        name: 'ConversationTimeline',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   void _openMessageOverlay(MessageLongPressDetailsV2 details) {
@@ -355,7 +413,9 @@ class _ConversationTimelineViewState
   ) async {
     try {
       await ref
-          .read(conversationTimelineViewModelProvider(_identity).notifier)
+          .read(
+            conversationTimelineViewModelProvider(widget._identity).notifier,
+          )
           .toggleReaction(message, emoji);
     } catch (error) {
       if (!mounted) {
@@ -444,7 +504,7 @@ class _ConversationTimelineViewState
     rowPresentationByStableKey,
   }) {
     final vmNotifier = ref.read(
-      conversationTimelineViewModelProvider(_identity).notifier,
+      conversationTimelineViewModelProvider(widget._identity).notifier,
     );
     return SliverList.builder(
       key: key,
@@ -463,7 +523,11 @@ class _ConversationTimelineViewState
             showAvatar: rowPresentation.showAvatar,
             onLongPress: _openMessageOverlay,
             onReply: () => ref
-                .read(conversationComposerViewModelProvider(_identity).notifier)
+                .read(
+                  conversationComposerViewModelProvider(
+                    widget._identity,
+                  ).notifier,
+                )
                 .beginReply(message),
             onToggleReaction:
                 message.content is StickerMessageContent || message.isDeleted
@@ -490,7 +554,9 @@ class _ConversationTimelineViewState
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(conversationTimelineViewModelProvider(_identity));
+    final state = ref.watch(
+      conversationTimelineViewModelProvider(widget._identity),
+    );
 
     if (state.isBootstrapping) {
       return const Center(child: CupertinoActivityIndicator());
@@ -595,7 +661,9 @@ class _ConversationTimelineViewState
               pendingLiveCount: 0,
               onPressed: () => ref
                   .read(
-                    conversationTimelineViewModelProvider(_identity).notifier,
+                    conversationTimelineViewModelProvider(
+                      widget._identity,
+                    ).notifier,
                   )
                   .jumpToLatest(),
             ),

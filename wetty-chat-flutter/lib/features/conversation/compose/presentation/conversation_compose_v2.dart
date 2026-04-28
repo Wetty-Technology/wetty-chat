@@ -8,6 +8,7 @@ import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/features/conversation/compose/presentation/conversation_composer_view_model.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
 import 'package:chahua/features/conversation/compose/presentation/conversation_v2_composer_bar.dart';
+import 'package:chahua/features/conversation/timeline/presentation/conversation_timeline_view_model.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:chahua/features/stickers/presentation/sticker_picker_panel.dart';
 
@@ -15,11 +16,14 @@ class ConversationComposeV2 extends ConsumerStatefulWidget {
   const ConversationComposeV2({
     super.key,
     required this.identity,
+    this.onMessageWillSend,
     this.onMessageSent,
   });
 
   final ConversationIdentity identity;
-  final Future<void> Function()? onMessageSent;
+  final ConversationLocalSendViewportIntent Function()? onMessageWillSend;
+  final Future<void> Function(ConversationLocalSendViewportIntent intent)?
+  onMessageSent;
 
   @override
   ConversationComposeV2State createState() => ConversationComposeV2State();
@@ -59,12 +63,15 @@ class ConversationComposeV2State extends ConsumerState<ConversationComposeV2> {
   }
 
   Future<void> _sendSticker(StickerSummary sticker) async {
+    final viewportIntent = widget.onMessageWillSend?.call();
     unawaited(
       ref
           .read(conversationComposerViewModelProvider(widget.identity).notifier)
           .sendSticker(sticker),
     );
-    unawaited(widget.onMessageSent?.call());
+    if (viewportIntent != null) {
+      unawaited(widget.onMessageSent?.call(viewportIntent));
+    }
   }
 
   @override
@@ -87,6 +94,7 @@ class ConversationComposeV2State extends ConsumerState<ConversationComposeV2> {
           children: [
             ConversationV2ComposerBar(
               identity: widget.identity,
+              onMessageWillSend: widget.onMessageWillSend,
               onMessageSent: widget.onMessageSent,
               onToggleStickerPicker: _toggleStickerPicker,
               onInputFocusChanged: _handleInputFocusChanged,

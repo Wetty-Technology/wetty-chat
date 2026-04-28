@@ -8,6 +8,7 @@ import 'package:chahua/features/conversation/compose/presentation/conversation_c
 import 'package:chahua/features/conversation/compose/data/attachment_picker_service.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
+import 'package:chahua/features/conversation/timeline/presentation/conversation_timeline_view_model.dart';
 import 'package:chahua/features/conversation/compose/presentation/composer_attachment_menu.dart';
 import 'package:chahua/features/conversation/compose/presentation/composer_audio_controls.dart';
 import 'package:chahua/features/conversation/compose/presentation/composer_input_area.dart';
@@ -21,6 +22,7 @@ class ConversationV2ComposerBar extends ConsumerStatefulWidget {
   const ConversationV2ComposerBar({
     super.key,
     required this.identity,
+    this.onMessageWillSend,
     this.onMessageSent,
     this.onToggleStickerPicker,
     this.onInputFocusChanged,
@@ -28,7 +30,9 @@ class ConversationV2ComposerBar extends ConsumerStatefulWidget {
   });
 
   final ConversationIdentity identity;
-  final Future<void> Function()? onMessageSent;
+  final ConversationLocalSendViewportIntent Function()? onMessageWillSend;
+  final Future<void> Function(ConversationLocalSendViewportIntent intent)?
+  onMessageSent;
   final VoidCallback? onToggleStickerPicker;
   final ValueChanged<bool>? onInputFocusChanged;
   final bool isStickerPickerOpen;
@@ -362,7 +366,7 @@ class _ConversationV2ComposerBarState
     final composer = ref.read(
       conversationComposerViewModelProvider(widget.identity),
     );
-    final composerNotifier = ref.read(
+    final composeViewModel = ref.read(
       conversationComposerViewModelProvider(widget.identity).notifier,
     );
     if (composer.isEditing && composer.attachments.isNotEmpty) {
@@ -373,8 +377,9 @@ class _ConversationV2ComposerBarState
         !composer.hasUploadedAttachments) {
       return;
     }
+    final viewportIntent = widget.onMessageWillSend?.call();
     try {
-      await composerNotifier.send(text: _wireFormatText(_textController.text));
+      await composeViewModel.send(text: _wireFormatText(_textController.text));
       _closeAttachmentMenu();
       _textController.clear();
       if (mounted) {
@@ -382,7 +387,9 @@ class _ConversationV2ComposerBarState
           _clearMentionState(clearEntries: true);
         });
       }
-      await widget.onMessageSent?.call();
+      if (viewportIntent != null) {
+        unawaited(widget.onMessageSent?.call(viewportIntent));
+      }
     } catch (error) {
       if (mounted) {
         _showErrorDialog('$error');
@@ -394,10 +401,13 @@ class _ConversationV2ComposerBarState
     final composerNotifier = ref.read(
       conversationComposerViewModelProvider(widget.identity).notifier,
     );
+    final viewportIntent = widget.onMessageWillSend?.call();
     try {
       await composerNotifier.sendRecordedAudio();
       _closeAttachmentMenu();
-      await widget.onMessageSent?.call();
+      if (viewportIntent != null) {
+        await widget.onMessageSent?.call(viewportIntent);
+      }
     } on ComposerAudioException catch (error) {
       if (mounted) {
         _showErrorDialog(_audioErrorMessage(error));

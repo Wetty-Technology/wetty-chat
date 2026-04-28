@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -102,10 +103,23 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
     );
   }
 
-  Future<void> _handleMessageSent() async {
+  ConversationLocalSendViewportIntent _captureLocalSendViewportIntent() {
+    return ref
+        .read(conversationTimelineViewModelProvider(widget.identity).notifier)
+        .captureLocalSendViewportIntent();
+  }
+
+  Future<void> _handleMessageSent(
+    ConversationLocalSendViewportIntent viewportIntent,
+  ) async {
+    log(
+      'surface onMessageSent: identity=${widget.identity} '
+      'viewportIntent=${viewportIntent.name}',
+      name: 'ConversationTimeline',
+    );
     ref
         .read(conversationTimelineViewModelProvider(widget.identity).notifier)
-        .followLatestTailIfNeeded();
+        .applyLocalSendViewportIntent(viewportIntent);
     await widget.onMessageSent?.call();
   }
 
@@ -539,6 +553,7 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
                 ConversationComposeV2(
                   key: _composeKey,
                   identity: widget.identity,
+                  onMessageWillSend: _captureLocalSendViewportIntent,
                   onMessageSent: _handleMessageSent,
                 ),
               ],

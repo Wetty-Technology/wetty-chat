@@ -130,7 +130,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                           );
                           final extra = state.extra as Map<String, dynamic>?;
                           return _chatWorkspacePage(
-                            key: state.pageKey,
+                            key: ValueKey("chat/$chatId"),
                             disableTransition: _disableTransition(state),
                             child: ChatDetailV2Page(
                               chatId: chatId,
@@ -175,7 +175,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                               final extra =
                                   state.extra as Map<String, dynamic>?;
                               return CupertinoPage(
-                                key: state.pageKey,
+                                key: ValueKey("thread/$threadId/new"),
                                 child: ThreadDetailV2Page(
                                   chatId: chatId,
                                   threadRootId: threadId,
@@ -201,7 +201,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                               final extra =
                                   state.extra as Map<String, dynamic>?;
                               return CupertinoPage(
-                                key: state.pageKey,
+                                key: ValueKey("thread/$threadId"),
                                 child: ThreadDetailV2Page(
                                   chatId: chatId,
                                   threadRootId: threadId,
@@ -227,7 +227,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                           );
                           final extra = state.extra as Map<String, dynamic>?;
                           return _chatWorkspacePage(
-                            key: state.pageKey,
+                            key: ValueKey("thread/$chatId/$threadId"),
                             disableTransition: _disableTransition(state),
                             child: ThreadDetailV2Page(
                               chatId: chatId,

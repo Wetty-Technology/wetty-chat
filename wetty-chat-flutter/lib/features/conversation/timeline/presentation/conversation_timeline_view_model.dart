@@ -45,6 +45,13 @@ enum ConversationTimelineViewportCommandKind {
 /// The preferred placement for the viewport command.
 enum ConversationTimelineViewportPlacement { bottomPreferred, topPreferred }
 
+/// The viewport state captured at the moment a local send starts.
+enum ConversationLocalSendViewportIntent {
+  latestNearBottom,
+  latestAwayFromBottom,
+  nonLatest,
+}
+
 /// A viewport command issued by the timeline view model to the viewport controller.
 typedef ConversationTimelineViewportCommand = ({
   ConversationTimelineViewportCommandKind kind,
@@ -137,6 +144,13 @@ class ConversationTimelineViewModel
         mode: activeSegmentMode,
       )),
     );
+    log(
+      'vm build: identity=$identity mode=${_modeLabel(activeSegmentMode)} '
+      'hasSegment=${_activeSegment != null} '
+      'pending=${_commandLabel(_pendingViewportCommand)} '
+      'generation=$_viewportCommandGeneration',
+      name: 'ConversationTimeline',
+    );
     if (_activeSegment != null) {
       return _stateFromActiveSegment(
         _activeSegment!,
@@ -149,9 +163,17 @@ class ConversationTimelineViewModel
 
   void initialize(LaunchRequest launchRequest) {
     if (_initialLaunchRequest == launchRequest) {
+      log(
+        'initialize skipped: identity=$identity launch=$launchRequest',
+        name: 'ConversationTimeline',
+      );
       return;
     }
     _initialLaunchRequest = launchRequest;
+    log(
+      'initialize: identity=$identity launch=$launchRequest',
+      name: 'ConversationTimeline',
+    );
 
     switch (launchRequest) {
       case LatestLaunchRequest():
@@ -168,6 +190,12 @@ class ConversationTimelineViewModel
 
   void onViewportChanged(TimelineViewportFacts facts) {
     _latestViewportFacts = facts;
+    log(
+      'vm viewport facts: identity=$identity mode=${_modeLabel(_activeSegmentMode)} '
+      'facts=$facts bootstrapping=${state.isBootstrapping} '
+      'canOlder=${state.canLoadOlder} canNewer=${state.canLoadNewer}',
+      name: 'ConversationTimeline',
+    );
 
     if (state.isBootstrapping) {
       return;
@@ -208,6 +236,11 @@ class ConversationTimelineViewModel
   }
 
   Future<void> jumpToLatest() async {
+    log(
+      'jumpToLatest: identity=$identity mode=${_modeLabel(_activeSegmentMode)} '
+      'latestFacts=$_latestViewportFacts split=${_splitLabel(_renderSplitPolicy)}',
+      name: 'ConversationTimeline',
+    );
     unawaited(
       _repository.refreshLatestSegment(limit: _initialLoadedWindowSize),
     );
@@ -232,10 +265,70 @@ class ConversationTimelineViewModel
     final isFollowingTail =
         (_activeSegment?.isLatestSlice ?? false) &&
         (_latestViewportFacts?.isNearBottom ?? false);
+    log(
+      'followLatestTailIfNeeded: identity=$identity '
+      'mode=${_modeLabel(_activeSegmentMode)} '
+      'activeLatest=${_activeSegment?.isLatestSlice} '
+      'latestFacts=$_latestViewportFacts isFollowingTail=$isFollowingTail',
+      name: 'ConversationTimeline',
+    );
     if (isFollowingTail) {
       return;
     }
+    log(
+      'followLatestTailIfNeeded: not following tail, will jump to latest',
+      name: 'ConversationTimeline',
+    );
     unawaited(jumpToLatest());
+  }
+
+  ConversationLocalSendViewportIntent captureLocalSendViewportIntent() {
+    final isLatestSlice = _activeSegment?.isLatestSlice ?? false;
+    final isNearBottom = _latestViewportFacts?.isNearBottom ?? false;
+    final intent = !isLatestSlice
+        ? ConversationLocalSendViewportIntent.nonLatest
+        : isNearBottom
+        ? ConversationLocalSendViewportIntent.latestNearBottom
+        : ConversationLocalSendViewportIntent.latestAwayFromBottom;
+    log(
+      'captureLocalSendViewportIntent: identity=$identity '
+      'mode=${_modeLabel(_activeSegmentMode)} activeLatest=$isLatestSlice '
+      'latestFacts=$_latestViewportFacts intent=${intent.name}',
+      name: 'ConversationTimeline',
+    );
+    return intent;
+  }
+
+  void applyLocalSendViewportIntent(
+    ConversationLocalSendViewportIntent intent,
+  ) {
+    log(
+      'applyLocalSendViewportIntent: identity=$identity '
+      'mode=${_modeLabel(_activeSegmentMode)} intent=${intent.name}',
+      name: 'ConversationTimeline',
+    );
+    switch (intent) {
+      case ConversationLocalSendViewportIntent.latestNearBottom:
+        _issueViewportCommand(
+          kind: ConversationTimelineViewportCommandKind.scrollToBottom,
+          placement: ConversationTimelineViewportPlacement.bottomPreferred,
+        );
+        ref.invalidateSelf();
+        break;
+      case ConversationLocalSendViewportIntent.latestAwayFromBottom:
+        _highlightedServerMessageId = null;
+        _highlightFirstServerMessageIdAfter = null;
+        _renderSplitPolicy = const _TimelineRenderSplitPolicy.none();
+        _issueViewportCommand(
+          kind: ConversationTimelineViewportCommandKind.resetToCenterOrigin,
+          placement: ConversationTimelineViewportPlacement.bottomPreferred,
+        );
+        ref.invalidateSelf();
+        break;
+      case ConversationLocalSendViewportIntent.nonLatest:
+        unawaited(jumpToLatest());
+        break;
+    }
   }
 
   Future<void> jumpToMessageServerId(
@@ -374,11 +467,23 @@ class ConversationTimelineViewModel
     final currentTailStableKey = segment.orderedMessages.isEmpty
         ? null
         : segment.orderedMessages.last.stableKey;
-    if (segment.isLatestSlice &&
+    final shouldScrollToBottom =
+        segment.isLatestSlice &&
         (_latestViewportFacts?.isNearBottom ?? false) &&
         _lastRenderedTailStableKey != null &&
         currentTailStableKey != null &&
-        currentTailStableKey != _lastRenderedTailStableKey) {
+        currentTailStableKey != _lastRenderedTailStableKey;
+    log(
+      'stateFromSegment: identity=$identity mode=${_modeLabel(_activeSegmentMode)} '
+      'segmentLatest=${segment.isLatestSlice} count=${segment.orderedMessages.length} '
+      'split=${_splitLabel(_renderSplitPolicy)} '
+      'before=${beforeMessages.length} after=${afterMessages.length} '
+      'lastTail=$_lastRenderedTailStableKey currentTail=$currentTailStableKey '
+      'latestFacts=$_latestViewportFacts shouldScrollToBottom=$shouldScrollToBottom '
+      'pending=${_commandLabel(_pendingViewportCommand)} generation=$_viewportCommandGeneration',
+      name: 'ConversationTimeline',
+    );
+    if (shouldScrollToBottom) {
       _issueViewportCommand(
         kind: ConversationTimelineViewportCommandKind.scrollToBottom,
         placement: ConversationTimelineViewportPlacement.bottomPreferred,
@@ -411,7 +516,21 @@ class ConversationTimelineViewModel
     if ((_pendingViewportCommand != null) && hasMessages) {
       final command = _pendingViewportCommand!;
       _pendingViewportCommand = null;
-      return (command: command, generation: ++_viewportCommandGeneration);
+      final generation = ++_viewportCommandGeneration;
+      log(
+        'takePendingViewportCommand: identity=$identity '
+        'command=${_commandLabel(command)} generation=$generation',
+        name: 'ConversationTimeline',
+      );
+      return (command: command, generation: generation);
+    }
+    if (_pendingViewportCommand != null) {
+      log(
+        'takePendingViewportCommand blocked: identity=$identity '
+        'hasMessages=$hasMessages pending=${_commandLabel(_pendingViewportCommand)} '
+        'generation=$_viewportCommandGeneration',
+        name: 'ConversationTimeline',
+      );
     }
     return null;
   }
@@ -448,9 +567,21 @@ class ConversationTimelineViewModel
     required ConversationTimelineViewportPlacement placement,
   }) {
     final command = _viewportCommand(kind: kind, placement: placement);
+    log(
+      'issueViewportCommand: identity=$identity command=${_commandLabel(command)} '
+      'previousPending=${_commandLabel(_pendingViewportCommand)} '
+      'previousLast=${_commandLabel(_lastViewportCommand)} '
+      'generationBefore=$_viewportCommandGeneration',
+      name: 'ConversationTimeline',
+    );
     _pendingViewportCommand = command;
     _lastViewportCommand = command;
     ++_viewportCommandGeneration;
+    log(
+      'issueViewportCommand queued: identity=$identity '
+      'command=${_commandLabel(command)} generation=$_viewportCommandGeneration',
+      name: 'ConversationTimeline',
+    );
   }
 
   ConversationTimelineState _loadingState({bool isBootstrapping = true}) {
@@ -489,6 +620,10 @@ class ConversationTimelineViewModel
     _renderSplitPolicy = _TimelineRenderSplitPolicy.afterMessage(
       tailServerMessageId,
     );
+    log(
+      'captureLatestTailSplit: identity=$identity tailServerId=$tailServerMessageId',
+      name: 'ConversationTimeline',
+    );
   }
 
   void _splitMessages(
@@ -519,6 +654,31 @@ class ConversationTimelineViewModel
         beforeMessages.add(message);
       }
     }
+  }
+
+  String _modeLabel(ConversationTimelineActiveSegmentMode? mode) {
+    if (mode == null) {
+      return 'none';
+    }
+    final target = mode.targetServerMessageId;
+    return target == null ? 'latest' : 'around($target)';
+  }
+
+  String _splitLabel(_TimelineRenderSplitPolicy policy) {
+    final anchor = policy.anchorServerMessageId;
+    if (anchor == null) {
+      return 'none';
+    }
+    return policy.includeAnchorInAfter
+        ? 'fromInclusive($anchor)'
+        : 'after($anchor)';
+  }
+
+  String _commandLabel(ConversationTimelineViewportCommand? command) {
+    if (command == null) {
+      return 'null';
+    }
+    return '${command.kind.name}/${command.placement.name}';
   }
 }
 

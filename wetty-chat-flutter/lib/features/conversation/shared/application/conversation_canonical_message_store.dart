@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_timeline_v2_active_segment.dart';
 import 'package:chahua/features/conversation/shared/domain/conversation_timeline_v2_canonical_scope.dart';
@@ -133,6 +135,12 @@ class ConversationTimelineMessageStore
     ConversationTimelineCanonicalSegment segment,
   ) {
     final existingScope = scopeFor(identity);
+    log(
+      'store insertLatest: identity=$identity incoming=${segment.orderedMessages.length} '
+      'existingSegments=${existingScope?.segments.length ?? 0} '
+      'existingOptimistic=${existingScope?.optimisticMessages.length ?? 0}',
+      name: 'ConversationTimeline',
+    );
     final segments = _normalizeLatestSegments(
       existingScope?.segments ?? const <ConversationTimelineCanonicalSegment>[],
       incoming: segment,
@@ -163,6 +171,15 @@ class ConversationTimelineMessageStore
     ConversationMessageV2 message,
   ) {
     final existingScope = scopeFor(identity);
+    log(
+      'store newServerBackedMessage: identity=$identity '
+      'serverId=${message.serverMessageId} clientId=${message.clientGeneratedId} '
+      'hasScope=${existingScope != null} '
+      'hasLatest=${existingScope?.hasLatestSegment} '
+      'segments=${existingScope?.segments.length ?? 0} '
+      'optimistic=${existingScope?.optimisticMessages.length ?? 0}',
+      name: 'ConversationTimeline',
+    );
     if (existingScope == null || !existingScope.hasLatestSegment) {
       return;
     }
@@ -195,6 +212,13 @@ class ConversationTimelineMessageStore
         hasLatestSegment: true,
       ),
     );
+    log(
+      'store newServerBackedMessage applied: identity=$identity '
+      'serverId=${message.serverMessageId} '
+      'remainingOptimistic=${optimisticMessages.length} '
+      'latestCount=${updatedLatestMessages.length}',
+      name: 'ConversationTimeline',
+    );
   }
 
   void _newOptimisticMessage(
@@ -210,6 +234,14 @@ class ConversationTimelineMessageStore
     final optimisticMessages =
         (existingScope?.optimisticMessages ?? const <ConversationMessageV2>[])
             .toList(growable: true);
+    log(
+      'store newOptimisticMessage: identity=$identity '
+      'clientId=${message.clientGeneratedId} '
+      'hasLatestBefore=${existingScope?.hasLatestSegment} '
+      'segmentsBefore=${existingScope?.segments.length ?? 0} '
+      'optimisticBefore=${optimisticMessages.length}',
+      name: 'ConversationTimeline',
+    );
 
     for (var index = 0; index < optimisticMessages.length; index++) {
       if (optimisticMessages[index].clientGeneratedId !=
@@ -224,6 +256,12 @@ class ConversationTimelineMessageStore
           optimisticMessages: optimisticMessages.toList(growable: false),
         ),
       );
+      log(
+        'store newOptimisticMessage replaced: identity=$identity '
+        'clientId=${message.clientGeneratedId} '
+        'optimisticAfter=${optimisticMessages.length}',
+        name: 'ConversationTimeline',
+      );
       return;
     }
 
@@ -235,6 +273,14 @@ class ConversationTimelineMessageStore
         hasLatestSegment: true,
         optimisticMessages: optimisticMessages.toList(growable: false),
       ),
+    );
+    log(
+      'store newOptimisticMessage appended: identity=$identity '
+      'clientId=${message.clientGeneratedId} '
+      'hasLatestAfter=true '
+      'segmentsAfter=${existingScope?.segments.length ?? 0} '
+      'optimisticAfter=${optimisticMessages.length}',
+      name: 'ConversationTimeline',
     );
   }
 

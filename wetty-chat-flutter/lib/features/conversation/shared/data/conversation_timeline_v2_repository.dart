@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:developer';
+
 import 'package:chahua/features/conversation/shared/application/conversation_canonical_message_store.dart';
 import 'package:chahua/features/conversation/compose/data/message_api_service_v2.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
@@ -21,6 +24,13 @@ class ConversationTimelineV2Repository {
     // attachment ids directly from the optimistic message payload.
     required List<String> attachmentIds,
   }) async {
+    log(
+      'sendMessage optimistic insert: identity=$identity '
+      'clientId=${optimisticMessage.clientGeneratedId} '
+      'serverId=${optimisticMessage.serverMessageId} '
+      'type=${_messageTypeFor(optimisticMessage)}',
+      name: 'ConversationTimeline',
+    );
     // Optimistically insert the message into the timeline.
     _store.newMessage(identity, optimisticMessage);
 
@@ -28,7 +38,7 @@ class ConversationTimelineV2Repository {
     // row as failed in the v2 store, and keep the same clientGeneratedId for
     // later retry/discard actions.
     // Send the message to the server.
-    await ref
+    final postFuture = ref
         .read(messageApiServiceV2Provider)
         .sendConversationMessage(
           identity,
@@ -39,6 +49,22 @@ class ConversationTimelineV2Repository {
           clientGeneratedId: optimisticMessage.clientGeneratedId,
           stickerId: _stickerIdFor(optimisticMessage),
         );
+    unawaited(
+      postFuture.then(
+        (_) => log(
+          'sendMessage post accepted: identity=$identity '
+          'clientId=${optimisticMessage.clientGeneratedId}',
+          name: 'ConversationTimeline',
+        ),
+        onError: (Object error, StackTrace stackTrace) => log(
+          'sendMessage post failed: identity=$identity '
+          'clientId=${optimisticMessage.clientGeneratedId}',
+          name: 'ConversationTimeline',
+          error: error,
+          stackTrace: stackTrace,
+        ),
+      ),
+    );
   }
 
   Future<void> toggleReaction({
