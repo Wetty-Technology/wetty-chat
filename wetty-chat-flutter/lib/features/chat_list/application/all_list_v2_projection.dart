@@ -9,7 +9,7 @@ final allListV2ItemsProvider = Provider<List<AllListV2Item>>((ref) {
     groupListV2StoreProvider.select((state) => state.groups),
   );
   final threads = ref.watch(
-    threadListV2StoreProvider.select((state) => state.threads),
+    threadListV2StoreProvider.select((state) => state.active.threads),
   );
 
   final items = <AllListV2Item>[];

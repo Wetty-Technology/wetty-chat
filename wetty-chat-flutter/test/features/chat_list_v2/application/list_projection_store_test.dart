@@ -106,7 +106,13 @@ void main() {
       addTearDown(container.dispose);
       container
           .read(threadListV2StoreProvider.notifier)
-          .replacePage(threads: [_thread(unreadCount: 4)], totalUnreadCount: 4);
+          .replaceActivePage(threads: [_thread(unreadCount: 4)]);
+      container.read(threadListV2StoreProvider.notifier).replaceUnreadTotals((
+        activeThreadCount: 4,
+        archivedThreadCount: 0,
+        activeMessageCount: 0,
+        archivedMessageCount: 0,
+      ));
 
       final shouldRefresh = container
           .read(threadListV2StoreProvider.notifier)
@@ -122,11 +128,11 @@ void main() {
           );
 
       final state = container.read(threadListV2StoreProvider);
-      final thread = state.threads.single;
+      final thread = state.active.threads.single;
       expect(shouldRefresh, isFalse);
       expect(thread.lastReply?.messageId, 202);
       expect(thread.unreadCount, 0);
-      expect(state.totalUnreadCount, 0);
+      expect(state.unreadTotals.activeThreadCount, 0);
       expect(container.read(unreadBadgeProvider).threadUnreadTotal, 0);
     });
 
@@ -135,10 +141,13 @@ void main() {
       addTearDown(container.dispose);
       container
           .read(threadListV2StoreProvider.notifier)
-          .replacePage(
-            threads: [_thread(unreadCount: 1, replyCount: 2)],
-            totalUnreadCount: 1,
-          );
+          .replaceActivePage(threads: [_thread(unreadCount: 1, replyCount: 2)]);
+      container.read(threadListV2StoreProvider.notifier).replaceUnreadTotals((
+        activeThreadCount: 1,
+        archivedThreadCount: 0,
+        activeMessageCount: 0,
+        archivedMessageCount: 0,
+      ));
 
       final shouldRefresh = container
           .read(threadListV2StoreProvider.notifier)
@@ -154,12 +163,12 @@ void main() {
           );
 
       final state = container.read(threadListV2StoreProvider);
-      final thread = state.threads.single;
+      final thread = state.active.threads.single;
       expect(shouldRefresh, isFalse);
       expect(thread.lastReply?.messageId, 203);
       expect(thread.replyCount, 3);
       expect(thread.unreadCount, 2);
-      expect(state.totalUnreadCount, 2);
+      expect(state.unreadTotals.activeThreadCount, 2);
       expect(container.read(unreadBadgeProvider).threadUnreadTotal, 1);
     });
 
@@ -183,7 +192,13 @@ void main() {
       addTearDown(container.dispose);
       container
           .read(threadListV2StoreProvider.notifier)
-          .replacePage(threads: [_thread(unreadCount: 4)], totalUnreadCount: 4);
+          .replaceActivePage(threads: [_thread(unreadCount: 4)]);
+      container.read(threadListV2StoreProvider.notifier).replaceUnreadTotals((
+        activeThreadCount: 4,
+        archivedThreadCount: 0,
+        activeMessageCount: 0,
+        archivedMessageCount: 0,
+      ));
       container.read(unreadBadgeProvider.notifier).replaceThreadUnreadTotal(4);
 
       container
@@ -194,9 +209,59 @@ void main() {
           );
 
       final state = container.read(threadListV2StoreProvider);
-      expect(state.threads.single.unreadCount, 1);
-      expect(state.totalUnreadCount, 1);
+      expect(state.active.threads.single.unreadCount, 1);
+      expect(state.unreadTotals.activeThreadCount, 1);
       expect(container.read(unreadBadgeProvider).threadUnreadTotal, 1);
+    });
+
+    test(
+      'server read state updates archived bucket without active badge delta',
+      () {
+        final container = _container(threadUnreadTotal: 4);
+        addTearDown(container.dispose);
+        container
+            .read(threadListV2StoreProvider.notifier)
+            .replaceArchivedPage(
+              threads: [_thread(unreadCount: 3).copyWith(archived: true)],
+            );
+        container.read(threadListV2StoreProvider.notifier).replaceUnreadTotals((
+          activeThreadCount: 4,
+          archivedThreadCount: 3,
+          activeMessageCount: 0,
+          archivedMessageCount: 0,
+        ));
+        container
+            .read(unreadBadgeProvider.notifier)
+            .replaceThreadUnreadTotal(4);
+
+        container
+            .read(threadListV2StoreProvider.notifier)
+            .applyServerReadState(
+              threadRootId: 200,
+              response: (lastReadMessageId: '203', unreadCount: 1),
+            );
+
+        final state = container.read(threadListV2StoreProvider);
+        expect(state.archived.threads.single.unreadCount, 1);
+        expect(state.unreadTotals.activeThreadCount, 4);
+        expect(state.unreadTotals.archivedThreadCount, 1);
+        expect(container.read(unreadBadgeProvider).threadUnreadTotal, 4);
+      },
+    );
+
+    test('threadByIdProvider searches archived bucket', () {
+      final container = _container();
+      addTearDown(container.dispose);
+      container
+          .read(threadListV2StoreProvider.notifier)
+          .replaceArchivedPage(threads: [_thread().copyWith(archived: true)]);
+
+      final thread = container.read(
+        threadByIdProvider((chatId: '10', threadRootId: '200')),
+      );
+
+      expect(thread, isNotNull);
+      expect(thread!.archived, isTrue);
     });
   });
 }

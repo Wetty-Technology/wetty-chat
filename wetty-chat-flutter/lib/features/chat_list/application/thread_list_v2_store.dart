@@ -9,73 +9,97 @@ import '../model/thread_list_item.dart';
 import '../../shared/data/read_state_models.dart';
 import 'realtime_projection_policy.dart';
 
-typedef ThreadListV2StoreState = ({
+typedef ThreadListV2BucketState = ({
   List<ThreadListItem> threads,
   String? nextCursor,
   bool hasMore,
-  int totalUnreadCount,
+  bool isLoaded,
+});
+
+typedef ThreadUnreadTotals = ({
+  int activeThreadCount,
+  int archivedThreadCount,
+  int activeMessageCount,
+  int archivedMessageCount,
+});
+
+typedef ThreadListV2StoreState = ({
+  ThreadListV2BucketState active,
+  ThreadListV2BucketState archived,
+  ThreadUnreadTotals unreadTotals,
 });
 
 typedef ThreadListV2Identity = ({String chatId, String threadRootId});
+
+typedef _ThreadLocation = ({bool archived, int index});
 
 class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
   @override
   ThreadListV2StoreState build() {
     return (
-      threads: const [],
-      nextCursor: null,
-      hasMore: false,
-      totalUnreadCount: 0,
+      active: _emptyBucket(),
+      archived: _emptyBucket(),
+      unreadTotals: _emptyUnreadTotals(),
     );
   }
 
-  void replacePage({
+  void replaceActivePage({
     required List<ThreadListItem> threads,
     String? nextCursor,
-    required int totalUnreadCount,
   }) {
-    state = (
-      threads: threads,
-      nextCursor: nextCursor,
-      hasMore: nextCursor != null && nextCursor.isNotEmpty,
-      totalUnreadCount: totalUnreadCount,
+    _replaceState(active: _bucketWithPage(threads, nextCursor));
+  }
+
+  void replaceArchivedPage({
+    required List<ThreadListItem> threads,
+    String? nextCursor,
+  }) {
+    _replaceState(archived: _bucketWithPage(threads, nextCursor));
+  }
+
+  void appendActivePage({
+    required List<ThreadListItem> threads,
+    String? nextCursor,
+  }) {
+    _replaceState(
+      active: _bucketWithAppendedPage(state.active, threads, nextCursor),
     );
   }
 
-  void appendPage({required List<ThreadListItem> threads, String? nextCursor}) {
-    final existingKeys = state.threads
-        .map((thread) => '${thread.chatId}:${thread.threadRootId}')
-        .toSet();
-    final appended = threads
-        .where(
-          (thread) =>
-              !existingKeys.contains('${thread.chatId}:${thread.threadRootId}'),
-        )
-        .toList(growable: false);
-
-    state = (
-      threads: [...state.threads, ...appended],
-      nextCursor: nextCursor,
-      hasMore: nextCursor != null && nextCursor.isNotEmpty,
-      totalUnreadCount: state.totalUnreadCount,
+  void appendArchivedPage({
+    required List<ThreadListItem> threads,
+    String? nextCursor,
+  }) {
+    _replaceState(
+      archived: _bucketWithAppendedPage(state.archived, threads, nextCursor),
     );
+  }
+
+  void replaceUnreadTotals(ThreadUnreadTotals unreadTotals) {
+    _replaceState(unreadTotals: unreadTotals);
   }
 
   void applyServerReadState({
     required int threadRootId,
     required ThreadReadStateUpdate response,
   }) {
-    final index = state.threads.indexWhere(
-      (thread) => thread.threadRootId == threadRootId,
-    );
-    if (index < 0) {
+    final location = _locationOfThread(threadRootId);
+    if (location == null) {
       return;
     }
 
-    final previous = state.threads[index];
+    final bucket = location.archived ? state.archived : state.active;
+    final previous = bucket.threads[location.index];
     final updated = previous.copyWith(unreadCount: response.unreadCount);
-    _replaceState(threads: _replaceThreadAt(state.threads, index, updated));
-    _applyThreadUnreadDelta(previous: previous, updated: updated);
+    _replaceBucketThreads(
+      archived: location.archived,
+      threads: _replaceThreadAt(bucket.threads, location.index, updated),
+    );
+    _applyThreadUnreadDelta(
+      archived: location.archived,
+      previous: previous,
+      updated: updated,
+    );
   }
 
   bool applyRealtimeEvent(ApiWsEvent event) {
@@ -99,12 +123,13 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
       return false;
     }
 
-    final index = _indexOfThread(payload.chatId, threadRootId);
-    if (index < 0) {
+    final location = _locationOfThreadInChat(payload.chatId, threadRootId);
+    if (location == null) {
       return true;
     }
 
-    final previous = state.threads[index];
+    final bucket = location.archived ? state.archived : state.active;
+    final previous = bucket.threads[location.index];
     final alreadyProjected = matchesThreadPreview(previous.lastReply, payload);
     final isCurrentUserMessage = payload.sender.uid == _currentUserId;
     final updated = previous.copyWith(
@@ -119,10 +144,19 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
           ? previous.unreadCount
           : previous.unreadCount + 1,
     );
-    _replaceState(
-      threads: _reinsertThreadByActivity(state.threads, index, updated),
+    _replaceBucketThreads(
+      archived: location.archived,
+      threads: _reinsertThreadByActivity(
+        bucket.threads,
+        location.index,
+        updated,
+      ),
     );
-    _applyThreadUnreadDelta(previous: previous, updated: updated);
+    _applyThreadUnreadDelta(
+      archived: location.archived,
+      previous: previous,
+      updated: updated,
+    );
     return false;
   }
 
@@ -131,20 +165,25 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
       return _applyRootPatched(payload);
     }
 
-    final index = _indexOfThread(payload.chatId, payload.replyRootId!);
-    if (index < 0) {
+    final location = _locationOfThreadInChat(
+      payload.chatId,
+      payload.replyRootId!,
+    );
+    if (location == null) {
       return true;
     }
 
-    final previous = state.threads[index];
+    final bucket = location.archived ? state.archived : state.active;
+    final previous = bucket.threads[location.index];
     if (!matchesThreadPreview(previous.lastReply, payload)) {
       return false;
     }
 
-    _replaceState(
+    _replaceBucketThreads(
+      archived: location.archived,
       threads: _replaceThreadAt(
-        state.threads,
-        index,
+        bucket.threads,
+        location.index,
         previous.copyWith(lastReply: _toReplyPreview(payload)),
       ),
     );
@@ -156,12 +195,16 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
       return _applyRootPatched(payload);
     }
 
-    final index = _indexOfThread(payload.chatId, payload.replyRootId!);
-    if (index < 0) {
+    final location = _locationOfThreadInChat(
+      payload.chatId,
+      payload.replyRootId!,
+    );
+    if (location == null) {
       return true;
     }
 
-    final previous = state.threads[index];
+    final bucket = location.archived ? state.archived : state.active;
+    final previous = bucket.threads[location.index];
     final isCurrentPreview = matchesThreadPreview(previous.lastReply, payload);
     if (isCurrentPreview) {
       return true;
@@ -170,18 +213,52 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
     final updated = previous.copyWith(
       replyCount: previous.replyCount > 0 ? previous.replyCount - 1 : 0,
     );
-    _replaceState(threads: _replaceThreadAt(state.threads, index, updated));
+    _replaceBucketThreads(
+      archived: location.archived,
+      threads: _replaceThreadAt(bucket.threads, location.index, updated),
+    );
     return false;
   }
 
   int get _currentUserId => ref.read(authSessionProvider).currentUserId;
 
-  int _indexOfThread(int chatId, int threadRootId) {
-    return state.threads.indexWhere(
-      (thread) =>
-          thread.chatId == chatId.toString() &&
-          thread.threadRootId == threadRootId,
+  _ThreadLocation? _locationOfThread(int threadRootId) {
+    final activeIndex = state.active.threads.indexWhere(
+      (thread) => thread.threadRootId == threadRootId,
     );
+    if (activeIndex >= 0) {
+      return (archived: false, index: activeIndex);
+    }
+
+    final archivedIndex = state.archived.threads.indexWhere(
+      (thread) => thread.threadRootId == threadRootId,
+    );
+    if (archivedIndex >= 0) {
+      return (archived: true, index: archivedIndex);
+    }
+
+    return null;
+  }
+
+  _ThreadLocation? _locationOfThreadInChat(int chatId, int threadRootId) {
+    final chatIdString = chatId.toString();
+    final activeIndex = state.active.threads.indexWhere(
+      (thread) =>
+          thread.chatId == chatIdString && thread.threadRootId == threadRootId,
+    );
+    if (activeIndex >= 0) {
+      return (archived: false, index: activeIndex);
+    }
+
+    final archivedIndex = state.archived.threads.indexWhere(
+      (thread) =>
+          thread.chatId == chatIdString && thread.threadRootId == threadRootId,
+    );
+    if (archivedIndex >= 0) {
+      return (archived: true, index: archivedIndex);
+    }
+
+    return null;
   }
 
   MessagePreview _toReplyPreview(MessageItemDto payload) {
@@ -189,16 +266,18 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
   }
 
   bool _applyRootPatched(MessageItemDto payload) {
-    final index = _indexOfThread(payload.chatId, payload.id);
-    if (index < 0) {
+    final location = _locationOfThreadInChat(payload.chatId, payload.id);
+    if (location == null) {
       return false;
     }
 
-    final previous = state.threads[index];
-    _replaceState(
+    final bucket = location.archived ? state.archived : state.active;
+    final previous = bucket.threads[location.index];
+    _replaceBucketThreads(
+      archived: location.archived,
       threads: _replaceThreadAt(
-        state.threads,
-        index,
+        bucket.threads,
+        location.index,
         previous.copyWith(
           threadRootMessage: messagePreviewFromMessageItemDto(payload),
         ),
@@ -245,6 +324,7 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
   }
 
   void _applyThreadUnreadDelta({
+    required bool archived,
     required ThreadListItem previous,
     required ThreadListItem updated,
   }) {
@@ -253,25 +333,115 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
       return;
     }
 
-    final nextTotal = state.totalUnreadCount + delta;
-    _replaceState(totalUnreadCount: nextTotal < 0 ? 0 : nextTotal);
+    final totals = state.unreadTotals;
+    if (archived) {
+      _replaceState(
+        unreadTotals: (
+          activeThreadCount: totals.activeThreadCount,
+          archivedThreadCount: _clampUnread(totals.archivedThreadCount + delta),
+          activeMessageCount: totals.activeMessageCount,
+          archivedMessageCount: totals.archivedMessageCount,
+        ),
+      );
+      return;
+    }
+
+    _replaceState(
+      unreadTotals: (
+        activeThreadCount: _clampUnread(totals.activeThreadCount + delta),
+        archivedThreadCount: totals.archivedThreadCount,
+        activeMessageCount: totals.activeMessageCount,
+        archivedMessageCount: totals.archivedMessageCount,
+      ),
+    );
     ref.read(unreadBadgeProvider.notifier).applyThreadUnreadDelta(delta);
   }
 
+  void _replaceBucketThreads({
+    required bool archived,
+    required List<ThreadListItem> threads,
+  }) {
+    final bucket = archived ? state.archived : state.active;
+    final updatedBucket = (
+      threads: threads,
+      nextCursor: bucket.nextCursor,
+      hasMore: bucket.hasMore,
+      isLoaded: bucket.isLoaded,
+    );
+    if (archived) {
+      _replaceState(archived: updatedBucket);
+    } else {
+      _replaceState(active: updatedBucket);
+    }
+  }
+
   void _replaceState({
-    List<ThreadListItem>? threads,
-    String? nextCursor,
-    bool? hasMore,
-    int? totalUnreadCount,
+    ThreadListV2BucketState? active,
+    ThreadListV2BucketState? archived,
+    ThreadUnreadTotals? unreadTotals,
   }) {
     state = (
-      threads: threads ?? state.threads,
-      nextCursor: nextCursor ?? state.nextCursor,
-      hasMore: hasMore ?? state.hasMore,
-      totalUnreadCount: totalUnreadCount ?? state.totalUnreadCount,
+      active: active ?? state.active,
+      archived: archived ?? state.archived,
+      unreadTotals: unreadTotals ?? state.unreadTotals,
     );
   }
 }
+
+ThreadListV2BucketState _emptyBucket() {
+  return (
+    threads: const <ThreadListItem>[],
+    nextCursor: null,
+    hasMore: false,
+    isLoaded: false,
+  );
+}
+
+ThreadUnreadTotals _emptyUnreadTotals() {
+  return (
+    activeThreadCount: 0,
+    archivedThreadCount: 0,
+    activeMessageCount: 0,
+    archivedMessageCount: 0,
+  );
+}
+
+ThreadListV2BucketState _bucketWithPage(
+  List<ThreadListItem> threads,
+  String? nextCursor,
+) {
+  return (
+    threads: threads,
+    nextCursor: nextCursor,
+    hasMore: nextCursor != null && nextCursor.isNotEmpty,
+    isLoaded: true,
+  );
+}
+
+ThreadListV2BucketState _bucketWithAppendedPage(
+  ThreadListV2BucketState bucket,
+  List<ThreadListItem> threads,
+  String? nextCursor,
+) {
+  final existingKeys = bucket.threads
+      .map((thread) => '${thread.chatId}:${thread.threadRootId}')
+      .toSet();
+  final appended = threads
+      .where(
+        (thread) =>
+            !existingKeys.contains('${thread.chatId}:${thread.threadRootId}'),
+      )
+      .toList(growable: false);
+
+  return (
+    threads: [...bucket.threads, ...appended],
+    nextCursor: nextCursor,
+    hasMore: nextCursor != null && nextCursor.isNotEmpty,
+    isLoaded: true,
+  );
+}
+
+int _clampUnread(int value) => value < 0 ? 0 : value;
 
 final threadListV2StoreProvider =
     NotifierProvider<ThreadListV2Store, ThreadListV2StoreState>(
@@ -281,14 +451,18 @@ final threadListV2StoreProvider =
 final threadByIdProvider =
     Provider.family<ThreadListItem?, ThreadListV2Identity>((ref, identity) {
       return ref.watch(
-        threadListV2StoreProvider.select(
-          (state) => state.threads
-              .where(
-                (thread) =>
-                    thread.chatId == identity.chatId &&
-                    thread.threadRootId.toString() == identity.threadRootId,
-              )
-              .firstOrNull,
-        ),
+        threadListV2StoreProvider.select((state) {
+          ThreadListItem? findIn(List<ThreadListItem> threads) {
+            return threads
+                .where(
+                  (thread) =>
+                      thread.chatId == identity.chatId &&
+                      thread.threadRootId.toString() == identity.threadRootId,
+                )
+                .firstOrNull;
+          }
+
+          return findIn(state.active.threads) ?? findIn(state.archived.threads);
+        }),
       );
     });

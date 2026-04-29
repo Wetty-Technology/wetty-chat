@@ -14,7 +14,9 @@ class ThreadListV2Repository {
 
   Future<void> loadThreads({int limit = 20}) async {
     final results = await Future.wait([
-      ref.read(threadApiServiceProvider).fetchThreads(limit: limit),
+      ref
+          .read(threadApiServiceProvider)
+          .fetchThreads(limit: limit, archived: false),
       ref.read(threadApiServiceProvider).fetchUnreadThreadCount(),
     ]);
     final response = results[0] as ListThreadsResponseDto;
@@ -24,31 +26,66 @@ class ThreadListV2Repository {
         .toList(growable: false);
     ref
         .read(threadListV2StoreProvider.notifier)
-        .replacePage(
-          threads: threads,
-          nextCursor: response.nextCursor,
-          totalUnreadCount: unreadResponse.unreadThreadCount,
-        );
+        .replaceActivePage(threads: threads, nextCursor: response.nextCursor);
+    ref.read(threadListV2StoreProvider.notifier).replaceUnreadTotals((
+      activeThreadCount: unreadResponse.unreadThreadCount,
+      archivedThreadCount: unreadResponse.archivedUnreadThreadCount,
+      activeMessageCount: unreadResponse.unreadMessageCount,
+      archivedMessageCount: unreadResponse.archivedUnreadMessageCount,
+    ));
     ref
         .read(unreadBadgeProvider.notifier)
         .replaceThreadUnreadTotal(unreadResponse.unreadThreadCount);
   }
 
   Future<void> loadMoreThreads({int limit = 20}) async {
-    final current = ref.read(threadListV2StoreProvider);
+    final current = ref.read(threadListV2StoreProvider).active;
     if (!current.hasMore || current.nextCursor == null) {
       return;
     }
 
     final response = await ref
         .read(threadApiServiceProvider)
-        .fetchThreads(limit: limit, before: current.nextCursor);
+        .fetchThreads(
+          limit: limit,
+          before: current.nextCursor,
+          archived: false,
+        );
     final threads = response.threads
         .map(ThreadListItem.fromDto)
         .toList(growable: false);
     ref
         .read(threadListV2StoreProvider.notifier)
-        .appendPage(threads: threads, nextCursor: response.nextCursor);
+        .appendActivePage(threads: threads, nextCursor: response.nextCursor);
+  }
+
+  Future<void> loadArchivedThreads({int limit = 20}) async {
+    final response = await ref
+        .read(threadApiServiceProvider)
+        .fetchThreads(limit: limit, archived: true);
+    final threads = response.threads
+        .map(ThreadListItem.fromDto)
+        .toList(growable: false);
+    ref
+        .read(threadListV2StoreProvider.notifier)
+        .replaceArchivedPage(threads: threads, nextCursor: response.nextCursor);
+  }
+
+  Future<void> loadMoreArchivedThreads({int limit = 20}) async {
+    final current = ref.read(threadListV2StoreProvider).archived;
+    if (!current.hasMore || current.nextCursor == null) {
+      return;
+    }
+
+    final response = await ref
+        .read(threadApiServiceProvider)
+        .fetchThreads(limit: limit, before: current.nextCursor, archived: true);
+    final threads = response.threads
+        .map(ThreadListItem.fromDto)
+        .toList(growable: false);
+    ref
+        .read(threadListV2StoreProvider.notifier)
+        .appendArchivedPage(threads: threads, nextCursor: response.nextCursor);
   }
 }
 

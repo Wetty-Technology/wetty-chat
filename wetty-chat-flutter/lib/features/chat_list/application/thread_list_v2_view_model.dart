@@ -28,8 +28,8 @@ class ThreadListV2ViewModel extends AsyncNotifier<ThreadListV2ViewState> {
     await ref.read(threadListV2RepositoryProvider).loadThreads();
     final storeState = ref.read(threadListV2StoreProvider);
     return (
-      threads: storeState.threads,
-      hasMore: storeState.hasMore,
+      threads: storeState.active.threads,
+      hasMore: storeState.active.hasMore,
       isLoadingMore: false,
       isRefreshing: false,
       isLoading: false,
@@ -44,8 +44,8 @@ class ThreadListV2ViewModel extends AsyncNotifier<ThreadListV2ViewState> {
     }
     final storeState = ref.read(threadListV2StoreProvider);
     state = AsyncData((
-      threads: storeState.threads,
-      hasMore: storeState.hasMore,
+      threads: storeState.active.threads,
+      hasMore: storeState.active.hasMore,
       isLoadingMore: current.isLoadingMore,
       isRefreshing: current.isRefreshing,
       isLoading: false,
@@ -79,8 +79,8 @@ class ThreadListV2ViewModel extends AsyncNotifier<ThreadListV2ViewState> {
       final latest = state.value;
       if (latest != null) {
         state = AsyncData((
-          threads: storeState.threads,
-          hasMore: storeState.hasMore,
+          threads: storeState.active.threads,
+          hasMore: storeState.active.hasMore,
           isLoadingMore: false,
           isRefreshing: latest.isRefreshing,
           isLoading: false,
@@ -113,8 +113,8 @@ class ThreadListV2ViewModel extends AsyncNotifier<ThreadListV2ViewState> {
       ref.read(readStateRepositoryProvider).resetThreadBaselines();
       final storeState = ref.read(threadListV2StoreProvider);
       state = AsyncData((
-        threads: storeState.threads,
-        hasMore: storeState.hasMore,
+        threads: storeState.active.threads,
+        hasMore: storeState.active.hasMore,
         isLoadingMore: false,
         isRefreshing: false,
         isLoading: false,
