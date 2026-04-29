@@ -1,0 +1,2 @@
+[profile.ci.junit]
+path = "rust-test-report.xml"
