@@ -603,6 +603,18 @@ abstract class AppLocalizations {
   /// **'No threads yet'**
   String get noThreadsYet;
 
+  /// Title and folder row label for archived threads
+  ///
+  /// In en, this message translates to:
+  /// **'Archived threads'**
+  String get archivedThreads;
+
+  /// Empty state for the archived thread list
+  ///
+  /// In en, this message translates to:
+  /// **'No archived threads'**
+  String get noArchivedThreads;
+
   /// Empty state for the combined chat/thread list
   ///
   /// In en, this message translates to:

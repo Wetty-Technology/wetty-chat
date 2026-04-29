@@ -5,8 +5,10 @@ import 'package:chahua/l10n/app_localizations.dart';
 
 import '../../../app/routing/route_names.dart';
 import '../../../app/theme/style_config.dart';
+import '../application/thread_list_v2_store.dart';
 import '../model/thread_list_item.dart';
 import 'chat_workspace_layout_scope.dart';
+import 'widgets/list_row_interaction_surface.dart';
 import 'widgets/thread_list_row.dart';
 import '../application/thread_list_v2_view_model.dart';
 
@@ -19,6 +21,14 @@ class ThreadListV2View extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final asyncState = ref.watch(threadListV2ViewModelProvider);
+    final archivedSummary = ref.watch(
+      threadListV2StoreProvider.select(
+        (state) => (
+          count: state.archived.threads.length,
+          unreadCount: state.unreadTotals.archivedThreadCount,
+        ),
+      ),
+    );
 
     return asyncState.when(
       loading: () => const SliverFillRemaining(
@@ -64,7 +74,9 @@ class ThreadListV2View extends ConsumerWidget {
           );
         }
 
-        if (viewState.threads.isEmpty) {
+        final showArchiveFolder = archivedSummary.count > 0;
+
+        if (viewState.threads.isEmpty && !showArchiveFolder) {
           return SliverFillRemaining(
             hasScrollBody: false,
             child: Center(
@@ -79,9 +91,16 @@ class ThreadListV2View extends ConsumerWidget {
         return SliverMainAxisGroup(
           slivers: [
             SliverList.builder(
-              itemCount: viewState.threads.length,
+              itemCount: viewState.threads.length + (showArchiveFolder ? 1 : 0),
               itemBuilder: (context, index) {
-                final thread = viewState.threads[index];
+                if (showArchiveFolder && index == 0) {
+                  return _ArchivedThreadsFolderRow(
+                    unreadCount: archivedSummary.unreadCount,
+                  );
+                }
+
+                final threadIndex = showArchiveFolder ? index - 1 : index;
+                final thread = viewState.threads[threadIndex];
                 return _ThreadListV2Row(
                   thread: thread,
                   isActive: thread.threadRootId == selectedThreadRootId,
@@ -98,6 +117,98 @@ class ThreadListV2View extends ConsumerWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _ArchivedThreadsFolderRow extends StatelessWidget {
+  const _ArchivedThreadsFolderRow({required this.unreadCount});
+
+  final int unreadCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return ListRowInteractionSurface(
+      isActive: false,
+      onTap: () => context.go(AppRoutes.archivedThreads),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: CupertinoColors.systemGrey5.resolveFrom(context),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    CupertinoIcons.archivebox,
+                    color: CupertinoColors.systemGrey.resolveFrom(context),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    l10n.archivedThreads,
+                    style: appTextStyle(
+                      context,
+                      fontSize: AppFontSizes.body,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                if (unreadCount > 0) _UnreadBadge(count: unreadCount),
+                const SizedBox(width: 8),
+                const Icon(
+                  CupertinoIcons.chevron_right,
+                  size: 16,
+                  color: CupertinoColors.systemGrey3,
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 76),
+            child: Container(
+              height: 0.5,
+              color: CupertinoColors.separator.resolveFrom(context),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UnreadBadge extends StatelessWidget {
+  const _UnreadBadge({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(left: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemRed,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      constraints: const BoxConstraints(minWidth: 20),
+      child: Text(
+        count > 99 ? '99+' : '$count',
+        textAlign: TextAlign.center,
+        style: appOnDarkTextStyle(
+          context,
+          fontSize: AppFontSizes.unreadBadge,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 }

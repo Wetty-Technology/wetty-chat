@@ -261,6 +261,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get noThreadsYet => '暂无话题';
 
   @override
+  String get archivedThreads => '已归档话题';
+
+  @override
+  String get noArchivedThreads => '暂无已归档话题';
+
+  @override
   String get noChatsOrThreadsYet => '暂无聊天或话题';
 
   @override
@@ -654,6 +660,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get noThreadsYet => '暫無話題';
+
+  @override
+  String get archivedThreads => '已封存話題';
+
+  @override
+  String get noArchivedThreads => '暫無已封存話題';
 
   @override
   String get noChatsOrThreadsYet => '暫無聊天或話題';

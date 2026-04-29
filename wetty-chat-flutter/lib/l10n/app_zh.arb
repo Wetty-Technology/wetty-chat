@@ -90,6 +90,8 @@
   "newThreadInstruction": "回复这条消息以开始话题。",
   "noGroupsYet": "暂无群组",
   "noThreadsYet": "暂无话题",
+  "archivedThreads": "已归档话题",
+  "noArchivedThreads": "暂无已归档话题",
   "noChatsOrThreadsYet": "暂无聊天或话题",
   "threadReplyCount": "{count} 条回复",
   "chatFallbackName": "聊天 {id}",

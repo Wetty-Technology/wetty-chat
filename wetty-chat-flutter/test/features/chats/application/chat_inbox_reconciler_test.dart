@@ -84,7 +84,7 @@ void main() {
       expect(badge.threadUnreadTotal, 2);
       expect(badge.combinedUnreadTotal, 6);
       expect(chatService.fetchChatsCalls, 1);
-      expect(threadService.fetchThreadsCalls, 1);
+      expect(threadService.fetchThreadsCalls, 2);
       expect(chatService.fetchUnreadCountCalls, greaterThanOrEqualTo(1));
       expect(threadService.fetchUnreadCountCalls, greaterThanOrEqualTo(1));
     });
@@ -186,7 +186,7 @@ void main() {
       );
       expect(container.read(unreadBadgeProvider).threadUnreadTotal, 2);
       expect(chatService.fetchChatsCalls, 0);
-      expect(threadService.fetchThreadsCalls, 1);
+      expect(threadService.fetchThreadsCalls, 2);
       expect(threadService.fetchUnreadCountCalls, greaterThanOrEqualTo(1));
     });
   });

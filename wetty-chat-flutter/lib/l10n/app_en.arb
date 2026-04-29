@@ -253,6 +253,12 @@
   "noThreadsYet": "No threads yet",
   "@noThreadsYet": { "description": "Empty state for the thread list" },
 
+  "archivedThreads": "Archived threads",
+  "@archivedThreads": { "description": "Title and folder row label for archived threads" },
+
+  "noArchivedThreads": "No archived threads",
+  "@noArchivedThreads": { "description": "Empty state for the archived thread list" },
+
   "noChatsOrThreadsYet": "No chats or threads yet",
   "@noChatsOrThreadsYet": { "description": "Empty state for the combined chat/thread list" },
 

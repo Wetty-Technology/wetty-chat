@@ -90,6 +90,8 @@
   "newThreadInstruction": "回覆這則訊息以開始話題。",
   "noGroupsYet": "暫無群組",
   "noThreadsYet": "暫無話題",
+  "archivedThreads": "已封存話題",
+  "noArchivedThreads": "暫無已封存話題",
   "noChatsOrThreadsYet": "暫無聊天或話題",
   "threadReplyCount": "{count} 則回覆",
   "chatFallbackName": "聊天 {id}",

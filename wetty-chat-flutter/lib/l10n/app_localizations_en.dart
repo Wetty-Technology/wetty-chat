@@ -266,6 +266,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noThreadsYet => 'No threads yet';
 
   @override
+  String get archivedThreads => 'Archived threads';
+
+  @override
+  String get noArchivedThreads => 'No archived threads';
+
+  @override
   String get noChatsOrThreadsYet => 'No chats or threads yet';
 
   @override

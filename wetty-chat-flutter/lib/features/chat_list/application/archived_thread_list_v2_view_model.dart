@@ -1,12 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:chahua/features/shared/data/read_state_repository.dart';
-
-import '../model/thread_list_item.dart';
 import '../data/thread_list_v2_repository.dart';
+import '../model/thread_list_item.dart';
 import 'thread_list_v2_store.dart';
 
-typedef ThreadListV2ViewState = ({
+typedef ArchivedThreadListV2ViewState = ({
   List<ThreadListItem> threads,
   bool hasMore,
   bool isLoadingMore,
@@ -15,24 +13,25 @@ typedef ThreadListV2ViewState = ({
   String? errorMessage,
 });
 
-class ThreadListV2ViewModel extends AsyncNotifier<ThreadListV2ViewState> {
+class ArchivedThreadListV2ViewModel
+    extends AsyncNotifier<ArchivedThreadListV2ViewState> {
   @override
-  Future<ThreadListV2ViewState> build() async {
+  Future<ArchivedThreadListV2ViewState> build() async {
     ref.listen<ThreadListV2StoreState>(threadListV2StoreProvider, (_, _) {
       _rebuildFromStore();
     });
     return _loadInitial();
   }
 
-  Future<ThreadListV2ViewState> _loadInitial() async {
-    await Future.wait([
-      ref.read(threadListV2RepositoryProvider).loadThreads(),
-      ref.read(threadListV2RepositoryProvider).loadArchivedThreads(),
-    ]);
+  Future<ArchivedThreadListV2ViewState> _loadInitial() async {
+    final archived = ref.read(threadListV2StoreProvider).archived;
+    if (!archived.isLoaded) {
+      await ref.read(threadListV2RepositoryProvider).loadArchivedThreads();
+    }
     final storeState = ref.read(threadListV2StoreProvider);
     return (
-      threads: storeState.active.threads,
-      hasMore: storeState.active.hasMore,
+      threads: storeState.archived.threads,
+      hasMore: storeState.archived.hasMore,
       isLoadingMore: false,
       isRefreshing: false,
       isLoading: false,
@@ -47,8 +46,8 @@ class ThreadListV2ViewModel extends AsyncNotifier<ThreadListV2ViewState> {
     }
     final storeState = ref.read(threadListV2StoreProvider);
     state = AsyncData((
-      threads: storeState.active.threads,
-      hasMore: storeState.active.hasMore,
+      threads: storeState.archived.threads,
+      hasMore: storeState.archived.hasMore,
       isLoadingMore: current.isLoadingMore,
       isRefreshing: current.isRefreshing,
       isLoading: false,
@@ -74,7 +73,7 @@ class ThreadListV2ViewModel extends AsyncNotifier<ThreadListV2ViewState> {
       errorMessage: current.errorMessage,
     ));
     try {
-      await ref.read(threadListV2RepositoryProvider).loadMoreThreads();
+      await ref.read(threadListV2RepositoryProvider).loadMoreArchivedThreads();
     } catch (_) {
       // Silently fail pagination.
     } finally {
@@ -82,8 +81,8 @@ class ThreadListV2ViewModel extends AsyncNotifier<ThreadListV2ViewState> {
       final latest = state.value;
       if (latest != null) {
         state = AsyncData((
-          threads: storeState.active.threads,
-          hasMore: storeState.active.hasMore,
+          threads: storeState.archived.threads,
+          hasMore: storeState.archived.hasMore,
           isLoadingMore: false,
           isRefreshing: latest.isRefreshing,
           isLoading: false,
@@ -112,24 +111,13 @@ class ThreadListV2ViewModel extends AsyncNotifier<ThreadListV2ViewState> {
     ));
     try {
       final limit = current.threads.isEmpty ? 20 : current.threads.length;
-      final archivedCount = ref
-          .read(threadListV2StoreProvider)
-          .archived
-          .threads
-          .length;
-      await Future.wait([
-        ref.read(threadListV2RepositoryProvider).loadThreads(limit: limit),
-        ref
-            .read(threadListV2RepositoryProvider)
-            .loadArchivedThreads(
-              limit: archivedCount == 0 ? 20 : archivedCount,
-            ),
-      ]);
-      ref.read(readStateRepositoryProvider).resetThreadBaselines();
+      await ref
+          .read(threadListV2RepositoryProvider)
+          .loadArchivedThreads(limit: limit);
       final storeState = ref.read(threadListV2StoreProvider);
       state = AsyncData((
-        threads: storeState.active.threads,
-        hasMore: storeState.active.hasMore,
+        threads: storeState.archived.threads,
+        hasMore: storeState.archived.hasMore,
         isLoadingMore: false,
         isRefreshing: false,
         isLoading: false,
@@ -151,7 +139,8 @@ class ThreadListV2ViewModel extends AsyncNotifier<ThreadListV2ViewState> {
   }
 }
 
-final threadListV2ViewModelProvider =
-    AsyncNotifierProvider<ThreadListV2ViewModel, ThreadListV2ViewState>(
-      ThreadListV2ViewModel.new,
-    );
+final archivedThreadListV2ViewModelProvider =
+    AsyncNotifierProvider<
+      ArchivedThreadListV2ViewModel,
+      ArchivedThreadListV2ViewState
+    >(ArchivedThreadListV2ViewModel.new);
