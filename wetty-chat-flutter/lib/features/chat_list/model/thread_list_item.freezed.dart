@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ThreadListItem {
 
- String get chatId; String get chatName; String? get chatAvatar; MessagePreview get threadRootMessage; List<User> get participants; MessagePreview? get lastReply; int get replyCount; DateTime? get lastReplyAt; int get unreadCount; DateTime? get subscribedAt;
+ String get chatId; String get chatName; String? get chatAvatar; MessagePreview get threadRootMessage; List<User> get participants; MessagePreview? get lastReply; int get replyCount; DateTime? get lastReplyAt; int get unreadCount; DateTime? get subscribedAt; bool get archived;
 /// Create a copy of ThreadListItem
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $ThreadListItemCopyWith<ThreadListItem> get copyWith => _$ThreadListItemCopyWith
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ThreadListItem&&(identical(other.chatId, chatId) || other.chatId == chatId)&&(identical(other.chatName, chatName) || other.chatName == chatName)&&(identical(other.chatAvatar, chatAvatar) || other.chatAvatar == chatAvatar)&&(identical(other.threadRootMessage, threadRootMessage) || other.threadRootMessage == threadRootMessage)&&const DeepCollectionEquality().equals(other.participants, participants)&&(identical(other.lastReply, lastReply) || other.lastReply == lastReply)&&(identical(other.replyCount, replyCount) || other.replyCount == replyCount)&&(identical(other.lastReplyAt, lastReplyAt) || other.lastReplyAt == lastReplyAt)&&(identical(other.unreadCount, unreadCount) || other.unreadCount == unreadCount)&&(identical(other.subscribedAt, subscribedAt) || other.subscribedAt == subscribedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ThreadListItem&&(identical(other.chatId, chatId) || other.chatId == chatId)&&(identical(other.chatName, chatName) || other.chatName == chatName)&&(identical(other.chatAvatar, chatAvatar) || other.chatAvatar == chatAvatar)&&(identical(other.threadRootMessage, threadRootMessage) || other.threadRootMessage == threadRootMessage)&&const DeepCollectionEquality().equals(other.participants, participants)&&(identical(other.lastReply, lastReply) || other.lastReply == lastReply)&&(identical(other.replyCount, replyCount) || other.replyCount == replyCount)&&(identical(other.lastReplyAt, lastReplyAt) || other.lastReplyAt == lastReplyAt)&&(identical(other.unreadCount, unreadCount) || other.unreadCount == unreadCount)&&(identical(other.subscribedAt, subscribedAt) || other.subscribedAt == subscribedAt)&&(identical(other.archived, archived) || other.archived == archived));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,chatId,chatName,chatAvatar,threadRootMessage,const DeepCollectionEquality().hash(participants),lastReply,replyCount,lastReplyAt,unreadCount,subscribedAt);
+int get hashCode => Object.hash(runtimeType,chatId,chatName,chatAvatar,threadRootMessage,const DeepCollectionEquality().hash(participants),lastReply,replyCount,lastReplyAt,unreadCount,subscribedAt,archived);
 
 @override
 String toString() {
-  return 'ThreadListItem(chatId: $chatId, chatName: $chatName, chatAvatar: $chatAvatar, threadRootMessage: $threadRootMessage, participants: $participants, lastReply: $lastReply, replyCount: $replyCount, lastReplyAt: $lastReplyAt, unreadCount: $unreadCount, subscribedAt: $subscribedAt)';
+  return 'ThreadListItem(chatId: $chatId, chatName: $chatName, chatAvatar: $chatAvatar, threadRootMessage: $threadRootMessage, participants: $participants, lastReply: $lastReply, replyCount: $replyCount, lastReplyAt: $lastReplyAt, unreadCount: $unreadCount, subscribedAt: $subscribedAt, archived: $archived)';
 }
 
 
@@ -45,7 +45,7 @@ abstract mixin class $ThreadListItemCopyWith<$Res>  {
   factory $ThreadListItemCopyWith(ThreadListItem value, $Res Function(ThreadListItem) _then) = _$ThreadListItemCopyWithImpl;
 @useResult
 $Res call({
- String chatId, String chatName, String? chatAvatar, MessagePreview threadRootMessage, List<User> participants, MessagePreview? lastReply, int replyCount, DateTime? lastReplyAt, int unreadCount, DateTime? subscribedAt
+ String chatId, String chatName, String? chatAvatar, MessagePreview threadRootMessage, List<User> participants, MessagePreview? lastReply, int replyCount, DateTime? lastReplyAt, int unreadCount, DateTime? subscribedAt, bool archived
 });
 
 
@@ -62,7 +62,7 @@ class _$ThreadListItemCopyWithImpl<$Res>
 
 /// Create a copy of ThreadListItem
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? chatId = null,Object? chatName = null,Object? chatAvatar = freezed,Object? threadRootMessage = null,Object? participants = null,Object? lastReply = freezed,Object? replyCount = null,Object? lastReplyAt = freezed,Object? unreadCount = null,Object? subscribedAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? chatId = null,Object? chatName = null,Object? chatAvatar = freezed,Object? threadRootMessage = null,Object? participants = null,Object? lastReply = freezed,Object? replyCount = null,Object? lastReplyAt = freezed,Object? unreadCount = null,Object? subscribedAt = freezed,Object? archived = null,}) {
   return _then(_self.copyWith(
 chatId: null == chatId ? _self.chatId : chatId // ignore: cast_nullable_to_non_nullable
 as String,chatName: null == chatName ? _self.chatName : chatName // ignore: cast_nullable_to_non_nullable
@@ -74,7 +74,8 @@ as MessagePreview?,replyCount: null == replyCount ? _self.replyCount : replyCoun
 as int,lastReplyAt: freezed == lastReplyAt ? _self.lastReplyAt : lastReplyAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,unreadCount: null == unreadCount ? _self.unreadCount : unreadCount // ignore: cast_nullable_to_non_nullable
 as int,subscribedAt: freezed == subscribedAt ? _self.subscribedAt : subscribedAt // ignore: cast_nullable_to_non_nullable
-as DateTime?,
+as DateTime?,archived: null == archived ? _self.archived : archived // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 /// Create a copy of ThreadListItem
@@ -180,10 +181,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String chatId,  String chatName,  String? chatAvatar,  MessagePreview threadRootMessage,  List<User> participants,  MessagePreview? lastReply,  int replyCount,  DateTime? lastReplyAt,  int unreadCount,  DateTime? subscribedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String chatId,  String chatName,  String? chatAvatar,  MessagePreview threadRootMessage,  List<User> participants,  MessagePreview? lastReply,  int replyCount,  DateTime? lastReplyAt,  int unreadCount,  DateTime? subscribedAt,  bool archived)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ThreadListItem() when $default != null:
-return $default(_that.chatId,_that.chatName,_that.chatAvatar,_that.threadRootMessage,_that.participants,_that.lastReply,_that.replyCount,_that.lastReplyAt,_that.unreadCount,_that.subscribedAt);case _:
+return $default(_that.chatId,_that.chatName,_that.chatAvatar,_that.threadRootMessage,_that.participants,_that.lastReply,_that.replyCount,_that.lastReplyAt,_that.unreadCount,_that.subscribedAt,_that.archived);case _:
   return orElse();
 
 }
@@ -201,10 +202,10 @@ return $default(_that.chatId,_that.chatName,_that.chatAvatar,_that.threadRootMes
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String chatId,  String chatName,  String? chatAvatar,  MessagePreview threadRootMessage,  List<User> participants,  MessagePreview? lastReply,  int replyCount,  DateTime? lastReplyAt,  int unreadCount,  DateTime? subscribedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String chatId,  String chatName,  String? chatAvatar,  MessagePreview threadRootMessage,  List<User> participants,  MessagePreview? lastReply,  int replyCount,  DateTime? lastReplyAt,  int unreadCount,  DateTime? subscribedAt,  bool archived)  $default,) {final _that = this;
 switch (_that) {
 case _ThreadListItem():
-return $default(_that.chatId,_that.chatName,_that.chatAvatar,_that.threadRootMessage,_that.participants,_that.lastReply,_that.replyCount,_that.lastReplyAt,_that.unreadCount,_that.subscribedAt);case _:
+return $default(_that.chatId,_that.chatName,_that.chatAvatar,_that.threadRootMessage,_that.participants,_that.lastReply,_that.replyCount,_that.lastReplyAt,_that.unreadCount,_that.subscribedAt,_that.archived);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -221,10 +222,10 @@ return $default(_that.chatId,_that.chatName,_that.chatAvatar,_that.threadRootMes
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String chatId,  String chatName,  String? chatAvatar,  MessagePreview threadRootMessage,  List<User> participants,  MessagePreview? lastReply,  int replyCount,  DateTime? lastReplyAt,  int unreadCount,  DateTime? subscribedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String chatId,  String chatName,  String? chatAvatar,  MessagePreview threadRootMessage,  List<User> participants,  MessagePreview? lastReply,  int replyCount,  DateTime? lastReplyAt,  int unreadCount,  DateTime? subscribedAt,  bool archived)?  $default,) {final _that = this;
 switch (_that) {
 case _ThreadListItem() when $default != null:
-return $default(_that.chatId,_that.chatName,_that.chatAvatar,_that.threadRootMessage,_that.participants,_that.lastReply,_that.replyCount,_that.lastReplyAt,_that.unreadCount,_that.subscribedAt);case _:
+return $default(_that.chatId,_that.chatName,_that.chatAvatar,_that.threadRootMessage,_that.participants,_that.lastReply,_that.replyCount,_that.lastReplyAt,_that.unreadCount,_that.subscribedAt,_that.archived);case _:
   return null;
 
 }
@@ -236,7 +237,7 @@ return $default(_that.chatId,_that.chatName,_that.chatAvatar,_that.threadRootMes
 
 
 class _ThreadListItem extends ThreadListItem {
-  const _ThreadListItem({required this.chatId, required this.chatName, this.chatAvatar, required this.threadRootMessage, final  List<User> participants = const [], this.lastReply, this.replyCount = 0, this.lastReplyAt, this.unreadCount = 0, this.subscribedAt}): _participants = participants,super._();
+  const _ThreadListItem({required this.chatId, required this.chatName, this.chatAvatar, required this.threadRootMessage, final  List<User> participants = const [], this.lastReply, this.replyCount = 0, this.lastReplyAt, this.unreadCount = 0, this.subscribedAt, this.archived = false}): _participants = participants,super._();
 
 
 @override final  String chatId;
@@ -255,6 +256,7 @@ class _ThreadListItem extends ThreadListItem {
 @override final  DateTime? lastReplyAt;
 @override@JsonKey() final  int unreadCount;
 @override final  DateTime? subscribedAt;
+@override@JsonKey() final  bool archived;
 
 /// Create a copy of ThreadListItem
 /// with the given fields replaced by the non-null parameter values.
@@ -266,16 +268,16 @@ _$ThreadListItemCopyWith<_ThreadListItem> get copyWith => __$ThreadListItemCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ThreadListItem&&(identical(other.chatId, chatId) || other.chatId == chatId)&&(identical(other.chatName, chatName) || other.chatName == chatName)&&(identical(other.chatAvatar, chatAvatar) || other.chatAvatar == chatAvatar)&&(identical(other.threadRootMessage, threadRootMessage) || other.threadRootMessage == threadRootMessage)&&const DeepCollectionEquality().equals(other._participants, _participants)&&(identical(other.lastReply, lastReply) || other.lastReply == lastReply)&&(identical(other.replyCount, replyCount) || other.replyCount == replyCount)&&(identical(other.lastReplyAt, lastReplyAt) || other.lastReplyAt == lastReplyAt)&&(identical(other.unreadCount, unreadCount) || other.unreadCount == unreadCount)&&(identical(other.subscribedAt, subscribedAt) || other.subscribedAt == subscribedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ThreadListItem&&(identical(other.chatId, chatId) || other.chatId == chatId)&&(identical(other.chatName, chatName) || other.chatName == chatName)&&(identical(other.chatAvatar, chatAvatar) || other.chatAvatar == chatAvatar)&&(identical(other.threadRootMessage, threadRootMessage) || other.threadRootMessage == threadRootMessage)&&const DeepCollectionEquality().equals(other._participants, _participants)&&(identical(other.lastReply, lastReply) || other.lastReply == lastReply)&&(identical(other.replyCount, replyCount) || other.replyCount == replyCount)&&(identical(other.lastReplyAt, lastReplyAt) || other.lastReplyAt == lastReplyAt)&&(identical(other.unreadCount, unreadCount) || other.unreadCount == unreadCount)&&(identical(other.subscribedAt, subscribedAt) || other.subscribedAt == subscribedAt)&&(identical(other.archived, archived) || other.archived == archived));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,chatId,chatName,chatAvatar,threadRootMessage,const DeepCollectionEquality().hash(_participants),lastReply,replyCount,lastReplyAt,unreadCount,subscribedAt);
+int get hashCode => Object.hash(runtimeType,chatId,chatName,chatAvatar,threadRootMessage,const DeepCollectionEquality().hash(_participants),lastReply,replyCount,lastReplyAt,unreadCount,subscribedAt,archived);
 
 @override
 String toString() {
-  return 'ThreadListItem(chatId: $chatId, chatName: $chatName, chatAvatar: $chatAvatar, threadRootMessage: $threadRootMessage, participants: $participants, lastReply: $lastReply, replyCount: $replyCount, lastReplyAt: $lastReplyAt, unreadCount: $unreadCount, subscribedAt: $subscribedAt)';
+  return 'ThreadListItem(chatId: $chatId, chatName: $chatName, chatAvatar: $chatAvatar, threadRootMessage: $threadRootMessage, participants: $participants, lastReply: $lastReply, replyCount: $replyCount, lastReplyAt: $lastReplyAt, unreadCount: $unreadCount, subscribedAt: $subscribedAt, archived: $archived)';
 }
 
 
@@ -286,7 +288,7 @@ abstract mixin class _$ThreadListItemCopyWith<$Res> implements $ThreadListItemCo
   factory _$ThreadListItemCopyWith(_ThreadListItem value, $Res Function(_ThreadListItem) _then) = __$ThreadListItemCopyWithImpl;
 @override @useResult
 $Res call({
- String chatId, String chatName, String? chatAvatar, MessagePreview threadRootMessage, List<User> participants, MessagePreview? lastReply, int replyCount, DateTime? lastReplyAt, int unreadCount, DateTime? subscribedAt
+ String chatId, String chatName, String? chatAvatar, MessagePreview threadRootMessage, List<User> participants, MessagePreview? lastReply, int replyCount, DateTime? lastReplyAt, int unreadCount, DateTime? subscribedAt, bool archived
 });
 
 
@@ -303,7 +305,7 @@ class __$ThreadListItemCopyWithImpl<$Res>
 
 /// Create a copy of ThreadListItem
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? chatId = null,Object? chatName = null,Object? chatAvatar = freezed,Object? threadRootMessage = null,Object? participants = null,Object? lastReply = freezed,Object? replyCount = null,Object? lastReplyAt = freezed,Object? unreadCount = null,Object? subscribedAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? chatId = null,Object? chatName = null,Object? chatAvatar = freezed,Object? threadRootMessage = null,Object? participants = null,Object? lastReply = freezed,Object? replyCount = null,Object? lastReplyAt = freezed,Object? unreadCount = null,Object? subscribedAt = freezed,Object? archived = null,}) {
   return _then(_ThreadListItem(
 chatId: null == chatId ? _self.chatId : chatId // ignore: cast_nullable_to_non_nullable
 as String,chatName: null == chatName ? _self.chatName : chatName // ignore: cast_nullable_to_non_nullable
@@ -315,7 +317,8 @@ as MessagePreview?,replyCount: null == replyCount ? _self.replyCount : replyCoun
 as int,lastReplyAt: freezed == lastReplyAt ? _self.lastReplyAt : lastReplyAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,unreadCount: null == unreadCount ? _self.unreadCount : unreadCount // ignore: cast_nullable_to_non_nullable
 as int,subscribedAt: freezed == subscribedAt ? _self.subscribedAt : subscribedAt // ignore: cast_nullable_to_non_nullable
-as DateTime?,
+as DateTime?,archived: null == archived ? _self.archived : archived // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 

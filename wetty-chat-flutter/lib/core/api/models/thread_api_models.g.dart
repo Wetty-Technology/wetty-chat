@@ -29,6 +29,7 @@ ThreadListItemDto _$ThreadListItemDtoFromJson(
   subscribedAt: const NullableDateTimeConverter().fromJson(
     json['subscribedAt'],
   ),
+  archived: json['archived'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$ThreadListItemDtoToJson(
@@ -46,6 +47,7 @@ Map<String, dynamic> _$ThreadListItemDtoToJson(
   'subscribedAt': const NullableDateTimeConverter().toJson(
     instance.subscribedAt,
   ),
+  'archived': instance.archived,
 };
 
 ListThreadsResponseDto _$ListThreadsResponseDtoFromJson(
@@ -70,11 +72,35 @@ UnreadThreadCountResponseDto _$UnreadThreadCountResponseDtoFromJson(
   Map<String, dynamic> json,
 ) => UnreadThreadCountResponseDto(
   unreadThreadCount: (json['unreadThreadCount'] as num?)?.toInt() ?? 0,
+  archivedUnreadThreadCount:
+      (json['archivedUnreadThreadCount'] as num?)?.toInt() ?? 0,
+  unreadMessageCount: (json['unreadMessageCount'] as num?)?.toInt() ?? 0,
+  archivedUnreadMessageCount:
+      (json['archivedUnreadMessageCount'] as num?)?.toInt() ?? 0,
 );
 
 Map<String, dynamic> _$UnreadThreadCountResponseDtoToJson(
   UnreadThreadCountResponseDto instance,
-) => <String, dynamic>{'unreadThreadCount': instance.unreadThreadCount};
+) => <String, dynamic>{
+  'unreadThreadCount': instance.unreadThreadCount,
+  'archivedUnreadThreadCount': instance.archivedUnreadThreadCount,
+  'unreadMessageCount': instance.unreadMessageCount,
+  'archivedUnreadMessageCount': instance.archivedUnreadMessageCount,
+};
+
+ThreadSubscriptionStatusResponseDto
+_$ThreadSubscriptionStatusResponseDtoFromJson(Map<String, dynamic> json) =>
+    ThreadSubscriptionStatusResponseDto(
+      subscribed: json['subscribed'] as bool? ?? false,
+      archived: json['archived'] as bool? ?? false,
+    );
+
+Map<String, dynamic> _$ThreadSubscriptionStatusResponseDtoToJson(
+  ThreadSubscriptionStatusResponseDto instance,
+) => <String, dynamic>{
+  'subscribed': instance.subscribed,
+  'archived': instance.archived,
+};
 
 MarkThreadReadResponseDto _$MarkThreadReadResponseDtoFromJson(
   Map<String, dynamic> json,

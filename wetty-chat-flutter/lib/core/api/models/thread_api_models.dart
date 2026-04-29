@@ -19,6 +19,7 @@ class ThreadListItemDto {
     required this.lastReplyAt,
     this.unreadCount = 0,
     required this.subscribedAt,
+    this.archived = false,
   });
 
   @FlexibleIntConverter()
@@ -37,6 +38,8 @@ class ThreadListItemDto {
   final int unreadCount;
   @NullableDateTimeConverter()
   final DateTime? subscribedAt;
+  @JsonKey(defaultValue: false)
+  final bool archived;
 
   factory ThreadListItemDto.fromJson(Map<String, dynamic> json) =>
       _$ThreadListItemDtoFromJson(json);
@@ -63,15 +66,46 @@ class ListThreadsResponseDto {
 
 @JsonSerializable(explicitToJson: true)
 class UnreadThreadCountResponseDto {
-  const UnreadThreadCountResponseDto({this.unreadThreadCount = 0});
+  const UnreadThreadCountResponseDto({
+    this.unreadThreadCount = 0,
+    this.archivedUnreadThreadCount = 0,
+    this.unreadMessageCount = 0,
+    this.archivedUnreadMessageCount = 0,
+  });
 
   @JsonKey(defaultValue: 0)
   final int unreadThreadCount;
+  @JsonKey(defaultValue: 0)
+  final int archivedUnreadThreadCount;
+  @JsonKey(defaultValue: 0)
+  final int unreadMessageCount;
+  @JsonKey(defaultValue: 0)
+  final int archivedUnreadMessageCount;
 
   factory UnreadThreadCountResponseDto.fromJson(Map<String, dynamic> json) =>
       _$UnreadThreadCountResponseDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$UnreadThreadCountResponseDtoToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
+class ThreadSubscriptionStatusResponseDto {
+  const ThreadSubscriptionStatusResponseDto({
+    this.subscribed = false,
+    this.archived = false,
+  });
+
+  @JsonKey(defaultValue: false)
+  final bool subscribed;
+  @JsonKey(defaultValue: false)
+  final bool archived;
+
+  factory ThreadSubscriptionStatusResponseDto.fromJson(
+    Map<String, dynamic> json,
+  ) => _$ThreadSubscriptionStatusResponseDtoFromJson(json);
+
+  Map<String, dynamic> toJson() =>
+      _$ThreadSubscriptionStatusResponseDtoToJson(this);
 }
 
 @JsonSerializable(explicitToJson: true)

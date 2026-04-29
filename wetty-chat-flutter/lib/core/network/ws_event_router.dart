@@ -74,6 +74,9 @@ final wsEventRouterProvider = Provider<void>((ref) {
             .applyRealtimeEvent(event);
         reconcileThreadsIfNeeded(shouldReconcile);
         return;
+      case ThreadMembershipChangedWsEvent():
+        reconcileThreadsIfNeeded(true);
+        return;
       case ReactionUpdatedWsEvent():
       case PinAddedWsEvent():
       case PinRemovedWsEvent():
@@ -123,6 +126,7 @@ final wsEventRouterProvider = Provider<void>((ref) {
       case MessageDeletedWsEvent():
       case ReactionUpdatedWsEvent():
       case ThreadUpdatedWsEvent():
+      case ThreadMembershipChangedWsEvent():
       case PongWsEvent():
         return;
     }

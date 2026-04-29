@@ -250,6 +250,7 @@ class _FakeThreadApiService extends ThreadApiService {
   Future<ListThreadsResponseDto> fetchThreads({
     int? limit,
     String? before,
+    bool? archived,
   }) async {
     final index = fetchThreadsCalls < threadResponses.length
         ? fetchThreadsCalls

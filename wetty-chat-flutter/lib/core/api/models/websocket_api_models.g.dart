@@ -165,6 +165,36 @@ Map<String, dynamic> _$ThreadUpdatedWsEventToJson(
   'payload': instance.payload.toJson(),
 };
 
+ThreadMembershipChangedPayloadDto _$ThreadMembershipChangedPayloadDtoFromJson(
+  Map<String, dynamic> json,
+) => ThreadMembershipChangedPayloadDto(
+  threadRootId: const FlexibleIntConverter().fromJson(json['threadRootId']),
+  chatId: const FlexibleIntConverter().fromJson(json['chatId']),
+);
+
+Map<String, dynamic> _$ThreadMembershipChangedPayloadDtoToJson(
+  ThreadMembershipChangedPayloadDto instance,
+) => <String, dynamic>{
+  'threadRootId': const FlexibleIntConverter().toJson(instance.threadRootId),
+  'chatId': const FlexibleIntConverter().toJson(instance.chatId),
+};
+
+ThreadMembershipChangedWsEvent _$ThreadMembershipChangedWsEventFromJson(
+  Map<String, dynamic> json,
+) => ThreadMembershipChangedWsEvent(
+  type: json['type'] as String? ?? 'threadMembershipChanged',
+  payload: ThreadMembershipChangedPayloadDto.fromJson(
+    json['payload'] as Map<String, dynamic>,
+  ),
+);
+
+Map<String, dynamic> _$ThreadMembershipChangedWsEventToJson(
+  ThreadMembershipChangedWsEvent instance,
+) => <String, dynamic>{
+  'type': instance.type,
+  'payload': instance.payload.toJson(),
+};
+
 StickerPackOrderItemDto _$StickerPackOrderItemDtoFromJson(
   Map<String, dynamic> json,
 ) => StickerPackOrderItemDto(

@@ -13,10 +13,12 @@ class ThreadApiService {
   Future<ListThreadsResponseDto> fetchThreads({
     int? limit,
     String? before,
+    bool? archived,
   }) async {
     final query = <String, String>{};
     if (limit != null) query['limit'] = limit.toString();
     if (before != null && before.isNotEmpty) query['before'] = before;
+    if (archived != null) query['archived'] = archived.toString();
     final response = await _dio.get<Map<String, dynamic>>(
       '/threads',
       queryParameters: query.isEmpty ? null : query,
@@ -50,15 +52,25 @@ class ThreadApiService {
     await _dio.delete<void>('/chats/$chatId/threads/$threadRootId/subscribe');
   }
 
-  /// GET /chats/{chatId}/threads/{threadRootId}/subscribe — returns { subscribed: bool }
-  Future<bool> getThreadSubscriptionStatus(
+  /// GET /chats/{chatId}/threads/{threadRootId}/subscribe — returns subscription state.
+  Future<ThreadSubscriptionStatusResponseDto> getThreadSubscriptionStatus(
     String chatId,
     int threadRootId,
   ) async {
     final response = await _dio.get<Map<String, dynamic>>(
       '/chats/$chatId/threads/$threadRootId/subscribe',
     );
-    return response.data!['subscribed'] as bool? ?? false;
+    return ThreadSubscriptionStatusResponseDto.fromJson(response.data!);
+  }
+
+  /// PUT /chats/{chatId}/threads/{threadRootId}/archive — returns 204
+  Future<void> archiveThread(String chatId, int threadRootId) async {
+    await _dio.put<void>('/chats/$chatId/threads/$threadRootId/archive');
+  }
+
+  /// DELETE /chats/{chatId}/threads/{threadRootId}/archive — returns 204
+  Future<void> unarchiveThread(String chatId, int threadRootId) async {
+    await _dio.delete<void>('/chats/$chatId/threads/$threadRootId/archive');
   }
 }
 

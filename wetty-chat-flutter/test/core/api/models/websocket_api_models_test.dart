@@ -65,5 +65,21 @@ void main() {
       expect(event.payload.messageId, 200);
       expect(event.payload.pin, isNull);
     });
+
+    test('ApiWsEvent parses threadMembershipChanged payloads', () {
+      final event =
+          ApiWsEvent.fromJson(<String, Object?>{
+                'type': 'threadMembershipChanged',
+                'payload': <String, Object?>{
+                  'chatId': '10',
+                  'threadRootId': '200',
+                },
+              })
+              as ThreadMembershipChangedWsEvent?;
+
+      expect(event, isNotNull);
+      expect(event!.payload.chatId, 10);
+      expect(event.payload.threadRootId, 200);
+    });
   });
 }

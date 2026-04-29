@@ -83,6 +83,8 @@ sealed class ApiWsEvent {
         return ReactionUpdatedWsEvent.fromJson(json);
       case 'threadUpdate':
         return ThreadUpdatedWsEvent.fromJson(json);
+      case 'threadMembershipChanged':
+        return ThreadMembershipChangedWsEvent.fromJson(json);
       case 'pinAdded':
         return PinAddedWsEvent.fromJson(json);
       case 'pinRemoved':
@@ -221,6 +223,42 @@ class ThreadUpdatedWsEvent extends ApiWsEvent {
       _$ThreadUpdatedWsEventFromJson(json);
 
   Map<String, dynamic> toJson() => _$ThreadUpdatedWsEventToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
+class ThreadMembershipChangedPayloadDto {
+  const ThreadMembershipChangedPayloadDto({
+    required this.threadRootId,
+    required this.chatId,
+  });
+
+  @FlexibleIntConverter()
+  final int threadRootId;
+  @FlexibleIntConverter()
+  final int chatId;
+
+  factory ThreadMembershipChangedPayloadDto.fromJson(
+    Map<String, dynamic> json,
+  ) => _$ThreadMembershipChangedPayloadDtoFromJson(json);
+
+  Map<String, dynamic> toJson() =>
+      _$ThreadMembershipChangedPayloadDtoToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
+class ThreadMembershipChangedWsEvent extends ApiWsEvent {
+  const ThreadMembershipChangedWsEvent({
+    this.type = 'threadMembershipChanged',
+    required this.payload,
+  });
+
+  final String type;
+  final ThreadMembershipChangedPayloadDto payload;
+
+  factory ThreadMembershipChangedWsEvent.fromJson(Map<String, dynamic> json) =>
+      _$ThreadMembershipChangedWsEventFromJson(json);
+
+  Map<String, dynamic> toJson() => _$ThreadMembershipChangedWsEventToJson(this);
 }
 
 class PinAddedWsEvent extends ApiWsEvent {

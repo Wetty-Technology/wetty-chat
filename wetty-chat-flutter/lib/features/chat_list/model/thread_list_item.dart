@@ -22,6 +22,7 @@ abstract class ThreadListItem with _$ThreadListItem {
     DateTime? lastReplyAt,
     @Default(0) int unreadCount,
     DateTime? subscribedAt,
+    @Default(false) bool archived,
   }) = _ThreadListItem;
 
   /// Thread root message ID used as the unique key for this thread.
@@ -40,5 +41,6 @@ abstract class ThreadListItem with _$ThreadListItem {
     lastReplyAt: dto.lastReplyAt,
     unreadCount: dto.unreadCount,
     subscribedAt: dto.subscribedAt,
+    archived: dto.archived,
   );
 }

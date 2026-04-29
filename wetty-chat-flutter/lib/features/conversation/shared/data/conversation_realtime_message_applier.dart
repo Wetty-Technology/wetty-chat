@@ -28,6 +28,7 @@ class ConversationTimelineV2RealtimeApplier {
         _updateReaction(payload);
         return;
       case ThreadUpdatedWsEvent():
+      case ThreadMembershipChangedWsEvent():
       case PinAddedWsEvent():
       case PinRemovedWsEvent():
       case StickerPackOrderUpdatedWsEvent():
