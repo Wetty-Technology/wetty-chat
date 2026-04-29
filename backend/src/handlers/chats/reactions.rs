@@ -6,11 +6,14 @@ use axum::{
 use chrono::Utc;
 use diesel::prelude::*;
 use diesel::PgConnection;
-use serde::Serialize;
 use unicode_segmentation::UnicodeSegmentation;
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::{
+    dto::{
+        messages::{ReactionDetailGroup, ReactionDetailResponse, ReactionReactor, ReactionSummary},
+        ws::{ReactionUpdatePayload, ServerWsMessage},
+    },
     errors::AppError,
     extractors::DbConn,
     handlers::members::check_membership,
@@ -21,7 +24,7 @@ use crate::{
     AppState,
 };
 
-use super::{load_usernames_by_uids, ReactionReactor, ReactionSummary};
+use super::load_usernames_by_uids;
 
 fn validate_emoji(input: &str) -> Result<String, AppError> {
     if input.is_empty() {
@@ -108,29 +111,12 @@ fn broadcast_reaction_update(
         .load(conn)
         .unwrap_or_default();
 
-    let ws_msg = std::sync::Arc::new(
-        crate::handlers::ws::messages::ServerWsMessage::ReactionUpdated(
-            crate::handlers::ws::messages::ReactionUpdatePayload {
-                message_id,
-                chat_id,
-                reactions,
-            },
-        ),
-    );
+    let ws_msg = std::sync::Arc::new(ServerWsMessage::ReactionUpdated(ReactionUpdatePayload {
+        message_id,
+        chat_id,
+        reactions,
+    }));
     state.ws_registry.broadcast_to_uids(&member_uids, ws_msg);
-}
-
-#[derive(Debug, Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-struct ReactionDetailGroup {
-    emoji: String,
-    reactors: Vec<ReactionReactor>,
-}
-
-#[derive(Debug, Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-struct ReactionDetailResponse {
-    reactions: Vec<ReactionDetailGroup>,
 }
 
 #[utoipa::path(

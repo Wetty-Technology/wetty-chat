@@ -12,11 +12,11 @@ use tokio::sync::mpsc;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
+use crate::dto::ws::ServerWsMessage;
 use crate::errors::AppError;
 use crate::handlers::chats::{
     attach_metadata, build_message_side_effects, recalculate_group_last_message,
 };
-use crate::handlers::ws::messages::ServerWsMessage;
 use crate::models::{Attachment, Message, MessageType, NewAttachment, TranscodeStatus};
 use crate::schema::{attachments, messages};
 use crate::services::media::{build_storage_key, upload_public_object};
@@ -475,7 +475,7 @@ async fn process_message(state: AppState, message_id: i64) -> Result<(), AppErro
     Ok(())
 }
 
-fn broadcast_message_update(state: &AppState, response: &crate::handlers::chats::MessageResponse) {
+fn broadcast_message_update(state: &AppState, response: &crate::dto::messages::MessageResponse) {
     let mut conn = match state.db.get() {
         Ok(conn) => conn,
         Err(err) => {

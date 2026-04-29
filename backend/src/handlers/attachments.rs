@@ -6,12 +6,12 @@ use axum::{
 };
 use chrono::{Duration, Utc};
 use diesel::prelude::*;
-use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use serde::Deserialize;
 use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
+use crate::dto::attachments::UploadUrlResponse;
 use crate::errors::AppError;
 use crate::extractors::DbConn;
 use crate::services::media::{build_storage_key, presign_public_upload};
@@ -28,14 +28,6 @@ pub struct UploadUrlRequest {
     width: Option<i32>,
     height: Option<i32>,
     order: Option<i16>,
-}
-
-#[derive(Serialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct UploadUrlResponse {
-    attachment_id: String,
-    upload_url: String,
-    upload_headers: BTreeMap<String, String>,
 }
 
 // Kept for potential future use or non-public buckets

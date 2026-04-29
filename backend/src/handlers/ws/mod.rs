@@ -1,13 +1,11 @@
 //! WebSocket handler: auth handshake, lifecycle-aware presence updates, ping/pong keepalive,
 //! connection registry, 300s stale timeout.
 
-pub mod messages;
-
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::State;
 use axum::response::Response;
 use axum::Json;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::time::timeout;
@@ -17,14 +15,8 @@ use utoipa_axum::router::OpenApiRouter;
 use crate::services::ws_registry;
 use crate::utils::auth::{decode_auth_token, encode_auth_token, AuthClaims, ClientId, CurrentUid};
 use crate::AppState;
-use messages::ServerWsMessage;
+use crate::dto::ws::{ServerWsMessage, TicketResponse};
 use ws_registry::AppPresenceState;
-
-#[derive(Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct TicketResponse {
-    pub ticket: String,
-}
 
 #[utoipa::path(
     get,

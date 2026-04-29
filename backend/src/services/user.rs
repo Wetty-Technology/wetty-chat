@@ -1,4 +1,4 @@
-use crate::{models::UserGroupInfo, AppState, AuthMethod};
+use crate::{dto::users::UserGroupTagInfo, AppState, AuthMethod};
 use diesel::prelude::*;
 use diesel::sql_query;
 use diesel::PgConnection;
@@ -11,7 +11,7 @@ use std::time::UNIX_EPOCH;
 pub struct UserProfile {
     pub username: Option<String>,
     pub gender: i16,
-    pub user_group: Option<UserGroupInfo>,
+    pub user_group: Option<UserGroupTagInfo>,
 }
 
 pub(crate) fn normalize_discuz_username(username: &str) -> String {
@@ -204,7 +204,7 @@ pub fn lookup_user_profiles(
                 UserProfile {
                     username: Some(normalize_discuz_username(&row.username)),
                     gender: row.gender.unwrap_or(0),
-                    user_group: Some(UserGroupInfo {
+                    user_group: Some(UserGroupTagInfo {
                         group_id: row.group_id,
                         name: row.group_name,
                         chat_group_color: row.chat_group_color,

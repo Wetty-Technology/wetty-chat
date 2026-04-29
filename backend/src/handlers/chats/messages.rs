@@ -7,10 +7,13 @@ use axum::{
 use chrono::Utc;
 use diesel::prelude::*;
 use diesel::PgConnection;
-use serde::Serialize;
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::{
+    dto::{
+        messages::{ListMessagesResponse, MessageResponse},
+        ws::ServerWsMessage,
+    },
     errors::AppError,
     extractors::DbConn,
     handlers::{groups::load_requester_group_role, members::check_membership},
@@ -22,7 +25,7 @@ use crate::{
 
 use super::{
     attach_metadata, extract_mention_uids, load_sticker_accessible_ids, send_prepared_message,
-    ChatIdPath, CreateMessageBody, MessageResponse, PreparedMessageSend,
+    ChatIdPath, CreateMessageBody, PreparedMessageSend,
 };
 
 #[derive(serde::Deserialize, utoipa::ToSchema)]
@@ -54,18 +57,6 @@ pub struct ListMessagesQuery {
     )]
     #[schema(value_type = Option<String>)]
     thread_id: Option<i64>,
-}
-
-#[derive(Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct ListMessagesResponse {
-    messages: Vec<MessageResponse>,
-    #[serde(with = "crate::serde_i64_string::opt")]
-    #[schema(value_type = Option<String>)]
-    next_cursor: Option<i64>,
-    #[serde(with = "crate::serde_i64_string::opt")]
-    #[schema(value_type = Option<String>)]
-    prev_cursor: Option<i64>,
 }
 
 #[derive(serde::Deserialize)]
@@ -599,11 +590,8 @@ pub(super) async fn post_thread_message(
                 .into_iter()
                 .next()
                 .unwrap();
-            let ws_msg = std::sync::Arc::new(
-                crate::handlers::ws::messages::ServerWsMessage::MessageUpdated(
-                    root_response.clone(),
-                ),
-            );
+            let ws_msg =
+                std::sync::Arc::new(ServerWsMessage::MessageUpdated(root_response.clone()));
             state.ws_registry.broadcast_to_uids(&member_uids, ws_msg);
         }
 
@@ -726,9 +714,7 @@ async fn patch_message(
             .select(group_membership::uid)
             .load(conn)?
     };
-    let ws_msg = std::sync::Arc::new(
-        crate::handlers::ws::messages::ServerWsMessage::MessageUpdated(response.clone()),
-    );
+    let ws_msg = std::sync::Arc::new(ServerWsMessage::MessageUpdated(response.clone()));
     state.ws_registry.broadcast_to_uids(&member_uids, ws_msg);
 
     Ok(Json(response))
@@ -828,9 +814,7 @@ async fn delete_message(
             .select(group_membership::uid)
             .load(conn)?
     };
-    let ws_msg = std::sync::Arc::new(
-        crate::handlers::ws::messages::ServerWsMessage::MessageDeleted(response.clone()),
-    );
+    let ws_msg = std::sync::Arc::new(ServerWsMessage::MessageDeleted(response.clone()));
     state.ws_registry.broadcast_to_uids(&member_uids, ws_msg);
 
     if let Some(reply_root_id) = response.reply_root_id {

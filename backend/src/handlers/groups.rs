@@ -7,10 +7,12 @@ use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use diesel::PgConnection;
 use diesel::PgTextExpressionMethods;
-use serde::Serialize;
-use std::collections::BTreeMap;
 use utoipa_axum::router::OpenApiRouter;
 
+use crate::dto::groups::{
+    AvatarUploadUrlResponse, CreateChatResponse, GroupInfoResponse, GroupSelectorItem,
+    ListGroupsResponse, MuteResponse,
+};
 use crate::errors::AppError;
 use crate::extractors::DbConn;
 use crate::handlers::members::{check_membership, require_admin_role};
@@ -41,37 +43,9 @@ pub(super) struct CreateChatBody {
     name: Option<String>,
 }
 
-#[derive(Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub(super) struct CreateChatResponse {
-    #[serde(with = "crate::serde_i64_string")]
-    #[schema(value_type = String)]
-    id: i64,
-    name: Option<String>,
-    created_at: DateTime<Utc>,
-}
-
 #[derive(serde::Deserialize)]
 pub(super) struct ChatIdPath {
     pub(super) chat_id: i64,
-}
-
-#[derive(Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub(super) struct GroupInfoResponse {
-    #[serde(with = "crate::serde_i64_string")]
-    #[schema(value_type = String)]
-    id: i64,
-    name: String,
-    description: Option<String>,
-    #[serde(with = "crate::serde_i64_string::opt")]
-    #[schema(value_type = Option<String>)]
-    avatar_image_id: Option<i64>,
-    avatar: Option<String>,
-    visibility: GroupVisibility,
-    created_at: DateTime<Utc>,
-    muted_until: Option<DateTime<Utc>>,
-    my_role: Option<GroupRole>,
 }
 
 #[derive(Debug, Clone, Copy, serde::Deserialize, PartialEq, Eq, utoipa::ToSchema)]
@@ -108,28 +82,6 @@ struct ListGroupsQuery {
     scope: Option<GroupSelectorScope>,
 }
 
-#[derive(Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-struct GroupSelectorItem {
-    #[serde(with = "crate::serde_i64_string")]
-    #[schema(value_type = String)]
-    id: i64,
-    name: String,
-    description: Option<String>,
-    avatar: Option<String>,
-    visibility: GroupVisibility,
-    role: Option<GroupRole>,
-}
-
-#[derive(Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-struct ListGroupsResponse {
-    groups: Vec<GroupSelectorItem>,
-    #[serde(with = "crate::serde_i64_string::opt")]
-    #[schema(value_type = Option<String>)]
-    next_cursor: Option<i64>,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct ParsedGroupSearch {
     pattern: String,
@@ -160,25 +112,11 @@ struct AvatarUploadUrlRequest {
     height: Option<i32>,
 }
 
-#[derive(Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-struct AvatarUploadUrlResponse {
-    image_id: String,
-    upload_url: String,
-    upload_headers: BTreeMap<String, String>,
-}
-
 #[derive(serde::Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct MuteBody {
     /// Duration in seconds, or null/absent for indefinite mute.
     duration_seconds: Option<i64>,
-}
-
-#[derive(Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub(super) struct MuteResponse {
-    muted_until: DateTime<Utc>,
 }
 
 fn parse_group_search_query(

@@ -10,7 +10,7 @@ use std::collections::HashSet;
 use tokio::sync::mpsc;
 use tracing::{error, info, warn};
 
-use crate::handlers::ws::messages::{BulkDeletedPayload, ServerWsMessage};
+use crate::dto::ws::{BulkDeletedPayload, ServerWsMessage};
 use crate::metrics::Metrics;
 use crate::schema::{attachments, group_membership, messages};
 use crate::services::ws_registry::ConnectionRegistry;

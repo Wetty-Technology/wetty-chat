@@ -3,17 +3,21 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use diesel::prelude::*;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use utoipa_axum::router::OpenApiRouter;
 use uuid::Uuid;
 
+use crate::dto::{
+    messages::MessageResponse,
+    pins::{ListPinsResponse, PinResponse},
+    ws::{PinUpdatePayload, ServerWsMessage},
+};
 use crate::errors::AppError;
 use crate::extractors::DbConn;
-use crate::handlers::chats::{attach_metadata, MessageResponse, PreparedMessageSend};
+use crate::handlers::chats::{attach_metadata, PreparedMessageSend};
 use crate::handlers::members::{check_membership, require_admin_role};
-use crate::handlers::ws::messages::{PinUpdatePayload, ServerWsMessage};
 use crate::models::{Message, MessageType, NewPinnedMessage, PinnedMessage};
 use crate::schema::{group_membership, messages, pinned_messages};
 use crate::utils::auth::CurrentUid;
@@ -21,28 +25,6 @@ use crate::utils::ids;
 use crate::AppState;
 
 const MAX_PINS_PER_CHAT: i64 = 50;
-
-#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct PinResponse {
-    #[serde(with = "crate::serde_i64_string")]
-    #[schema(value_type = String)]
-    pub id: i64,
-    #[serde(with = "crate::serde_i64_string")]
-    #[schema(value_type = String)]
-    pub chat_id: i64,
-    pub message: MessageResponse,
-    pub pinned_by: i32,
-    pub pinned_at: DateTime<Utc>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub expires_at: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-struct ListPinsResponse {
-    pins: Vec<PinResponse>,
-}
 
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]

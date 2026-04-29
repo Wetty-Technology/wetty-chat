@@ -1,19 +1,10 @@
+ARG BUILDER_BASE_IMAGE=ghcr.io/wetty-technology/wetty-chat-backend-builder-base:rust-1.94.0-trixie
+ARG RUNTIME_BASE_IMAGE=ghcr.io/wetty-technology/wetty-chat-backend-runtime-base:trixie
+
 # Build stage
-FROM --platform=$BUILDPLATFORM rust:1.94.0-trixie AS builder
+FROM --platform=$BUILDPLATFORM ${BUILDER_BASE_IMAGE} AS builder
 
 ARG TARGETARCH
-
-# Install cross-compilation toolchain and C dependencies
-RUN dpkg --add-architecture arm64 && \
-    dpkg --add-architecture amd64 && \
-    apt-get update && apt-get install -y --no-install-recommends \
-    gcc-aarch64-linux-gnu \
-    g++-aarch64-linux-gnu \
-    libc6-dev-arm64-cross \
-    pkg-config \
-    libpq-dev:${TARGETARCH} \
-    libssl-dev:${TARGETARCH} \
-    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -21,13 +12,11 @@ WORKDIR /app
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
         echo "aarch64-unknown-linux-gnu" > /app/target-triple.txt && \
         echo "aarch64-linux-gnu-gcc" > /app/cargo-linker.txt && \
-        echo "/usr/lib/aarch64-linux-gnu/pkgconfig" > /app/pkg-config-libdir.txt && \
-        rustup target add aarch64-unknown-linux-gnu; \
+        echo "/usr/lib/aarch64-linux-gnu/pkgconfig" > /app/pkg-config-libdir.txt; \
     elif [ "$TARGETARCH" = "amd64" ]; then \
         echo "x86_64-unknown-linux-gnu" > /app/target-triple.txt && \
         echo "gcc" > /app/cargo-linker.txt && \
-        echo "/usr/lib/x86_64-linux-gnu/pkgconfig" > /app/pkg-config-libdir.txt && \
-        rustup target add x86_64-unknown-linux-gnu; \
+        echo "/usr/lib/x86_64-linux-gnu/pkgconfig" > /app/pkg-config-libdir.txt; \
     else \
         echo "Unsupported architecture: $TARGETARCH" && exit 1; \
     fi
@@ -52,14 +41,7 @@ RUN export TARGET_TRIPLE=$(cat /app/target-triple.txt) && \
     cp target/$TARGET_TRIPLE/release/wetty-chat-backend /app/wetty-chat-backend
 
 # Runtime stage
-FROM debian:trixie-slim
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates \
-    ffmpeg \
-    libpq5 \
-    libssl3 \
-    && rm -rf /var/lib/apt/lists/*
+FROM ${RUNTIME_BASE_IMAGE}
 
 WORKDIR /app
 

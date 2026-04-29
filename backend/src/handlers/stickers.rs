@@ -5,13 +5,20 @@ use axum::{
     response::IntoResponse,
     Json as AxumJson,
 };
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use diesel::prelude::*;
 use diesel::PgConnection;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use utoipa_axum::router::OpenApiRouter;
 
+use crate::dto::stickers::{
+    FavoriteStickerListResponse, StickerDetailResponse, StickerMediaResponse,
+    StickerPackDetailResponse, StickerPackListResponse, StickerPackPreviewSticker,
+    StickerPackSummary, StickerSummary,
+};
+use crate::dto::users::StickerPackOrderItem;
+use crate::dto::ws::{ServerWsMessage, StickerPackOrderUpdatePayload};
 use crate::errors::AppError;
 use crate::extractors::DbConn;
 use crate::{
@@ -48,91 +55,6 @@ struct CreateStickerPackBody {
 struct UpdateStickerPackBody {
     name: Option<String>,
     description: Option<String>,
-}
-
-#[derive(Debug, Serialize, Clone, utoipa::ToSchema)]
-#[schema(as = StickersStickerMediaResponse)]
-#[serde(rename_all = "camelCase")]
-struct StickerMediaResponse {
-    #[serde(with = "crate::serde_i64_string")]
-    #[schema(value_type = String)]
-    id: i64,
-    url: String,
-    content_type: String,
-    size: i64,
-    width: Option<i32>,
-    height: Option<i32>,
-}
-
-#[derive(Debug, Serialize, Clone, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-struct StickerSummary {
-    #[serde(with = "crate::serde_i64_string")]
-    #[schema(value_type = String)]
-    id: i64,
-    media: StickerMediaResponse,
-    emoji: String,
-    name: Option<String>,
-    description: Option<String>,
-    created_at: DateTime<Utc>,
-    is_favorited: bool,
-}
-
-#[derive(Debug, Serialize, Clone, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-struct StickerPackPreviewSticker {
-    #[serde(with = "crate::serde_i64_string")]
-    #[schema(value_type = String)]
-    id: i64,
-    media: StickerMediaResponse,
-    emoji: String,
-}
-
-#[derive(Debug, Serialize, Clone, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-struct StickerPackSummary {
-    #[serde(with = "crate::serde_i64_string")]
-    #[schema(value_type = String)]
-    id: i64,
-    owner_uid: i32,
-    owner_name: Option<String>,
-    name: String,
-    description: Option<String>,
-    created_at: DateTime<Utc>,
-    updated_at: DateTime<Utc>,
-    sticker_count: i64,
-    is_subscribed: bool,
-    preview_sticker: Option<StickerPackPreviewSticker>,
-}
-
-#[derive(Debug, Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-struct StickerPackDetailResponse {
-    #[serde(flatten)]
-    #[schema(inline)]
-    pack: StickerPackSummary,
-    stickers: Vec<StickerSummary>,
-}
-
-#[derive(Debug, Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-struct StickerDetailResponse {
-    #[serde(flatten)]
-    #[schema(inline)]
-    sticker: StickerSummary,
-    packs: Vec<StickerPackSummary>,
-}
-
-#[derive(Debug, Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-struct StickerPackListResponse {
-    packs: Vec<StickerPackSummary>,
-}
-
-#[derive(Debug, Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-struct FavoriteStickerListResponse {
-    stickers: Vec<StickerSummary>,
 }
 
 fn normalize_required_name(input: &str) -> Result<String, AppError> {
@@ -1127,9 +1049,8 @@ fn remove_from_sticker_pack_order(
         .first::<UserExtra>(conn)
         .optional()
     {
-        if let Ok(mut order) = serde_json::from_value::<
-            Vec<crate::handlers::users::StickerPackOrderItem>,
-        >(extra.sticker_pack_order.clone())
+        if let Ok(mut order) =
+            serde_json::from_value::<Vec<StickerPackOrderItem>>(extra.sticker_pack_order.clone())
         {
             let pack_id_str = pack_id.to_string();
             let original_len = order.len();
@@ -1140,11 +1061,9 @@ fn remove_from_sticker_pack_order(
                     .set(user_extra::sticker_pack_order.eq(&order_json))
                     .execute(conn)?;
 
-                let msg = std::sync::Arc::new(
-                    crate::handlers::ws::messages::ServerWsMessage::StickerPackOrderUpdated(
-                        crate::handlers::ws::messages::StickerPackOrderUpdatePayload { order },
-                    ),
-                );
+                let msg = std::sync::Arc::new(ServerWsMessage::StickerPackOrderUpdated(
+                    StickerPackOrderUpdatePayload { order },
+                ));
                 state.ws_registry.broadcast_to_uids(&[uid], msg);
             }
         }
@@ -1166,9 +1085,8 @@ fn add_to_sticker_pack_order(
         .first::<UserExtra>(conn)
         .optional()
     {
-        if let Ok(mut order) = serde_json::from_value::<
-            Vec<crate::handlers::users::StickerPackOrderItem>,
-        >(extra.sticker_pack_order.clone())
+        if let Ok(mut order) =
+            serde_json::from_value::<Vec<StickerPackOrderItem>>(extra.sticker_pack_order.clone())
         {
             let pack_id_str = pack_id.to_string();
             let mut changed = false;
@@ -1181,7 +1099,7 @@ fn add_to_sticker_pack_order(
                     changed = true;
                 }
             } else {
-                order.push(crate::handlers::users::StickerPackOrderItem {
+                order.push(StickerPackOrderItem {
                     sticker_pack_id: pack_id_str,
                     last_used_on: now,
                 });
@@ -1194,11 +1112,9 @@ fn add_to_sticker_pack_order(
                     .set(user_extra::sticker_pack_order.eq(&order_json))
                     .execute(conn)?;
 
-                let msg = std::sync::Arc::new(
-                    crate::handlers::ws::messages::ServerWsMessage::StickerPackOrderUpdated(
-                        crate::handlers::ws::messages::StickerPackOrderUpdatePayload { order },
-                    ),
-                );
+                let msg = std::sync::Arc::new(ServerWsMessage::StickerPackOrderUpdated(
+                    StickerPackOrderUpdatePayload { order },
+                ));
                 state.ws_registry.broadcast_to_uids(&[uid], msg);
             }
         }

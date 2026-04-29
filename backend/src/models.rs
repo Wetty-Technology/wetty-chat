@@ -213,25 +213,6 @@ pub struct ApnsSubscriptionData {
     pub environment: PushEnvironment,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct UserGroupInfo {
-    pub group_id: i32,
-    pub name: Option<String>,
-    pub chat_group_color: Option<String>,
-    pub chat_group_color_dark: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct Sender {
-    pub uid: i32,
-    pub avatar_url: Option<String>,
-    pub name: Option<String>,
-    pub gender: i16,
-    pub user_group: Option<UserGroupInfo>,
-}
-
 #[derive(Debug, Clone, Queryable, Selectable, Serialize, Insertable)]
 #[diesel(table_name = schema::groups)]
 pub struct Group {
@@ -508,12 +489,6 @@ pub struct Message {
     pub transcode_status: TranscodeStatus,
 }
 
-#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct ThreadInfo {
-    pub reply_count: i64,
-}
-
 #[derive(Debug, Clone, Insertable)]
 #[diesel(table_name = schema::messages)]
 pub struct NewMessage {
@@ -620,20 +595,6 @@ pub struct Attachment {
     pub width: Option<i32>,
     pub height: Option<i32>,
     pub order: i16,
-}
-
-#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct AttachmentResponse {
-    #[serde(with = "crate::serde_i64_string")]
-    #[schema(value_type = String)]
-    pub id: i64,
-    pub url: String,
-    pub kind: String,
-    pub size: i64,
-    pub file_name: String,
-    pub width: Option<i32>,
-    pub height: Option<i32>,
 }
 
 #[derive(Debug, Clone, Insertable)]

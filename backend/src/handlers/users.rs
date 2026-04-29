@@ -3,15 +3,18 @@ use axum::{
     http::HeaderMap,
     Json,
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
+use crate::dto::users::{
+    AuthTokenResponse, MeResponse, MemberSummary, SearchUsersResponse, StickerPackOrderItem,
+};
+use crate::dto::ws::{ServerWsMessage, StickerPackOrderUpdatePayload};
 use crate::errors::AppError;
 use crate::extractors::DbConn;
-use crate::handlers::ws::messages::{ServerWsMessage, StickerPackOrderUpdatePayload};
-use crate::models::{NewUserExtra, UserExtra, UserGroupInfo};
+use crate::models::{NewUserExtra, UserExtra};
 use crate::schema::{group_membership, sticker_packs, user_extra, user_sticker_pack_subscriptions};
 use crate::services::authz::{Action as AuthzAction, Resource as AuthzResource};
 use crate::services::user::{
@@ -27,13 +30,6 @@ use std::sync::Arc;
 
 const DEFAULT_USER_SEARCH_LIMIT: i64 = 20;
 const MAX_USER_SEARCH_LIMIT: i64 = 50;
-
-#[derive(Debug, Clone, serde::Deserialize, Serialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct StickerPackOrderItem {
-    pub sticker_pack_id: String,
-    pub last_used_on: i64,
-}
 
 #[derive(serde::Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -157,32 +153,6 @@ async fn put_stickerpack_order(
     Ok(Json(()))
 }
 
-#[derive(Serialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct MeResponse {
-    pub uid: i32,
-    pub username: String,
-    pub avatar_url: Option<String>,
-    pub gender: i16,
-    pub sticker_pack_order: Vec<StickerPackOrderItem>,
-    pub permissions: Vec<String>,
-}
-
-#[derive(Serialize, ToSchema)]
-pub struct AuthTokenResponse {
-    pub token: String,
-}
-
-#[derive(Debug, Clone, Serialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct MemberSummary {
-    pub uid: i32,
-    pub username: Option<String>,
-    pub avatar_url: Option<String>,
-    pub gender: i16,
-    pub user_group: Option<UserGroupInfo>,
-}
-
 #[derive(Debug, Deserialize, ToSchema, utoipa::IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchUsersQuery {
@@ -194,13 +164,6 @@ pub struct SearchUsersQuery {
     )]
     #[schema(value_type = Option<String>)]
     exclude_member_of: Option<i64>,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct SearchUsersResponse {
-    members: Vec<MemberSummary>,
-    excluded: Vec<MemberSummary>,
 }
 
 fn normalize_user_search_limit(limit: Option<i64>) -> i64 {

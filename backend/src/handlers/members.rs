@@ -5,19 +5,17 @@ use axum::{
 };
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
-use serde::Serialize;
 use serde_json::json;
 use std::collections::HashMap;
 use utoipa_axum::router::OpenApiRouter;
 
 use diesel::PgConnection;
 
+use crate::dto::members::{ListMembersResponse, MemberResponse};
 use crate::errors::AppError;
 use crate::extractors::DbConn;
 use crate::handlers::groups::load_requester_group_role;
-use crate::models::{
-    GroupJoinReason, GroupMembership, GroupRole, NewGroupMembership, UserGroupInfo,
-};
+use crate::models::{GroupJoinReason, GroupMembership, GroupRole, NewGroupMembership};
 use crate::schema::{self, group_membership};
 
 use crate::services::user::{
@@ -52,18 +50,6 @@ pub struct UpdateMemberBody {
     role: GroupRole,
 }
 
-#[derive(Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct MemberResponse {
-    uid: i32,
-    role: GroupRole,
-    joined_at: DateTime<Utc>,
-    username: Option<String>,
-    avatar_url: Option<String>,
-    gender: i16,
-    user_group: Option<UserGroupInfo>,
-}
-
 #[derive(serde::Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 struct ListMembersQuery {
@@ -71,14 +57,6 @@ struct ListMembersQuery {
     after: Option<i32>,
     q: Option<String>,
     mode: Option<UserSearchMode>,
-}
-
-#[derive(Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-struct ListMembersResponse {
-    members: Vec<MemberResponse>,
-    next_cursor: Option<i32>,
-    can_manage_members: bool,
 }
 
 fn build_member_responses(

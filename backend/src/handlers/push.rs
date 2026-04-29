@@ -11,6 +11,7 @@ use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
+use crate::dto::push::{SubscriptionStatusResponse, VapidPublicKeyResponse};
 use crate::errors::AppError;
 use crate::extractors::DbConn;
 use crate::models::{
@@ -21,12 +22,6 @@ use crate::schema::push_subscriptions;
 use crate::utils::auth::{ClientId, CurrentUid};
 use crate::utils::ids;
 use crate::AppState;
-
-#[derive(Serialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct VapidPublicKeyResponse {
-    pub public_key: String,
-}
 
 #[utoipa::path(
     get,
@@ -346,14 +341,6 @@ pub struct SubscriptionStatusQuery {
     pub endpoint: Option<String>,
     pub device_token: Option<String>,
     pub environment: Option<PushEnvironment>,
-}
-
-#[derive(Serialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct SubscriptionStatusResponse {
-    pub has_active_subscription: bool,
-    pub has_matching_subscription: Option<bool>,
-    pub has_matching_endpoint: Option<bool>,
 }
 
 #[utoipa::path(

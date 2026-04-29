@@ -5,10 +5,13 @@ use axum::{
 };
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
-use serde::Serialize;
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::{
+    dto::threads::{
+        ListThreadsResponse, MarkThreadReadResponse, ThreadSubscriptionStatusResponse,
+        UnreadThreadCountResponse,
+    },
     errors::AppError,
     extractors::DbConn,
     handlers::members::check_membership,
@@ -18,9 +21,6 @@ use crate::{
     utils::{auth::CurrentUid, pagination::validate_limit},
     AppState,
 };
-
-// Re-export response type used by the handler
-pub use thread_svc::ListThreadsResponse;
 
 #[derive(serde::Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -94,15 +94,6 @@ pub struct MarkThreadReadBody {
     message_id: i64,
 }
 
-#[derive(Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-struct MarkThreadReadResponse {
-    #[serde(serialize_with = "crate::serde_i64_string::opt::serialize")]
-    #[schema(value_type = Option<String>)]
-    last_read_message_id: Option<i64>,
-    unread_count: i64,
-}
-
 #[derive(serde::Deserialize)]
 pub struct ThreadRootIdPath {
     #[serde(deserialize_with = "crate::serde_i64_string::deserialize")]
@@ -140,15 +131,6 @@ async fn mark_thread_read(
         last_read_message_id: Some(body.message_id),
         unread_count,
     }))
-}
-
-#[derive(Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-struct UnreadThreadCountResponse {
-    unread_thread_count: i64,
-    archived_unread_thread_count: i64,
-    unread_message_count: i64,
-    archived_unread_message_count: i64,
 }
 
 /// GET /threads/unread — Get total unread thread and message counts for the current user.
@@ -286,13 +268,6 @@ pub struct ThreadSubscriptionStatusPath {
     chat_id: i64,
     #[serde(deserialize_with = "crate::serde_i64_string::deserialize")]
     thread_root_id: i64,
-}
-
-#[derive(Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-struct ThreadSubscriptionStatusResponse {
-    subscribed: bool,
-    archived: bool,
 }
 
 /// GET /chats/:chat_id/threads/:thread_root_id/subscribe — Check subscription status.

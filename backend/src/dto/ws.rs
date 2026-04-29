@@ -1,7 +1,17 @@
-use crate::handlers::chats::{MessageResponse, ReactionSummary};
-use crate::handlers::pins::PinResponse;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
+
+use crate::dto::{
+    messages::{MessageResponse, ReactionSummary},
+    pins::PinResponse,
+    users::StickerPackOrderItem,
+};
+
+#[derive(Serialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TicketResponse {
+    pub ticket: String,
+}
 
 #[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -115,6 +125,12 @@ pub struct PinUpdatePayload {
     pub pin: Option<PinResponse>,
 }
 
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct StickerPackOrderUpdatePayload {
+    pub order: Vec<StickerPackOrderItem>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::{PresenceUpdatePayload, ServerWsMessage, ThreadMembershipChangedPayload};
@@ -146,12 +162,4 @@ mod tests {
         assert_eq!(value["payload"]["threadRootId"], json!("42"));
         assert_eq!(value["payload"]["chatId"], json!("7"));
     }
-}
-
-use crate::handlers::users::StickerPackOrderItem;
-
-#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct StickerPackOrderUpdatePayload {
-    pub order: Vec<StickerPackOrderItem>,
 }

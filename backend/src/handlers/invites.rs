@@ -4,7 +4,7 @@ use axum::{
 };
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::json;
 use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
@@ -13,10 +13,14 @@ use uuid::Uuid;
 
 use diesel::PgConnection;
 
+use crate::dto::invites::{
+    InvitePreviewResponse, InviteResponse, ListInvitesResponse, RedeemInviteResponse,
+    SendInviteMessageResponse,
+};
 use crate::errors::AppError;
 use crate::extractors::DbConn;
-use crate::handlers::chats::{send_prepared_message, MessageResponse, PreparedMessageSend};
-use crate::handlers::groups::{load_group_info, GroupInfoResponse};
+use crate::handlers::chats::{send_prepared_message, PreparedMessageSend};
+use crate::handlers::groups::load_group_info;
 use crate::handlers::members::{check_membership, require_admin_role};
 use crate::models::{
     GroupJoinReason, GroupRole, Invite, InviteType, MessageType, NewGroupMembership, NewInvite,
@@ -103,55 +107,6 @@ struct SendInviteMessageBody {
     invite_id: Option<i64>,
     expires_at: Option<DateTime<Utc>>,
     client_generated_id: String,
-}
-
-#[derive(Serialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-struct InviteResponse {
-    #[serde(with = "crate::serde_i64_string")]
-    #[schema(value_type = String)]
-    id: i64,
-    code: String,
-    #[serde(with = "crate::serde_i64_string")]
-    #[schema(value_type = String)]
-    chat_id: i64,
-    invite_type: InviteType,
-    creator_uid: Option<i32>,
-    target_uid: Option<i32>,
-    #[serde(with = "crate::serde_i64_string::opt")]
-    #[schema(value_type = Option<String>)]
-    required_chat_id: Option<i64>,
-    created_at: DateTime<Utc>,
-    expires_at: Option<DateTime<Utc>>,
-    revoked_at: Option<DateTime<Utc>>,
-    used_at: Option<DateTime<Utc>>,
-}
-
-#[derive(Serialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-struct ListInvitesResponse {
-    invites: Vec<InviteResponse>,
-}
-
-#[derive(Serialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-struct InvitePreviewResponse {
-    invite: InviteResponse,
-    chat: GroupInfoResponse,
-    already_member: bool,
-}
-
-#[derive(Serialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-struct RedeemInviteResponse {
-    chat: GroupInfoResponse,
-}
-
-#[derive(Serialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-struct SendInviteMessageResponse {
-    invite: InviteResponse,
-    message: MessageResponse,
 }
 
 enum RedeemInviteError {

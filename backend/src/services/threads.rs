@@ -2,14 +2,16 @@ use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use diesel::sql_query;
 use diesel::PgConnection;
-use serde::Serialize;
 use std::collections::HashMap;
 use tracing::warn;
 
-use crate::handlers::chats::{build_mention_info, extract_mention_uids, MentionInfo};
-use crate::handlers::ws::messages::{
-    ServerWsMessage, ThreadMembershipChangedPayload, ThreadUpdatePayload,
+use crate::dto::{
+    messages::{MessagePreview, MessagePreviewSticker},
+    threads::{ListThreadsResponse, ThreadListItem},
+    users::User,
+    ws::{ServerWsMessage, ThreadMembershipChangedPayload, ThreadUpdatePayload},
 };
+use crate::handlers::chats::{build_mention_info, build_sender, extract_mention_uids};
 use crate::models::{Attachment, Message, MessageType};
 use crate::schema::{attachments, messages, stickers, thread_meta, thread_subscriptions};
 use crate::services::chat::MAX_UNREAD_COUNT;
@@ -532,70 +534,6 @@ pub fn get_unread_summary_counts(
 
 // --- Thread list enrichment types and logic ---
 
-#[derive(Debug, Serialize, Clone, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct ThreadParticipant {
-    pub uid: i32,
-    pub name: Option<String>,
-    pub avatar_url: Option<String>,
-}
-
-#[derive(Debug, Serialize, Clone, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct ThreadReplyPreview {
-    pub sender: ThreadParticipant,
-    pub message: Option<String>,
-    pub message_type: MessageType,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub sticker_emoji: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub first_attachment_kind: Option<String>,
-    pub is_deleted: bool,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub mentions: Vec<MentionInfo>,
-}
-
-#[derive(Debug, Serialize, Clone, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct ThreadRootMessagePreview {
-    #[serde(with = "crate::serde_i64_string")]
-    #[schema(value_type = String)]
-    pub id: i64,
-    pub sender: ThreadParticipant,
-    pub message: Option<String>,
-    pub message_type: MessageType,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub first_attachment_kind: Option<String>,
-    pub is_deleted: bool,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub mentions: Vec<MentionInfo>,
-}
-
-#[derive(Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct ThreadListItem {
-    #[serde(with = "crate::serde_i64_string")]
-    #[schema(value_type = String)]
-    pub chat_id: i64,
-    pub chat_name: String,
-    pub chat_avatar: Option<String>,
-    pub thread_root_message: ThreadRootMessagePreview,
-    pub participants: Vec<ThreadParticipant>,
-    pub last_reply: Option<ThreadReplyPreview>,
-    pub reply_count: i64,
-    pub last_reply_at: DateTime<Utc>,
-    pub unread_count: i64,
-    pub subscribed_at: DateTime<Utc>,
-    pub archived: bool,
-}
-
-#[derive(Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct ListThreadsResponse {
-    pub threads: Vec<ThreadListItem>,
-    pub next_cursor: Option<String>,
-}
-
 fn first_attachment_kind_map(atts: Vec<Attachment>) -> HashMap<i64, String> {
     let mut map: HashMap<i64, String> = HashMap::new();
     for att in atts {
@@ -699,6 +637,10 @@ pub fn enrich_thread_list(
         reply_root_id: i64,
         #[diesel(sql_type = diesel::sql_types::BigInt)]
         id: i64,
+        #[diesel(sql_type = diesel::sql_types::Text)]
+        client_generated_id: String,
+        #[diesel(sql_type = diesel::sql_types::Timestamptz)]
+        created_at: DateTime<Utc>,
         #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Text>)]
         message: Option<String>,
         #[diesel(sql_type = crate::schema::sql_types::MessageType)]
@@ -712,7 +654,7 @@ pub fn enrich_thread_list(
     }
     let latest_reply_rows: Vec<LatestReplyRow> = sql_query(
         "SELECT DISTINCT ON (m.reply_root_id)
-            m.reply_root_id, m.id, m.message, m.message_type,
+            m.reply_root_id, m.id, m.client_generated_id, m.created_at, m.message, m.message_type,
             m.sender_uid, m.sticker_id, m.has_attachments
          FROM messages m
          WHERE m.reply_root_id = ANY($1)
@@ -757,28 +699,22 @@ pub fn enrich_thread_list(
     let user_profiles = lookup_user_profiles(conn, &all_uids)?;
     let user_avatars = lookup_user_avatars(state, &all_uids);
 
-    let make_participant = |uid: i32| -> ThreadParticipant {
-        let profile = user_profiles.get(&uid);
-        ThreadParticipant {
-            uid,
-            name: profile.and_then(|p| p.username.clone()),
-            avatar_url: user_avatars.get(&uid).cloned().flatten(),
-        }
-    };
+    let make_sender = |uid: i32| -> User { build_sender(uid, &user_avatars, &user_profiles) };
 
-    // 4. Build participants map: thread_root_id -> Vec<ThreadParticipant>
-    let mut participants_map: HashMap<i64, Vec<ThreadParticipant>> = HashMap::new();
+    // 4. Build participants map: thread_root_id -> Vec<User>
+    let mut participants_map: HashMap<i64, Vec<User>> = HashMap::new();
     for row in &participant_rows {
         participants_map
             .entry(row.reply_root_id)
             .or_default()
-            .push(make_participant(row.sender_uid));
+            .push(make_sender(row.sender_uid));
     }
 
-    // 5. Load sticker emoji for latest replies
+    // 5. Load sticker emoji for root messages and latest replies
     let sticker_ids: Vec<i64> = latest_reply_rows
         .iter()
         .filter_map(|r| r.sticker_id)
+        .chain(root_messages.iter().filter_map(|m| m.sticker_id))
         .collect();
     let sticker_emoji_map: HashMap<i64, String> = if sticker_ids.is_empty() {
         HashMap::new()
@@ -820,17 +756,23 @@ pub fn enrich_thread_list(
     };
 
     // 7. Build latest reply map
-    let mut latest_reply_map: HashMap<i64, ThreadReplyPreview> = HashMap::new();
+    let mut latest_reply_map: HashMap<i64, MessagePreview> = HashMap::new();
     for lr in latest_reply_rows {
         latest_reply_map.insert(
             lr.reply_root_id,
-            ThreadReplyPreview {
-                sender: make_participant(lr.sender_uid),
+            MessagePreview {
+                id: lr.id,
+                client_generated_id: lr.client_generated_id,
+                created_at: lr.created_at,
+                sender: make_sender(lr.sender_uid),
                 message: lr.message,
                 message_type: lr.message_type,
-                sticker_emoji: lr
-                    .sticker_id
-                    .and_then(|sid| sticker_emoji_map.get(&sid).cloned()),
+                sticker: lr.sticker_id.and_then(|sid| {
+                    sticker_emoji_map
+                        .get(&sid)
+                        .cloned()
+                        .map(|emoji| MessagePreviewSticker { emoji })
+                }),
                 first_attachment_kind: if lr.has_attachments {
                     first_attachment_map.get(&lr.id).cloned()
                 } else {
@@ -860,11 +802,19 @@ pub fn enrich_thread_list(
         .into_iter()
         .filter_map(|row| {
             let root_msg = root_msg_map.get(&row.thread_root_id)?;
-            let root_preview = ThreadRootMessagePreview {
+            let root_preview = MessagePreview {
                 id: root_msg.id,
-                sender: make_participant(root_msg.sender_uid),
+                client_generated_id: root_msg.client_generated_id.clone(),
+                created_at: root_msg.created_at,
+                sender: make_sender(root_msg.sender_uid),
                 message: root_msg.message.clone(),
                 message_type: root_msg.message_type.clone(),
+                sticker: root_msg.sticker_id.and_then(|sid| {
+                    sticker_emoji_map
+                        .get(&sid)
+                        .cloned()
+                        .map(|emoji| MessagePreviewSticker { emoji })
+                }),
                 first_attachment_kind: if root_msg.has_attachments {
                     first_attachment_map.get(&root_msg.id).cloned()
                 } else {

@@ -1,0 +1,49 @@
+use chrono::{DateTime, Utc};
+use serde::Serialize;
+
+use crate::dto::messages::MessagePreview;
+
+#[derive(Serialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ChatListItem {
+    #[serde(with = "crate::serde_i64_string")]
+    #[schema(value_type = String)]
+    pub id: i64,
+    pub name: Option<String>,
+    pub avatar: Option<String>,
+    pub last_message_at: Option<DateTime<Utc>>,
+    pub unread_count: i64,
+    #[serde(with = "crate::serde_i64_string::opt")]
+    #[schema(value_type = Option<String>)]
+    pub last_read_message_id: Option<i64>,
+    pub last_message: Option<MessagePreview>,
+    pub muted_until: Option<DateTime<Utc>>,
+    pub archived: bool,
+}
+
+#[derive(Serialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ListChatsResponse {
+    pub chats: Vec<ChatListItem>,
+    #[serde(with = "crate::serde_i64_string::opt")]
+    #[schema(value_type = Option<String>)]
+    pub next_cursor: Option<i64>,
+}
+
+#[derive(Serialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MarkChatReadStateResponse {
+    #[serde(serialize_with = "crate::serde_i64_string::opt::serialize")]
+    #[schema(value_type = Option<String>)]
+    pub last_read_message_id: Option<i64>,
+    pub unread_count: i64,
+}
+
+#[derive(Serialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UnreadCountResponse {
+    pub unread_count: i64,
+    pub archived_unread_count: i64,
+    pub unread_chat_count: i64,
+    pub archived_unread_chat_count: i64,
+}

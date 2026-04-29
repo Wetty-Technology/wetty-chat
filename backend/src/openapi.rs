@@ -1,4 +1,4 @@
-use crate::handlers::ws::messages::{
+use crate::dto::ws::{
     ChatArchiveStateChangedPayload, PinUpdatePayload, PresenceUpdatePayload, ReactionUpdatePayload,
     ServerWsMessage, ThreadMembershipChangedPayload, ThreadUpdatePayload,
 };

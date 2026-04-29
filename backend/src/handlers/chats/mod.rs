@@ -8,14 +8,23 @@ use axum::{
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use diesel::PgConnection;
-use serde::Serialize;
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::{
+    dto::{
+        attachments::AttachmentResponse,
+        chats::{ChatListItem, ListChatsResponse, MarkChatReadStateResponse, UnreadCountResponse},
+        messages::{
+            MentionInfo, MessagePreview, MessagePreviewSticker, MessageResponse,
+            MessageStickerResponse, ReactionReactor, ReactionSummary, StickerMediaResponse,
+            ThreadInfo,
+        },
+        users::User,
+        ws::{ChatArchiveStateChangedPayload, ServerWsMessage},
+    },
     errors::AppError,
     extractors::DbConn,
     handlers::members::check_membership,
-    models::NewMessage,
     services::{
         chat,
         media::build_public_object_url,
@@ -25,18 +34,7 @@ use crate::{
     utils::{auth::CurrentUid, ids, pagination::validate_limit},
 };
 use crate::{
-    models::{
-        Attachment,
-        AttachmentResponse,
-        Media,
-        Message,
-        MessageType,
-        Sender,
-        Sticker,
-        ThreadInfo,
-        TranscodeStatus,
-        UserGroupInfo, //
-    },
+    models::{Attachment, Media, Message, MessageType, NewMessage, Sticker, TranscodeStatus},
     schema::{
         attachments, group_membership, groups, media, message_reactions,
         messages as messages_schema, sticker_pack_stickers, sticker_packs, stickers,
@@ -54,18 +52,6 @@ pub use self::reactions::router as reactions_router;
 // ---------------------------------------------------------------------------
 // Mention extraction
 // ---------------------------------------------------------------------------
-
-/// Parsed mention info for serialization in `MessageResponse`.
-#[derive(Debug, Serialize, Clone, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct MentionInfo {
-    pub uid: i32,
-    pub username: Option<String>,
-    pub avatar_url: Option<String>,
-    pub gender: i16,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub user_group: Option<UserGroupInfo>,
-}
 
 fn parse_mention_token(text: &str, start: usize) -> Option<(i32, usize)> {
     let bytes = text.as_bytes();
@@ -112,102 +98,6 @@ pub struct ChatIdPath {
     chat_id: i64,
 }
 
-#[derive(Debug, Serialize, Clone, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct MessageResponse {
-    #[serde(with = "crate::serde_i64_string")]
-    #[schema(value_type = String)]
-    pub id: i64,
-    pub message: Option<String>,
-    pub message_type: MessageType,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub sticker: Option<MessageStickerResponse>,
-    #[serde(with = "crate::serde_i64_string::opt")]
-    #[schema(value_type = Option<String>)]
-    pub reply_root_id: Option<i64>,
-    pub client_generated_id: String,
-    pub sender: Sender,
-    #[serde(with = "crate::serde_i64_string")]
-    #[schema(value_type = String)]
-    pub chat_id: i64,
-    pub created_at: DateTime<Utc>,
-    pub is_edited: bool,
-    pub is_deleted: bool,
-    pub has_attachments: bool,
-    pub thread_info: Option<ThreadInfo>,
-    pub reply_to_message: Option<Box<ReplyToMessage>>,
-    pub attachments: Vec<AttachmentResponse>,
-    pub reactions: Vec<ReactionSummary>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub mentions: Vec<MentionInfo>,
-}
-
-#[derive(Debug, Serialize, Clone, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct ReactionReactor {
-    pub uid: i32,
-    pub name: Option<String>,
-    pub avatar_url: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub sort_index: Option<i32>,
-}
-
-#[derive(Debug, Serialize, Clone, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct ReactionSummary {
-    pub emoji: String,
-    pub count: i64,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub reacted_by_me: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub reactors: Option<Vec<ReactionReactor>>,
-}
-
-#[derive(Debug, Serialize, Clone, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct ReplyToMessage {
-    #[serde(with = "crate::serde_i64_string")]
-    #[schema(value_type = String)]
-    id: i64,
-    message: Option<String>,
-    message_type: MessageType,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    sticker: Option<MessageStickerResponse>,
-    sender: Sender,
-    is_deleted: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    first_attachment_kind: Option<String>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    mentions: Vec<MentionInfo>,
-}
-
-#[derive(Debug, Serialize, Clone, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct StickerMediaResponse {
-    #[serde(with = "crate::serde_i64_string")]
-    #[schema(value_type = String)]
-    pub id: i64,
-    pub url: String,
-    pub content_type: String,
-    pub size: i64,
-    pub width: Option<i32>,
-    pub height: Option<i32>,
-}
-
-#[derive(Debug, Serialize, Clone, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct MessageStickerResponse {
-    #[serde(with = "crate::serde_i64_string")]
-    #[schema(value_type = String)]
-    pub id: i64,
-    pub emoji: String,
-    pub name: Option<String>,
-    pub description: Option<String>,
-    pub created_at: DateTime<Utc>,
-    pub is_favorited: bool,
-    pub media: StickerMediaResponse,
-}
-
 pub(crate) struct PreparedMessageSend {
     pub chat_id: i64,
     pub sender_uid: i32,
@@ -229,7 +119,7 @@ pub(crate) struct SendMessageResult {
 
 #[must_use = "side effects must be fired via .fire()"]
 pub(crate) struct PendingSideEffects {
-    pub(crate) ws_msg: std::sync::Arc<crate::handlers::ws::messages::ServerWsMessage>,
+    pub(crate) ws_msg: std::sync::Arc<ServerWsMessage>,
     pub(crate) broadcast_uids: Vec<i32>,
     pub(crate) push_job: Option<PushJob>,
 }
@@ -394,19 +284,42 @@ fn build_message_sticker_response(
     }
 }
 
-fn build_sender(
+pub(crate) fn build_sender(
     uid: i32,
     user_avatars: &std::collections::HashMap<i32, Option<String>>,
     user_profiles: &std::collections::HashMap<i32, UserProfile>,
-) -> Sender {
+) -> User {
     let profile = user_profiles.get(&uid);
 
-    Sender {
+    User {
         uid,
         avatar_url: user_avatars.get(&uid).cloned().flatten(),
         name: profile.and_then(|profile| profile.username.clone()),
         gender: profile.map(|profile| profile.gender).unwrap_or(0),
         user_group: profile.and_then(|profile| profile.user_group.clone()),
+    }
+}
+
+fn message_response_preview(response: MessageResponse) -> MessagePreview {
+    let is_deleted = response.is_deleted;
+    MessagePreview {
+        id: response.id,
+        client_generated_id: response.client_generated_id,
+        created_at: response.created_at,
+        sender: response.sender,
+        message: response.message,
+        message_type: response.message_type,
+        sticker: response.sticker.and_then(|sticker| {
+            (!is_deleted).then_some(MessagePreviewSticker {
+                emoji: sticker.emoji,
+            })
+        }),
+        first_attachment_kind: response
+            .attachments
+            .first()
+            .map(|attachment| attachment.kind.clone()),
+        is_deleted,
+        mentions: response.mentions,
     }
 }
 
@@ -563,9 +476,7 @@ pub(crate) fn build_message_side_effects(
             .load(conn)?
     };
 
-    let ws_msg = std::sync::Arc::new(crate::handlers::ws::messages::ServerWsMessage::Message(
-        response.clone(),
-    ));
+    let ws_msg = std::sync::Arc::new(ServerWsMessage::Message(response.clone()));
 
     let is_system_message = matches!(response.message_type, MessageType::System);
     let push_job = if enqueue_push && !is_system_message {
@@ -692,9 +603,7 @@ pub(crate) async fn send_prepared_message(
         (
             Vec::new(),
             PendingSideEffects {
-                ws_msg: std::sync::Arc::new(
-                    crate::handlers::ws::messages::ServerWsMessage::Message(response.clone()),
-                ),
+                ws_msg: std::sync::Arc::new(ServerWsMessage::Message(response.clone())),
                 broadcast_uids: Vec::new(),
                 push_job: None,
             },
@@ -954,8 +863,11 @@ pub async fn attach_metadata(
                     );
                 }
 
-                Box::new(ReplyToMessage {
+                Box::new(MessagePreview {
                     id: reply_msg.id,
+                    client_generated_id: reply_msg.client_generated_id.clone(),
+                    created_at: reply_msg.created_at,
+                    sender: build_sender(reply_msg.sender_uid, &user_avatars, &user_profiles),
                     message: if reply_msg.deleted_at.is_some() {
                         None
                     } else {
@@ -963,21 +875,17 @@ pub async fn attach_metadata(
                     },
                     message_type: reply_msg.message_type.clone(),
                     sticker: reply_msg.sticker_id.and_then(|sticker_id| {
-                        sticker_rows.get(&sticker_id).map(|(sticker, media_row)| {
-                            build_message_sticker_response(
-                                state,
-                                sticker,
-                                media_row,
-                                favorited_sticker_ids.contains(&sticker_id),
-                            )
+                        sticker_rows.get(&sticker_id).and_then(|(sticker, _)| {
+                            (reply_msg.deleted_at.is_none()).then_some(MessagePreviewSticker {
+                                emoji: sticker.emoji.clone(),
+                            })
                         })
                     }),
-                    sender: build_sender(reply_msg.sender_uid, &user_avatars, &user_profiles),
-                    is_deleted: reply_msg.deleted_at.is_some(),
                     first_attachment_kind: first_attachment_kind(
                         &message_attachments_map,
                         reply_msg.id,
                     ),
+                    is_deleted: reply_msg.deleted_at.is_some(),
                     mentions: reply_msg
                         .message
                         .as_deref()
@@ -1074,33 +982,6 @@ pub struct ListChatsQuery {
     after: Option<i64>,
     #[serde(default)]
     archived: Option<bool>,
-}
-
-#[derive(Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct ChatListItem {
-    #[serde(with = "crate::serde_i64_string")]
-    #[schema(value_type = String)]
-    id: i64,
-    name: Option<String>,
-    avatar: Option<String>,
-    last_message_at: Option<DateTime<Utc>>,
-    unread_count: i64,
-    #[serde(with = "crate::serde_i64_string::opt")]
-    #[schema(value_type = Option<String>)]
-    last_read_message_id: Option<i64>,
-    last_message: Option<MessageResponse>,
-    muted_until: Option<DateTime<Utc>>,
-    archived: bool,
-}
-
-#[derive(Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct ListChatsResponse {
-    chats: Vec<ChatListItem>,
-    #[serde(with = "crate::serde_i64_string::opt")]
-    #[schema(value_type = Option<String>)]
-    next_cursor: Option<i64>,
 }
 
 /// GET /chats — List chats for the current user (cursor-based).
@@ -1297,7 +1178,9 @@ async fn get_chats(
                 muted_until,
                 archived,
             )| {
-                let mr = msg.and_then(|m| message_response_map.remove(&m.id));
+                let mr = msg
+                    .and_then(|m| message_response_map.remove(&m.id))
+                    .map(message_response_preview);
                 ChatListItem {
                     id,
                     name: Some(name),
@@ -1326,15 +1209,6 @@ pub struct MarkAsReadBody {
     #[serde(deserialize_with = "crate::serde_i64_string::deserialize")]
     #[schema(value_type = String)]
     message_id: i64,
-}
-
-#[derive(Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-struct MarkChatReadStateResponse {
-    #[serde(serialize_with = "crate::serde_i64_string::opt::serialize")]
-    #[schema(value_type = Option<String>)]
-    last_read_message_id: Option<i64>,
-    unread_count: i64,
 }
 
 /// POST /chats/:chat_id/messages/read — Mark messages as read up to a specific message ID.
@@ -1501,15 +1375,6 @@ async fn get_chat_unread_count(
     }))
 }
 
-#[derive(Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct UnreadCountResponse {
-    unread_count: i64,
-    archived_unread_count: i64,
-    unread_chat_count: i64,
-    archived_unread_chat_count: i64,
-}
-
 /// GET /chats/unread — Get total unread message and chat counts for the current user.
 #[utoipa::path(
     get,
@@ -1574,15 +1439,13 @@ async fn archive_chat(
 
     state.ws_registry.broadcast_to_uids(
         &[uid],
-        std::sync::Arc::new(
-            crate::handlers::ws::messages::ServerWsMessage::ChatArchiveStateChanged(
-                crate::handlers::ws::messages::ChatArchiveStateChangedPayload {
-                    chat_id,
-                    archived: true,
-                    muted_until: Some(chat::indefinite_mute_until()),
-                },
-            ),
-        ),
+        std::sync::Arc::new(ServerWsMessage::ChatArchiveStateChanged(
+            ChatArchiveStateChangedPayload {
+                chat_id,
+                archived: true,
+                muted_until: Some(chat::indefinite_mute_until()),
+            },
+        )),
     );
 
     Ok(axum::http::StatusCode::NO_CONTENT)
@@ -1626,15 +1489,13 @@ async fn unarchive_chat(
 
     state.ws_registry.broadcast_to_uids(
         &[uid],
-        std::sync::Arc::new(
-            crate::handlers::ws::messages::ServerWsMessage::ChatArchiveStateChanged(
-                crate::handlers::ws::messages::ChatArchiveStateChangedPayload {
-                    chat_id,
-                    archived: false,
-                    muted_until: None,
-                },
-            ),
-        ),
+        std::sync::Arc::new(ServerWsMessage::ChatArchiveStateChanged(
+            ChatArchiveStateChangedPayload {
+                chat_id,
+                archived: false,
+                muted_until: None,
+            },
+        )),
     );
 
     Ok(axum::http::StatusCode::NO_CONTENT)
@@ -1724,9 +1585,12 @@ mod tests {
     use super::{
         attachment_preview_text, build_push_preview_bundle, extract_mention_uids,
         first_attachment_kind, render_mentions_as_text, sticker_preview_text, MentionInfo,
-        ReplyToMessage,
+        MessagePreview,
     };
-    use crate::models::{Attachment, AttachmentResponse, MessageType, Sender};
+    use crate::{
+        dto::{attachments::AttachmentResponse, users::User},
+        models::{Attachment, MessageType},
+    };
     use chrono::Utc;
     use serde_json::json;
     use std::collections::HashMap;
@@ -1799,7 +1663,7 @@ mod tests {
             sticker: None,
             reply_root_id: None,
             client_generated_id: "cgid".to_string(),
-            sender: Sender {
+            sender: User {
                 uid: 7,
                 avatar_url: None,
                 name: Some("Alice".to_string()),
@@ -1833,7 +1697,7 @@ mod tests {
             sticker: None,
             reply_root_id: None,
             client_generated_id: "cgid".to_string(),
-            sender: Sender {
+            sender: User {
                 uid: 7,
                 avatar_url: None,
                 name: Some("Alice".to_string()),
@@ -1874,24 +1738,27 @@ mod tests {
 
     #[test]
     fn serializes_reply_to_message_type_and_camel_case_keys() {
-        let reply = ReplyToMessage {
+        let reply = MessagePreview {
             id: 42,
-            message: Some("voice".to_string()),
-            message_type: MessageType::Audio,
-            sticker: None,
-            sender: Sender {
+            client_generated_id: "cgid".to_string(),
+            created_at: Utc::now(),
+            sender: User {
                 uid: 7,
                 avatar_url: None,
                 name: Some("Alice".to_string()),
                 gender: 0,
                 user_group: None,
             },
-            is_deleted: false,
+            message: Some("voice".to_string()),
+            message_type: MessageType::Audio,
+            sticker: None,
             first_attachment_kind: Some("audio/webm".to_string()),
+            is_deleted: false,
             mentions: Vec::new(),
         };
 
         let value = serde_json::to_value(reply).expect("serialize reply_to_message");
+        assert_eq!(value["clientGeneratedId"], json!("cgid"));
         assert_eq!(value["messageType"], json!("audio"));
         assert_eq!(value["isDeleted"], json!(false));
         assert_eq!(value["firstAttachmentKind"], json!("audio/webm"));

@@ -22,6 +22,7 @@ use utils::auth::{X_APP_VERSION, X_CLIENT_ID, X_USER_ID};
 use utoipa::OpenApi;
 
 mod db_tracing;
+mod dto;
 pub(crate) mod errors;
 pub(crate) mod extractors;
 mod handlers;

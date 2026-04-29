@@ -1,7 +1,7 @@
 //! WebSocket connection registry: maps user id to active connections, tracks app presence,
 //! supports broadcast and stale-connection pruning.
 
-use crate::handlers::ws::messages::{PresenceUpdatePayload, ServerWsMessage};
+use crate::dto::ws::{PresenceUpdatePayload, ServerWsMessage};
 use crate::metrics::Metrics;
 use std::sync::atomic::{AtomicU64, AtomicU8, Ordering};
 use std::sync::Arc;
