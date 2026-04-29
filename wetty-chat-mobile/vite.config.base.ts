@@ -1,4 +1,5 @@
 import path from 'path';
+import { execSync } from 'child_process';
 import react from '@vitejs/plugin-react';
 import { lingui } from '@lingui/vite-plugin';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -11,13 +12,23 @@ type BaseConfigOptions = {
   assetBaseUrl?: string;
 };
 
+function getGitShortHash(): string | undefined {
+  try {
+    return execSync('git rev-parse --short HEAD').toString().trim() || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function createBaseConfig(options: BaseConfigOptions = {}) {
   const assetBaseUrl = options.assetBaseUrl?.replace(/\/+$/, '');
+  const resolvedAppVersion = process.env.CI_BUILD_VERSION?.trim() || getGitShortHash() || 'unknown';
 
   return defineConfig({
     define: {
       __API_BASE__: JSON.stringify('/_api'),
       __ASSET_BASE__: JSON.stringify(null),
+      __APP_VERSION__: JSON.stringify(resolvedAppVersion),
       __AUTH_REDIRECT_URL__: JSON.stringify(null),
       __FEATURE_GATES_ENABLED__: JSON.stringify(false),
     },
