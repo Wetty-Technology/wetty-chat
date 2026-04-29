@@ -25,7 +25,7 @@ import chatsReducer, {
 } from './chatsSlice';
 import pinsReducer from './pinsSlice';
 import userReducer, { fetchCurrentUser } from './userSlice';
-import type { MessageResponse } from '@/api/messages';
+import { toMessagePreview, type MessageResponse } from '@/api/messages';
 import { messageAdded, messageConfirmed, messagePatched, messagesBulkDeleted } from './messageEvents';
 import { findLatestEligibleRootMessage, isOptimisticMessageId } from './messageProjection';
 import { kvSet } from '@/utils/db';
@@ -67,15 +67,7 @@ listenerMiddleware.startListening({
             api.dispatch(
               updateThreadCachedLastReply({
                 threadRootId,
-                cachedLastReply: {
-                  sender: { uid: message.sender.uid, name: message.sender.name, avatarUrl: message.sender.avatarUrl },
-                  message: message.message,
-                  messageType: message.messageType,
-                  stickerEmoji: message.sticker?.emoji ?? null,
-                  firstAttachmentKind: message.attachments?.[0]?.kind ?? null,
-                  isDeleted: false,
-                  mentions: message.mentions ?? null,
-                },
+                cachedLastReply: toMessagePreview(message),
               }),
             );
           }
@@ -112,15 +104,7 @@ listenerMiddleware.startListening({
           api.dispatch(
             updateThreadCachedLastReply({
               threadRootId,
-              cachedLastReply: {
-                sender: { uid: message.sender.uid, name: message.sender.name, avatarUrl: message.sender.avatarUrl },
-                message: message.message,
-                messageType: message.messageType,
-                stickerEmoji: message.sticker?.emoji ?? null,
-                firstAttachmentKind: message.attachments?.[0]?.kind ?? null,
-                isDeleted: false,
-                mentions: message.mentions ?? null,
-              },
+              cachedLastReply: toMessagePreview(message),
             }),
           );
         }

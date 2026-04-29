@@ -1,11 +1,11 @@
 import type { GroupedUser } from '@/hooks/useReactionGrouping';
-import type { Sender } from '@/api/messages';
+import type { User } from '@/api/messages';
 import { ReactionUserItem } from '@/components/chat/reactions/ReactionUserItem';
 
 interface ReactionUserGridProps {
   users: GroupedUser[];
   showEmojis: boolean;
-  onAvatarClick?: (sender: Sender) => void;
+  onAvatarClick?: (sender: User) => void;
 }
 
 export function ReactionUserGrid({ users, showEmojis, onAvatarClick }: ReactionUserGridProps) {

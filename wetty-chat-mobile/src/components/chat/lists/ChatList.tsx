@@ -47,7 +47,7 @@ import {
   setThreadsList,
 } from '@/store/threadsSlice';
 import { selectEffectiveLocale, selectShowAllTab } from '@/store/settingsSlice';
-import { markChatAsUnread, markMessagesAsRead, type MessageResponse } from '@/api/messages';
+import { markChatAsUnread, markMessagesAsRead, type MessagePreview, type MessageResponse } from '@/api/messages';
 import { syncAppBadgeCount } from '@/utils/badges';
 import { getChatDisplayName } from '@/utils/chatDisplay';
 import { UserAvatar } from '@/components/UserAvatar';
@@ -95,7 +95,7 @@ function isChatMuted(chat: ChatListEntry): boolean {
   return new Date(chat.mutedUntil) > new Date();
 }
 
-function getMessagePreview(message: MessageResponse | null, locale: string): ReactNode {
+function getMessagePreview(message: MessagePreview | null, locale: string): ReactNode {
   if (!message) return t`No messages yet`;
 
   const senderName = message.sender?.name || 'User';

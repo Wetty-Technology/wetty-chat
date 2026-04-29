@@ -3,14 +3,14 @@ import { IonCard, IonCardHeader, IonCardSubtitle, IonIcon, IonItem, IonLabel, Io
 import { chevronForward, mailOutline } from 'ionicons/icons';
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
-import type { Sender } from '@/api/messages';
+import type { User } from '@/api/messages';
 import { UserAvatar } from '@/components/UserAvatar';
 import { useInvitePreview } from '@/components/invites/useInvitePreview';
 import styles from './InviteMessageCard.module.scss';
 
 interface InviteMessageCardProps {
   inviteCode: string;
-  sender: Sender;
+  sender: User;
   isSent: boolean;
   showName: boolean;
   showAvatar: boolean;

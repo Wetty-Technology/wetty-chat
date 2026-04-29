@@ -1,13 +1,13 @@
 import React from 'react';
 import { UserAvatar } from '@/components/UserAvatar';
-import type { Sender } from '@/api/messages';
+import type { User } from '@/api/messages';
 import type { GroupedUser } from '@/hooks/useReactionGrouping';
 
 interface ReactionUserItemProps {
   user: GroupedUser;
   showEmojis: boolean;
   style?: React.CSSProperties;
-  onAvatarClick?: (sender: Sender) => void;
+  onAvatarClick?: (sender: User) => void;
 }
 
 export function ReactionUserItem({ user, showEmojis, style, onAvatarClick }: ReactionUserItemProps) {

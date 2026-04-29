@@ -1,6 +1,6 @@
 import type { AxiosResponse } from 'axios';
 import apiClient from './client';
-import type { MessageResponse } from './messages';
+import type { MessagePreview } from './messages';
 
 export interface ChatListEntry {
   id: string;
@@ -9,7 +9,7 @@ export interface ChatListEntry {
   lastMessageAt: string | null;
   unreadCount: number;
   lastReadMessageId?: string | null;
-  lastMessage: MessageResponse | null;
+  lastMessage: MessagePreview | null;
   mutedUntil: string | null;
   archived: boolean;
 }

@@ -2,32 +2,40 @@ import type { AxiosResponse } from 'axios';
 import type { StickerSummary } from './stickers';
 import apiClient from './client';
 
-export interface UserGroupInfo {
+export interface UserGroupTagInfo {
   groupId: number;
   name?: string | null;
   chatGroupColor?: string | null;
   chatGroupColorDark?: string | null;
 }
 
-export interface Sender {
+export interface User {
   uid: number;
-  avatarUrl?: string;
+  avatarUrl?: string | null;
   name: string | null;
   gender: number;
-  userGroup?: UserGroupInfo | null;
+  userGroup?: UserGroupTagInfo | null;
 }
 
-export interface ReplyToMessage {
+export interface MessagePreviewSticker {
+  emoji?: string | null;
+}
+
+export interface MessagePreview {
   id: string;
+  clientGeneratedId?: string | null;
+  createdAt?: string | null;
   message: string | null;
   messageType: 'text' | 'audio' | 'file' | 'system' | 'invite' | 'sticker';
-  sticker?: StickerSummary;
-  sender: Sender;
+  sticker?: MessagePreviewSticker | null;
+  sender: User;
   isDeleted: boolean;
   attachments?: Attachment[];
-  firstAttachmentKind?: string;
-  mentions?: MentionInfo[];
+  firstAttachmentKind?: string | null;
+  mentions?: MentionInfo[] | null;
 }
+
+export type ReplyToMessage = MessagePreview;
 
 export interface Attachment {
   id: string;
@@ -62,7 +70,7 @@ export interface MentionInfo {
   username: string | null;
   avatarUrl?: string;
   gender: number;
-  userGroup?: UserGroupInfo | null;
+  userGroup?: UserGroupTagInfo | null;
 }
 
 export interface ReactionDetailResponse {
@@ -81,7 +89,7 @@ export interface MessageResponse {
   sticker?: StickerSummary;
   replyRootId: string | null;
   clientGeneratedId: string;
-  sender: Sender;
+  sender: User;
   chatId: string;
   createdAt: string;
   isEdited: boolean;
@@ -92,6 +100,28 @@ export interface MessageResponse {
   attachments?: Attachment[];
   reactions?: ReactionSummary[];
   mentions?: MentionInfo[];
+}
+
+export function toMessagePreview(message: MessageResponse): MessagePreview {
+  return {
+    id: message.id,
+    clientGeneratedId: message.clientGeneratedId,
+    createdAt: message.createdAt,
+    message: message.message,
+    messageType: message.messageType,
+    sticker: message.sticker ? { emoji: message.sticker.emoji } : undefined,
+    sender: {
+      uid: message.sender.uid,
+      name: message.sender.name,
+      avatarUrl: message.sender.avatarUrl,
+      gender: message.sender.gender,
+      userGroup: message.sender.userGroup,
+    },
+    isDeleted: message.isDeleted,
+    attachments: message.attachments,
+    firstAttachmentKind: message.attachments?.[0]?.kind ?? null,
+    mentions: message.mentions ?? null,
+  };
 }
 
 export interface ListMessagesResponse {

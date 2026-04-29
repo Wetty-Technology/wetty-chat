@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { IonContent, IonIcon, IonModal } from '@ionic/react';
 import { close } from 'ionicons/icons';
 import { t } from '@lingui/core/macro';
-import { getReactionDetails, type ReactionReactor, type Sender } from '@/api/messages';
+import { getReactionDetails, type ReactionReactor, type User } from '@/api/messages';
 import { useIsDesktop } from '@/hooks/platformHooks';
 import { useReactionGrouping } from '@/hooks/useReactionGrouping';
 import { ReactionUserGrid } from '@/components/chat/reactions/ReactionUserGrid';
@@ -17,7 +17,7 @@ interface ReactionDetailsModalProps {
   messageId: string | null;
   initialEmoji?: string;
   onDismiss: () => void;
-  onAvatarClick?: (sender: Sender) => void;
+  onAvatarClick?: (sender: User) => void;
 }
 
 export function ReactionDetailsModal({

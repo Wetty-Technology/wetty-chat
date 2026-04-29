@@ -30,7 +30,7 @@ import { FeatureGate } from '@/components/FeatureGate';
 import { BackButton } from '@/components/BackButton';
 import type { BackAction } from '@/types/back-action';
 import { ChatMemberRow } from '@/components/chat-members/ChatMemberRow';
-import type { Sender } from '@/api/messages';
+import type { User } from '@/api/messages';
 import { UserProfileModal } from '@/components/chat/profiles/UserProfileModal';
 import styles from './chat-members.module.scss';
 
@@ -79,7 +79,7 @@ export default function ChatMembersCore({ chatId: propChatId, backAction }: Chat
 
   const [presentToast] = useIonToast();
   const [presentAlert] = useIonAlert();
-  const [profileSender, setProfileSender] = useState<Sender | null>(null);
+  const [profileSender, setProfileSender] = useState<User | null>(null);
   const [profileMember, setProfileMember] = useState<MemberResponse | null>(null);
 
   const [members, setMembers] = useState<MemberResponse[]>([]);

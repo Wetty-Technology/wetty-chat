@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { t } from '@lingui/core/macro';
-import { type MessageResponse, type Sender } from '@/api/messages';
+import { type MessageResponse, type User } from '@/api/messages';
 import { InviteMessageModal } from '@/components/invites/InviteMessageModal';
 import { ChatBubble } from './ChatBubble';
 import { InviteMessageCard } from './InviteMessageCard';
@@ -15,7 +15,7 @@ interface ChatMessageRowProps {
   onReply: (message: MessageResponse) => void;
   onJumpToReply: (messageId: string) => void;
   onLongPress: (message: MessageResponse, rect: DOMRect, interactionPos?: { x: number; y: number }) => void;
-  onAvatarClick: (sender: Sender) => void;
+  onAvatarClick: (sender: User) => void;
   onThreadClick: (message: MessageResponse) => void;
   onReactionToggle: (message: MessageResponse, emoji: string, currentlyReacted: boolean) => void;
   onStickerTap?: (stickerId: string) => void;
@@ -79,7 +79,7 @@ export function ChatMessageRow({
   const sharedBubbleProps = {
     senderName: msg.sender.name ?? `User ${msg.sender.uid}`,
     isSent: msg.sender.uid === currentUserId,
-    avatarUrl: msg.sender.avatarUrl,
+    avatarUrl: msg.sender.avatarUrl ?? undefined,
     onReply: () => onReply(msg),
     onReplyTap: replyToMessage && !replyToMessage.isDeleted ? () => onJumpToReply(replyToMessage.id) : undefined,
     onLongPress: (rect: DOMRect, interactionPos?: { x: number; y: number }) => onLongPress(msg, rect, interactionPos),

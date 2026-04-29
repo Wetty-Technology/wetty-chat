@@ -42,7 +42,7 @@ import {
   markMessagesAsRead,
   type MessageResponse,
   putReaction,
-  type Sender,
+  type User,
   sendMessage,
   sendThreadMessage,
   updateMessage,
@@ -465,7 +465,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
 
   const [atBottom, setAtBottom] = useState(() => threadId || initialResumeMessageId == null);
   const [replyingTo, setReplyingTo] = useState<MessageResponse | null>(null);
-  const [profileSender, setProfileSender] = useState<Sender | null>(null);
+  const [profileSender, setProfileSender] = useState<User | null>(null);
   const [reactionDetail, setReactionDetail] = useState<{ messageId: string; emoji?: string } | null>(null);
   const [stickerPreviewId, setStickerPreviewId] = useState<string | null>(null);
   const [editingSession, setEditingSession] = useState<EditSession | null>(null);

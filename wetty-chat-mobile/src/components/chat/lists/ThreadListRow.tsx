@@ -1,7 +1,8 @@
 import { type ReactNode, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { IonBadge, IonIcon, IonItem, IonItemOption, IonItemOptions, IonItemSliding, IonLabel } from '@ionic/react';
-import type { StoredThreadListItem, ThreadReplyPreview } from '@/api/threads';
+import { toMessagePreview, type MessagePreview } from '@/api/messages';
+import type { StoredThreadListItem } from '@/api/threads';
 import { OverlayAvatar } from '@/components/OverlayAvatar';
 import type { RootState } from '@/store/index';
 import { selectLatestThreadReplyMessage } from '@/store/messagesSlice';
@@ -32,19 +33,8 @@ function formatRelativeTime(isoString: string, locale: string): string {
   }
   return Intl.DateTimeFormat(locale, { year: 'numeric', month: 'short', day: 'numeric' }).format(date);
 }
-function formatReplyPreview(reply: ThreadReplyPreview, locale: string): string {
-  // Build a preview-compatible object for formatMessagePreview
-  return formatMessagePreview(
-    {
-      message: reply.message,
-      messageType: reply.messageType as 'text',
-      sticker: reply.stickerEmoji ? { emoji: reply.stickerEmoji } : undefined,
-      firstAttachmentKind: reply.firstAttachmentKind ?? undefined,
-      isDeleted: reply.isDeleted,
-      mentions: reply.mentions ?? undefined,
-    },
-    getNotificationPreviewLabels(locale),
-  );
+function formatReplyPreview(reply: MessagePreview, locale: string): string {
+  return formatMessagePreview(reply, getNotificationPreviewLabels(locale));
 }
 
 interface ThreadListRowProps {
@@ -70,15 +60,7 @@ export function ThreadListRow({ thread, locale, isActive, onSelect, endAction }:
 
   const lastReply = useMemo(() => {
     if (liveMessage) {
-      return {
-        sender: { uid: liveMessage.sender.uid, name: liveMessage.sender.name, avatarUrl: liveMessage.sender.avatarUrl },
-        message: liveMessage.message,
-        messageType: liveMessage.messageType,
-        stickerEmoji: liveMessage.sticker?.emoji ?? null,
-        firstAttachmentKind: liveMessage.attachments?.[0]?.kind ?? null,
-        isDeleted: liveMessage.isDeleted,
-        mentions: liveMessage.mentions ?? null,
-      } satisfies ThreadReplyPreview;
+      return toMessagePreview(liveMessage);
     }
     return thread.cachedLastReply;
   }, [liveMessage, thread.cachedLastReply]);

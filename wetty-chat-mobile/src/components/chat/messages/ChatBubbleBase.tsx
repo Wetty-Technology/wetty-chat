@@ -13,7 +13,7 @@ import { t } from '@lingui/core/macro';
 import { useSelector } from 'react-redux';
 import styles from './ChatBubble.module.scss';
 import reactionStyles from './ReactionPill.module.scss';
-import type { Attachment, MentionInfo, ReactionSummary, UserGroupInfo } from '@/api/messages';
+import type { Attachment, MentionInfo, ReactionSummary, UserGroupTagInfo } from '@/api/messages';
 import { ImageViewer } from '@/components/chat/messages/media/ImageViewer';
 import { formatMessagePreview, type PreviewMessage, getNotificationPreviewLabels } from '@/utils/messagePreview';
 import { selectChatFontSizeStyle, selectEffectiveLocale } from '@/store/settingsSlice';
@@ -208,7 +208,7 @@ export interface ChatBubbleBaseProps {
   messageType?: 'text' | 'audio';
   senderName: string;
   senderGender?: number;
-  senderGroup?: UserGroupInfo | null;
+  senderGroup?: UserGroupTagInfo | null;
   message: string;
   isSent: boolean;
   avatarUrl?: string;

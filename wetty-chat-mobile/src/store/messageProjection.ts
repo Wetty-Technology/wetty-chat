@@ -1,5 +1,11 @@
 import type { MessageResponse } from '@/api/messages';
 
+interface MessageOrderLike {
+  id: string;
+  createdAt?: string | null;
+  clientGeneratedId?: string | null;
+}
+
 interface MessageWindowLike {
   messages: MessageResponse[];
 }
@@ -9,8 +15,8 @@ export function isOptimisticMessageId(messageId: string | null | undefined): boo
 }
 
 export function compareMessageOrder(
-  a: MessageResponse | null | undefined,
-  b: MessageResponse | null | undefined,
+  a: MessageOrderLike | null | undefined,
+  b: MessageOrderLike | null | undefined,
 ): number {
   if (!a && !b) return 0;
   if (!a) return -1;
@@ -49,7 +55,7 @@ export function compareMessageOrder(
   return 0;
 }
 
-export function isSameMessage(a: MessageResponse | null | undefined, b: MessageResponse | null | undefined): boolean {
+export function isSameMessage(a: MessageOrderLike | null | undefined, b: MessageOrderLike | null | undefined): boolean {
   if (!a || !b) return false;
   if (a.id === b.id) return true;
   return !!a.clientGeneratedId && a.clientGeneratedId === b.clientGeneratedId;

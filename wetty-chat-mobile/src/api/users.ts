@@ -1,5 +1,5 @@
 import apiClient from './client';
-import type { UserGroupInfo } from './messages';
+import type { UserGroupTagInfo } from './messages';
 
 export interface StickerPackOrderItem {
   stickerPackId: string;
@@ -26,7 +26,7 @@ export interface MemberSummary {
   username: string | null;
   avatarUrl?: string | null;
   gender: number;
-  userGroup?: UserGroupInfo | null;
+  userGroup?: UserGroupTagInfo | null;
 }
 
 export interface SearchMembersResponse {

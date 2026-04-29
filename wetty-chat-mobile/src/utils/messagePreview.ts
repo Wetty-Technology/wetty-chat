@@ -21,7 +21,7 @@ export interface PreviewMessage {
   attachments?: PreviewAttachmentLike[];
   firstAttachmentKind?: string | null;
   isDeleted?: boolean;
-  mentions?: PreviewMentionLike[];
+  mentions?: PreviewMentionLike[] | null;
 }
 
 export interface PreviewLabels {
@@ -72,7 +72,7 @@ const PREVIEW_LABELS_BY_LOCALE: Record<string, NotificationPreviewLabels> = {
 };
 
 /** Replace `@[uid:N]` tokens with `@username` for display. */
-function renderMentionsAsText(text: string, mentions?: PreviewMentionLike[]): string {
+function renderMentionsAsText(text: string, mentions?: PreviewMentionLike[] | null): string {
   const mentionMap = new Map<number, string>();
   if (mentions) {
     for (const m of mentions) {

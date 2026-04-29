@@ -1,40 +1,16 @@
 import type { AxiosResponse } from 'axios';
-import type { MentionInfo } from './messages';
+import type { MessagePreview, User } from './messages';
 import apiClient from './client';
 
-export interface ThreadParticipant {
-  uid: number;
-  name: string | null;
-  avatarUrl?: string | null;
-}
-
-export interface ThreadReplyPreview {
-  sender: ThreadParticipant;
-  message: string | null;
-  messageType: string;
-  stickerEmoji?: string | null;
-  firstAttachmentKind?: string | null;
-  isDeleted: boolean;
-  mentions?: MentionInfo[] | null;
-}
-
-export interface ThreadRootMessagePreview {
-  id: string;
-  sender: ThreadParticipant;
-  message: string | null;
-  messageType: string;
-  firstAttachmentKind?: string | null;
-  isDeleted: boolean;
-  mentions?: MentionInfo[];
-}
+export type ThreadParticipant = User;
 
 export interface ThreadListItem {
   chatId: string;
   chatName: string;
   chatAvatar: string | null;
-  threadRootMessage: ThreadRootMessagePreview;
+  threadRootMessage: MessagePreview;
   participants: ThreadParticipant[];
-  lastReply: ThreadReplyPreview | null;
+  lastReply: MessagePreview | null;
   replyCount: number;
   lastReplyAt: string;
   unreadCount: number;
@@ -44,7 +20,7 @@ export interface ThreadListItem {
 
 /** Internal Redux state representation — replaces `lastReply` with a cache-only fallback. */
 export interface StoredThreadListItem extends Omit<ThreadListItem, 'lastReply'> {
-  cachedLastReply: ThreadReplyPreview | null;
+  cachedLastReply: MessagePreview | null;
 }
 
 export interface ListThreadsResponse {

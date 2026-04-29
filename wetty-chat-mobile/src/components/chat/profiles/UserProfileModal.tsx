@@ -2,7 +2,7 @@ import { IonButton, IonChip, IonContent, IonIcon, IonLabel, IonModal, useIonAler
 import { close, openOutline } from 'ionicons/icons';
 import { t } from '@lingui/core/macro';
 import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
-import type { Sender } from '@/api/messages';
+import type { User } from '@/api/messages';
 import { useIsDarkMode, useIsDesktop } from '@/hooks/platformHooks';
 import { UserAvatar } from '@/components/UserAvatar';
 import { useSelector } from 'react-redux';
@@ -12,7 +12,7 @@ import { getMembers, removeMember, updateMemberRole, type MemberResponse } from 
 import styles from './UserProfileModal.module.scss';
 
 interface UserProfileModalProps {
-  sender: Sender | null;
+  sender: User | null;
   onDismiss: () => void;
   chatId?: string | number;
   canManage?: boolean;
@@ -32,8 +32,8 @@ export function UserProfileModal({
   const isDarkMode = useIsDarkMode();
 
   const contentRef = useRef<HTMLDivElement | null>(null);
-  const [prevSender, setPrevSender] = useState<Sender | null>(sender);
-  const [localSender, setLocalSender] = useState<Sender | null>(sender);
+  const [prevSender, setPrevSender] = useState<User | null>(sender);
+  const [localSender, setLocalSender] = useState<User | null>(sender);
   const [memberInfo, setMemberInfo] = useState<MemberResponse | null>(memberProp);
   const [memberLoading, setMemberLoading] = useState(false);
   const [initialBreakpoint, setInitialBreakpoint] = useState<number | null>(null);

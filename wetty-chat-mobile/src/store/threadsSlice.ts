@@ -1,7 +1,8 @@
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { createSlice } from '@reduxjs/toolkit';
 import type { RootState } from './index';
-import type { StoredThreadListItem, ThreadListItem, ThreadReplyPreview } from '@/api/threads';
+import type { MessagePreview } from '@/api/messages';
+import type { StoredThreadListItem, ThreadListItem } from '@/api/threads';
 
 export interface ThreadUpdatePayload {
   threadRootId: string;
@@ -97,7 +98,7 @@ const threadsSlice = createSlice({
     /** Update the cached preview for threads whose messages aren't loaded in messagesSlice. */
     updateThreadCachedLastReply(
       state,
-      action: PayloadAction<{ threadRootId: string; cachedLastReply: ThreadReplyPreview }>,
+      action: PayloadAction<{ threadRootId: string; cachedLastReply: MessagePreview }>,
     ) {
       const thread = state.items.find((t) => t.threadRootMessage.id === action.payload.threadRootId);
       if (thread) {
@@ -107,7 +108,7 @@ const threadsSlice = createSlice({
     /** Partially patch the cached preview (e.g. mark as deleted when the thread window isn't loaded). */
     patchThreadCachedLastReply(
       state,
-      action: PayloadAction<{ threadRootId: string; patch: Partial<ThreadReplyPreview> }>,
+      action: PayloadAction<{ threadRootId: string; patch: Partial<MessagePreview> }>,
     ) {
       const thread = state.items.find((t) => t.threadRootMessage.id === action.payload.threadRootId);
       if (thread && thread.cachedLastReply) {
@@ -146,7 +147,7 @@ const threadsSlice = createSlice({
     },
     patchThreadRootMessage(
       state,
-      action: PayloadAction<{ threadRootId: string; message: Partial<{ message: string | null; isDeleted: boolean }> }>,
+      action: PayloadAction<{ threadRootId: string; message: Partial<MessagePreview> }>,
     ) {
       const thread = state.items.find((t) => t.threadRootMessage.id === action.payload.threadRootId);
       if (thread) {

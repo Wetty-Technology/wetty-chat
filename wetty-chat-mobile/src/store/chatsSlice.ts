@@ -1,7 +1,7 @@
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { createSelector, createSlice } from '@reduxjs/toolkit';
 import type { RootState } from './index';
-import type { MessageResponse } from '@/api/messages';
+import { toMessagePreview, type MessagePreview, type MessageResponse } from '@/api/messages';
 import type { ChatListEntry } from '@/api/chats';
 import type { GroupRole } from '@/api/group';
 import { compareMessageOrder, isSameMessage } from './messageProjection';
@@ -20,7 +20,7 @@ interface ChatListMeta {
   lastMessageAt?: string | null;
   unreadCount?: number;
   lastReadMessageId?: string | null;
-  lastMessage?: MessageResponse | null;
+  lastMessage?: MessagePreview | null;
   inList?: boolean;
   mutedUntil?: string | null;
   archived?: boolean;
@@ -51,7 +51,7 @@ function getChatEntry(state: ChatsState, chatId: string): ChatStateEntry {
   return created;
 }
 
-function chooseEffectiveLatest(snapshot?: ChatListMeta, live?: ChatListMeta): MessageResponse | null {
+function chooseEffectiveLatest(snapshot?: ChatListMeta, live?: ChatListMeta): MessagePreview | null {
   const liveOverridesLatest = !!live && Object.prototype.hasOwnProperty.call(live, 'lastMessage');
   const snapshotMessage = snapshot?.lastMessage ?? null;
   const liveMessage = live?.lastMessage ?? null;
@@ -187,7 +187,7 @@ const chatsSlice = createSlice({
 
       const currentLatest = current.lastMessage;
       if (!currentLatest || compareMessageOrder(message, currentLatest) >= 0) {
-        entry.liveProjection.lastMessage = message;
+        entry.liveProjection.lastMessage = toMessagePreview(message);
         entry.liveProjection.lastMessageAt = message.createdAt;
       }
     },
@@ -213,7 +213,7 @@ const chatsSlice = createSlice({
         (currentLatest.clientGeneratedId === clientGeneratedId || currentLatest.id === clientGeneratedId);
 
       if (isConfirmingCurrent || !currentLatest || compareMessageOrder(message, currentLatest) >= 0) {
-        entry.liveProjection.lastMessage = message;
+        entry.liveProjection.lastMessage = toMessagePreview(message);
         entry.liveProjection.lastMessageAt = message.createdAt;
       }
     },
@@ -252,18 +252,12 @@ const chatsSlice = createSlice({
       };
 
       if (message.isDeleted) {
-        entry.liveProjection.lastMessage = fallbackMessage;
+        entry.liveProjection.lastMessage = fallbackMessage ? toMessagePreview(fallbackMessage) : null;
         entry.liveProjection.lastMessageAt = fallbackMessage?.createdAt ?? null;
         return;
       }
 
-      entry.liveProjection.lastMessage = {
-        ...currentLatest,
-        ...message,
-        mentions: message.mentions ?? currentLatest.mentions,
-        reactions: message.reactions ?? currentLatest.reactions,
-        threadInfo: message.threadInfo ?? currentLatest.threadInfo,
-      };
+      entry.liveProjection.lastMessage = toMessagePreview(message);
       entry.liveProjection.lastMessageAt = message.createdAt;
     },
     markChatAsRead(state, action: PayloadAction<{ chatId: string; lastReadMessageId?: string | null }>) {
