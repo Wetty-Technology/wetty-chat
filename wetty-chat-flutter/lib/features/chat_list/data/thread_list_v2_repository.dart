@@ -38,6 +38,15 @@ class ThreadListV2Repository {
         .replaceThreadUnreadTotal(unreadResponse.unreadThreadCount);
   }
 
+  Future<void> probeArchivedThreads() async {
+    final response = await ref
+        .read(threadApiServiceProvider)
+        .fetchThreads(limit: 1, archived: true);
+    ref
+        .read(threadListV2StoreProvider.notifier)
+        .replaceHasArchivedThreads(response.threads.isNotEmpty);
+  }
+
   Future<void> loadMoreThreads({int limit = 20}) async {
     final current = ref.read(threadListV2StoreProvider).active;
     if (!current.hasMore || current.nextCursor == null) {

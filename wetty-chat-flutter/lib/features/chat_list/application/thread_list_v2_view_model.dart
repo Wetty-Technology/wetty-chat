@@ -27,7 +27,7 @@ class ThreadListV2ViewModel extends AsyncNotifier<ThreadListV2ViewState> {
   Future<ThreadListV2ViewState> _loadInitial() async {
     await Future.wait([
       ref.read(threadListV2RepositoryProvider).loadThreads(),
-      ref.read(threadListV2RepositoryProvider).loadArchivedThreads(),
+      ref.read(threadListV2RepositoryProvider).probeArchivedThreads(),
     ]);
     final storeState = ref.read(threadListV2StoreProvider);
     return (
@@ -112,18 +112,9 @@ class ThreadListV2ViewModel extends AsyncNotifier<ThreadListV2ViewState> {
     ));
     try {
       final limit = current.threads.isEmpty ? 20 : current.threads.length;
-      final archivedCount = ref
-          .read(threadListV2StoreProvider)
-          .archived
-          .threads
-          .length;
       await Future.wait([
         ref.read(threadListV2RepositoryProvider).loadThreads(limit: limit),
-        ref
-            .read(threadListV2RepositoryProvider)
-            .loadArchivedThreads(
-              limit: archivedCount == 0 ? 20 : archivedCount,
-            ),
+        ref.read(threadListV2RepositoryProvider).probeArchivedThreads(),
       ]);
       ref.read(readStateRepositoryProvider).resetThreadBaselines();
       final storeState = ref.read(threadListV2StoreProvider);

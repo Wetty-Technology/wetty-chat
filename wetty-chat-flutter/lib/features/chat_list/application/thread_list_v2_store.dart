@@ -26,6 +26,7 @@ typedef ThreadUnreadTotals = ({
 typedef ThreadListV2StoreState = ({
   ThreadListV2BucketState active,
   ThreadListV2BucketState archived,
+  bool hasArchivedThreads,
   ThreadUnreadTotals unreadTotals,
 });
 
@@ -39,6 +40,7 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
     return (
       active: _emptyBucket(),
       archived: _emptyBucket(),
+      hasArchivedThreads: false,
       unreadTotals: _emptyUnreadTotals(),
     );
   }
@@ -54,7 +56,14 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
     required List<ThreadListItem> threads,
     String? nextCursor,
   }) {
-    _replaceState(archived: _bucketWithPage(threads, nextCursor));
+    _replaceState(
+      archived: _bucketWithPage(threads, nextCursor),
+      hasArchivedThreads: threads.isNotEmpty,
+    );
+  }
+
+  void replaceHasArchivedThreads(bool hasArchivedThreads) {
+    _replaceState(hasArchivedThreads: hasArchivedThreads);
   }
 
   void appendActivePage({
@@ -72,6 +81,7 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
   }) {
     _replaceState(
       archived: _bucketWithAppendedPage(state.archived, threads, nextCursor),
+      hasArchivedThreads: state.hasArchivedThreads || threads.isNotEmpty,
     );
   }
 
@@ -378,11 +388,13 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
   void _replaceState({
     ThreadListV2BucketState? active,
     ThreadListV2BucketState? archived,
+    bool? hasArchivedThreads,
     ThreadUnreadTotals? unreadTotals,
   }) {
     state = (
       active: active ?? state.active,
       archived: archived ?? state.archived,
+      hasArchivedThreads: hasArchivedThreads ?? state.hasArchivedThreads,
       unreadTotals: unreadTotals ?? state.unreadTotals,
     );
   }

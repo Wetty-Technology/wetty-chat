@@ -24,7 +24,7 @@ class ThreadListV2View extends ConsumerWidget {
     final archivedSummary = ref.watch(
       threadListV2StoreProvider.select(
         (state) => (
-          count: state.archived.threads.length,
+          hasArchivedThreads: state.hasArchivedThreads,
           unreadCount: state.unreadTotals.archivedThreadCount,
         ),
       ),
@@ -74,7 +74,9 @@ class ThreadListV2View extends ConsumerWidget {
           );
         }
 
-        final showArchiveFolder = archivedSummary.count > 0;
+        final showArchiveFolder =
+            archivedSummary.hasArchivedThreads ||
+            archivedSummary.unreadCount > 0;
 
         if (viewState.threads.isEmpty && !showArchiveFolder) {
           return SliverFillRemaining(
