@@ -124,58 +124,9 @@ class ThreadListRow extends StatelessWidget {
   /// Root message preview for line 1, falls back to sender name.
   String _rootMessagePreview(AppLocalizations l10n) {
     final root = thread.threadRootMessage;
-    final preview = _contentPreview(
-      root.content,
-      isDeleted: root.isDeleted,
-      l10n: l10n,
-    );
+    final preview = formatMessagePreviewSummary(root, l10n: l10n);
     if (preview.isNotEmpty) return preview;
     return root.sender.name ?? l10n.unknownUser;
-  }
-
-  String _contentPreview(
-    MessageContent content, {
-    required bool isDeleted,
-    required AppLocalizations l10n,
-  }) {
-    return switch (content) {
-      TextMessageContent(:final text, :final attachments, :final mentions) =>
-        formatMessagePreview(
-          message: text,
-          messageType: 'text',
-          attachments: attachments,
-          isDeleted: isDeleted,
-          mentions: mentions,
-          l10n: l10n,
-        ),
-      AudioMessageContent(:final text, :final mentions) => formatMessagePreview(
-        message: text,
-        messageType: 'audio',
-        isDeleted: isDeleted,
-        mentions: mentions,
-        l10n: l10n,
-      ),
-      StickerMessageContent(:final sticker) => formatMessagePreview(
-        messageType: 'sticker',
-        sticker: sticker,
-        isDeleted: isDeleted,
-        l10n: l10n,
-      ),
-      InviteMessageContent(:final text, :final mentions) =>
-        formatMessagePreview(
-          message: text,
-          messageType: 'invite',
-          isDeleted: isDeleted,
-          mentions: mentions,
-          l10n: l10n,
-        ),
-      SystemMessageContent(:final text) => formatMessagePreview(
-        message: text,
-        messageType: 'system',
-        isDeleted: isDeleted,
-        l10n: l10n,
-      ),
-    };
   }
 
   /// Last reply preview text for line 2.

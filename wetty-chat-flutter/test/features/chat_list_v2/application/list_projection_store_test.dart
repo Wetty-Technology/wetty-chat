@@ -40,7 +40,7 @@ void main() {
 
         final group = container.read(groupListV2StoreProvider).groups.single;
         expect(shouldRefresh, isFalse);
-        expect(group.lastMessage?.id, 102);
+        expect(group.lastMessage?.messageId, 102);
         expect(group.lastMessage?.message, 'mine');
         expect(group.unreadCount, 0);
         expect(container.read(unreadBadgeProvider).chatUnreadTotal, 0);
@@ -64,7 +64,7 @@ void main() {
 
       final group = container.read(groupListV2StoreProvider).groups.single;
       expect(shouldRefresh, isFalse);
-      expect(group.lastMessage?.id, 103);
+      expect(group.lastMessage?.messageId, 103);
       expect(group.unreadCount, 3);
       expect(container.read(unreadBadgeProvider).chatUnreadTotal, 1);
     });
@@ -267,7 +267,7 @@ ChatListItem _chat({int unreadCount = 0}) {
     name: 'General',
     unreadCount: unreadCount,
     lastMessageAt: DateTime.parse('2026-04-12T12:00:00Z'),
-    lastMessage: MessageItem.fromDto(_message(id: 101, senderUid: 2)),
+    lastMessage: _preview(id: 101, senderUid: 2),
   );
 }
 
@@ -275,12 +275,10 @@ ThreadListItem _thread({int unreadCount = 0, int replyCount = 1}) {
   return ThreadListItem(
     chatId: '10',
     chatName: 'General',
-    threadRootMessage: ConversationMessageV2.fromMessageItemDto(
-      _message(id: 200, senderUid: 2, text: 'root'),
-    ),
+    threadRootMessage: _preview(id: 200, senderUid: 2, text: 'root'),
     lastReply: MessagePreview(
       messageId: 201,
-      sender: const Sender(uid: 2, name: 'sender'),
+      sender: const User(uid: 2, name: 'sender'),
       message: 'old reply',
     ),
     replyCount: replyCount,
@@ -300,7 +298,7 @@ MessageItemDto _message({
     id: id,
     message: text,
     messageType: 'text',
-    sender: SenderDto(uid: senderUid, name: 'sender', gender: 0),
+    sender: UserDto(uid: senderUid, name: 'sender', gender: 0),
     chatId: chatId,
     createdAt: DateTime.parse('2026-04-12T12:02:00Z'),
     isEdited: false,
@@ -309,5 +307,20 @@ MessageItemDto _message({
     replyRootId: replyRootId,
     hasAttachments: false,
     attachments: const [],
+  );
+}
+
+MessagePreview _preview({
+  required int id,
+  required int senderUid,
+  String text = 'hello',
+}) {
+  return MessagePreview(
+    messageId: id,
+    clientGeneratedId: 'cg-$id',
+    sender: User(uid: senderUid, name: 'sender'),
+    message: text,
+    messageType: 'text',
+    createdAt: DateTime.parse('2026-04-12T12:02:00Z'),
   );
 }

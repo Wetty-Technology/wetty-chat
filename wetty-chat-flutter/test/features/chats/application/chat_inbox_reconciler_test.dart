@@ -35,7 +35,7 @@ void main() {
                 name: 'General',
                 unreadCount: 4,
                 lastMessageAt: DateTime.parse('2026-04-12T12:00:00Z'),
-                lastMessage: _message(id: 101, chatId: 10, text: 'hello'),
+                lastMessage: _preview(id: 101, text: 'hello'),
               ),
             ],
           ),
@@ -49,16 +49,8 @@ void main() {
               ThreadListItemDto(
                 chatId: 10,
                 chatName: 'General',
-                threadRootMessage: _message(
-                  id: 200,
-                  chatId: 10,
-                  text: 'thread root',
-                ),
-                lastReply: const ThreadReplyPreviewDto(
-                  id: 201,
-                  sender: SenderDto(uid: 2, name: 'sender'),
-                  message: 'thread reply',
-                ),
+                threadRootMessage: _preview(id: 200, text: 'thread root'),
+                lastReply: _preview(id: 201, text: 'thread reply'),
                 lastReplyAt: DateTime.parse('2026-04-12T12:05:00Z'),
                 unreadCount: 2,
                 subscribedAt: null,
@@ -112,7 +104,7 @@ void main() {
                   name: 'General',
                   unreadCount: 4,
                   lastMessageAt: DateTime.parse('2026-04-12T12:00:00Z'),
-                  lastMessage: _message(id: 101, chatId: 10, text: 'hello'),
+                  lastMessage: _preview(id: 101, text: 'hello'),
                 ),
               ],
             ),
@@ -159,7 +151,7 @@ void main() {
                 name: 'General',
                 unreadCount: 4,
                 lastMessageAt: DateTime.parse('2026-04-12T12:00:00Z'),
-                lastMessage: _message(id: 101, chatId: 10, text: 'hello'),
+                lastMessage: _preview(id: 101, text: 'hello'),
               ),
             ],
           ),
@@ -198,12 +190,8 @@ ThreadListItemDto _threadDto() {
   return ThreadListItemDto(
     chatId: 10,
     chatName: 'General',
-    threadRootMessage: _message(id: 200, chatId: 10, text: 'thread root'),
-    lastReply: const ThreadReplyPreviewDto(
-      id: 201,
-      sender: SenderDto(uid: 2, name: 'sender'),
-      message: 'thread reply',
-    ),
+    threadRootMessage: _preview(id: 200, text: 'thread root'),
+    lastReply: _preview(id: 201, text: 'thread reply'),
     lastReplyAt: DateTime.parse('2026-04-12T12:05:00Z'),
     unreadCount: 2,
     subscribedAt: null,
@@ -285,22 +273,13 @@ class _FakeApnsChannel extends ApnsChannel {
   Future<void> setBadge(int count) async {}
 }
 
-MessageItemDto _message({
-  required int id,
-  required int chatId,
-  required String text,
-}) {
-  return MessageItemDto(
+MessagePreviewDto _preview({required int id, required String text}) {
+  return MessagePreviewDto(
     id: id,
+    clientGeneratedId: 'cg-$id',
     message: text,
     messageType: 'text',
-    sender: const SenderDto(uid: 2, name: 'sender', gender: 0),
-    chatId: chatId,
+    sender: const UserDto(uid: 2, name: 'sender', gender: 0),
     createdAt: DateTime.parse('2026-04-12T12:00:00Z'),
-    isEdited: false,
-    isDeleted: false,
-    clientGeneratedId: 'cg-$id',
-    hasAttachments: false,
-    attachments: const [],
   );
 }

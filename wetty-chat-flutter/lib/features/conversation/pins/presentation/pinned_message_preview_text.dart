@@ -1,7 +1,7 @@
 import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:chahua/l10n/app_localizations.dart';
 
-String pinnedMessageSenderName(Sender sender, AppLocalizations l10n) {
+String pinnedMessageSenderName(User sender, AppLocalizations l10n) {
   final name = sender.name?.trim();
   if (name != null && name.isNotEmpty) {
     return name;

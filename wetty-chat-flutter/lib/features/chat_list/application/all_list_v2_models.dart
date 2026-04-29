@@ -20,6 +20,5 @@ class AllThreadListV2Item extends AllListV2Item {
   final ThreadListItem thread;
 
   @override
-  DateTime? get activityAt =>
-      thread.lastReplyAt ?? thread.threadRootMessage.createdAt;
+  DateTime? get activityAt => thread.lastReplyAt;
 }

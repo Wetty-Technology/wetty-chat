@@ -7,12 +7,13 @@ import '../converters/string_value_converter.dart';
 part 'messages_api_models.g.dart';
 
 @JsonSerializable(explicitToJson: true)
-class SenderDto {
-  const SenderDto({
+class UserDto {
+  const UserDto({
     required this.uid,
     this.name,
     this.avatarUrl,
     this.gender = 0,
+    this.userGroup,
   });
 
   @FlexibleIntConverter()
@@ -21,11 +22,12 @@ class SenderDto {
   final String? avatarUrl;
   @JsonKey(defaultValue: 0)
   final int gender;
+  final UserGroupTagInfoDto? userGroup;
 
-  factory SenderDto.fromJson(Map<String, dynamic> json) =>
-      _$SenderDtoFromJson(json);
+  factory UserDto.fromJson(Map<String, dynamic> json) =>
+      _$UserDtoFromJson(json);
 
-  Map<String, dynamic> toJson() => _$SenderDtoToJson(this);
+  Map<String, dynamic> toJson() => _$UserDtoToJson(this);
 }
 
 @JsonSerializable(explicitToJson: true)
@@ -115,6 +117,18 @@ class StickerSummaryDto {
 }
 
 @JsonSerializable(explicitToJson: true)
+class MessagePreviewStickerDto {
+  const MessagePreviewStickerDto({this.emoji});
+
+  final String? emoji;
+
+  factory MessagePreviewStickerDto.fromJson(Map<String, dynamic> json) =>
+      _$MessagePreviewStickerDtoFromJson(json);
+
+  Map<String, dynamic> toJson() => _$MessagePreviewStickerDtoToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
 class ReactionReactorDto {
   const ReactionReactorDto({required this.uid, this.name, this.avatarUrl});
 
@@ -151,8 +165,8 @@ class ReactionSummaryDto {
 }
 
 @JsonSerializable(explicitToJson: true)
-class UserGroupInfoDto {
-  const UserGroupInfoDto({
+class UserGroupTagInfoDto {
+  const UserGroupTagInfoDto({
     required this.groupId,
     this.name,
     this.chatGroupColor,
@@ -165,10 +179,10 @@ class UserGroupInfoDto {
   final String? chatGroupColor;
   final String? chatGroupColorDark;
 
-  factory UserGroupInfoDto.fromJson(Map<String, dynamic> json) =>
-      _$UserGroupInfoDtoFromJson(json);
+  factory UserGroupTagInfoDto.fromJson(Map<String, dynamic> json) =>
+      _$UserGroupTagInfoDtoFromJson(json);
 
-  Map<String, dynamic> toJson() => _$UserGroupInfoDtoToJson(this);
+  Map<String, dynamic> toJson() => _$UserGroupTagInfoDtoToJson(this);
 }
 
 @JsonSerializable(explicitToJson: true)
@@ -187,7 +201,7 @@ class MentionInfoDto {
   final String? avatarUrl;
   @JsonKey(defaultValue: 0)
   final int gender;
-  final UserGroupInfoDto? userGroup;
+  final UserGroupTagInfoDto? userGroup;
 
   factory MentionInfoDto.fromJson(Map<String, dynamic> json) =>
       _$MentionInfoDtoFromJson(json);
@@ -196,38 +210,41 @@ class MentionInfoDto {
 }
 
 @JsonSerializable(explicitToJson: true)
-class ReplyToMessageDto {
-  const ReplyToMessageDto({
+class MessagePreviewDto {
+  const MessagePreviewDto({
     required this.id,
+    this.clientGeneratedId = '',
+    required this.sender,
     this.message,
     this.messageType = 'text',
     this.sticker,
-    required this.sender,
+    this.createdAt,
     this.isDeleted = false,
-    this.attachments = const <AttachmentItemDto>[],
     this.firstAttachmentKind,
     this.mentions = const <MentionInfoDto>[],
   });
 
   @FlexibleIntConverter()
   final int id;
+  @JsonKey(defaultValue: '')
+  final String clientGeneratedId;
+  final UserDto sender;
   final String? message;
   @JsonKey(defaultValue: 'text')
   final String messageType;
-  final StickerSummaryDto? sticker;
-  final SenderDto sender;
+  final MessagePreviewStickerDto? sticker;
+  @NullableDateTimeConverter()
+  final DateTime? createdAt;
   @JsonKey(defaultValue: false)
   final bool isDeleted;
-  @JsonKey(defaultValue: <AttachmentItemDto>[])
-  final List<AttachmentItemDto> attachments;
   final String? firstAttachmentKind;
   @JsonKey(defaultValue: <MentionInfoDto>[])
   final List<MentionInfoDto> mentions;
 
-  factory ReplyToMessageDto.fromJson(Map<String, dynamic> json) =>
-      _$ReplyToMessageDtoFromJson(json);
+  factory MessagePreviewDto.fromJson(Map<String, dynamic> json) =>
+      _$MessagePreviewDtoFromJson(json);
 
-  Map<String, dynamic> toJson() => _$ReplyToMessageDtoToJson(this);
+  Map<String, dynamic> toJson() => _$MessagePreviewDtoToJson(this);
 }
 
 @JsonSerializable(explicitToJson: true)
@@ -271,7 +288,7 @@ class MessageItemDto {
   @JsonKey(defaultValue: 'text')
   final String messageType;
   final StickerSummaryDto? sticker;
-  final SenderDto sender;
+  final UserDto sender;
   @FlexibleIntConverter()
   final int chatId;
   @NullableDateTimeConverter()
@@ -286,7 +303,7 @@ class MessageItemDto {
   final int? replyRootId;
   @JsonKey(defaultValue: false)
   final bool hasAttachments;
-  final ReplyToMessageDto? replyToMessage;
+  final MessagePreviewDto? replyToMessage;
   @JsonKey(defaultValue: <AttachmentItemDto>[])
   final List<AttachmentItemDto> attachments;
   @JsonKey(defaultValue: <ReactionSummaryDto>[])

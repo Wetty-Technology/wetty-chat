@@ -185,23 +185,7 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
   }
 
   MessagePreview _toReplyPreview(MessageItemDto payload) {
-    return MessagePreview(
-      messageId: payload.id,
-      clientGeneratedId: payload.clientGeneratedId.isEmpty
-          ? null
-          : payload.clientGeneratedId,
-      sender: Sender.fromDto(payload.sender),
-      message: payload.message,
-      messageType: payload.messageType,
-      sticker: payload.sticker == null
-          ? null
-          : StickerSummary.fromDto(payload.sticker!),
-      firstAttachmentKind: payload.attachments.isNotEmpty
-          ? payload.attachments.first.kind
-          : null,
-      isDeleted: payload.isDeleted,
-      mentions: payload.mentions.map(MentionInfo.fromDto).toList(),
-    );
+    return messagePreviewFromMessageItemDto(payload);
   }
 
   bool _applyRootPatched(MessageItemDto payload) {
@@ -216,7 +200,7 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
         state.threads,
         index,
         previous.copyWith(
-          threadRootMessage: ConversationMessageV2.fromMessageItemDto(payload),
+          threadRootMessage: messagePreviewFromMessageItemDto(payload),
         ),
       ),
     );

@@ -6,18 +6,22 @@ part of 'messages_api_models.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-SenderDto _$SenderDtoFromJson(Map<String, dynamic> json) => SenderDto(
+UserDto _$UserDtoFromJson(Map<String, dynamic> json) => UserDto(
   uid: const FlexibleIntConverter().fromJson(json['uid']),
   name: json['name'] as String?,
   avatarUrl: json['avatarUrl'] as String?,
   gender: (json['gender'] as num?)?.toInt() ?? 0,
+  userGroup: json['userGroup'] == null
+      ? null
+      : UserGroupTagInfoDto.fromJson(json['userGroup'] as Map<String, dynamic>),
 );
 
-Map<String, dynamic> _$SenderDtoToJson(SenderDto instance) => <String, dynamic>{
+Map<String, dynamic> _$UserDtoToJson(UserDto instance) => <String, dynamic>{
   'uid': const FlexibleIntConverter().toJson(instance.uid),
   'name': instance.name,
   'avatarUrl': instance.avatarUrl,
   'gender': instance.gender,
+  'userGroup': instance.userGroup?.toJson(),
 };
 
 AttachmentItemDto _$AttachmentItemDtoFromJson(Map<String, dynamic> json) =>
@@ -86,6 +90,14 @@ Map<String, dynamic> _$StickerSummaryDtoToJson(StickerSummaryDto instance) =>
       'isFavorited': instance.isFavorited,
     };
 
+MessagePreviewStickerDto _$MessagePreviewStickerDtoFromJson(
+  Map<String, dynamic> json,
+) => MessagePreviewStickerDto(emoji: json['emoji'] as String?);
+
+Map<String, dynamic> _$MessagePreviewStickerDtoToJson(
+  MessagePreviewStickerDto instance,
+) => <String, dynamic>{'emoji': instance.emoji};
+
 ReactionReactorDto _$ReactionReactorDtoFromJson(Map<String, dynamic> json) =>
     ReactionReactorDto(
       uid: const FlexibleIntConverter().fromJson(json['uid']),
@@ -118,21 +130,22 @@ Map<String, dynamic> _$ReactionSummaryDtoToJson(ReactionSummaryDto instance) =>
       'reactors': instance.reactors?.map((e) => e.toJson()).toList(),
     };
 
-UserGroupInfoDto _$UserGroupInfoDtoFromJson(Map<String, dynamic> json) =>
-    UserGroupInfoDto(
+UserGroupTagInfoDto _$UserGroupTagInfoDtoFromJson(Map<String, dynamic> json) =>
+    UserGroupTagInfoDto(
       groupId: const FlexibleIntConverter().fromJson(json['groupId']),
       name: json['name'] as String?,
       chatGroupColor: json['chatGroupColor'] as String?,
       chatGroupColorDark: json['chatGroupColorDark'] as String?,
     );
 
-Map<String, dynamic> _$UserGroupInfoDtoToJson(UserGroupInfoDto instance) =>
-    <String, dynamic>{
-      'groupId': const FlexibleIntConverter().toJson(instance.groupId),
-      'name': instance.name,
-      'chatGroupColor': instance.chatGroupColor,
-      'chatGroupColorDark': instance.chatGroupColorDark,
-    };
+Map<String, dynamic> _$UserGroupTagInfoDtoToJson(
+  UserGroupTagInfoDto instance,
+) => <String, dynamic>{
+  'groupId': const FlexibleIntConverter().toJson(instance.groupId),
+  'name': instance.name,
+  'chatGroupColor': instance.chatGroupColor,
+  'chatGroupColorDark': instance.chatGroupColorDark,
+};
 
 MentionInfoDto _$MentionInfoDtoFromJson(Map<String, dynamic> json) =>
     MentionInfoDto(
@@ -142,7 +155,7 @@ MentionInfoDto _$MentionInfoDtoFromJson(Map<String, dynamic> json) =>
       gender: (json['gender'] as num?)?.toInt() ?? 0,
       userGroup: json['userGroup'] == null
           ? null
-          : UserGroupInfoDto.fromJson(
+          : UserGroupTagInfoDto.fromJson(
               json['userGroup'] as Map<String, dynamic>,
             ),
     );
@@ -156,23 +169,20 @@ Map<String, dynamic> _$MentionInfoDtoToJson(MentionInfoDto instance) =>
       'userGroup': instance.userGroup?.toJson(),
     };
 
-ReplyToMessageDto _$ReplyToMessageDtoFromJson(Map<String, dynamic> json) =>
-    ReplyToMessageDto(
+MessagePreviewDto _$MessagePreviewDtoFromJson(Map<String, dynamic> json) =>
+    MessagePreviewDto(
       id: const FlexibleIntConverter().fromJson(json['id']),
+      clientGeneratedId: json['clientGeneratedId'] as String? ?? '',
+      sender: UserDto.fromJson(json['sender'] as Map<String, dynamic>),
       message: json['message'] as String?,
       messageType: json['messageType'] as String? ?? 'text',
       sticker: json['sticker'] == null
           ? null
-          : StickerSummaryDto.fromJson(json['sticker'] as Map<String, dynamic>),
-      sender: SenderDto.fromJson(json['sender'] as Map<String, dynamic>),
+          : MessagePreviewStickerDto.fromJson(
+              json['sticker'] as Map<String, dynamic>,
+            ),
+      createdAt: const NullableDateTimeConverter().fromJson(json['createdAt']),
       isDeleted: json['isDeleted'] as bool? ?? false,
-      attachments:
-          (json['attachments'] as List<dynamic>?)
-              ?.map(
-                (e) => AttachmentItemDto.fromJson(e as Map<String, dynamic>),
-              )
-              .toList() ??
-          [],
       firstAttachmentKind: json['firstAttachmentKind'] as String?,
       mentions:
           (json['mentions'] as List<dynamic>?)
@@ -181,15 +191,16 @@ ReplyToMessageDto _$ReplyToMessageDtoFromJson(Map<String, dynamic> json) =>
           [],
     );
 
-Map<String, dynamic> _$ReplyToMessageDtoToJson(ReplyToMessageDto instance) =>
+Map<String, dynamic> _$MessagePreviewDtoToJson(MessagePreviewDto instance) =>
     <String, dynamic>{
       'id': const FlexibleIntConverter().toJson(instance.id),
+      'clientGeneratedId': instance.clientGeneratedId,
+      'sender': instance.sender.toJson(),
       'message': instance.message,
       'messageType': instance.messageType,
       'sticker': instance.sticker?.toJson(),
-      'sender': instance.sender.toJson(),
+      'createdAt': const NullableDateTimeConverter().toJson(instance.createdAt),
       'isDeleted': instance.isDeleted,
-      'attachments': instance.attachments.map((e) => e.toJson()).toList(),
       'firstAttachmentKind': instance.firstAttachmentKind,
       'mentions': instance.mentions.map((e) => e.toJson()).toList(),
     };
@@ -209,7 +220,7 @@ MessageItemDto _$MessageItemDtoFromJson(
   sticker: json['sticker'] == null
       ? null
       : StickerSummaryDto.fromJson(json['sticker'] as Map<String, dynamic>),
-  sender: SenderDto.fromJson(json['sender'] as Map<String, dynamic>),
+  sender: UserDto.fromJson(json['sender'] as Map<String, dynamic>),
   chatId: const FlexibleIntConverter().fromJson(json['chatId']),
   createdAt: const NullableDateTimeConverter().fromJson(json['createdAt']),
   isEdited: json['isEdited'] as bool? ?? false,
@@ -221,7 +232,7 @@ MessageItemDto _$MessageItemDtoFromJson(
   hasAttachments: json['hasAttachments'] as bool? ?? false,
   replyToMessage: json['replyToMessage'] == null
       ? null
-      : ReplyToMessageDto.fromJson(
+      : MessagePreviewDto.fromJson(
           json['replyToMessage'] as Map<String, dynamic>,
         ),
   attachments:

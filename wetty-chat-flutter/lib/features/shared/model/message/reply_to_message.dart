@@ -5,7 +5,7 @@ import 'package:chahua/core/api/models/messages_api_models.dart';
 import 'attachment.dart';
 import 'mention.dart';
 import 'reaction.dart';
-import 'sender.dart';
+import 'user.dart';
 import 'sticker.dart';
 
 part 'reply_to_message.freezed.dart';
@@ -17,7 +17,7 @@ abstract class ReplyToMessage with _$ReplyToMessage {
     String? message,
     @Default('text') String messageType,
     StickerSummary? sticker,
-    required Sender sender,
+    required User sender,
     @Default(false) bool isDeleted,
     @Default([]) List<AttachmentItem> attachments,
     @Default([]) List<ReactionSummary> reactions,
@@ -25,16 +25,18 @@ abstract class ReplyToMessage with _$ReplyToMessage {
     @Default([]) List<MentionInfo> mentions,
   }) = _ReplyToMessage;
 
-  factory ReplyToMessage.fromDto(ReplyToMessageDto dto) => ReplyToMessage(
+  factory ReplyToMessage.fromDto(MessagePreviewDto dto) => ReplyToMessage(
     id: dto.id,
     message: dto.message,
     messageType: dto.messageType,
-    sticker: dto.sticker == null ? null : StickerSummary.fromDto(dto.sticker!),
-    sender: Sender.fromDto(dto.sender),
+    sticker: dto.sticker?.emoji == null
+        ? null
+        : StickerSummary(
+            id: 'message-preview-${dto.id}',
+            emoji: dto.sticker!.emoji,
+          ),
+    sender: User.fromDto(dto.sender),
     isDeleted: dto.isDeleted,
-    attachments: dto.attachments
-        .map((attachment) => AttachmentItem.fromDto(attachment))
-        .toList(),
     firstAttachmentKind: dto.firstAttachmentKind,
     mentions: dto.mentions
         .map((mention) => MentionInfo.fromDto(mention))

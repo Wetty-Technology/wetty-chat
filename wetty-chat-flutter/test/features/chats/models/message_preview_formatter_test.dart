@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('formatReplyPreview', () {
-    const sender = Sender(uid: 1, name: 'Alice');
+    const sender = User(uid: 1, name: 'Alice');
 
     test('formats plain text replies', () {
       const preview = ReplyToMessage(

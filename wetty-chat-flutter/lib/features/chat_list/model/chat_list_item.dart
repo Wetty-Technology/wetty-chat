@@ -1,7 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'package:chahua/core/api/models/chats_api_models.dart';
-import 'package:chahua/features/shared/model/message/message.dart';
+import 'package:chahua/features/shared/model/message/message_preview.dart';
 
 part 'chat_list_item.freezed.dart';
 
@@ -14,7 +14,7 @@ abstract class ChatListItem with _$ChatListItem {
     DateTime? lastMessageAt,
     @Default(0) int unreadCount,
     String? lastReadMessageId,
-    MessageItem? lastMessage,
+    MessagePreview? lastMessage,
     DateTime? mutedUntil,
   }) = _ChatListItem;
 
@@ -27,7 +27,7 @@ abstract class ChatListItem with _$ChatListItem {
     lastReadMessageId: dto.lastReadMessageId,
     lastMessage: dto.lastMessage == null
         ? null
-        : MessageItem.fromDto(dto.lastMessage!),
+        : MessagePreview.fromDto(dto.lastMessage!),
     mutedUntil: dto.mutedUntil,
   );
 }

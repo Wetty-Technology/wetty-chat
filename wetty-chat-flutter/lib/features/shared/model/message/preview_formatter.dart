@@ -18,6 +18,7 @@ String formatReplyPreview(ReplyToMessage preview, {AppLocalizations? l10n}) {
   return formatMessagePreviewSummary(
     MessagePreview(
       messageId: preview.id,
+      clientGeneratedId: null,
       sender: preview.sender,
       message: preview.message,
       messageType: preview.messageType,

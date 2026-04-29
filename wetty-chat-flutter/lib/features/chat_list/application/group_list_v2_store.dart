@@ -4,7 +4,6 @@ import '../../../core/api/models/messages_api_models.dart';
 import '../../../core/api/models/websocket_api_models.dart';
 import '../../../core/notifications/unread_badge_provider.dart';
 import '../../../core/session/dev_session_store.dart';
-import 'package:chahua/features/shared/model/message/message.dart';
 import '../model/chat_list_item.dart';
 import '../../shared/data/read_state_models.dart';
 import 'realtime_projection_policy.dart';
@@ -152,7 +151,7 @@ class GroupListV2Store extends Notifier<GroupListV2StoreState> {
       return false;
     }
 
-    final message = MessageItem.fromDto(payload);
+    final message = messagePreviewFromMessageItemDto(payload);
     final updated = previous.copyWith(
       lastMessage: message,
       lastMessageAt: payload.createdAt,
@@ -193,7 +192,7 @@ class GroupListV2Store extends Notifier<GroupListV2StoreState> {
         state.groups,
         index,
         previous.copyWith(
-          lastMessage: MessageItem.fromDto(payload),
+          lastMessage: messagePreviewFromMessageItemDto(payload),
           lastMessageAt: payload.createdAt,
         ),
       ),

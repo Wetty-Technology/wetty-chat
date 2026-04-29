@@ -240,7 +240,7 @@ class _ComposerSendRequest {
     this.stickerId,
   });
 
-  final Sender sender;
+  final User sender;
   final String text;
   final String messageType;
   final List<AttachmentItem> optimisticAttachments;
@@ -546,7 +546,7 @@ class ConversationComposerViewModel
     final currentUserId = ref.read(authSessionProvider).currentUserId;
     await _sendMessage(
       _ComposerSendRequest(
-        sender: Sender(uid: currentUserId, name: 'You'),
+        sender: User(uid: currentUserId, name: 'You'),
         text: trimmed,
         messageType: 'text',
         optimisticAttachments: optimisticAttachments,
@@ -564,7 +564,7 @@ class ConversationComposerViewModel
     final mode = state.mode;
     await _sendMessage(
       _ComposerSendRequest(
-        sender: Sender(uid: currentUserId, name: 'You'),
+        sender: User(uid: currentUserId, name: 'You'),
         text: '',
         messageType: 'sticker',
         optimisticAttachments: const [],
@@ -970,7 +970,7 @@ class ConversationComposerViewModel
         );
     await _sendMessage(
       _ComposerSendRequest(
-        sender: Sender(uid: currentUserId, name: 'You'),
+        sender: User(uid: currentUserId, name: 'You'),
         text: '',
         messageType: 'audio',
         optimisticAttachments: [

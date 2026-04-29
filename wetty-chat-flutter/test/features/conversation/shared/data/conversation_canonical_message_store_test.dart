@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 final _identity = (chatId: 1, threadRootId: null);
-const _sender = Sender(uid: 1, name: 'Alice');
+const _sender = User(uid: 1, name: 'Alice');
 
 void main() {
   group('ConversationTimelineV2CanonicalSegment', () {

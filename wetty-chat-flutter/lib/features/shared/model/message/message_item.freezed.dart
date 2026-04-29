@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$MessageItem {
 
- int get id; String? get message; String get messageType; StickerSummary? get sticker; Sender get sender; String get chatId; DateTime? get createdAt; bool get isEdited; bool get isDeleted; String get clientGeneratedId; int? get replyRootId; bool get hasAttachments; ReplyToMessage? get replyToMessage; List<AttachmentItem> get attachments; List<ReactionSummary> get reactions; List<MentionInfo> get mentions; ThreadInfo? get threadInfo;
+ int get id; String? get message; String get messageType; StickerSummary? get sticker; User get sender; String get chatId; DateTime? get createdAt; bool get isEdited; bool get isDeleted; String get clientGeneratedId; int? get replyRootId; bool get hasAttachments; ReplyToMessage? get replyToMessage; List<AttachmentItem> get attachments; List<ReactionSummary> get reactions; List<MentionInfo> get mentions; ThreadInfo? get threadInfo;
 /// Create a copy of MessageItem
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -45,11 +45,11 @@ abstract mixin class $MessageItemCopyWith<$Res>  {
   factory $MessageItemCopyWith(MessageItem value, $Res Function(MessageItem) _then) = _$MessageItemCopyWithImpl;
 @useResult
 $Res call({
- int id, String? message, String messageType, StickerSummary? sticker, Sender sender, String chatId, DateTime? createdAt, bool isEdited, bool isDeleted, String clientGeneratedId, int? replyRootId, bool hasAttachments, ReplyToMessage? replyToMessage, List<AttachmentItem> attachments, List<ReactionSummary> reactions, List<MentionInfo> mentions, ThreadInfo? threadInfo
+ int id, String? message, String messageType, StickerSummary? sticker, User sender, String chatId, DateTime? createdAt, bool isEdited, bool isDeleted, String clientGeneratedId, int? replyRootId, bool hasAttachments, ReplyToMessage? replyToMessage, List<AttachmentItem> attachments, List<ReactionSummary> reactions, List<MentionInfo> mentions, ThreadInfo? threadInfo
 });
 
 
-$StickerSummaryCopyWith<$Res>? get sticker;$SenderCopyWith<$Res> get sender;$ReplyToMessageCopyWith<$Res>? get replyToMessage;$ThreadInfoCopyWith<$Res>? get threadInfo;
+$StickerSummaryCopyWith<$Res>? get sticker;$UserCopyWith<$Res> get sender;$ReplyToMessageCopyWith<$Res>? get replyToMessage;$ThreadInfoCopyWith<$Res>? get threadInfo;
 
 }
 /// @nodoc
@@ -69,7 +69,7 @@ as int,message: freezed == message ? _self.message : message // ignore: cast_nul
 as String?,messageType: null == messageType ? _self.messageType : messageType // ignore: cast_nullable_to_non_nullable
 as String,sticker: freezed == sticker ? _self.sticker : sticker // ignore: cast_nullable_to_non_nullable
 as StickerSummary?,sender: null == sender ? _self.sender : sender // ignore: cast_nullable_to_non_nullable
-as Sender,chatId: null == chatId ? _self.chatId : chatId // ignore: cast_nullable_to_non_nullable
+as User,chatId: null == chatId ? _self.chatId : chatId // ignore: cast_nullable_to_non_nullable
 as String,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,isEdited: null == isEdited ? _self.isEdited : isEdited // ignore: cast_nullable_to_non_nullable
 as bool,isDeleted: null == isDeleted ? _self.isDeleted : isDeleted // ignore: cast_nullable_to_non_nullable
@@ -100,9 +100,9 @@ $StickerSummaryCopyWith<$Res>? get sticker {
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')
-$SenderCopyWith<$Res> get sender {
+$UserCopyWith<$Res> get sender {
   
-  return $SenderCopyWith<$Res>(_self.sender, (value) {
+  return $UserCopyWith<$Res>(_self.sender, (value) {
     return _then(_self.copyWith(sender: value));
   });
 }/// Create a copy of MessageItem
@@ -211,7 +211,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String? message,  String messageType,  StickerSummary? sticker,  Sender sender,  String chatId,  DateTime? createdAt,  bool isEdited,  bool isDeleted,  String clientGeneratedId,  int? replyRootId,  bool hasAttachments,  ReplyToMessage? replyToMessage,  List<AttachmentItem> attachments,  List<ReactionSummary> reactions,  List<MentionInfo> mentions,  ThreadInfo? threadInfo)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String? message,  String messageType,  StickerSummary? sticker,  User sender,  String chatId,  DateTime? createdAt,  bool isEdited,  bool isDeleted,  String clientGeneratedId,  int? replyRootId,  bool hasAttachments,  ReplyToMessage? replyToMessage,  List<AttachmentItem> attachments,  List<ReactionSummary> reactions,  List<MentionInfo> mentions,  ThreadInfo? threadInfo)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MessageItem() when $default != null:
 return $default(_that.id,_that.message,_that.messageType,_that.sticker,_that.sender,_that.chatId,_that.createdAt,_that.isEdited,_that.isDeleted,_that.clientGeneratedId,_that.replyRootId,_that.hasAttachments,_that.replyToMessage,_that.attachments,_that.reactions,_that.mentions,_that.threadInfo);case _:
@@ -232,7 +232,7 @@ return $default(_that.id,_that.message,_that.messageType,_that.sticker,_that.sen
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String? message,  String messageType,  StickerSummary? sticker,  Sender sender,  String chatId,  DateTime? createdAt,  bool isEdited,  bool isDeleted,  String clientGeneratedId,  int? replyRootId,  bool hasAttachments,  ReplyToMessage? replyToMessage,  List<AttachmentItem> attachments,  List<ReactionSummary> reactions,  List<MentionInfo> mentions,  ThreadInfo? threadInfo)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String? message,  String messageType,  StickerSummary? sticker,  User sender,  String chatId,  DateTime? createdAt,  bool isEdited,  bool isDeleted,  String clientGeneratedId,  int? replyRootId,  bool hasAttachments,  ReplyToMessage? replyToMessage,  List<AttachmentItem> attachments,  List<ReactionSummary> reactions,  List<MentionInfo> mentions,  ThreadInfo? threadInfo)  $default,) {final _that = this;
 switch (_that) {
 case _MessageItem():
 return $default(_that.id,_that.message,_that.messageType,_that.sticker,_that.sender,_that.chatId,_that.createdAt,_that.isEdited,_that.isDeleted,_that.clientGeneratedId,_that.replyRootId,_that.hasAttachments,_that.replyToMessage,_that.attachments,_that.reactions,_that.mentions,_that.threadInfo);case _:
@@ -252,7 +252,7 @@ return $default(_that.id,_that.message,_that.messageType,_that.sticker,_that.sen
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String? message,  String messageType,  StickerSummary? sticker,  Sender sender,  String chatId,  DateTime? createdAt,  bool isEdited,  bool isDeleted,  String clientGeneratedId,  int? replyRootId,  bool hasAttachments,  ReplyToMessage? replyToMessage,  List<AttachmentItem> attachments,  List<ReactionSummary> reactions,  List<MentionInfo> mentions,  ThreadInfo? threadInfo)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String? message,  String messageType,  StickerSummary? sticker,  User sender,  String chatId,  DateTime? createdAt,  bool isEdited,  bool isDeleted,  String clientGeneratedId,  int? replyRootId,  bool hasAttachments,  ReplyToMessage? replyToMessage,  List<AttachmentItem> attachments,  List<ReactionSummary> reactions,  List<MentionInfo> mentions,  ThreadInfo? threadInfo)?  $default,) {final _that = this;
 switch (_that) {
 case _MessageItem() when $default != null:
 return $default(_that.id,_that.message,_that.messageType,_that.sticker,_that.sender,_that.chatId,_that.createdAt,_that.isEdited,_that.isDeleted,_that.clientGeneratedId,_that.replyRootId,_that.hasAttachments,_that.replyToMessage,_that.attachments,_that.reactions,_that.mentions,_that.threadInfo);case _:
@@ -274,7 +274,7 @@ class _MessageItem implements MessageItem {
 @override final  String? message;
 @override final  String messageType;
 @override final  StickerSummary? sticker;
-@override final  Sender sender;
+@override final  User sender;
 @override final  String chatId;
 @override final  DateTime? createdAt;
 @override@JsonKey() final  bool isEdited;
@@ -336,11 +336,11 @@ abstract mixin class _$MessageItemCopyWith<$Res> implements $MessageItemCopyWith
   factory _$MessageItemCopyWith(_MessageItem value, $Res Function(_MessageItem) _then) = __$MessageItemCopyWithImpl;
 @override @useResult
 $Res call({
- int id, String? message, String messageType, StickerSummary? sticker, Sender sender, String chatId, DateTime? createdAt, bool isEdited, bool isDeleted, String clientGeneratedId, int? replyRootId, bool hasAttachments, ReplyToMessage? replyToMessage, List<AttachmentItem> attachments, List<ReactionSummary> reactions, List<MentionInfo> mentions, ThreadInfo? threadInfo
+ int id, String? message, String messageType, StickerSummary? sticker, User sender, String chatId, DateTime? createdAt, bool isEdited, bool isDeleted, String clientGeneratedId, int? replyRootId, bool hasAttachments, ReplyToMessage? replyToMessage, List<AttachmentItem> attachments, List<ReactionSummary> reactions, List<MentionInfo> mentions, ThreadInfo? threadInfo
 });
 
 
-@override $StickerSummaryCopyWith<$Res>? get sticker;@override $SenderCopyWith<$Res> get sender;@override $ReplyToMessageCopyWith<$Res>? get replyToMessage;@override $ThreadInfoCopyWith<$Res>? get threadInfo;
+@override $StickerSummaryCopyWith<$Res>? get sticker;@override $UserCopyWith<$Res> get sender;@override $ReplyToMessageCopyWith<$Res>? get replyToMessage;@override $ThreadInfoCopyWith<$Res>? get threadInfo;
 
 }
 /// @nodoc
@@ -360,7 +360,7 @@ as int,message: freezed == message ? _self.message : message // ignore: cast_nul
 as String?,messageType: null == messageType ? _self.messageType : messageType // ignore: cast_nullable_to_non_nullable
 as String,sticker: freezed == sticker ? _self.sticker : sticker // ignore: cast_nullable_to_non_nullable
 as StickerSummary?,sender: null == sender ? _self.sender : sender // ignore: cast_nullable_to_non_nullable
-as Sender,chatId: null == chatId ? _self.chatId : chatId // ignore: cast_nullable_to_non_nullable
+as User,chatId: null == chatId ? _self.chatId : chatId // ignore: cast_nullable_to_non_nullable
 as String,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,isEdited: null == isEdited ? _self.isEdited : isEdited // ignore: cast_nullable_to_non_nullable
 as bool,isDeleted: null == isDeleted ? _self.isDeleted : isDeleted // ignore: cast_nullable_to_non_nullable
@@ -392,9 +392,9 @@ $StickerSummaryCopyWith<$Res>? get sticker {
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')
-$SenderCopyWith<$Res> get sender {
+$UserCopyWith<$Res> get sender {
   
-  return $SenderCopyWith<$Res>(_self.sender, (value) {
+  return $UserCopyWith<$Res>(_self.sender, (value) {
     return _then(_self.copyWith(sender: value));
   });
 }/// Create a copy of MessageItem

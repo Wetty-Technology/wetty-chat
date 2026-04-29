@@ -12,20 +12,20 @@ part of 'mention.dart';
 // dart format off
 T _$identity<T>(T value) => value;
 /// @nodoc
-mixin _$UserGroupInfo {
+mixin _$UserGroupTagInfo {
 
  int get groupId; String? get name; String? get chatGroupColor; String? get chatGroupColorDark;
-/// Create a copy of UserGroupInfo
+/// Create a copy of UserGroupTagInfo
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
-$UserGroupInfoCopyWith<UserGroupInfo> get copyWith => _$UserGroupInfoCopyWithImpl<UserGroupInfo>(this as UserGroupInfo, _$identity);
+$UserGroupTagInfoCopyWith<UserGroupTagInfo> get copyWith => _$UserGroupTagInfoCopyWithImpl<UserGroupTagInfo>(this as UserGroupTagInfo, _$identity);
 
 
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is UserGroupInfo&&(identical(other.groupId, groupId) || other.groupId == groupId)&&(identical(other.name, name) || other.name == name)&&(identical(other.chatGroupColor, chatGroupColor) || other.chatGroupColor == chatGroupColor)&&(identical(other.chatGroupColorDark, chatGroupColorDark) || other.chatGroupColorDark == chatGroupColorDark));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is UserGroupTagInfo&&(identical(other.groupId, groupId) || other.groupId == groupId)&&(identical(other.name, name) || other.name == name)&&(identical(other.chatGroupColor, chatGroupColor) || other.chatGroupColor == chatGroupColor)&&(identical(other.chatGroupColorDark, chatGroupColorDark) || other.chatGroupColorDark == chatGroupColorDark));
 }
 
 
@@ -34,15 +34,15 @@ int get hashCode => Object.hash(runtimeType,groupId,name,chatGroupColor,chatGrou
 
 @override
 String toString() {
-  return 'UserGroupInfo(groupId: $groupId, name: $name, chatGroupColor: $chatGroupColor, chatGroupColorDark: $chatGroupColorDark)';
+  return 'UserGroupTagInfo(groupId: $groupId, name: $name, chatGroupColor: $chatGroupColor, chatGroupColorDark: $chatGroupColorDark)';
 }
 
 
 }
 
 /// @nodoc
-abstract mixin class $UserGroupInfoCopyWith<$Res>  {
-  factory $UserGroupInfoCopyWith(UserGroupInfo value, $Res Function(UserGroupInfo) _then) = _$UserGroupInfoCopyWithImpl;
+abstract mixin class $UserGroupTagInfoCopyWith<$Res>  {
+  factory $UserGroupTagInfoCopyWith(UserGroupTagInfo value, $Res Function(UserGroupTagInfo) _then) = _$UserGroupTagInfoCopyWithImpl;
 @useResult
 $Res call({
  int groupId, String? name, String? chatGroupColor, String? chatGroupColorDark
@@ -53,14 +53,14 @@ $Res call({
 
 }
 /// @nodoc
-class _$UserGroupInfoCopyWithImpl<$Res>
-    implements $UserGroupInfoCopyWith<$Res> {
-  _$UserGroupInfoCopyWithImpl(this._self, this._then);
+class _$UserGroupTagInfoCopyWithImpl<$Res>
+    implements $UserGroupTagInfoCopyWith<$Res> {
+  _$UserGroupTagInfoCopyWithImpl(this._self, this._then);
 
-  final UserGroupInfo _self;
-  final $Res Function(UserGroupInfo) _then;
+  final UserGroupTagInfo _self;
+  final $Res Function(UserGroupTagInfo) _then;
 
-/// Create a copy of UserGroupInfo
+/// Create a copy of UserGroupTagInfo
 /// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') @override $Res call({Object? groupId = null,Object? name = freezed,Object? chatGroupColor = freezed,Object? chatGroupColorDark = freezed,}) {
   return _then(_self.copyWith(
@@ -75,8 +75,8 @@ as String?,
 }
 
 
-/// Adds pattern-matching-related methods to [UserGroupInfo].
-extension UserGroupInfoPatterns on UserGroupInfo {
+/// Adds pattern-matching-related methods to [UserGroupTagInfo].
+extension UserGroupTagInfoPatterns on UserGroupTagInfo {
 /// A variant of `map` that fallback to returning `orElse`.
 ///
 /// It is equivalent to doing:
@@ -89,10 +89,10 @@ extension UserGroupInfoPatterns on UserGroupInfo {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _UserGroupInfo value)?  $default,{required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _UserGroupTagInfo value)?  $default,{required TResult orElse(),}){
 final _that = this;
 switch (_that) {
-case _UserGroupInfo() when $default != null:
+case _UserGroupTagInfo() when $default != null:
 return $default(_that);case _:
   return orElse();
 
@@ -111,10 +111,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _UserGroupInfo value)  $default,){
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _UserGroupTagInfo value)  $default,){
 final _that = this;
 switch (_that) {
-case _UserGroupInfo():
+case _UserGroupTagInfo():
 return $default(_that);case _:
   throw StateError('Unexpected subclass');
 
@@ -132,10 +132,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _UserGroupInfo value)?  $default,){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _UserGroupTagInfo value)?  $default,){
 final _that = this;
 switch (_that) {
-case _UserGroupInfo() when $default != null:
+case _UserGroupTagInfo() when $default != null:
 return $default(_that);case _:
   return null;
 
@@ -155,7 +155,7 @@ return $default(_that);case _:
 
 @optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int groupId,  String? name,  String? chatGroupColor,  String? chatGroupColorDark)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
-case _UserGroupInfo() when $default != null:
+case _UserGroupTagInfo() when $default != null:
 return $default(_that.groupId,_that.name,_that.chatGroupColor,_that.chatGroupColorDark);case _:
   return orElse();
 
@@ -176,7 +176,7 @@ return $default(_that.groupId,_that.name,_that.chatGroupColor,_that.chatGroupCol
 
 @optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int groupId,  String? name,  String? chatGroupColor,  String? chatGroupColorDark)  $default,) {final _that = this;
 switch (_that) {
-case _UserGroupInfo():
+case _UserGroupTagInfo():
 return $default(_that.groupId,_that.name,_that.chatGroupColor,_that.chatGroupColorDark);case _:
   throw StateError('Unexpected subclass');
 
@@ -196,7 +196,7 @@ return $default(_that.groupId,_that.name,_that.chatGroupColor,_that.chatGroupCol
 
 @optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int groupId,  String? name,  String? chatGroupColor,  String? chatGroupColorDark)?  $default,) {final _that = this;
 switch (_that) {
-case _UserGroupInfo() when $default != null:
+case _UserGroupTagInfo() when $default != null:
 return $default(_that.groupId,_that.name,_that.chatGroupColor,_that.chatGroupColorDark);case _:
   return null;
 
@@ -208,8 +208,8 @@ return $default(_that.groupId,_that.name,_that.chatGroupColor,_that.chatGroupCol
 /// @nodoc
 
 
-class _UserGroupInfo implements UserGroupInfo {
-  const _UserGroupInfo({required this.groupId, this.name, this.chatGroupColor, this.chatGroupColorDark});
+class _UserGroupTagInfo implements UserGroupTagInfo {
+  const _UserGroupTagInfo({required this.groupId, this.name, this.chatGroupColor, this.chatGroupColorDark});
   
 
 @override final  int groupId;
@@ -217,17 +217,17 @@ class _UserGroupInfo implements UserGroupInfo {
 @override final  String? chatGroupColor;
 @override final  String? chatGroupColorDark;
 
-/// Create a copy of UserGroupInfo
+/// Create a copy of UserGroupTagInfo
 /// with the given fields replaced by the non-null parameter values.
 @override @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
-_$UserGroupInfoCopyWith<_UserGroupInfo> get copyWith => __$UserGroupInfoCopyWithImpl<_UserGroupInfo>(this, _$identity);
+_$UserGroupTagInfoCopyWith<_UserGroupTagInfo> get copyWith => __$UserGroupTagInfoCopyWithImpl<_UserGroupTagInfo>(this, _$identity);
 
 
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _UserGroupInfo&&(identical(other.groupId, groupId) || other.groupId == groupId)&&(identical(other.name, name) || other.name == name)&&(identical(other.chatGroupColor, chatGroupColor) || other.chatGroupColor == chatGroupColor)&&(identical(other.chatGroupColorDark, chatGroupColorDark) || other.chatGroupColorDark == chatGroupColorDark));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _UserGroupTagInfo&&(identical(other.groupId, groupId) || other.groupId == groupId)&&(identical(other.name, name) || other.name == name)&&(identical(other.chatGroupColor, chatGroupColor) || other.chatGroupColor == chatGroupColor)&&(identical(other.chatGroupColorDark, chatGroupColorDark) || other.chatGroupColorDark == chatGroupColorDark));
 }
 
 
@@ -236,15 +236,15 @@ int get hashCode => Object.hash(runtimeType,groupId,name,chatGroupColor,chatGrou
 
 @override
 String toString() {
-  return 'UserGroupInfo(groupId: $groupId, name: $name, chatGroupColor: $chatGroupColor, chatGroupColorDark: $chatGroupColorDark)';
+  return 'UserGroupTagInfo(groupId: $groupId, name: $name, chatGroupColor: $chatGroupColor, chatGroupColorDark: $chatGroupColorDark)';
 }
 
 
 }
 
 /// @nodoc
-abstract mixin class _$UserGroupInfoCopyWith<$Res> implements $UserGroupInfoCopyWith<$Res> {
-  factory _$UserGroupInfoCopyWith(_UserGroupInfo value, $Res Function(_UserGroupInfo) _then) = __$UserGroupInfoCopyWithImpl;
+abstract mixin class _$UserGroupTagInfoCopyWith<$Res> implements $UserGroupTagInfoCopyWith<$Res> {
+  factory _$UserGroupTagInfoCopyWith(_UserGroupTagInfo value, $Res Function(_UserGroupTagInfo) _then) = __$UserGroupTagInfoCopyWithImpl;
 @override @useResult
 $Res call({
  int groupId, String? name, String? chatGroupColor, String? chatGroupColorDark
@@ -255,17 +255,17 @@ $Res call({
 
 }
 /// @nodoc
-class __$UserGroupInfoCopyWithImpl<$Res>
-    implements _$UserGroupInfoCopyWith<$Res> {
-  __$UserGroupInfoCopyWithImpl(this._self, this._then);
+class __$UserGroupTagInfoCopyWithImpl<$Res>
+    implements _$UserGroupTagInfoCopyWith<$Res> {
+  __$UserGroupTagInfoCopyWithImpl(this._self, this._then);
 
-  final _UserGroupInfo _self;
-  final $Res Function(_UserGroupInfo) _then;
+  final _UserGroupTagInfo _self;
+  final $Res Function(_UserGroupTagInfo) _then;
 
-/// Create a copy of UserGroupInfo
+/// Create a copy of UserGroupTagInfo
 /// with the given fields replaced by the non-null parameter values.
 @override @pragma('vm:prefer-inline') $Res call({Object? groupId = null,Object? name = freezed,Object? chatGroupColor = freezed,Object? chatGroupColorDark = freezed,}) {
-  return _then(_UserGroupInfo(
+  return _then(_UserGroupTagInfo(
 groupId: null == groupId ? _self.groupId : groupId // ignore: cast_nullable_to_non_nullable
 as int,name: freezed == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String?,chatGroupColor: freezed == chatGroupColor ? _self.chatGroupColor : chatGroupColor // ignore: cast_nullable_to_non_nullable
@@ -280,7 +280,7 @@ as String?,
 /// @nodoc
 mixin _$MentionInfo {
 
- int get uid; String? get username; String? get avatarUrl; int get gender; UserGroupInfo? get userGroup;
+ int get uid; String? get username; String? get avatarUrl; int get gender; UserGroupTagInfo? get userGroup;
 /// Create a copy of MentionInfo
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -311,11 +311,11 @@ abstract mixin class $MentionInfoCopyWith<$Res>  {
   factory $MentionInfoCopyWith(MentionInfo value, $Res Function(MentionInfo) _then) = _$MentionInfoCopyWithImpl;
 @useResult
 $Res call({
- int uid, String? username, String? avatarUrl, int gender, UserGroupInfo? userGroup
+ int uid, String? username, String? avatarUrl, int gender, UserGroupTagInfo? userGroup
 });
 
 
-$UserGroupInfoCopyWith<$Res>? get userGroup;
+$UserGroupTagInfoCopyWith<$Res>? get userGroup;
 
 }
 /// @nodoc
@@ -335,19 +335,19 @@ as int,username: freezed == username ? _self.username : username // ignore: cast
 as String?,avatarUrl: freezed == avatarUrl ? _self.avatarUrl : avatarUrl // ignore: cast_nullable_to_non_nullable
 as String?,gender: null == gender ? _self.gender : gender // ignore: cast_nullable_to_non_nullable
 as int,userGroup: freezed == userGroup ? _self.userGroup : userGroup // ignore: cast_nullable_to_non_nullable
-as UserGroupInfo?,
+as UserGroupTagInfo?,
   ));
 }
 /// Create a copy of MentionInfo
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')
-$UserGroupInfoCopyWith<$Res>? get userGroup {
+$UserGroupTagInfoCopyWith<$Res>? get userGroup {
     if (_self.userGroup == null) {
     return null;
   }
 
-  return $UserGroupInfoCopyWith<$Res>(_self.userGroup!, (value) {
+  return $UserGroupTagInfoCopyWith<$Res>(_self.userGroup!, (value) {
     return _then(_self.copyWith(userGroup: value));
   });
 }
@@ -432,7 +432,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int uid,  String? username,  String? avatarUrl,  int gender,  UserGroupInfo? userGroup)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int uid,  String? username,  String? avatarUrl,  int gender,  UserGroupTagInfo? userGroup)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MentionInfo() when $default != null:
 return $default(_that.uid,_that.username,_that.avatarUrl,_that.gender,_that.userGroup);case _:
@@ -453,7 +453,7 @@ return $default(_that.uid,_that.username,_that.avatarUrl,_that.gender,_that.user
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int uid,  String? username,  String? avatarUrl,  int gender,  UserGroupInfo? userGroup)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int uid,  String? username,  String? avatarUrl,  int gender,  UserGroupTagInfo? userGroup)  $default,) {final _that = this;
 switch (_that) {
 case _MentionInfo():
 return $default(_that.uid,_that.username,_that.avatarUrl,_that.gender,_that.userGroup);case _:
@@ -473,7 +473,7 @@ return $default(_that.uid,_that.username,_that.avatarUrl,_that.gender,_that.user
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int uid,  String? username,  String? avatarUrl,  int gender,  UserGroupInfo? userGroup)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int uid,  String? username,  String? avatarUrl,  int gender,  UserGroupTagInfo? userGroup)?  $default,) {final _that = this;
 switch (_that) {
 case _MentionInfo() when $default != null:
 return $default(_that.uid,_that.username,_that.avatarUrl,_that.gender,_that.userGroup);case _:
@@ -495,7 +495,7 @@ class _MentionInfo implements MentionInfo {
 @override final  String? username;
 @override final  String? avatarUrl;
 @override@JsonKey() final  int gender;
-@override final  UserGroupInfo? userGroup;
+@override final  UserGroupTagInfo? userGroup;
 
 /// Create a copy of MentionInfo
 /// with the given fields replaced by the non-null parameter values.
@@ -527,11 +527,11 @@ abstract mixin class _$MentionInfoCopyWith<$Res> implements $MentionInfoCopyWith
   factory _$MentionInfoCopyWith(_MentionInfo value, $Res Function(_MentionInfo) _then) = __$MentionInfoCopyWithImpl;
 @override @useResult
 $Res call({
- int uid, String? username, String? avatarUrl, int gender, UserGroupInfo? userGroup
+ int uid, String? username, String? avatarUrl, int gender, UserGroupTagInfo? userGroup
 });
 
 
-@override $UserGroupInfoCopyWith<$Res>? get userGroup;
+@override $UserGroupTagInfoCopyWith<$Res>? get userGroup;
 
 }
 /// @nodoc
@@ -551,7 +551,7 @@ as int,username: freezed == username ? _self.username : username // ignore: cast
 as String?,avatarUrl: freezed == avatarUrl ? _self.avatarUrl : avatarUrl // ignore: cast_nullable_to_non_nullable
 as String?,gender: null == gender ? _self.gender : gender // ignore: cast_nullable_to_non_nullable
 as int,userGroup: freezed == userGroup ? _self.userGroup : userGroup // ignore: cast_nullable_to_non_nullable
-as UserGroupInfo?,
+as UserGroupTagInfo?,
   ));
 }
 
@@ -559,12 +559,12 @@ as UserGroupInfo?,
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')
-$UserGroupInfoCopyWith<$Res>? get userGroup {
+$UserGroupTagInfoCopyWith<$Res>? get userGroup {
     if (_self.userGroup == null) {
     return null;
   }
 
-  return $UserGroupInfoCopyWith<$Res>(_self.userGroup!, (value) {
+  return $UserGroupTagInfoCopyWith<$Res>(_self.userGroup!, (value) {
     return _then(_self.copyWith(userGroup: value));
   });
 }

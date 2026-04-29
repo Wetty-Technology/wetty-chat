@@ -9,26 +9,47 @@ bool isEligibleThreadPreviewPayload(MessageItemDto payload) {
   return payload.replyRootId != null && !payload.isDeleted;
 }
 
-bool matchesChatPreview(MessageItem? preview, MessageItemDto payload) {
+bool matchesChatPreview(MessagePreview? preview, MessageItemDto payload) {
   if (preview == null) {
     return false;
   }
-  if (preview.id == payload.id) {
+  if (preview.messageId == payload.id) {
     return true;
   }
-  return preview.clientGeneratedId.isNotEmpty &&
-      preview.clientGeneratedId == payload.clientGeneratedId;
+  final clientGeneratedId = preview.clientGeneratedId;
+  return clientGeneratedId != null &&
+      clientGeneratedId.isNotEmpty &&
+      clientGeneratedId == payload.clientGeneratedId;
 }
 
 bool matchesThreadPreview(MessagePreview? preview, MessageItemDto payload) {
   if (preview == null) {
     return false;
   }
-  if (preview.messageId != null) {
-    return preview.messageId == payload.id;
-  }
+  if (preview.messageId == payload.id) return true;
   final clientGeneratedId = preview.clientGeneratedId;
   return clientGeneratedId != null &&
       clientGeneratedId.isNotEmpty &&
       clientGeneratedId == payload.clientGeneratedId;
+}
+
+MessagePreview messagePreviewFromMessageItemDto(MessageItemDto payload) {
+  return MessagePreview(
+    messageId: payload.id,
+    clientGeneratedId: payload.clientGeneratedId.isEmpty
+        ? null
+        : payload.clientGeneratedId,
+    sender: User.fromDto(payload.sender),
+    message: payload.message,
+    messageType: payload.messageType,
+    sticker: payload.sticker == null
+        ? null
+        : StickerSummary.fromDto(payload.sticker!),
+    createdAt: payload.createdAt,
+    firstAttachmentKind: payload.attachments.isNotEmpty
+        ? payload.attachments.first.kind
+        : null,
+    isDeleted: payload.isDeleted,
+    mentions: payload.mentions.map(MentionInfo.fromDto).toList(),
+  );
 }

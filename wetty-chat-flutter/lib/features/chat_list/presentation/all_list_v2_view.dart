@@ -172,7 +172,7 @@ class _AllGroupListV2Row extends StatelessWidget {
   }
 
   static String _messagePreviewText(
-    MessageItem? message,
+    MessagePreview? message,
     AppLocalizations l10n,
   ) {
     if (message == null) {
@@ -183,9 +183,7 @@ class _AllGroupListV2Row extends StatelessWidget {
       messageType: message.messageType,
       sticker: message.sticker,
       attachments: message.attachments,
-      firstAttachmentKind: message.attachments.isNotEmpty
-          ? message.attachments.first.kind
-          : null,
+      firstAttachmentKind: message.firstAttachmentKind,
       isDeleted: message.isDeleted,
       mentions: message.mentions,
       l10n: l10n,

@@ -7,48 +7,13 @@ import 'package:chahua/core/api/models/messages_api_models.dart';
 part 'thread_api_models.g.dart';
 
 @JsonSerializable(explicitToJson: true)
-class ThreadReplyPreviewDto {
-  const ThreadReplyPreviewDto({
-    this.id,
-    this.clientGeneratedId = '',
-    required this.sender,
-    this.message,
-    this.messageType = 'text',
-    this.stickerEmoji,
-    this.firstAttachmentKind,
-    this.isDeleted = false,
-    this.mentions = const <MentionInfoDto>[],
-  });
-
-  @NullableFlexibleIntConverter()
-  final int? id;
-  @JsonKey(defaultValue: '')
-  final String clientGeneratedId;
-  final SenderDto sender;
-  final String? message;
-  @JsonKey(defaultValue: 'text')
-  final String messageType;
-  final String? stickerEmoji;
-  final String? firstAttachmentKind;
-  @JsonKey(defaultValue: false)
-  final bool isDeleted;
-  @JsonKey(defaultValue: <MentionInfoDto>[])
-  final List<MentionInfoDto> mentions;
-
-  factory ThreadReplyPreviewDto.fromJson(Map<String, dynamic> json) =>
-      _$ThreadReplyPreviewDtoFromJson(json);
-
-  Map<String, dynamic> toJson() => _$ThreadReplyPreviewDtoToJson(this);
-}
-
-@JsonSerializable(explicitToJson: true)
 class ThreadListItemDto {
   const ThreadListItemDto({
     required this.chatId,
     required this.chatName,
     this.chatAvatar,
     required this.threadRootMessage,
-    this.participants = const <SenderDto>[],
+    this.participants = const <UserDto>[],
     this.lastReply,
     this.replyCount = 0,
     required this.lastReplyAt,
@@ -60,10 +25,10 @@ class ThreadListItemDto {
   final int chatId;
   final String chatName;
   final String? chatAvatar;
-  final MessageItemDto threadRootMessage;
-  @JsonKey(defaultValue: <SenderDto>[])
-  final List<SenderDto> participants;
-  final ThreadReplyPreviewDto? lastReply;
+  final MessagePreviewDto threadRootMessage;
+  @JsonKey(defaultValue: <UserDto>[])
+  final List<UserDto> participants;
+  final MessagePreviewDto? lastReply;
   @JsonKey(defaultValue: 0)
   final int replyCount;
   @NullableDateTimeConverter()

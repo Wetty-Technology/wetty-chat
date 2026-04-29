@@ -19,7 +19,7 @@ ChatListItemDto _$ChatListItemDtoFromJson(
   lastReadMessageId: json['lastReadMessageId'] as String?,
   lastMessage: json['lastMessage'] == null
       ? null
-      : MessageItemDto.fromJson(json['lastMessage'] as Map<String, dynamic>),
+      : MessagePreviewDto.fromJson(json['lastMessage'] as Map<String, dynamic>),
   mutedUntil: const NullableDateTimeConverter().fromJson(json['mutedUntil']),
 );
 

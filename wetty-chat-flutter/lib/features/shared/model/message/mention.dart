@@ -5,15 +5,15 @@ import 'package:chahua/core/api/models/messages_api_models.dart';
 part 'mention.freezed.dart';
 
 @freezed
-abstract class UserGroupInfo with _$UserGroupInfo {
-  const factory UserGroupInfo({
+abstract class UserGroupTagInfo with _$UserGroupTagInfo {
+  const factory UserGroupTagInfo({
     required int groupId,
     String? name,
     String? chatGroupColor,
     String? chatGroupColorDark,
-  }) = _UserGroupInfo;
+  }) = _UserGroupTagInfo;
 
-  factory UserGroupInfo.fromDto(UserGroupInfoDto dto) => UserGroupInfo(
+  factory UserGroupTagInfo.fromDto(UserGroupTagInfoDto dto) => UserGroupTagInfo(
     groupId: dto.groupId,
     name: dto.name,
     chatGroupColor: dto.chatGroupColor,
@@ -28,7 +28,7 @@ abstract class MentionInfo with _$MentionInfo {
     String? username,
     String? avatarUrl,
     @Default(0) int gender,
-    UserGroupInfo? userGroup,
+    UserGroupTagInfo? userGroup,
   }) = _MentionInfo;
 
   factory MentionInfo.fromDto(MentionInfoDto dto) => MentionInfo(
@@ -38,6 +38,6 @@ abstract class MentionInfo with _$MentionInfo {
     gender: dto.gender,
     userGroup: dto.userGroup == null
         ? null
-        : UserGroupInfo.fromDto(dto.userGroup!),
+        : UserGroupTagInfo.fromDto(dto.userGroup!),
   );
 }

@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ThreadListItem {
 
- String get chatId; String get chatName; String? get chatAvatar; ConversationMessageV2 get threadRootMessage; List<Sender> get participants; MessagePreview? get lastReply; int get replyCount; DateTime? get lastReplyAt; int get unreadCount; DateTime? get subscribedAt;
+ String get chatId; String get chatName; String? get chatAvatar; MessagePreview get threadRootMessage; List<User> get participants; MessagePreview? get lastReply; int get replyCount; DateTime? get lastReplyAt; int get unreadCount; DateTime? get subscribedAt;
 /// Create a copy of ThreadListItem
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -45,11 +45,11 @@ abstract mixin class $ThreadListItemCopyWith<$Res>  {
   factory $ThreadListItemCopyWith(ThreadListItem value, $Res Function(ThreadListItem) _then) = _$ThreadListItemCopyWithImpl;
 @useResult
 $Res call({
- String chatId, String chatName, String? chatAvatar, ConversationMessageV2 threadRootMessage, List<Sender> participants, MessagePreview? lastReply, int replyCount, DateTime? lastReplyAt, int unreadCount, DateTime? subscribedAt
+ String chatId, String chatName, String? chatAvatar, MessagePreview threadRootMessage, List<User> participants, MessagePreview? lastReply, int replyCount, DateTime? lastReplyAt, int unreadCount, DateTime? subscribedAt
 });
 
 
-$MessagePreviewCopyWith<$Res>? get lastReply;
+$MessagePreviewCopyWith<$Res> get threadRootMessage;$MessagePreviewCopyWith<$Res>? get lastReply;
 
 }
 /// @nodoc
@@ -68,8 +68,8 @@ chatId: null == chatId ? _self.chatId : chatId // ignore: cast_nullable_to_non_n
 as String,chatName: null == chatName ? _self.chatName : chatName // ignore: cast_nullable_to_non_nullable
 as String,chatAvatar: freezed == chatAvatar ? _self.chatAvatar : chatAvatar // ignore: cast_nullable_to_non_nullable
 as String?,threadRootMessage: null == threadRootMessage ? _self.threadRootMessage : threadRootMessage // ignore: cast_nullable_to_non_nullable
-as ConversationMessageV2,participants: null == participants ? _self.participants : participants // ignore: cast_nullable_to_non_nullable
-as List<Sender>,lastReply: freezed == lastReply ? _self.lastReply : lastReply // ignore: cast_nullable_to_non_nullable
+as MessagePreview,participants: null == participants ? _self.participants : participants // ignore: cast_nullable_to_non_nullable
+as List<User>,lastReply: freezed == lastReply ? _self.lastReply : lastReply // ignore: cast_nullable_to_non_nullable
 as MessagePreview?,replyCount: null == replyCount ? _self.replyCount : replyCount // ignore: cast_nullable_to_non_nullable
 as int,lastReplyAt: freezed == lastReplyAt ? _self.lastReplyAt : lastReplyAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,unreadCount: null == unreadCount ? _self.unreadCount : unreadCount // ignore: cast_nullable_to_non_nullable
@@ -78,6 +78,15 @@ as DateTime?,
   ));
 }
 /// Create a copy of ThreadListItem
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$MessagePreviewCopyWith<$Res> get threadRootMessage {
+
+  return $MessagePreviewCopyWith<$Res>(_self.threadRootMessage, (value) {
+    return _then(_self.copyWith(threadRootMessage: value));
+  });
+}/// Create a copy of ThreadListItem
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')
@@ -171,7 +180,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String chatId,  String chatName,  String? chatAvatar,  ConversationMessageV2 threadRootMessage,  List<Sender> participants,  MessagePreview? lastReply,  int replyCount,  DateTime? lastReplyAt,  int unreadCount,  DateTime? subscribedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String chatId,  String chatName,  String? chatAvatar,  MessagePreview threadRootMessage,  List<User> participants,  MessagePreview? lastReply,  int replyCount,  DateTime? lastReplyAt,  int unreadCount,  DateTime? subscribedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ThreadListItem() when $default != null:
 return $default(_that.chatId,_that.chatName,_that.chatAvatar,_that.threadRootMessage,_that.participants,_that.lastReply,_that.replyCount,_that.lastReplyAt,_that.unreadCount,_that.subscribedAt);case _:
@@ -192,7 +201,7 @@ return $default(_that.chatId,_that.chatName,_that.chatAvatar,_that.threadRootMes
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String chatId,  String chatName,  String? chatAvatar,  ConversationMessageV2 threadRootMessage,  List<Sender> participants,  MessagePreview? lastReply,  int replyCount,  DateTime? lastReplyAt,  int unreadCount,  DateTime? subscribedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String chatId,  String chatName,  String? chatAvatar,  MessagePreview threadRootMessage,  List<User> participants,  MessagePreview? lastReply,  int replyCount,  DateTime? lastReplyAt,  int unreadCount,  DateTime? subscribedAt)  $default,) {final _that = this;
 switch (_that) {
 case _ThreadListItem():
 return $default(_that.chatId,_that.chatName,_that.chatAvatar,_that.threadRootMessage,_that.participants,_that.lastReply,_that.replyCount,_that.lastReplyAt,_that.unreadCount,_that.subscribedAt);case _:
@@ -212,7 +221,7 @@ return $default(_that.chatId,_that.chatName,_that.chatAvatar,_that.threadRootMes
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String chatId,  String chatName,  String? chatAvatar,  ConversationMessageV2 threadRootMessage,  List<Sender> participants,  MessagePreview? lastReply,  int replyCount,  DateTime? lastReplyAt,  int unreadCount,  DateTime? subscribedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String chatId,  String chatName,  String? chatAvatar,  MessagePreview threadRootMessage,  List<User> participants,  MessagePreview? lastReply,  int replyCount,  DateTime? lastReplyAt,  int unreadCount,  DateTime? subscribedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _ThreadListItem() when $default != null:
 return $default(_that.chatId,_that.chatName,_that.chatAvatar,_that.threadRootMessage,_that.participants,_that.lastReply,_that.replyCount,_that.lastReplyAt,_that.unreadCount,_that.subscribedAt);case _:
@@ -227,15 +236,15 @@ return $default(_that.chatId,_that.chatName,_that.chatAvatar,_that.threadRootMes
 
 
 class _ThreadListItem extends ThreadListItem {
-  const _ThreadListItem({required this.chatId, required this.chatName, this.chatAvatar, required this.threadRootMessage, final  List<Sender> participants = const [], this.lastReply, this.replyCount = 0, this.lastReplyAt, this.unreadCount = 0, this.subscribedAt}): _participants = participants,super._();
-  
+  const _ThreadListItem({required this.chatId, required this.chatName, this.chatAvatar, required this.threadRootMessage, final  List<User> participants = const [], this.lastReply, this.replyCount = 0, this.lastReplyAt, this.unreadCount = 0, this.subscribedAt}): _participants = participants,super._();
+
 
 @override final  String chatId;
 @override final  String chatName;
 @override final  String? chatAvatar;
-@override final  ConversationMessageV2 threadRootMessage;
- final  List<Sender> _participants;
-@override@JsonKey() List<Sender> get participants {
+@override final  MessagePreview threadRootMessage;
+ final  List<User> _participants;
+@override@JsonKey() List<User> get participants {
   if (_participants is EqualUnmodifiableListView) return _participants;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableListView(_participants);
@@ -277,11 +286,11 @@ abstract mixin class _$ThreadListItemCopyWith<$Res> implements $ThreadListItemCo
   factory _$ThreadListItemCopyWith(_ThreadListItem value, $Res Function(_ThreadListItem) _then) = __$ThreadListItemCopyWithImpl;
 @override @useResult
 $Res call({
- String chatId, String chatName, String? chatAvatar, ConversationMessageV2 threadRootMessage, List<Sender> participants, MessagePreview? lastReply, int replyCount, DateTime? lastReplyAt, int unreadCount, DateTime? subscribedAt
+ String chatId, String chatName, String? chatAvatar, MessagePreview threadRootMessage, List<User> participants, MessagePreview? lastReply, int replyCount, DateTime? lastReplyAt, int unreadCount, DateTime? subscribedAt
 });
 
 
-@override $MessagePreviewCopyWith<$Res>? get lastReply;
+@override $MessagePreviewCopyWith<$Res> get threadRootMessage;@override $MessagePreviewCopyWith<$Res>? get lastReply;
 
 }
 /// @nodoc
@@ -300,8 +309,8 @@ chatId: null == chatId ? _self.chatId : chatId // ignore: cast_nullable_to_non_n
 as String,chatName: null == chatName ? _self.chatName : chatName // ignore: cast_nullable_to_non_nullable
 as String,chatAvatar: freezed == chatAvatar ? _self.chatAvatar : chatAvatar // ignore: cast_nullable_to_non_nullable
 as String?,threadRootMessage: null == threadRootMessage ? _self.threadRootMessage : threadRootMessage // ignore: cast_nullable_to_non_nullable
-as ConversationMessageV2,participants: null == participants ? _self._participants : participants // ignore: cast_nullable_to_non_nullable
-as List<Sender>,lastReply: freezed == lastReply ? _self.lastReply : lastReply // ignore: cast_nullable_to_non_nullable
+as MessagePreview,participants: null == participants ? _self._participants : participants // ignore: cast_nullable_to_non_nullable
+as List<User>,lastReply: freezed == lastReply ? _self.lastReply : lastReply // ignore: cast_nullable_to_non_nullable
 as MessagePreview?,replyCount: null == replyCount ? _self.replyCount : replyCount // ignore: cast_nullable_to_non_nullable
 as int,lastReplyAt: freezed == lastReplyAt ? _self.lastReplyAt : lastReplyAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,unreadCount: null == unreadCount ? _self.unreadCount : unreadCount // ignore: cast_nullable_to_non_nullable
@@ -311,6 +320,15 @@ as DateTime?,
 }
 
 /// Create a copy of ThreadListItem
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$MessagePreviewCopyWith<$Res> get threadRootMessage {
+
+  return $MessagePreviewCopyWith<$Res>(_self.threadRootMessage, (value) {
+    return _then(_self.copyWith(threadRootMessage: value));
+  });
+}/// Create a copy of ThreadListItem
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')

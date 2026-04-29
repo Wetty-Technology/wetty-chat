@@ -144,7 +144,7 @@ class GroupListV2ViewModel extends AsyncNotifier<GroupListV2ViewState> {
     }
 
     if (group.unreadCount > 0) {
-      final lastMessageId = group.lastMessage?.id;
+      final lastMessageId = group.lastMessage?.messageId;
       if (lastMessageId == null) {
         return;
       }

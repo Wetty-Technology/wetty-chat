@@ -6,7 +6,7 @@ import 'attachment.dart';
 import 'mention.dart';
 import 'reaction.dart';
 import 'reply_to_message.dart';
-import 'sender.dart';
+import 'user.dart';
 import 'sticker.dart';
 import 'thread_info.dart';
 
@@ -19,7 +19,7 @@ abstract class MessageItem with _$MessageItem {
     String? message,
     required String messageType,
     StickerSummary? sticker,
-    required Sender sender,
+    required User sender,
     required String chatId,
     DateTime? createdAt,
     @Default(false) bool isEdited,
@@ -39,7 +39,7 @@ abstract class MessageItem with _$MessageItem {
     message: dto.message,
     messageType: dto.messageType,
     sticker: dto.sticker == null ? null : StickerSummary.fromDto(dto.sticker!),
-    sender: Sender.fromDto(dto.sender),
+    sender: User.fromDto(dto.sender),
     chatId: dto.chatId.toString(),
     createdAt: dto.createdAt,
     isEdited: dto.isEdited,

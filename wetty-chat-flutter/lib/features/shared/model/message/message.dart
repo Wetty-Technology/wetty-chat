@@ -4,7 +4,7 @@ import 'attachment.dart';
 import 'mention.dart';
 import 'reaction.dart';
 import 'reply_to_message.dart';
-import 'sender.dart';
+import 'user.dart';
 import 'sticker.dart';
 import 'thread_info.dart';
 
@@ -15,7 +15,7 @@ export 'message_preview.dart';
 export 'preview_formatter.dart';
 export 'reaction.dart';
 export 'reply_to_message.dart';
-export 'sender.dart';
+export 'user.dart';
 export 'sticker.dart';
 export 'thread_info.dart';
 
@@ -57,7 +57,7 @@ class ConversationMessageV2 {
     return ConversationMessageV2(
       serverMessageId: dto.id,
       clientGeneratedId: dto.clientGeneratedId,
-      sender: Sender.fromDto(dto.sender),
+      sender: User.fromDto(dto.sender),
       createdAt: dto.createdAt,
       isEdited: dto.isEdited,
       isDeleted: dto.isDeleted,
@@ -83,7 +83,7 @@ class ConversationMessageV2 {
 
   final int? serverMessageId;
   final String clientGeneratedId;
-  final Sender sender;
+  final User sender;
   final DateTime? createdAt;
   final bool isEdited;
   final bool isDeleted;
@@ -96,7 +96,7 @@ class ConversationMessageV2 {
   ConversationMessageV2 copyWith({
     int? serverMessageId,
     String? clientGeneratedId,
-    Sender? sender,
+    User? sender,
     DateTime? createdAt,
     bool? isEdited,
     bool? isDeleted,

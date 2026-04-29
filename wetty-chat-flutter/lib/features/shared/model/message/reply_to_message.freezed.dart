@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ReplyToMessage {
 
- int get id; String? get message; String get messageType; StickerSummary? get sticker; Sender get sender; bool get isDeleted; List<AttachmentItem> get attachments; List<ReactionSummary> get reactions; String? get firstAttachmentKind; List<MentionInfo> get mentions;
+ int get id; String? get message; String get messageType; StickerSummary? get sticker; User get sender; bool get isDeleted; List<AttachmentItem> get attachments; List<ReactionSummary> get reactions; String? get firstAttachmentKind; List<MentionInfo> get mentions;
 /// Create a copy of ReplyToMessage
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -45,11 +45,11 @@ abstract mixin class $ReplyToMessageCopyWith<$Res>  {
   factory $ReplyToMessageCopyWith(ReplyToMessage value, $Res Function(ReplyToMessage) _then) = _$ReplyToMessageCopyWithImpl;
 @useResult
 $Res call({
- int id, String? message, String messageType, StickerSummary? sticker, Sender sender, bool isDeleted, List<AttachmentItem> attachments, List<ReactionSummary> reactions, String? firstAttachmentKind, List<MentionInfo> mentions
+ int id, String? message, String messageType, StickerSummary? sticker, User sender, bool isDeleted, List<AttachmentItem> attachments, List<ReactionSummary> reactions, String? firstAttachmentKind, List<MentionInfo> mentions
 });
 
 
-$StickerSummaryCopyWith<$Res>? get sticker;$SenderCopyWith<$Res> get sender;
+$StickerSummaryCopyWith<$Res>? get sticker;$UserCopyWith<$Res> get sender;
 
 }
 /// @nodoc
@@ -69,7 +69,7 @@ as int,message: freezed == message ? _self.message : message // ignore: cast_nul
 as String?,messageType: null == messageType ? _self.messageType : messageType // ignore: cast_nullable_to_non_nullable
 as String,sticker: freezed == sticker ? _self.sticker : sticker // ignore: cast_nullable_to_non_nullable
 as StickerSummary?,sender: null == sender ? _self.sender : sender // ignore: cast_nullable_to_non_nullable
-as Sender,isDeleted: null == isDeleted ? _self.isDeleted : isDeleted // ignore: cast_nullable_to_non_nullable
+as User,isDeleted: null == isDeleted ? _self.isDeleted : isDeleted // ignore: cast_nullable_to_non_nullable
 as bool,attachments: null == attachments ? _self.attachments : attachments // ignore: cast_nullable_to_non_nullable
 as List<AttachmentItem>,reactions: null == reactions ? _self.reactions : reactions // ignore: cast_nullable_to_non_nullable
 as List<ReactionSummary>,firstAttachmentKind: freezed == firstAttachmentKind ? _self.firstAttachmentKind : firstAttachmentKind // ignore: cast_nullable_to_non_nullable
@@ -93,9 +93,9 @@ $StickerSummaryCopyWith<$Res>? get sticker {
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')
-$SenderCopyWith<$Res> get sender {
+$UserCopyWith<$Res> get sender {
   
-  return $SenderCopyWith<$Res>(_self.sender, (value) {
+  return $UserCopyWith<$Res>(_self.sender, (value) {
     return _then(_self.copyWith(sender: value));
   });
 }
@@ -180,7 +180,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String? message,  String messageType,  StickerSummary? sticker,  Sender sender,  bool isDeleted,  List<AttachmentItem> attachments,  List<ReactionSummary> reactions,  String? firstAttachmentKind,  List<MentionInfo> mentions)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String? message,  String messageType,  StickerSummary? sticker,  User sender,  bool isDeleted,  List<AttachmentItem> attachments,  List<ReactionSummary> reactions,  String? firstAttachmentKind,  List<MentionInfo> mentions)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ReplyToMessage() when $default != null:
 return $default(_that.id,_that.message,_that.messageType,_that.sticker,_that.sender,_that.isDeleted,_that.attachments,_that.reactions,_that.firstAttachmentKind,_that.mentions);case _:
@@ -201,7 +201,7 @@ return $default(_that.id,_that.message,_that.messageType,_that.sticker,_that.sen
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String? message,  String messageType,  StickerSummary? sticker,  Sender sender,  bool isDeleted,  List<AttachmentItem> attachments,  List<ReactionSummary> reactions,  String? firstAttachmentKind,  List<MentionInfo> mentions)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String? message,  String messageType,  StickerSummary? sticker,  User sender,  bool isDeleted,  List<AttachmentItem> attachments,  List<ReactionSummary> reactions,  String? firstAttachmentKind,  List<MentionInfo> mentions)  $default,) {final _that = this;
 switch (_that) {
 case _ReplyToMessage():
 return $default(_that.id,_that.message,_that.messageType,_that.sticker,_that.sender,_that.isDeleted,_that.attachments,_that.reactions,_that.firstAttachmentKind,_that.mentions);case _:
@@ -221,7 +221,7 @@ return $default(_that.id,_that.message,_that.messageType,_that.sticker,_that.sen
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String? message,  String messageType,  StickerSummary? sticker,  Sender sender,  bool isDeleted,  List<AttachmentItem> attachments,  List<ReactionSummary> reactions,  String? firstAttachmentKind,  List<MentionInfo> mentions)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String? message,  String messageType,  StickerSummary? sticker,  User sender,  bool isDeleted,  List<AttachmentItem> attachments,  List<ReactionSummary> reactions,  String? firstAttachmentKind,  List<MentionInfo> mentions)?  $default,) {final _that = this;
 switch (_that) {
 case _ReplyToMessage() when $default != null:
 return $default(_that.id,_that.message,_that.messageType,_that.sticker,_that.sender,_that.isDeleted,_that.attachments,_that.reactions,_that.firstAttachmentKind,_that.mentions);case _:
@@ -243,7 +243,7 @@ class _ReplyToMessage implements ReplyToMessage {
 @override final  String? message;
 @override@JsonKey() final  String messageType;
 @override final  StickerSummary? sticker;
-@override final  Sender sender;
+@override final  User sender;
 @override@JsonKey() final  bool isDeleted;
  final  List<AttachmentItem> _attachments;
 @override@JsonKey() List<AttachmentItem> get attachments {
@@ -298,11 +298,11 @@ abstract mixin class _$ReplyToMessageCopyWith<$Res> implements $ReplyToMessageCo
   factory _$ReplyToMessageCopyWith(_ReplyToMessage value, $Res Function(_ReplyToMessage) _then) = __$ReplyToMessageCopyWithImpl;
 @override @useResult
 $Res call({
- int id, String? message, String messageType, StickerSummary? sticker, Sender sender, bool isDeleted, List<AttachmentItem> attachments, List<ReactionSummary> reactions, String? firstAttachmentKind, List<MentionInfo> mentions
+ int id, String? message, String messageType, StickerSummary? sticker, User sender, bool isDeleted, List<AttachmentItem> attachments, List<ReactionSummary> reactions, String? firstAttachmentKind, List<MentionInfo> mentions
 });
 
 
-@override $StickerSummaryCopyWith<$Res>? get sticker;@override $SenderCopyWith<$Res> get sender;
+@override $StickerSummaryCopyWith<$Res>? get sticker;@override $UserCopyWith<$Res> get sender;
 
 }
 /// @nodoc
@@ -322,7 +322,7 @@ as int,message: freezed == message ? _self.message : message // ignore: cast_nul
 as String?,messageType: null == messageType ? _self.messageType : messageType // ignore: cast_nullable_to_non_nullable
 as String,sticker: freezed == sticker ? _self.sticker : sticker // ignore: cast_nullable_to_non_nullable
 as StickerSummary?,sender: null == sender ? _self.sender : sender // ignore: cast_nullable_to_non_nullable
-as Sender,isDeleted: null == isDeleted ? _self.isDeleted : isDeleted // ignore: cast_nullable_to_non_nullable
+as User,isDeleted: null == isDeleted ? _self.isDeleted : isDeleted // ignore: cast_nullable_to_non_nullable
 as bool,attachments: null == attachments ? _self._attachments : attachments // ignore: cast_nullable_to_non_nullable
 as List<AttachmentItem>,reactions: null == reactions ? _self._reactions : reactions // ignore: cast_nullable_to_non_nullable
 as List<ReactionSummary>,firstAttachmentKind: freezed == firstAttachmentKind ? _self.firstAttachmentKind : firstAttachmentKind // ignore: cast_nullable_to_non_nullable
@@ -347,9 +347,9 @@ $StickerSummaryCopyWith<$Res>? get sticker {
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')
-$SenderCopyWith<$Res> get sender {
+$UserCopyWith<$Res> get sender {
   
-  return $SenderCopyWith<$Res>(_self.sender, (value) {
+  return $UserCopyWith<$Res>(_self.sender, (value) {
     return _then(_self.copyWith(sender: value));
   });
 }

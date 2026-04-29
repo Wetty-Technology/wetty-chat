@@ -28,7 +28,7 @@ class ChatListItemDto {
   @JsonKey(defaultValue: 0)
   final int unreadCount;
   final String? lastReadMessageId;
-  final MessageItemDto? lastMessage;
+  final MessagePreviewDto? lastMessage;
   @NullableDateTimeConverter()
   final DateTime? mutedUntil;
 

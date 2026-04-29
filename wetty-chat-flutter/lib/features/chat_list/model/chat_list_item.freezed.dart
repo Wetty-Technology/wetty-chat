@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ChatListItem {
 
- String get id; String? get name; String? get avatarUrl; DateTime? get lastMessageAt; int get unreadCount; String? get lastReadMessageId; MessageItem? get lastMessage; DateTime? get mutedUntil;
+ String get id; String? get name; String? get avatarUrl; DateTime? get lastMessageAt; int get unreadCount; String? get lastReadMessageId; MessagePreview? get lastMessage; DateTime? get mutedUntil;
 /// Create a copy of ChatListItem
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -45,11 +45,11 @@ abstract mixin class $ChatListItemCopyWith<$Res>  {
   factory $ChatListItemCopyWith(ChatListItem value, $Res Function(ChatListItem) _then) = _$ChatListItemCopyWithImpl;
 @useResult
 $Res call({
- String id, String? name, String? avatarUrl, DateTime? lastMessageAt, int unreadCount, String? lastReadMessageId, MessageItem? lastMessage, DateTime? mutedUntil
+ String id, String? name, String? avatarUrl, DateTime? lastMessageAt, int unreadCount, String? lastReadMessageId, MessagePreview? lastMessage, DateTime? mutedUntil
 });
 
 
-$MessageItemCopyWith<$Res>? get lastMessage;
+$MessagePreviewCopyWith<$Res>? get lastMessage;
 
 }
 /// @nodoc
@@ -71,7 +71,7 @@ as String?,lastMessageAt: freezed == lastMessageAt ? _self.lastMessageAt : lastM
 as DateTime?,unreadCount: null == unreadCount ? _self.unreadCount : unreadCount // ignore: cast_nullable_to_non_nullable
 as int,lastReadMessageId: freezed == lastReadMessageId ? _self.lastReadMessageId : lastReadMessageId // ignore: cast_nullable_to_non_nullable
 as String?,lastMessage: freezed == lastMessage ? _self.lastMessage : lastMessage // ignore: cast_nullable_to_non_nullable
-as MessageItem?,mutedUntil: freezed == mutedUntil ? _self.mutedUntil : mutedUntil // ignore: cast_nullable_to_non_nullable
+as MessagePreview?,mutedUntil: freezed == mutedUntil ? _self.mutedUntil : mutedUntil // ignore: cast_nullable_to_non_nullable
 as DateTime?,
   ));
 }
@@ -79,12 +79,12 @@ as DateTime?,
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')
-$MessageItemCopyWith<$Res>? get lastMessage {
+$MessagePreviewCopyWith<$Res>? get lastMessage {
     if (_self.lastMessage == null) {
     return null;
   }
 
-  return $MessageItemCopyWith<$Res>(_self.lastMessage!, (value) {
+  return $MessagePreviewCopyWith<$Res>(_self.lastMessage!, (value) {
     return _then(_self.copyWith(lastMessage: value));
   });
 }
@@ -169,7 +169,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String? name,  String? avatarUrl,  DateTime? lastMessageAt,  int unreadCount,  String? lastReadMessageId,  MessageItem? lastMessage,  DateTime? mutedUntil)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String? name,  String? avatarUrl,  DateTime? lastMessageAt,  int unreadCount,  String? lastReadMessageId,  MessagePreview? lastMessage,  DateTime? mutedUntil)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ChatListItem() when $default != null:
 return $default(_that.id,_that.name,_that.avatarUrl,_that.lastMessageAt,_that.unreadCount,_that.lastReadMessageId,_that.lastMessage,_that.mutedUntil);case _:
@@ -190,7 +190,7 @@ return $default(_that.id,_that.name,_that.avatarUrl,_that.lastMessageAt,_that.un
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String? name,  String? avatarUrl,  DateTime? lastMessageAt,  int unreadCount,  String? lastReadMessageId,  MessageItem? lastMessage,  DateTime? mutedUntil)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String? name,  String? avatarUrl,  DateTime? lastMessageAt,  int unreadCount,  String? lastReadMessageId,  MessagePreview? lastMessage,  DateTime? mutedUntil)  $default,) {final _that = this;
 switch (_that) {
 case _ChatListItem():
 return $default(_that.id,_that.name,_that.avatarUrl,_that.lastMessageAt,_that.unreadCount,_that.lastReadMessageId,_that.lastMessage,_that.mutedUntil);case _:
@@ -210,7 +210,7 @@ return $default(_that.id,_that.name,_that.avatarUrl,_that.lastMessageAt,_that.un
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String? name,  String? avatarUrl,  DateTime? lastMessageAt,  int unreadCount,  String? lastReadMessageId,  MessageItem? lastMessage,  DateTime? mutedUntil)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String? name,  String? avatarUrl,  DateTime? lastMessageAt,  int unreadCount,  String? lastReadMessageId,  MessagePreview? lastMessage,  DateTime? mutedUntil)?  $default,) {final _that = this;
 switch (_that) {
 case _ChatListItem() when $default != null:
 return $default(_that.id,_that.name,_that.avatarUrl,_that.lastMessageAt,_that.unreadCount,_that.lastReadMessageId,_that.lastMessage,_that.mutedUntil);case _:
@@ -234,7 +234,7 @@ class _ChatListItem implements ChatListItem {
 @override final  DateTime? lastMessageAt;
 @override@JsonKey() final  int unreadCount;
 @override final  String? lastReadMessageId;
-@override final  MessageItem? lastMessage;
+@override final  MessagePreview? lastMessage;
 @override final  DateTime? mutedUntil;
 
 /// Create a copy of ChatListItem
@@ -267,11 +267,11 @@ abstract mixin class _$ChatListItemCopyWith<$Res> implements $ChatListItemCopyWi
   factory _$ChatListItemCopyWith(_ChatListItem value, $Res Function(_ChatListItem) _then) = __$ChatListItemCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String? name, String? avatarUrl, DateTime? lastMessageAt, int unreadCount, String? lastReadMessageId, MessageItem? lastMessage, DateTime? mutedUntil
+ String id, String? name, String? avatarUrl, DateTime? lastMessageAt, int unreadCount, String? lastReadMessageId, MessagePreview? lastMessage, DateTime? mutedUntil
 });
 
 
-@override $MessageItemCopyWith<$Res>? get lastMessage;
+@override $MessagePreviewCopyWith<$Res>? get lastMessage;
 
 }
 /// @nodoc
@@ -293,7 +293,7 @@ as String?,lastMessageAt: freezed == lastMessageAt ? _self.lastMessageAt : lastM
 as DateTime?,unreadCount: null == unreadCount ? _self.unreadCount : unreadCount // ignore: cast_nullable_to_non_nullable
 as int,lastReadMessageId: freezed == lastReadMessageId ? _self.lastReadMessageId : lastReadMessageId // ignore: cast_nullable_to_non_nullable
 as String?,lastMessage: freezed == lastMessage ? _self.lastMessage : lastMessage // ignore: cast_nullable_to_non_nullable
-as MessageItem?,mutedUntil: freezed == mutedUntil ? _self.mutedUntil : mutedUntil // ignore: cast_nullable_to_non_nullable
+as MessagePreview?,mutedUntil: freezed == mutedUntil ? _self.mutedUntil : mutedUntil // ignore: cast_nullable_to_non_nullable
 as DateTime?,
   ));
 }
@@ -302,12 +302,12 @@ as DateTime?,
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')
-$MessageItemCopyWith<$Res>? get lastMessage {
+$MessagePreviewCopyWith<$Res>? get lastMessage {
     if (_self.lastMessage == null) {
     return null;
   }
 
-  return $MessageItemCopyWith<$Res>(_self.lastMessage!, (value) {
+  return $MessagePreviewCopyWith<$Res>(_self.lastMessage!, (value) {
     return _then(_self.copyWith(lastMessage: value));
   });
 }
