@@ -12,10 +12,10 @@ use tokio::time::timeout;
 use tracing::{debug, trace};
 use utoipa_axum::router::OpenApiRouter;
 
+use crate::dto::ws::{ServerWsMessage, TicketResponse};
 use crate::services::ws_registry;
 use crate::utils::auth::{decode_auth_token, encode_auth_token, AuthClaims, ClientId, CurrentUid};
 use crate::AppState;
-use crate::dto::ws::{ServerWsMessage, TicketResponse};
 use ws_registry::AppPresenceState;
 
 #[utoipa::path(
