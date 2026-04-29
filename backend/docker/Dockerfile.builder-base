@@ -1,0 +1,25 @@
+FROM --platform=$BUILDPLATFORM rust:1.94.0-trixie
+
+ARG TARGETARCH
+
+# Cross-compilation toolchain and native C dependencies used by the backend.
+RUN dpkg --add-architecture arm64 && \
+    dpkg --add-architecture amd64 && \
+    apt-get update && apt-get install -y --no-install-recommends \
+    gcc-aarch64-linux-gnu \
+    g++-aarch64-linux-gnu \
+    libc6-dev-arm64-cross \
+    pkg-config \
+    libpq-dev:${TARGETARCH} \
+    libssl-dev:${TARGETARCH} \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+RUN if [ "$TARGETARCH" = "arm64" ]; then \
+        rustup target add aarch64-unknown-linux-gnu; \
+    elif [ "$TARGETARCH" = "amd64" ]; then \
+        rustup target add x86_64-unknown-linux-gnu; \
+    else \
+        echo "Unsupported architecture: $TARGETARCH" && exit 1; \
+    fi
