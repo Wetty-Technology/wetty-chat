@@ -106,10 +106,7 @@ const threadsSlice = createSlice({
       }
     },
     /** Partially patch the cached preview (e.g. mark as deleted when the thread window isn't loaded). */
-    patchThreadCachedLastReply(
-      state,
-      action: PayloadAction<{ threadRootId: string; patch: Partial<MessagePreview> }>,
-    ) {
+    patchThreadCachedLastReply(state, action: PayloadAction<{ threadRootId: string; patch: Partial<MessagePreview> }>) {
       const thread = state.items.find((t) => t.threadRootMessage.id === action.payload.threadRootId);
       if (thread && thread.cachedLastReply) {
         Object.assign(thread.cachedLastReply, action.payload.patch);
@@ -145,10 +142,7 @@ const threadsSlice = createSlice({
       state.subscriptionByThreadId[action.payload.threadRootId] = false;
       delete state.archivedByThreadId[action.payload.threadRootId];
     },
-    patchThreadRootMessage(
-      state,
-      action: PayloadAction<{ threadRootId: string; message: Partial<MessagePreview> }>,
-    ) {
+    patchThreadRootMessage(state, action: PayloadAction<{ threadRootId: string; message: Partial<MessagePreview> }>) {
       const thread = state.items.find((t) => t.threadRootMessage.id === action.payload.threadRootId);
       if (thread) {
         Object.assign(thread.threadRootMessage, action.payload.message);
