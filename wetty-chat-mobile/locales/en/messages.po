@@ -13,1839 +13,1176 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
-#: src/components/chat/messagePreview.ts
-#~ msgid "[Attachment]"
-#~ msgstr "[Attachment]"
-
-#: src/components/chat/messages/ChatMessageRow.tsx
-#: src/components/chat/messages/ChatMessageRow.tsx
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "[Deleted]"
 msgstr "[Deleted]"
 
-#: src/components/chat/messagePreview.ts
-#~ msgid "[Image]"
-#~ msgstr "[Image]"
-
-#: src/components/chat/messagePreview.ts
-#~ msgid "[Invite]"
-#~ msgstr "[Invite]"
-
-#: src/components/chat/messagePreview.ts
-#~ msgid "[Sticker]"
-#~ msgstr "[Sticker]"
-
-#: src/components/chat/messagePreview.ts
-#~ msgid "[Video]"
-#~ msgstr "[Video]"
-
-#: src/components/chat/messagePreview.ts
-#~ msgid "[Voice message]"
-#~ msgstr "[Voice message]"
-
-#: src/components/chat/settings/ChatMuteSettingItem.tsx
 msgid "1 day"
 msgstr "1 day"
 
-#: src/components/chat/settings/ChatMuteSettingItem.tsx
 msgid "1 hour"
 msgstr "1 hour"
 
-#: src/components/chat/settings/shareInviteHelpers.ts
 msgid "24 hours"
 msgstr "24 hours"
 
-#: src/components/chat/settings/shareInviteHelpers.ts
 msgid "30 days"
 msgstr "30 days"
 
-#: src/components/chat/settings/ChatMuteSettingItem.tsx
-#: src/components/chat/settings/shareInviteHelpers.ts
 msgid "7 days"
 msgstr "7 days"
 
-#: src/components/chat/settings/ChatMuteSettingItem.tsx
 msgid "8 hours"
 msgstr "8 hours"
 
-#: src/App.tsx
 msgid "A new version of the app is available!"
 msgstr "A new version of the app is available!"
 
-#: src/pages/settings.tsx
 msgid "About"
 msgstr "About"
 
-#: src/components/chat/compose/AddStickerModal.tsx
-#: src/pages/chat-thread/chat-members.tsx
+msgid "Action failed"
+msgstr "Action failed"
+
 msgid "Add"
 msgstr "Add"
 
-#: src/pages/chat-thread/chat-members.tsx
-#: src/pages/chat-thread/chat-members.tsx
 msgid "Add Member"
 msgstr "Add Member"
 
-#: src/components/chat/compose/StickerPicker.tsx
-#: src/pages/settings/sticker-pack-detail.tsx
 msgid "Add sticker"
 msgstr "Add sticker"
 
-#: src/components/chat/compose/AddStickerModal.tsx
 msgid "Add Sticker"
 msgstr "Add Sticker"
 
-#: src/components/chat/compose/StickerPicker.tsx
 msgid "Add to Favorites"
 msgstr "Add to Favorites"
 
-#: src/pages/settings/general.tsx
 msgid "Alex"
 msgstr "Alex"
 
-#: src/components/chat/lists/ChatListSegment.tsx
-#: src/components/chat/reactions/ReactionDetailsModal.tsx
 msgid "All"
 msgstr "All"
 
-#: src/pages/settings.tsx
 msgid "Allowed"
 msgstr "Allowed"
 
-#: src/components/member-selector/MemberSelector.tsx
 msgid "Already in this chat"
 msgstr "Already in this chat"
 
-#: src/components/chat/settings/shareInviteHelpers.ts
 msgid "Anyone with this invite link can use it until it expires or is revoked."
 msgstr "Anyone with this invite link can use it until it expires or is revoked."
 
-#: src/components/chat/lists/ChatList.tsx
-#: src/components/chat/lists/ChatList.tsx
 msgid "Archive"
 msgstr "Archive"
 
-#: src/components/chat/lists/ChatList.tsx
-#: src/layouts/DesktopSplitLayout.tsx
-#: src/pages/archived.tsx
 msgid "Archived"
 msgstr "Archived"
 
 #. placeholder {0}: msg.sender.name ?? 'this user'
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Are you sure you want to delete this message from {0}?"
 msgstr "Are you sure you want to delete this message from {0}?"
 
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Are you sure you want to delete this message?"
 msgstr "Are you sure you want to delete this message?"
 
-#: src/pages/chat-thread/chat-settings.tsx
 msgid "Are you sure you want to leave this group?"
 msgstr "Are you sure you want to leave this group?"
 
-#: src/pages/settings.tsx
 msgid "Ask first"
 msgstr "Ask first"
 
-#: src/components/chat/compose/MessageComposeBar.tsx
 msgid "Attach image"
 msgstr "Attach image"
 
-#: src/components/chat/messages/ChatBubbleBase.tsx
-#: src/components/chat/messages/ChatBubbleBase.tsx
 msgid "Attachment"
 msgstr "Attachment"
 
-#: src/components/chat/messages/media/ImageViewer.tsx
 msgid "Attachment large view"
 msgstr "Attachment large view"
 
-#: src/components/chat/compose/UploadPreview.tsx
 msgid "Attachment preview tray"
 msgstr "Attachment preview tray"
 
-#: src/pages/settings/general.tsx
-#: src/pages/settings/language.tsx
 msgid "Auto"
 msgstr "Auto"
 
-#: src/pages/settings/stickers.tsx
-#~ msgid "Auto-sort packs by recent use"
-#~ msgstr "Auto-sort packs by recent use"
-
-#: src/pages/settings/stickers.tsx
 msgid "Auto-sort sticker packs"
 msgstr "Auto-sort sticker packs"
 
-#: src/pages/chat-thread/chat-settings.tsx
 msgid "Avatar uploaded"
 msgstr "Avatar uploaded"
 
-#: src/components/chat/settings/ShareInviteModal.tsx
-#: src/pages/settings/general.tsx
-#: src/pages/settings/language.tsx
-#: src/pages/settings/sticker-pack-detail.tsx
-#: src/pages/settings/sticker-pack-detail.tsx
-#: src/pages/settings/stickers.tsx
 msgid "Back"
 msgstr "Back"
 
-#: src/components/invites/InvitePreviewCard.tsx
 msgid "Back to chats"
 msgstr "Back to chats"
 
-#: src/pages/settings.tsx
 msgid "Blocked"
 msgstr "Blocked"
 
-#: src/components/chat/compose/AddStickerModal.tsx
-#: src/components/chat/compose/StickerPicker.tsx
-#: src/components/chat/pins/PinBanner.tsx
-#: src/components/chat/pins/PinListModal.tsx
-#: src/components/chat/settings/ChatMuteSettingItem.tsx
-#: src/components/chat/settings/ChatMuteSettingItem.tsx
-#: src/components/chat/settings/ShareInviteModal.tsx
-#: src/pages/chat-thread/chat-members.tsx
-#: src/pages/chat-thread/chat-members.tsx
-#: src/pages/chat-thread/chat-members.tsx
-#: src/pages/chat-thread/chat-members.tsx
-#: src/pages/chat-thread/chat-settings.tsx
-#: src/pages/chat-thread/chat-thread.tsx
-#: src/pages/chat-thread/chat-thread.tsx
-#: src/pages/chat-thread/chat-thread.tsx
-#: src/pages/chat-thread/manage-invites.tsx
-#: src/pages/settings/sticker-pack-detail.tsx
-#: src/pages/settings/sticker-pack-detail.tsx
-#: src/pages/settings/sticker-pack-detail.tsx
-#: src/pages/settings/stickers.tsx
 msgid "Cancel"
 msgstr "Cancel"
 
-#: src/components/chat/compose/ComposeContextBanner.tsx
 msgid "Cancel edit"
 msgstr "Cancel edit"
 
-#: src/components/chat/compose/ComposeContextBanner.tsx
 msgid "Cancel reply"
 msgstr "Cancel reply"
 
-#: src/components/chat/messages/MessageOverlay.tsx
 msgid "Cannot add more than {MAX_DISTINCT_REACTIONS_PER_MESSAGE} different reactions"
 msgstr "Cannot add more than {MAX_DISTINCT_REACTIONS_PER_MESSAGE} different reactions"
 
-#: src/components/chat/profiles/GroupProfile.tsx
 msgid "Change"
 msgstr "Change"
 
-#: src/components/chat/profiles/GroupProfile.tsx
 msgid "Change group photo"
 msgstr "Change group photo"
 
-#: src/utils/chatDisplay.ts
 msgid "Chat {chatId}"
 msgstr "Chat {chatId}"
 
-#: src/pages/create-chat.tsx
 msgid "Chat Details"
 msgstr "Chat Details"
 
-#: src/pages/create-chat.tsx
 msgid "Chat name is required."
 msgstr "Chat name is required."
 
-#: src/layouts/DesktopSplitLayout.tsx
-#: src/layouts/MobileLayout.tsx
-#: src/pages/chats.tsx
 msgid "Chats"
 msgstr "Chats"
 
-#: src/components/settings/CheckForUpdateItem.tsx
 msgid "Check for Update"
 msgstr "Check for Update"
 
-#: src/pages/settings.tsx
 msgid "Checking..."
 msgstr "Checking..."
 
-#: src/components/chat/settings/ShareInviteModal.tsx
 msgid "Choose a destination group"
 msgstr "Choose a destination group"
 
-#: src/pages/chat-thread/ChatAdminSettings.tsx
-#~ msgid "Choose a new image to replace the current avatar."
-#~ msgstr "Choose a new image to replace the current avatar."
-
-#: src/components/shared/EmojiInput.tsx
-#~ msgid "Choose Emoji"
-#~ msgstr "Choose Emoji"
-
-#: src/components/chat/settings/ShareInviteModal.tsx
 msgid "Choose the member group first"
 msgstr "Choose the member group first"
 
-#: src/components/chat/settings/ShareInviteModal.tsx
 msgid "Choose the target user first"
 msgstr "Choose the target user first"
 
-#: src/pages/settings/stickers.tsx
-#~ msgid "Choose up to 5 default pinned emojis for quick reactions"
-#~ msgstr "Choose up to 5 default pinned emojis for quick reactions"
-
-#: src/pages/settings/stickers.tsx
-#~ msgid "Choose up to 5 emojis"
-#~ msgstr "Choose up to 5 emojis"
-
-#: src/components/chat/ChatList.tsx
-#~ msgid "Click to view new replies"
-#~ msgstr "Click to view new replies"
-
-#: src/components/chat/settings/ShareInviteModal.tsx
-#: src/pages/chat-thread/manage-invites.tsx
 msgid "Clipboard is not available on this device"
 msgstr "Clipboard is not available on this device"
 
-#: src/components/chat/compose/StickerPreviewModal.tsx
-#: src/components/chat/messages/media/ImageViewer.tsx
-#: src/components/chat/profiles/UserProfileModal.tsx
-#: src/components/chat/reactions/ReactionDetailsModal.tsx
-#: src/components/chat/settings/ShareInviteGroupSelectorModal.tsx
-#: src/components/chat/settings/ShareInviteMemberSelectorModal.tsx
-#: src/components/chat/settings/ShareInviteModal.tsx
-#: src/components/invites/InviteMessageModal.tsx
 msgid "Close"
 msgstr "Close"
 
-#: src/components/shared/EmojiInput.tsx
-#~ msgid "Close emoji picker"
-#~ msgstr "Close emoji picker"
-
-#: src/components/chat/messages/media/ImageViewer.tsx
 msgid "Close viewer"
 msgstr "Close viewer"
 
-#: src/pages/join-chat.tsx
 msgid "Code"
 msgstr "Code"
 
-#: src/components/chat/settings/ChatMuteSettingItem.tsx
-#: src/pages/chat-thread/chat-thread.tsx
-#: src/pages/join-chat.tsx
-#: src/pages/join-chat.tsx
 msgid "Continue"
 msgstr "Continue"
 
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Copy"
 msgstr "Copy"
 
-#: src/components/chat/settings/ShareInviteModal.tsx
-#: src/pages/chat-thread/manage-invites.tsx
 msgid "Copy code"
 msgstr "Copy code"
 
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Copy Link"
 msgstr "Copy Link"
 
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Copy text"
 msgstr "Copy text"
 
-#: src/components/chat/settings/ShareInviteModal.tsx
 msgid "Copy the link below, or choose a group to send it to right now."
 msgstr "Copy the link below, or choose a group to send it to right now."
 
-#: src/components/invites/InvitePreviewCard.tsx
 msgid "Could not join chat"
 msgstr "Could not join chat"
 
-#: src/components/invites/InvitePreviewCard.tsx
 msgid "Could not load invite"
 msgstr "Could not load invite"
 
-#: src/pages/join-chat.tsx
 msgid "Could not validate invite code"
 msgstr "Could not validate invite code"
 
-#: src/components/chat/compose/StickerPicker.tsx
-#: src/pages/create-chat.tsx
-#: src/pages/create-chat.tsx
-#: src/pages/settings/stickers.tsx
 msgid "Create"
 msgstr "Create"
 
-#: src/layouts/DesktopSplitLayout.tsx
-#: src/pages/chats.tsx
 msgid "Create Chat"
 msgstr "Create Chat"
 
-#: src/components/chat/settings/ShareInviteModal.tsx
 msgid "Create Invite"
 msgstr "Create Invite"
 
-#: src/pages/settings/stickers.tsx
 msgid "Create New Pack"
 msgstr "Create New Pack"
 
-#: src/components/chat/compose/StickerPicker.tsx
 msgid "Create new sticker pack"
 msgstr "Create new sticker pack"
 
-#: src/pages/create-chat.tsx
-#: src/pages/create-chat.tsx
 msgid "Creating…"
 msgstr "Creating…"
 
-#: src/pages/chat-thread/chat-thread.tsx
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Delete"
 msgstr "Delete"
 
-#: src/pages/settings/sticker-pack-detail.tsx
 msgctxt "sticker pack"
 msgid "Delete"
 msgstr "Delete"
 
-#: src/pages/chat-thread/chat-members.tsx
 msgid "Delete all messages"
 msgstr "Delete all messages"
 
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Delete Message"
 msgstr "Delete Message"
 
-#: src/pages/chat-thread/chat-members.tsx
 msgid "Delete messages from last 24 hours"
 msgstr "Delete messages from last 24 hours"
 
-#: src/pages/settings/sticker-pack-detail.tsx
 msgid "Delete pack"
 msgstr "Delete pack"
 
-#: src/pages/settings/sticker-pack-detail.tsx
 msgid "Delete Pack"
 msgstr "Delete Pack"
 
-#: src/components/chat/compose/VoiceRecorderPanel.tsx
 msgid "Delete recording"
 msgstr "Delete recording"
 
-#: src/pages/settings/sticker-pack-detail.tsx
 msgid "Delete this sticker pack? Stickers will stay available elsewhere, but this pack and its contents list will be removed."
 msgstr "Delete this sticker pack? Stickers will stay available elsewhere, but this pack and its contents list will be removed."
 
-#: src/pages/chat-thread/chat-members.tsx
 msgid "Demote"
 msgstr "Demote"
 
-#: src/pages/chat-thread/chat-members.tsx
 msgid "Demote {displayName} to member?"
 msgstr "Demote {displayName} to member?"
 
-#: src/pages/chat-thread/chat-members.tsx
 msgid "Demote Member"
 msgstr "Demote Member"
 
-#: src/pages/chat-thread/chat-members.tsx
 msgid "Demote to Member"
 msgstr "Demote to Member"
 
-#: src/pages/chat-thread/ChatAdminSettings.tsx
 msgid "Description"
 msgstr "Description"
 
-#: src/components/chat/settings/ShareInviteModal.tsx
 msgid "Destination Group"
 msgstr "Destination Group"
 
-#: src/pages/chat-thread/chat-settings.tsx
 msgid "Discard"
 msgstr "Discard"
 
-#: src/pages/chat-thread/chat-settings.tsx
 msgid "Discard changes?"
 msgstr "Discard changes?"
 
-#: src/App.tsx
 msgid "Dismiss"
 msgstr "Dismiss"
 
-#: src/components/chat/pins/PinListModal.tsx
 msgid "Done"
 msgstr "Done"
 
-#: src/components/chat/messages/media/ImageViewer.tsx
 msgid "Download"
 msgstr "Download"
 
-#: src/components/chat/messages/media/ImageViewer.tsx
 msgid "Download image"
 msgstr "Download image"
 
-#: src/components/chat/compose/MessageComposeBar.tsx
 msgid "Drop images or videos"
 msgstr "Drop images or videos"
 
-#: src/components/chat/compose/AddStickerModal.tsx
 msgid "e.g. 😊"
 msgstr "e.g. 😊"
 
-#: src/components/chat/virtualScroll/ChatVirtualScroll.tsx
 msgid "Earlier messages"
 msgstr "Earlier messages"
 
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Edit"
 msgstr "Edit"
 
-#: src/components/chat/compose/ComposeContextBanner.tsx
 msgid "Edit message"
 msgstr "Edit message"
 
-#: src/components/chat/messages/ChatBubbleBase.tsx
-#: src/components/chat/messages/ChatBubbleBase.tsx
-#: src/components/chat/messages/StickerBubble.tsx
 msgid "Edited"
 msgstr "Edited"
 
-#: src/components/chat/compose/AddStickerModal.tsx
 msgid "Emoji"
 msgstr "Emoji"
 
-#: src/pages/settings.tsx
-#: src/pages/settings/stickers.tsx
 msgid "Emojis & Stickers"
 msgstr "Emojis & Stickers"
 
-#: src/components/member-selector/MemberSelector.tsx
 msgid "Enter a user UID"
 msgstr "Enter a user UID"
 
-#: src/components/member-selector/MemberSelector.tsx
 msgid "Enter an exact UID to find a specific user."
 msgstr "Enter an exact UID to find a specific user."
 
-#: src/pages/join-chat.tsx
 msgid "Enter an invite code"
 msgstr "Enter an invite code"
 
-#: src/pages/create-chat.tsx
 msgid "Enter chat name"
 msgstr "Enter chat name"
 
-#: src/components/chat/messages/media/ImageViewer.tsx
-#: src/components/chat/messages/media/ImageViewer.tsx
 msgid "Enter fullscreen"
 msgstr "Enter fullscreen"
 
-#: src/pages/chat-thread/ChatAdminSettings.tsx
 msgid "Enter group description"
 msgstr "Enter group description"
 
-#: src/pages/chat-thread/ChatAdminSettings.tsx
 msgid "Enter group name"
 msgstr "Enter group name"
 
-#: src/pages/chat-thread/chat-members.tsx
 msgid "Enter user ID to add:"
 msgstr "Enter user ID to add:"
 
-#: src/components/chat/lists/ChatList.tsx
-#: src/pages/create-chat.tsx
 msgid "Error"
 msgstr "Error"
 
-#: src/components/chat/messages/media/ImageViewer.tsx
-#: src/components/chat/messages/media/ImageViewer.tsx
 msgid "Exit fullscreen"
 msgstr "Exit fullscreen"
 
-#: src/pages/chat-thread/manage-invites.tsx
 msgid "Expire Date"
 msgstr "Expire Date"
 
-#: src/components/chat/settings/ShareInviteModal.tsx
 msgid "Expires"
 msgstr "Expires"
 
-#: src/pages/chat-thread/chat-members.tsx
 msgid "Failed to add member"
 msgstr "Failed to add member"
 
-#: src/hooks/useAddSticker.ts
 msgid "Failed to add sticker"
 msgstr "Failed to add sticker"
 
-#: src/components/chat/settings/ShareInviteModal.tsx
-#: src/pages/chat-thread/manage-invites.tsx
 msgid "Failed to copy invite code"
 msgstr "Failed to copy invite code"
 
-#: src/pages/create-chat.tsx
 msgid "Failed to create chat"
 msgstr "Failed to create chat"
 
-#: src/components/chat/settings/ShareInviteModal.tsx
 msgid "Failed to create invite"
 msgstr "Failed to create invite"
 
-#: src/components/chat/compose/StickerPicker.tsx
-#: src/pages/settings/stickers.tsx
 msgid "Failed to create sticker pack"
 msgstr "Failed to create sticker pack"
 
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Failed to delete message"
 msgstr "Failed to delete message"
 
-#: src/pages/settings/sticker-pack-detail.tsx
 msgid "Failed to delete sticker pack"
 msgstr "Failed to delete sticker pack"
 
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Failed to edit message"
 msgstr "Failed to edit message"
 
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Failed to jump to message"
 msgstr "Failed to jump to message"
 
-#: src/pages/chat-thread/chat-settings.tsx
 msgid "Failed to leave group"
 msgstr "Failed to leave group"
 
-#: src/pages/chat-thread/chat-settings.tsx
 msgid "Failed to load chat details"
 msgstr "Failed to load chat details"
 
-#: src/components/chat/lists/ChatList.tsx
 msgid "Failed to load chats"
 msgstr "Failed to load chats"
 
-#: src/components/group-selector/GroupSelector.tsx
-#: src/components/group-selector/GroupSelector.tsx
 msgid "Failed to load groups"
 msgstr "Failed to load groups"
 
-#: src/pages/chat-thread/manage-invites.tsx
 msgid "Failed to load invite links"
 msgstr "Failed to load invite links"
 
-#: src/pages/chat-thread/chat-members.tsx
-#: src/pages/chat-thread/chat-members.tsx
 msgid "Failed to load members"
 msgstr "Failed to load members"
 
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Failed to load messages"
 msgstr "Failed to load messages"
 
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Failed to load more"
 msgstr "Failed to load more"
 
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Failed to load newer messages"
 msgstr "Failed to load newer messages"
 
-#: src/pages/settings/sticker-pack-detail.tsx
 msgid "Failed to load sticker pack"
 msgstr "Failed to load sticker pack"
 
-#: src/pages/settings/stickers.tsx
 msgid "Failed to load sticker packs"
 msgstr "Failed to load sticker packs"
 
-#: src/components/chat/compose/StickerPicker.tsx
 msgid "Failed to load stickers"
 msgstr "Failed to load stickers"
 
-#: src/components/member-selector/MemberSelector.tsx
 msgid "Failed to load users"
 msgstr "Failed to load users"
 
-#: src/components/chat/settings/ChatMuteSettingItem.tsx
 msgid "Failed to mute"
 msgstr "Failed to mute"
 
-#: src/components/chat/messages/PermalinkInline.tsx
-#: src/components/chat/messages/PermalinkInline.tsx
-#: src/pages/permalink.tsx
 msgid "Failed to open link"
 msgstr "Failed to open link"
 
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Failed to pin message"
 msgstr "Failed to pin message"
 
-#: src/components/chat/lists/ChatList.tsx
 msgid "Failed to refresh chats"
 msgstr "Failed to refresh chats"
 
-#: src/pages/chat-thread/chat-members.tsx
 msgid "Failed to remove member"
 msgstr "Failed to remove member"
 
-#: src/pages/settings/sticker-pack-detail.tsx
 msgid "Failed to remove sticker"
 msgstr "Failed to remove sticker"
 
-#: src/pages/chat-thread/manage-invites.tsx
 msgid "Failed to revoke invite"
 msgstr "Failed to revoke invite"
 
-#: src/pages/chat-thread/chat-settings.tsx
 msgid "Failed to save settings"
 msgstr "Failed to save settings"
 
-#: src/pages/chat-thread/chat-thread.tsx
-#: src/pages/chat-thread/chat-thread.tsx
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Failed to send"
 msgstr "Failed to send"
 
-#: src/components/chat/settings/ShareInviteModal.tsx
-#: src/pages/chat-thread/manage-invites.tsx
 msgid "Failed to send invite"
 msgstr "Failed to send invite"
 
-#: src/components/chat/compose/useVoiceRecorder.ts
 msgid "Failed to send voice message."
 msgstr "Failed to send voice message."
 
-#: src/pages/oobe.tsx
-#: src/pages/settings.tsx
 msgid "Failed to turn off push notifications"
 msgstr "Failed to turn off push notifications"
 
-#: src/pages/oobe.tsx
-#: src/pages/settings.tsx
 msgid "Failed to turn on push notifications"
 msgstr "Failed to turn on push notifications"
 
-#: src/components/chat/settings/ChatMuteSettingItem.tsx
-#: src/components/chat/settings/ChatMuteSettingItem.tsx
 msgid "Failed to unmute"
 msgstr "Failed to unmute"
 
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Failed to unpin message"
 msgstr "Failed to unpin message"
 
-#: src/pages/settings/sticker-pack-detail.tsx
 msgid "Failed to unsubscribe"
 msgstr "Failed to unsubscribe"
 
-#: src/components/chat/compose/StickerPicker.tsx
 msgid "Failed to update favorites"
 msgstr "Failed to update favorites"
 
-#: src/pages/chat-thread/chat-members.tsx
 msgid "Failed to update role"
 msgstr "Failed to update role"
 
-#: src/pages/chat-thread/chat-settings.tsx
 msgid "Failed to upload avatar"
 msgstr "Failed to upload avatar"
 
-#: src/components/chat/compose/StickerPicker.tsx
 msgid "Favorites"
 msgstr "Favorites"
 
-#: src/hooks/useAddSticker.ts
 msgid "File is too large. Maximum sticker size is 10 MB."
 msgstr "File is too large. Maximum sticker size is 10 MB."
 
-#: src/components/chat/settings/ChatMuteSettingItem.tsx
 msgid "Forever"
 msgstr "Forever"
 
-#: src/pages/settings.tsx
-#: src/pages/settings.tsx
-#: src/pages/settings/general.tsx
 msgid "General"
 msgstr "General"
 
-#: src/pages/chat-thread/ChatAdminSettings.tsx
 msgid "Group"
 msgstr "Group"
 
-#: src/pages/chat-thread/ChatAdminSettings.tsx
-#~ msgid "Group Avatar"
-#~ msgstr "Group Avatar"
-
-#: src/pages/chat-thread/chat-settings.tsx
 msgid "Group details saved"
 msgstr "Group details saved"
 
-#: src/components/chat/messages/InviteMessageCard.tsx
 msgid "Group invite"
 msgstr "Group invite"
 
-#: src/pages/chat-thread/chat-members.tsx
 msgid "Group Members"
 msgstr "Group Members"
 
-#: src/pages/chat-thread/ChatAdminSettings.tsx
 msgid "Group Name"
 msgstr "Group Name"
 
-#: src/pages/chat-thread/chat-settings.tsx
 msgid "Group Settings"
 msgstr "Group Settings"
 
-#: src/components/chat/lists/ChatListSegment.tsx
 msgid "Groups"
 msgstr "Groups"
 
-#: src/components/chat/settings/ChatMuteSettingItem.tsx
 msgid "indefinitely"
 msgstr "indefinitely"
 
-#: src/pages/permalink.tsx
 msgid "Invalid link"
 msgstr "Invalid link"
 
-#: src/pages/chat-thread/chat-members.tsx
 msgid "Invalid user ID"
 msgstr "Invalid user ID"
 
-#: src/components/invites/InvitePreviewCard.tsx
-#: src/components/invites/InvitePreviewCard.tsx
-#: src/pages/chat-thread/chat-settings.tsx
-#: src/pages/invite-preview.tsx
 msgid "Invite"
 msgstr "Invite"
 
-#: src/pages/chat-thread/manage-invites.tsx
-#: src/pages/join-chat.tsx
 msgid "Invite Code"
 msgstr "Invite Code"
 
-#: src/components/chat/settings/ShareInviteModal.tsx
-#: src/pages/chat-thread/manage-invites.tsx
-#~ msgid "Invite code copied"
-#~ msgstr "Invite code copied"
-
-#: src/components/chat/settings/ShareInviteModal.tsx
 msgid "Invite Link"
 msgstr "Invite Link"
 
-#: src/components/chat/settings/ShareInviteModal.tsx
-#: src/pages/chat-thread/manage-invites.tsx
 msgid "Invite link copied"
 msgstr "Invite link copied"
 
-#: src/components/chat/settings/ShareInviteModal.tsx
 msgid "Invite Link Created"
 msgstr "Invite Link Created"
 
-#: src/pages/chat-thread/manage-invites.tsx
 msgid "Invite revoked"
 msgstr "Invite revoked"
 
 #. placeholder {0}: getChatDisplayName(group.id, group.name)
 #. placeholder {0}: getChatDisplayName(selectedDestinationGroup.id, selectedDestinationGroup.name)
-#: src/components/chat/settings/ShareInviteModal.tsx
-#: src/pages/chat-thread/manage-invites.tsx
 msgid "Invite sent to {0}"
 msgstr "Invite sent to {0}"
 
-#: src/pages/chat-thread/manage-invites.tsx
 msgid "Invite Type"
 msgstr "Invite Type"
 
-#: src/components/chat/messages/InviteMessageCard.tsx
-#: src/components/invites/InvitePreviewCard.tsx
-#: src/components/invites/InvitePreviewCard.tsx
-#: src/components/invites/InvitePreviewCard.tsx
 msgid "Invite unavailable"
 msgstr "Invite unavailable"
 
-#: src/components/invites/InvitePreviewCard.tsx
 msgid "Join chat"
 msgstr "Join chat"
 
-#: src/components/invites/InvitePreviewCard.tsx
-#: src/components/invites/InvitePreviewCard.tsx
 msgid "Join this chat to start reading and sending messages."
 msgstr "Join this chat to start reading and sending messages."
 
-#: src/layouts/DesktopSplitLayout.tsx
-#: src/pages/chats.tsx
-#: src/pages/join-chat.tsx
 msgid "Join via Code"
 msgstr "Join via Code"
 
-#: src/components/invites/InvitePreviewCard.tsx
 msgid "Joining…"
 msgstr "Joining…"
 
-#: src/pages/chat-thread/chat-members.tsx
 msgid "Keep messages"
 msgstr "Keep messages"
 
-#: src/pages/settings/general.tsx
-#: src/pages/settings/language.tsx
 msgid "Language"
 msgstr "Language"
 
-#: src/pages/settings/general.tsx
 msgid "Large"
 msgstr "Large"
 
-#: src/pages/chat-thread/chat-settings.tsx
 msgid "Leave"
 msgstr "Leave"
 
-#: src/pages/chat-thread/chat-settings.tsx
-#: src/pages/chat-thread/chat-settings.tsx
 msgid "Leave Group"
 msgstr "Leave Group"
 
-#: src/pages/chat-thread/chat-settings.tsx
 msgid "Leaving..."
 msgstr "Leaving..."
 
-#: src/pages/chat-thread/chat-settings.tsx
 msgid "Left group"
 msgstr "Left group"
 
-#: src/components/invites/InvitePreviewCard.tsx
 msgid "Loading invite…"
 msgstr "Loading invite…"
 
-#: src/components/chat/compose/StickerPreviewModal.tsx
-#: src/components/chat/reactions/ReactionDetailsModal.tsx
-#: src/components/chat/reactions/ReactionDetailsModal.tsx
-#: src/pages/chat-thread/chat-thread.tsx
-#: src/pages/settings/sticker-pack-detail.tsx
 msgid "Loading..."
 msgstr "Loading..."
 
-#: src/components/chat/lists/ChatList.tsx
-#: src/components/chat/virtualScroll/ChatVirtualScroll.tsx
-#: src/components/chat/virtualScroll/ChatVirtualScroll.tsx
-#: src/components/chat/virtualScroll/ChatVirtualScroll.tsx
-#: src/pages/join-chat.tsx
-#: src/pages/join-chat.tsx
 msgid "Loading…"
 msgstr "Loading…"
 
-#: src/components/chat/compose/StickerPreviewModal.tsx
 msgid "Manage"
 msgstr "Manage"
 
-#: src/components/chat/settings/ShareInviteModal.tsx
-#: src/pages/chat-thread/manage-invites.tsx
 msgid "Manage Invite Links"
 msgstr "Manage Invite Links"
 
-#: src/components/member-selector/MemberSelector.tsx
 msgid "Member"
 msgstr "Member"
 
-#: src/pages/chat-thread/chat-members.tsx
 msgid "Member added"
 msgstr "Member added"
 
-#: src/pages/chat-thread/chat-members.tsx
 msgid "Member demoted"
 msgstr "Member demoted"
 
-#: src/components/chat/settings/ShareInviteModal.tsx
 msgid "Member Group"
 msgstr "Member Group"
 
-#: src/pages/chat-thread/chat-members.tsx
 msgid "Member promoted"
 msgstr "Member promoted"
 
-#: src/pages/chat-thread/chat-members.tsx
 msgid "Member removed"
 msgstr "Member removed"
 
-#: src/pages/chat-thread/chat-members.tsx
 msgid "Member removed, deleting all messages..."
 msgstr "Member removed, deleting all messages..."
 
-#: src/pages/chat-thread/chat-members.tsx
 msgid "Member removed, deleting recent messages..."
 msgstr "Member removed, deleting recent messages..."
 
-#: src/components/chat/settings/ShareInviteModal.tsx
-#: src/pages/chat-thread/manage-invites.tsx
 msgid "Membership"
 msgstr "Membership"
 
-#: src/components/chat/compose/MentionAutocomplete.tsx
 msgid "Mention suggestions"
 msgstr "Mention suggestions"
 
-#: src/components/chat/compose/ComposeInput.tsx
-#: src/components/chat/pins/PinBanner.tsx
-#: src/components/chat/pins/PinListModal.tsx
 msgid "Message"
 msgstr "Message"
 
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Message cannot be empty"
 msgstr "Message cannot be empty"
 
-#: src/components/chat/messages/PermalinkInline.tsx
-#: src/components/chat/messages/PermalinkInline.tsx
-#: src/pages/chat-thread/chat-thread.tsx
-#: src/pages/permalink.tsx
 msgid "Message not found"
 msgstr "Message not found"
 
-#: src/pages/settings/general.tsx
-#: src/pages/settings/general.tsx
 msgid "Messages Font Size"
 msgstr "Messages Font Size"
 
-#: src/components/chat/compose/useVoiceRecorder.ts
 msgid "Microphone access was denied."
 msgstr "Microphone access was denied."
 
-#: src/components/chat/reactions/ReactionDetailsModal.tsx
 msgid "More"
 msgstr "More"
 
-#: src/components/chat/settings/ChatMuteSettingItem.tsx
 msgid "Mute"
 msgstr "Mute"
 
-#: src/components/chat/settings/ChatMuteSettingItem.tsx
 msgid "Mute notifications"
 msgstr "Mute notifications"
 
-#: src/components/chat/settings/ChatMuteSettingItem.tsx
-#~ msgid "Muted indefinitely"
-#~ msgstr "Muted indefinitely"
-
-#: src/components/chat/settings/ChatMuteSettingItem.tsx
-#~ msgid "Muted until {0}"
-#~ msgstr "Muted until {0}"
-
-#: src/pages/settings/stickers.tsx
-#~ msgid "My Packs"
-#~ msgstr "My Packs"
-
-#: src/components/chat/compose/AddStickerModal.tsx
-#: src/pages/create-chat.tsx
 msgid "Name"
 msgstr "Name"
 
-#: src/components/chat/settings/shareInviteHelpers.ts
-#: src/components/chat/settings/shareInviteHelpers.ts
-#: src/pages/chat-thread/manage-invites.tsx
 msgid "Never"
 msgstr "Never"
 
-#: src/pages/create-chat.tsx
 msgid "New Chat"
 msgstr "New Chat"
 
-#: src/components/chat/lists/ChatList.tsx
 msgid "New message"
 msgstr "New message"
 
-#: src/components/chat/compose/StickerPicker.tsx
-#: src/pages/settings/stickers.tsx
 msgid "New Sticker Pack"
 msgstr "New Sticker Pack"
 
-#: src/components/chat/virtualScroll/ChatVirtualScroll.tsx
 msgid "Newer messages"
 msgstr "Newer messages"
 
-#: src/components/chat/messages/media/ImageViewer.tsx
 msgid "Next image"
 msgstr "Next image"
 
-#: src/pages/chat-thread/manage-invites.tsx
 msgid "No active invite links created by you."
 msgstr "No active invite links created by you."
 
-#: src/components/chat/lists/ChatList.tsx
 msgid "No archived chats"
 msgstr "No archived chats"
 
-#: src/components/chat/lists/ChatList.tsx
 msgid "No archived conversations"
 msgstr "No archived conversations"
 
-#: src/components/chat/lists/ChatList.tsx
 msgid "No archived threads"
 msgstr "No archived threads"
 
-#: src/components/chat/lists/ChatList.tsx
-#: src/components/chat/lists/ChatList.tsx
 msgid "No chats yet"
 msgstr "No chats yet"
 
-#: src/components/chat/profiles/GroupProfile.tsx
 msgid "No group description yet."
 msgstr "No group description yet."
 
-#: src/components/group-selector/GroupSelector.tsx
 msgid "No groups found."
 msgstr "No groups found."
 
-#: src/components/settings/AppVersionItem.tsx
 msgid "No JWT token available"
 msgstr "No JWT token available"
 
-#: src/components/group-selector/GroupSelector.tsx
 msgid "No matching groups found."
 msgstr "No matching groups found."
 
-#: src/pages/chat-thread/chat-members.tsx
 msgid "No matching members found."
 msgstr "No matching members found."
 
-#: src/components/member-selector/MemberSelector.tsx
 msgid "No matching users found."
 msgstr "No matching users found."
 
-#: src/pages/chat-thread/chat-members.tsx
 msgid "No members found."
 msgstr "No members found."
 
-#: src/components/chat/lists/ChatList.tsx
-#: src/components/chat/virtualScroll/ChatVirtualScroll.tsx
 msgid "No messages yet"
 msgstr "No messages yet"
 
-#: src/components/chat/ChatList.tsx
-#~ msgid "No new replies"
-#~ msgstr "No new replies"
-
-#: src/components/chat/pins/PinListModal.tsx
 msgid "No pinned messages"
 msgstr "No pinned messages"
 
-#: src/components/settings/CheckForUpdateItem.tsx
 msgid "No service worker registered"
 msgstr "No service worker registered"
 
-#: src/components/chat/compose/StickerPicker.tsx
 msgid "No stickers"
 msgstr "No stickers"
 
-#: src/pages/settings/stickers.tsx
-#~ msgid "No subscribed packs"
-#~ msgstr "No subscribed packs"
-
-#: src/components/chat/lists/ChatList.tsx
-#: src/components/chat/lists/ChatList.tsx
-#: src/pages/threads.tsx
 msgid "No threads yet"
 msgstr "No threads yet"
 
-#: src/components/invites/InvitePreviewCard.tsx
 msgid "Not now"
 msgstr "Not now"
 
-#: src/pages/settings.tsx
 msgid "Not subscribed"
 msgstr "Not subscribed"
 
-#: src/pages/oobe.tsx
-#: src/pages/settings.tsx
 msgid "Notification permission was not granted"
 msgstr "Notification permission was not granted"
 
-#: src/components/chat/settings/ChatMuteSettingItem.tsx
 msgid "Notifications muted"
 msgstr "Notifications muted"
 
-#: src/components/chat/settings/ChatMuteSettingItem.tsx
-#: src/components/chat/settings/ChatMuteSettingItem.tsx
 msgid "Notifications unmuted"
 msgstr "Notifications unmuted"
 
-#: src/pages/create-chat.tsx
 msgid "OK"
 msgstr "OK"
 
-#: src/components/chat/settings/shareInviteHelpers.ts
 msgid "Only members of a selected group can use this invite link to join."
 msgstr "Only members of a selected group can use this invite link to join."
 
-#: src/components/chat/settings/shareInviteHelpers.ts
 msgid "Only the selected user can redeem this invite link to join."
 msgstr "Only the selected user can redeem this invite link to join."
 
-#: src/components/invites/InvitePreviewCard.tsx
 msgid "Open chat"
 msgstr "Open chat"
 
-#: src/components/HeaderActionMenu.tsx
 msgid "Open chat actions"
 msgstr "Open chat actions"
 
-#: src/components/shared/EmojiInput.tsx
 msgid "Open emoji picker"
 msgstr "Open emoji picker"
 
-#: src/components/chat/messages/InviteMessageCard.tsx
 msgid "Open this invite to view the group and join."
 msgstr "Open this invite to view the group and join."
 
-#: src/components/chat/pins/PinBanner.tsx
 msgid "Open thread"
 msgstr "Open thread"
 
-#: src/components/chat/compose/AddStickerModal.tsx
 msgid "Optional"
 msgstr "Optional"
 
-#: src/pages/settings/stickers.tsx
 msgid "Owned"
 msgstr "Owned"
 
-#: src/pages/settings/sticker-pack-detail.tsx
 msgid "Pack"
 msgstr "Pack"
 
-#: src/components/chat/compose/StickerPicker.tsx
-#: src/pages/settings/stickers.tsx
 msgid "Pack name"
 msgstr "Pack name"
 
-#: src/pages/settings/stickers.tsx
 msgid "Packs below this line are not auto-sorted"
 msgstr "Packs below this line are not auto-sorted"
 
-#: src/pages/join-chat.tsx
 msgid "Paste code"
 msgstr "Paste code"
 
-#: src/pages/settings.tsx
 msgid "Permission"
 msgstr "Permission"
 
-#: src/pages/chat-thread/chat-thread.tsx
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Pin"
 msgstr "Pin"
 
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Pin Message"
 msgstr "Pin Message"
 
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Pin this message in the group?"
 msgstr "Pin this message in the group?"
 
-#: src/components/chat/pins/PinBanner.tsx
 msgid "Pinned message"
 msgstr "Pinned message"
 
-#: src/components/chat/pins/PinListModal.tsx
 msgid "Pinned Messages"
 msgstr "Pinned Messages"
 
-#: src/pages/settings/stickers.tsx
 msgid "Pinned Reaction Emojis"
 msgstr "Pinned Reactions"
 
-#: src/pages/chat-thread/chat-settings.tsx
 msgid "Please choose an image file"
 msgstr "Please choose an image file"
 
-#: src/components/chat/compose/AddStickerModal.tsx
-#: src/components/shared/EmojiInput.tsx
 msgid "Please choose at least one emoji"
 msgstr "Please choose at least one emoji"
 
-#: src/components/invites/InvitePreviewCard.tsx
 msgid "Please try again in a moment."
 msgstr "Please try again in a moment."
 
-#: src/components/chat/messages/media/ImageViewer.tsx
 msgid "Previous image"
 msgstr "Previous image"
 
-#: src/pages/chat-thread/ChatAdminSettings.tsx
-#: src/utils/chatDisplay.ts
 msgid "Private"
 msgstr "Private"
 
-#: src/pages/chat-thread/chat-members.tsx
 msgid "Promote"
 msgstr "Promote"
 
-#: src/pages/chat-thread/chat-members.tsx
 msgid "Promote {displayName} to admin?"
 msgstr "Promote {displayName} to admin?"
 
-#: src/pages/chat-thread/chat-members.tsx
 msgid "Promote Member"
 msgstr "Promote Member"
 
-#: src/pages/chat-thread/chat-members.tsx
 msgid "Promote to Admin"
 msgstr "Promote to Admin"
 
-#: src/components/chat/settings/ShareInviteModal.tsx
-#: src/pages/chat-thread/ChatAdminSettings.tsx
-#: src/pages/chat-thread/manage-invites.tsx
-#: src/utils/chatDisplay.ts
 msgid "Public"
 msgstr "Public"
 
-#: src/pages/settings.tsx
 msgid "Push Notifications"
 msgstr "Push Notifications"
 
-#: src/pages/oobe.tsx
-#: src/pages/settings.tsx
 msgid "Push notifications are not available right now"
 msgstr "Push notifications are not available right now"
 
-#: src/pages/oobe.tsx
-#: src/pages/settings.tsx
 msgid "Push notifications are not supported on this device"
 msgstr "Push notifications are not supported on this device"
 
-#: src/pages/oobe.tsx
-#: src/pages/settings.tsx
 msgid "Push notifications could not be enabled on the server"
 msgstr "Push notifications could not be enabled on the server"
 
-#: src/pages/settings.tsx
 msgid "Push notifications enabled"
 msgstr "Push notifications enabled"
 
-#: src/pages/settings.tsx
 msgid "Push notifications turned off"
 msgstr "Push notifications turned off"
 
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Reaction Details"
 msgstr "Reaction Details"
 
-#: src/components/chat/lists/ChatList.tsx
 msgid "Read"
 msgstr "Read"
 
-#: src/components/TitleWithConnectionStatus.tsx
 msgid "Reconnecting..."
 msgstr "Reconnecting..."
 
-#: src/components/chat/compose/AudioRecordButton.tsx
 msgid "Record audio"
 msgstr "Record audio"
 
-#: src/components/chat/compose/useVoiceRecorder.ts
 msgid "Recording is too short."
 msgstr "Recording is too short."
 
-#: src/components/chat/compose/VoiceRecorderPanel.tsx
 msgid "Release to save"
 msgstr "Release to save"
 
-#: src/pages/chat-thread/chat-members.tsx
-#: src/pages/settings/sticker-pack-detail.tsx
 msgid "Remove"
 msgstr "Remove"
 
 #. placeholder {0}: item.name
-#: src/components/chat/compose/UploadPreview.tsx
 msgid "Remove {0}"
 msgstr "Remove {0}"
 
-#: src/pages/chat-thread/chat-members.tsx
-msgid "Remove {displayName} from this group?"
-msgstr "Remove {displayName} from this group?"
-
-#: src/components/chat/profiles/UserProfileModal.tsx
 msgid "Remove {displayName} from {chatLabel}?"
 msgstr "Remove {displayName} from {chatLabel}?"
 
-#: src/components/chat/compose/StickerPicker.tsx
+msgid "Remove {displayName} from this group?"
+msgstr "Remove {displayName} from this group?"
+
 msgid "Remove from Favorites"
 msgstr "Remove from Favorites"
 
-#: src/pages/chat-thread/chat-members.tsx
 msgid "Remove from Group"
 msgstr "Remove from Group"
 
-#: src/pages/chat-thread/chat-members.tsx
 msgid "Remove Member"
 msgstr "Remove Member"
 
-#: src/pages/settings/sticker-pack-detail.tsx
 msgid "Remove Sticker"
 msgstr "Remove Sticker"
 
-#: src/pages/settings/sticker-pack-detail.tsx
 msgid "Remove this pack from your collection?"
 msgstr "Remove this pack from your collection?"
 
-#: src/pages/settings/sticker-pack-detail.tsx
 msgid "Remove this sticker from the pack?"
 msgstr "Remove this sticker from the pack?"
 
-#: src/components/chat/ThreadListRow.tsx
-#~ msgid "replied to:"
-#~ msgstr "replied to:"
-
-#: src/components/chat/messages/ChatBubbleBase.tsx
-#: src/components/chat/messages/StickerBubble.tsx
 msgid "replies"
 msgstr "replies"
 
-#: src/components/chat/messages/ChatBubbleBase.tsx
-#: src/components/chat/messages/StickerBubble.tsx
 msgid "reply"
 msgstr "reply"
 
-#: src/components/chat/messages/ChatBubbleBase.tsx
-#: src/components/chat/messages/StickerBubble.tsx
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Reply"
 msgstr "Reply"
 
 #. placeholder {0}: replyTo.username
-#: src/components/chat/compose/ComposeContextBanner.tsx
 msgid "Replying to {0}"
 msgstr "Replying to {0}"
 
-#: src/pages/chat-thread/manage-invites.tsx
 msgid "Restricted To"
 msgstr "Restricted To"
 
-#: src/components/chat/compose/UploadPreview.tsx
 msgid "Retry"
 msgstr "Retry"
 
-#: src/components/invites/InvitePreviewCard.tsx
 msgid "Review to confirm if you want to join. Nothing changes until you click join."
 msgstr "Review to confirm if you want to join. Nothing changes until you click join."
 
-#: src/pages/chat-thread/manage-invites.tsx
-#: src/pages/chat-thread/manage-invites.tsx
 msgid "Revoke"
 msgstr "Revoke"
 
-#: src/pages/chat-thread/manage-invites.tsx
 msgid "Revoke invite"
 msgstr "Revoke invite"
 
-#: src/pages/chat-thread/ChatAdminSettings.tsx
 msgid "Save Settings"
 msgstr "Save Settings"
 
-#: src/pages/chat-thread/ChatAdminSettings.tsx
 msgid "Saving..."
 msgstr "Saving..."
 
-#: src/components/member-selector/MemberSelector.tsx
 msgid "Search by username or UID"
 msgstr "Search by username or UID"
 
-#: src/components/shared/EmojiInput.tsx
 msgid "Search emoji"
 msgstr "Search emoji"
 
-#: src/components/member-selector/MemberSelector.tsx
 msgid "Search for a user by username prefix or exact UID."
 msgstr "Search for a user by username prefix or exact UID."
 
-#: src/components/group-selector/GroupSelector.tsx
 msgid "Search groups"
 msgstr "Search groups"
 
-#: src/pages/chat-thread/chat-members.tsx
 msgid "Search members"
 msgstr "Search members"
 
-#: src/components/chat/compose/MentionAutocomplete.tsx
 msgid "Searching..."
 msgstr "Searching..."
 
-#: src/components/chat/settings/ShareInviteModal.tsx
-#: src/components/chat/settings/ShareInviteModal.tsx
-#: src/components/chat/settings/ShareInviteModal.tsx
 msgid "Select"
 msgstr "Select"
 
-#: src/layouts/DesktopSplitLayout.tsx
 msgid "Select a chat"
 msgstr "Select a chat"
 
-#: src/components/chat/settings/ShareInviteGroupSelectorModal.tsx
 msgid "Select Group"
 msgstr "Select Group"
 
-#: src/components/chat/settings/ShareInviteMemberSelectorModal.tsx
 msgid "Select User"
 msgstr "Select User"
 
-#: src/utils/chatDisplay.ts
 msgid "Semi-Private"
 msgstr "Semi-Private"
 
-#: src/components/chat/settings/ShareInviteModal.tsx
 msgid "Send invite"
 msgstr "Send invite"
 
-#: src/components/chat/compose/MessageComposeBar.tsx
 msgid "Send message"
 msgstr "Send message"
 
-#: src/components/chat/compose/MessageComposeBar.tsx
 msgid "Send voice message"
 msgstr "Send voice message"
 
-#: src/layouts/MobileLayout.tsx
-#: src/pages/settings.tsx
 msgid "Settings"
 msgstr "Settings"
 
-#: src/pages/chat-thread/chat-settings.tsx
-#~ msgid "Settings saved"
-#~ msgstr "Settings saved"
-
-#: src/pages/chat-thread/manage-invites.tsx
 msgid "Share"
 msgstr "Share"
 
-#: src/components/chat/settings/ShareInviteModal.tsx
 msgid "Share Invite"
 msgstr "Share Invite"
 
-#: src/pages/settings/general.tsx
 msgid "Show \"All\" Tab in Chats"
 msgstr "Show \"All\" Tab in Chats"
 
-#: src/pages/settings/general.tsx
 msgid "Small"
 msgstr "Small"
 
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Start Thread"
 msgstr "Start Thread"
 
-#: src/pages/settings.tsx
 msgid "Status"
 msgstr "Status"
 
-#: src/pages/chat-thread/chat-settings.tsx
 msgid "Stay"
 msgstr "Stay"
 
-#: src/components/chat/compose/ComposeInput.tsx
-#: src/components/chat/messages/StickerBubble.tsx
 msgid "Sticker"
 msgstr "Sticker"
 
-#: src/hooks/useAddSticker.ts
 msgid "Sticker added"
 msgstr "Sticker added"
 
-#: src/components/chat/compose/StickerPicker.tsx
 msgid "Sticker packs"
 msgstr "Sticker packs"
 
-#: src/components/chat/compose/AddStickerModal.tsx
-#: src/components/chat/compose/StickerPreviewModal.tsx
 msgid "Sticker preview"
 msgstr "Sticker preview"
 
-#: src/components/chat/compose/StickerPreviewModal.tsx
-#: src/pages/settings/stickers.tsx
 msgid "stickers"
 msgstr "stickers"
 
-#: src/pages/settings.tsx
-#: src/pages/settings/stickers.tsx
-#~ msgid "Stickers"
-#~ msgstr "Stickers"
-
-#: src/components/chat/compose/StickerPreviewModal.tsx
 msgid "Subscribe"
 msgstr "Subscribe"
 
-#: src/pages/settings.tsx
 msgid "Subscribed"
 msgstr "Subscribed"
 
-#: src/pages/settings/stickers.tsx
-#~ msgid "Subscribed Packs"
-#~ msgstr "Subscribed Packs"
-
-#: src/pages/settings/sticker-pack-detail.tsx
 msgid "Tap a sticker to remove it from this pack."
 msgstr "Tap a sticker to remove it from this pack."
 
-#: src/components/chat/settings/ShareInviteModal.tsx
-#: src/pages/chat-thread/manage-invites.tsx
 msgid "Target User"
 msgstr "Target User"
 
-#: src/components/chat/settings/ShareInviteModal.tsx
-#: src/pages/chat-thread/manage-invites.tsx
 msgid "Targeted"
 msgstr "Targeted"
 
-#: src/pages/join-chat.tsx
 msgid "The invite code entered is not valid."
 msgstr "The invite code entered is not valid."
 
-#: src/components/invites/InvitePreviewCard.tsx
+msgid "this group"
+msgstr "this group"
+
 msgid "This invite is invalid or has expired."
 msgstr "This invite is invalid or has expired."
 
-#: src/components/invites/InvitePreviewCard.tsx
 msgid "This invite is not available for your account."
 msgstr "This invite is not available for your account."
 
-#: src/pages/chat-thread/manage-invites.tsx
 msgid "This invite link will stop working immediately."
 msgstr "This invite link will stop working immediately."
 
-#: src/components/chat/messages/InviteMessageCard.tsx
 msgid "This invite may have expired or been revoked."
 msgstr "This invite may have expired or been revoked."
 
-#: src/pages/settings/general.tsx
 msgid "This is how your messages will look in chat."
 msgstr "This is how your messages will look in chat."
 
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "This thread will move back to Threads. Continue?"
 msgstr "This thread will move back to Threads. Continue?"
 
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Thread"
 msgstr "Thread"
 
-#: src/components/chat/ChatList.tsx
-#~ msgid "Thread conversations"
-#~ msgstr "Thread conversations"
-
-#: src/components/chat/ThreadListRow.tsx
-#~ msgid "Thread in {0}"
-#~ msgstr "Thread in {0}"
-
-#: src/components/chat/lists/ChatListSegment.tsx
-#: src/pages/threads.tsx
 msgid "Threads"
 msgstr "Threads"
 
-#: src/pages/threads.tsx
 msgid "Threads you create or reply to will appear here"
 msgstr "Threads you create or reply to will appear here"
 
 #. placeholder {0}: index + 1
-#: src/components/chat/messages/media/ImageViewer.tsx
 msgid "Thumbnail {0}"
 msgstr "Thumbnail {0}"
 
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Today"
 msgstr "Today"
 
-#: src/pages/settings.tsx
 msgid "Turn Off Push Notifications"
 msgstr "Turn Off Push Notifications"
 
-#: src/pages/settings.tsx
 msgid "Turn On Push Notifications"
 msgstr "Turn On Push Notifications"
 
 #. placeholder {0}: member.uid
-#: src/components/member-selector/MemberSelector.tsx
-#: src/components/member-selector/MemberSelector.tsx
 msgid "UID {0}"
 msgstr "UID {0}"
 
-#: src/components/chat/lists/ChatList.tsx
-#: src/components/chat/lists/ChatList.tsx
 msgid "Unarchive"
 msgstr "Unarchive"
 
-#: src/components/chat/settings/ChatMuteSettingItem.tsx
 msgid "Unarchive chat?"
 msgstr "Unarchive chat?"
 
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Unarchive thread?"
 msgstr "Unarchive thread?"
 
-#: src/components/chat/settings/ChatMuteSettingItem.tsx
 msgid "Unmuting will unarchive this chat. Continue?"
 msgstr "Unmuting will unarchive this chat. Continue?"
 
-#: src/components/chat/pins/PinBanner.tsx
-#: src/components/chat/pins/PinBanner.tsx
-#: src/components/chat/pins/PinListModal.tsx
-#: src/components/chat/pins/PinListModal.tsx
-#: src/pages/chat-thread/chat-thread.tsx
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Unpin"
 msgstr "Unpin"
 
-#: src/components/chat/pins/PinBanner.tsx
-#: src/components/chat/pins/PinListModal.tsx
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Unpin Message"
 msgstr "Unpin Message"
 
-#: src/components/chat/lists/ChatList.tsx
 msgid "Unread"
 msgstr "Unread"
 
-#: src/components/chat/compose/StickerPreviewModal.tsx
-#: src/pages/settings/sticker-pack-detail.tsx
-#: src/pages/settings/sticker-pack-detail.tsx
-#: src/pages/settings/sticker-pack-detail.tsx
 msgid "Unsubscribe"
 msgstr "Unsubscribe"
 
-#: src/components/chat/settings/ChatMuteSettingItem.tsx
 msgid "until"
 msgstr "until"
 
-#: src/components/settings/CheckForUpdateItem.tsx
 msgid "Update check complete"
 msgstr "Update check complete"
 
-#: src/components/settings/CheckForUpdateItem.tsx
 msgid "Update check failed"
 msgstr "Update check failed"
 
-#: src/App.tsx
 msgid "Update Now"
 msgstr "Update Now"
 
-#: src/pages/chat-thread/ChatAdminSettings.tsx
-#~ msgid "Upload an image for this group."
-#~ msgstr "Upload an image for this group."
-
-#: src/pages/chat-thread/ChatAdminSettings.tsx
-#~ msgid "Upload Avatar"
-#~ msgstr "Upload Avatar"
-
-#: src/components/chat/compose/UploadPreview.tsx
-#: src/components/chat/compose/useComposeAttachments.ts
 msgid "Upload failed"
 msgstr "Upload failed"
 
-#: src/components/chat/compose/UploadPreview.tsx
 msgid "Uploading"
 msgstr "Uploading"
 
 #. placeholder {0}: voiceRecorder.uploadProgress
-#: src/components/chat/compose/VoiceRecorderPanel.tsx
 msgid "Uploading {0}%"
 msgstr "Uploading {0}%"
 
-#: src/pages/chat-thread/ChatAdminSettings.tsx
-#~ msgid "Uploading avatar..."
-#~ msgstr "Uploading avatar..."
-
-#: src/components/chat/profiles/GroupProfile.tsx
 msgid "Uploading..."
 msgstr "Uploading..."
 
 #. placeholder {0}: invite.targetUid
 #. placeholder {0}: member.uid
 #. placeholder {0}: selectedTargetMember.uid
-#: src/components/chat-members/ChatMemberRow.tsx
-#: src/components/chat/settings/ShareInviteModal.tsx
-#: src/pages/chat-thread/chat-members.tsx
-#: src/pages/chat-thread/chat-members.tsx
-#: src/pages/chat-thread/manage-invites.tsx
 msgid "User {0}"
 msgstr "User {0}"
 
-#: src/components/settings/SettingsProfileHero.tsx
 msgid "User {uid}"
 msgstr "User {uid}"
 
-#: src/pages/chat-thread/chat-members.tsx
 msgid "User ID"
 msgstr "User ID"
 
-#: src/components/chat/pins/PinBanner.tsx
 msgid "View all pinned messages"
 msgstr "View all pinned messages"
 
-#: src/components/chat/lists/ChatList.tsx
 msgid "View archived chats and threads"
 msgstr "View archived chats and threads"
 
 #. placeholder {0}: index + 1
-#: src/components/chat/messages/media/ImageViewer.tsx
 msgid "View image {0}"
 msgstr "View image {0}"
 
-#: src/pages/chat-thread/ChatAdminSettings.tsx
 msgid "Visibility"
 msgstr "Visibility"
 
-#: src/components/chat/compose/VoiceRecorderPanel.tsx
 msgid "Voice message"
 msgstr "Voice message"
 
-#: src/components/chat/compose/useVoiceRecorder.ts
-#: src/components/chat/compose/useVoiceRecorder.ts
 msgid "Voice recording is not supported on this device."
 msgstr "Voice recording is not supported on this device."
 
-#: src/components/chat/compose/VoiceRecorderPanel.tsx
 msgid "Waiting for microphone…"
 msgstr "Waiting for microphone…"
 
-#: src/components/invites/InvitePreviewCard.tsx
 msgid "We could not join this chat right now."
 msgstr "We could not join this chat right now."
 
-#: src/components/chat/pins/PinBanner.tsx
-#: src/components/chat/pins/PinListModal.tsx
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Would you like to unpin this message?"
 msgstr "Would you like to unpin this message?"
 
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "Yesterday"
 msgstr "Yesterday"
 
-#: src/components/invites/InvitePreviewCard.tsx
 msgid "You are already a member"
 msgstr "You are already a member"
 
-#: src/components/invites/InvitePreviewCard.tsx
 msgid "You are already a member of this chat."
 msgstr "You are already a member of this chat."
 
-#: src/pages/chat-thread/chat-thread.tsx
 msgid "You can only add up to {MAX_REACTIONS_PER_USER_PER_MESSAGE} reactions"
 msgstr "You can only add up to {MAX_REACTIONS_PER_USER_PER_MESSAGE} reactions"
 
-#: src/components/chat/compose/useComposeAttachments.ts
 msgid "You can only upload up to {maxAttachments} media files at once."
 msgstr "You can only upload up to {maxAttachments} media files at once."
 
-#: src/components/invites/InvitePreviewCard.tsx
-#~ msgid "You can review the chat before joining. Nothing changes until you tap Join chat."
-#~ msgstr "You can review the chat before joining. Nothing changes until you tap Join chat."
-
-#: src/pages/chat-thread/chat-settings.tsx
 msgid "You have unsaved group detail changes. Leave without saving?"
 msgstr "You have unsaved group detail changes. Leave without saving?"
 
-#: src/components/invites/InvitePreviewCard.tsx
 msgid "You’ve been invited"
 msgstr "You’ve been invited"
 
-#: src/components/settings/SettingsProfileHero.tsx
 msgid "Your account"
 msgstr "Your account"

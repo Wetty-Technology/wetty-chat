@@ -1,16 +1,13 @@
 ---
 name: localization
-description: Use this skill to translate localization files
+description: Use this skill when you need to update the localization of the PWA app (wetty-chat-mobile)
 ---
 
-## Location
-This skill is meant to be run inside `wetty-chat-mobile`
-
-## Adding missing translations
+## Adding missing translations for the PWA
 First you should extract anything that needs to be translated by using
-
+the following command in `wetty-chat-mobile` directory
 ```sh
-npm run extract
+npm run lingui:extract
 ```
 
 Then you should examine translation files in `locales/<language>/messages.po`

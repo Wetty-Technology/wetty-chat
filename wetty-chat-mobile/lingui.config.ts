@@ -11,6 +11,7 @@ const config: LinguiConfig = {
     },
   ],
   format: formatter({
+    origins: false,
     lineNumbers: false,
   }),
 };
