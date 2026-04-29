@@ -2,17 +2,31 @@ FROM --platform=$BUILDPLATFORM rust:1.95.0-trixie
 
 ARG TARGETARCH=amd64
 
-# Cross-compilation toolchain and native C dependencies used by the backend.
-RUN dpkg --add-architecture arm64 && \
-    dpkg --add-architecture amd64 && \
-    apt-get update && apt-get install -y --no-install-recommends \
-    gcc-aarch64-linux-gnu \
-    g++-aarch64-linux-gnu \
-    libc6-dev-arm64-cross \
-    pkg-config \
-    libpq-dev:${TARGETARCH} \
-    libssl-dev:${TARGETARCH} \
-    && rm -rf /var/lib/apt/lists/*
+# Native C dependencies are target-specific; arm64 builds also need a cross
+# linker because the builder runs on the Docker build platform.
+RUN if [ "$TARGETARCH" = "arm64" ]; then \
+        dpkg --add-architecture arm64; \
+    fi && \
+    apt-get update && \
+    if [ "$TARGETARCH" = "arm64" ]; then \
+        apt-get install -y --no-install-recommends \
+            gcc-aarch64-linux-gnu \
+            g++-aarch64-linux-gnu \
+            libc6-dev-arm64-cross \
+            pkg-config \
+            curl \
+            libpq-dev:arm64 \
+            libssl-dev:arm64; \
+    elif [ "$TARGETARCH" = "amd64" ]; then \
+        apt-get install -y --no-install-recommends \
+            pkg-config \
+            curl \
+            libpq-dev:amd64 \
+            libssl-dev:amd64; \
+    else \
+        echo "Unsupported architecture: $TARGETARCH" && exit 1; \
+    fi && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
