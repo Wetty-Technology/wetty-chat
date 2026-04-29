@@ -1,6 +1,6 @@
-ARG TARGETARCH
+ARG TARGETARCH=amd64
 ARG BUILDER_BASE_REPOSITORY=ghcr.io/wetty-technology/wetty-chat-backend-builder-base
-ARG BUILDER_BASE_TAG=rust-1.94.0-trixie
+ARG BUILDER_BASE_TAG=rust-1.95.0-trixie
 ARG RUNTIME_BASE_IMAGE=ghcr.io/wetty-technology/wetty-chat-backend-runtime-base:trixie
 
 # Build stage

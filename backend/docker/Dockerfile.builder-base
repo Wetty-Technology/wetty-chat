@@ -1,6 +1,6 @@
-FROM --platform=$BUILDPLATFORM rust:1.94.0-trixie
+FROM --platform=$BUILDPLATFORM rust:1.95.0-trixie
 
-ARG TARGETARCH
+ARG TARGETARCH=amd64
 
 # Cross-compilation toolchain and native C dependencies used by the backend.
 RUN dpkg --add-architecture arm64 && \
