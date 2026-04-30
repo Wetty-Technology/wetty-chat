@@ -16,6 +16,7 @@ import 'package:chahua/features/chat_list/application/group_list_v2_store.dart';
 import 'package:chahua/features/chat_list/application/group_list_v2_view_model.dart';
 import 'package:chahua/features/chat_list/application/thread_list_v2_store.dart';
 import 'package:chahua/features/chat_list/application/thread_list_v2_view_model.dart';
+import 'package:chahua/features/chat_list/model/thread_list_item.dart';
 import 'package:chahua/features/shared/application/chat_inbox_reconciler.dart';
 
 void main() {
@@ -189,18 +190,63 @@ void main() {
       expect(threadService.fetchThreadsCalls, 2);
       expect(threadService.fetchUnreadCountCalls, greaterThanOrEqualTo(1));
     });
+
+    test('reconcileThreads refreshes loaded archived threads', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final chatService = _FakeChatApiService(
+        unreadCount: 0,
+        chatResponses: [const ListChatsResponseDto(chats: [])],
+      );
+      final threadService = _FakeThreadApiService(
+        unreadCount: 2,
+        threadResponses: [
+          ListThreadsResponseDto(threads: [_threadDto()]),
+        ],
+        archivedThreadResponses: [
+          ListThreadsResponseDto(
+            threads: [_threadDto(rootId: 300, archived: true)],
+          ),
+        ],
+      );
+      final container = ProviderContainer(
+        overrides: [
+          authSessionProvider.overrideWith(_AuthenticatedSessionNotifier.new),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          chatApiServiceProvider.overrideWithValue(chatService),
+          threadApiServiceProvider.overrideWithValue(threadService),
+          apnsChannelProvider.overrideWithValue(_FakeApnsChannel()),
+        ],
+      );
+      addTearDown(container.dispose);
+      container
+          .read(threadListV2StoreProvider.notifier)
+          .replaceArchivedPage(
+            threads: [
+              _threadDto(rootId: 250, archived: true),
+            ].map(ThreadListItem.fromDto).toList(growable: false),
+          );
+
+      await container.read(chatInboxReconcilerProvider).reconcileThreads();
+
+      final store = container.read(threadListV2StoreProvider);
+      expect(store.active.threads.single.threadRootId, 200);
+      expect(store.archived.threads.single.threadRootId, 300);
+      expect(threadService.fetchArchivedThreadsCalls, 2);
+    });
   });
 }
 
-ThreadListItemDto _threadDto() {
+ThreadListItemDto _threadDto({int rootId = 200, bool archived = false}) {
   return ThreadListItemDto(
     chatId: 10,
     chatName: 'General',
-    threadRootMessage: _preview(id: 200, text: 'thread root'),
-    lastReply: _preview(id: 201, text: 'thread reply'),
+    threadRootMessage: _preview(id: rootId, text: 'thread root'),
+    lastReply: _preview(id: rootId + 1, text: 'thread reply'),
     lastReplyAt: DateTime.parse('2026-04-12T12:05:00Z'),
     unreadCount: 2,
     subscribedAt: null,
+    archived: archived,
   );
 }
 
@@ -245,11 +291,16 @@ class _FakeThreadApiService extends ThreadApiService {
   _FakeThreadApiService({
     required this.unreadCount,
     required this.threadResponses,
-  }) : super(Dio());
+    List<ListThreadsResponseDto>? archivedThreadResponses,
+  }) : archivedThreadResponses =
+           archivedThreadResponses ?? [const ListThreadsResponseDto()],
+       super(Dio());
 
   final int unreadCount;
   final List<ListThreadsResponseDto> threadResponses;
+  final List<ListThreadsResponseDto> archivedThreadResponses;
   int fetchThreadsCalls = 0;
+  int fetchArchivedThreadsCalls = 0;
   int fetchUnreadCountCalls = 0;
 
   @override
@@ -258,10 +309,18 @@ class _FakeThreadApiService extends ThreadApiService {
     String? before,
     bool? archived,
   }) async {
-    final index = fetchThreadsCalls < threadResponses.length
-        ? fetchThreadsCalls
-        : threadResponses.length - 1;
     fetchThreadsCalls += 1;
+    if (archived == true) {
+      final index = fetchArchivedThreadsCalls < archivedThreadResponses.length
+          ? fetchArchivedThreadsCalls
+          : archivedThreadResponses.length - 1;
+      fetchArchivedThreadsCalls += 1;
+      return archivedThreadResponses[index];
+    }
+    final activeFetches = fetchThreadsCalls - fetchArchivedThreadsCalls - 1;
+    final index = activeFetches < threadResponses.length
+        ? activeFetches
+        : threadResponses.length - 1;
     return threadResponses[index];
   }
 
