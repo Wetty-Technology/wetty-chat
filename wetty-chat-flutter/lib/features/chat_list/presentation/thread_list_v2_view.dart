@@ -9,6 +9,7 @@ import '../application/thread_list_v2_store.dart';
 import '../model/thread_list_item.dart';
 import 'chat_workspace_layout_scope.dart';
 import 'widgets/list_row_interaction_surface.dart';
+import 'widgets/swipe_to_action_row.dart';
 import 'widgets/thread_list_row.dart';
 import '../application/thread_list_v2_view_model.dart';
 
@@ -224,19 +225,35 @@ class _ThreadListV2Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ThreadListRow(
-      thread: thread,
-      isActive: isActive,
-      onTap: () {
-        context.go(
-          AppRoutes.threadDetail(thread.chatId, thread.threadRootId.toString()),
-          extra: {
-            'disableTransition': ChatWorkspaceLayoutScope.isSplitLayout(
-              context,
-            ),
+    final l10n = AppLocalizations.of(context)!;
+    return Consumer(
+      builder: (context, ref, _) => SwipeToActionRow(
+        key: ValueKey('thread-v2-${thread.chatId}-${thread.threadRootId}'),
+        direction: SwipeToActionDirection.left,
+        icon: CupertinoIcons.archivebox,
+        label: l10n.swipeActionArchive,
+        actionColor: CupertinoColors.systemOrange,
+        onAction: () => ref
+            .read(activeThreadListV2ViewModelProvider.notifier)
+            .archiveThread(thread),
+        child: ThreadListRow(
+          thread: thread,
+          isActive: isActive,
+          onTap: () {
+            context.go(
+              AppRoutes.threadDetail(
+                thread.chatId,
+                thread.threadRootId.toString(),
+              ),
+              extra: {
+                'disableTransition': ChatWorkspaceLayoutScope.isSplitLayout(
+                  context,
+                ),
+              },
+            );
           },
-        );
-      },
+        ),
+      ),
     );
   }
 }

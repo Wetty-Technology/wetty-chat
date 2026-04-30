@@ -402,6 +402,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get swipeActionMarkUnread => '未读';
 
   @override
+  String get swipeActionArchive => '归档';
+
+  @override
+  String get swipeActionUnarchive => '取消归档';
+
+  @override
   String get selectChatPlaceholder => '选择一个聊天';
 }
 
@@ -801,6 +807,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get swipeActionMarkUnread => '未讀';
+
+  @override
+  String get swipeActionArchive => '封存';
+
+  @override
+  String get swipeActionUnarchive => '取消封存';
 
   @override
   String get selectChatPlaceholder => '選擇一個聊天';

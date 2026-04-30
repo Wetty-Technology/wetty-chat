@@ -404,6 +404,12 @@
   "swipeActionMarkUnread": "Unread",
   "@swipeActionMarkUnread": { "description": "Swipe action label to mark a chat as unread" },
 
+  "swipeActionArchive": "Archive",
+  "@swipeActionArchive": { "description": "Swipe action label to archive a thread" },
+
+  "swipeActionUnarchive": "Unarchive",
+  "@swipeActionUnarchive": { "description": "Swipe action label to unarchive a thread" },
+
   "selectChatPlaceholder": "Select a chat",
   "@selectChatPlaceholder": { "description": "Placeholder in the desktop split view when no chat is selected" }
 }

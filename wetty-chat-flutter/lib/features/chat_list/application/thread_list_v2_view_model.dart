@@ -182,6 +182,40 @@ class ThreadListV2ViewModel extends AsyncNotifier<ThreadListV2ViewState> {
     }
   }
 
+  Future<void> archiveThread(ThreadListItem thread) async {
+    await ref.read(threadListV2RepositoryProvider).archiveThread(thread);
+    await _refreshAfterArchiveChange();
+  }
+
+  Future<void> unarchiveThread(ThreadListItem thread) async {
+    await ref.read(threadListV2RepositoryProvider).unarchiveThread(thread);
+    await _refreshAfterArchiveChange();
+  }
+
+  Future<void> _refreshAfterArchiveChange() async {
+    await refreshThreads();
+
+    final storeState = ref.read(threadListV2StoreProvider);
+    switch (scope) {
+      case ThreadListV2Scope.active:
+        if (storeState.archived.isLoaded) {
+          await ref
+              .read(threadListV2RepositoryProvider)
+              .loadArchivedThreads(limit: _refreshLimit(storeState.archived));
+        }
+      case ThreadListV2Scope.archived:
+        if (storeState.active.isLoaded) {
+          await ref
+              .read(threadListV2RepositoryProvider)
+              .loadThreads(limit: _refreshLimit(storeState.active));
+        }
+    }
+  }
+
+  int _refreshLimit(ThreadListV2ListState listState) {
+    return listState.threads.isEmpty ? 20 : listState.threads.length;
+  }
+
   ThreadListV2ListState _currentListState() {
     final storeState = ref.read(threadListV2StoreProvider);
     return switch (scope) {

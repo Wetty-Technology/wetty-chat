@@ -136,5 +136,7 @@
 
   "swipeActionMarkRead": "已讀",
   "swipeActionMarkUnread": "未讀",
+  "swipeActionArchive": "封存",
+  "swipeActionUnarchive": "取消封存",
   "selectChatPlaceholder": "選擇一個聊天"
 }

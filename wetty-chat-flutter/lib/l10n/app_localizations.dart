@@ -861,6 +861,18 @@ abstract class AppLocalizations {
   /// **'Unread'**
   String get swipeActionMarkUnread;
 
+  /// Swipe action label to archive a thread
+  ///
+  /// In en, this message translates to:
+  /// **'Archive'**
+  String get swipeActionArchive;
+
+  /// Swipe action label to unarchive a thread
+  ///
+  /// In en, this message translates to:
+  /// **'Unarchive'**
+  String get swipeActionUnarchive;
+
   /// Placeholder in the desktop split view when no chat is selected
   ///
   /// In en, this message translates to:

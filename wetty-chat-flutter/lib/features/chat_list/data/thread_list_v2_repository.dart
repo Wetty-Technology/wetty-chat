@@ -96,6 +96,18 @@ class ThreadListV2Repository {
         .read(threadListV2StoreProvider.notifier)
         .appendArchivedPage(threads: threads, nextCursor: response.nextCursor);
   }
+
+  Future<void> archiveThread(ThreadListItem thread) {
+    return ref
+        .read(threadApiServiceProvider)
+        .archiveThread(thread.chatId, thread.threadRootId);
+  }
+
+  Future<void> unarchiveThread(ThreadListItem thread) {
+    return ref
+        .read(threadApiServiceProvider)
+        .unarchiveThread(thread.chatId, thread.threadRootId);
+  }
 }
 
 final threadListV2RepositoryProvider = Provider<ThreadListV2Repository>((ref) {
