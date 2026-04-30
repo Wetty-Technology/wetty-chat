@@ -10,7 +10,9 @@ import '../application/sticker_pack_list_view_model.dart';
 import '../models/sticker_models.dart';
 
 class StickerPackListPage extends ConsumerStatefulWidget {
-  const StickerPackListPage({super.key});
+  const StickerPackListPage({super.key, this.onOpenPack});
+
+  final ValueChanged<String>? onOpenPack;
 
   @override
   ConsumerState<StickerPackListPage> createState() =>
@@ -55,7 +57,7 @@ class _StickerPackListPageState extends ConsumerState<StickerPackListPage> {
                   .read(stickerPackListViewModelProvider.notifier)
                   .createPack(name);
               if (pack != null && mounted) {
-                context.push(AppRoutes.settingsStickerPackDetail(pack.id));
+                _openPack(pack.id);
               }
             },
             child: const Text('Create'),
@@ -103,11 +105,7 @@ class _StickerPackListPageState extends ConsumerState<StickerPackListPage> {
                       return _PackListTile(
                         pack: pack,
                         isOwned: pack.ownerUid == currentUserId,
-                        onTap: () {
-                          context.push(
-                            AppRoutes.settingsStickerPackDetail(pack.id),
-                          );
-                        },
+                        onTap: () => _openPack(pack.id),
                       );
                     }, childCount: state.packs.length),
                   ),
@@ -115,6 +113,15 @@ class _StickerPackListPageState extends ConsumerState<StickerPackListPage> {
               ),
       ),
     );
+  }
+
+  void _openPack(String packId) {
+    final onOpenPack = widget.onOpenPack;
+    if (onOpenPack != null) {
+      onOpenPack(packId);
+      return;
+    }
+    context.push(AppRoutes.settingsStickerPackDetail(packId));
   }
 }
 

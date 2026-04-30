@@ -53,7 +53,7 @@ class _DevSessionSettingsPageState
       if (!mounted) {
         return;
       }
-      context.pop();
+      Navigator.of(context).pop();
     } finally {
       if (mounted) {
         setState(() {

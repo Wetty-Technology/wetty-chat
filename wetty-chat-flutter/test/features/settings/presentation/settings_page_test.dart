@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:chahua/core/providers/shared_preferences_provider.dart';
 import 'package:chahua/features/settings/presentation/cache_settings_view.dart';
+import 'package:chahua/features/settings/presentation/settings_modal_page.dart';
 import 'package:chahua/features/settings/presentation/settings_page.dart';
 import 'package:chahua/l10n/app_localizations.dart';
 import '../../../test_utils/path_provider_mock.dart';
@@ -47,6 +48,38 @@ void main() {
           routerConfig: router,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Cache'), findsOneWidget);
+
+    await tester.tap(find.text('Cache'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Storage Used'), findsOneWidget);
+  });
+
+  testWidgets('settings modal opens subpages in its local navigator', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(const <String, Object>{});
+    final preferences = await SharedPreferences.getInstance();
+    final container = ProviderContainer(
+      overrides: [sharedPreferencesProvider.overrideWithValue(preferences)],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const CupertinoApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: SettingsModalPage(),
         ),
       ),
     );

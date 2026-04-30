@@ -4,6 +4,7 @@ import 'package:chahua/features/chat_list/presentation/chat_list_v2_page.dart';
 import 'package:chahua/features/chat_list/presentation/chat_workspace_layout_scope.dart';
 import 'package:chahua/l10n/app_localizations.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:go_router/go_router.dart';
 
 class ChatWorkspaceShell extends StatelessWidget {
   const ChatWorkspaceShell({
@@ -39,6 +40,8 @@ class ChatWorkspaceShell extends StatelessWidget {
                     embedded: true,
                     selectedChatId: _selectedChatId(location),
                     selectedThreadRootId: _selectedThreadRootId(location),
+                    onOpenSettings: () =>
+                        context.push(AppRoutes.splitSettingsModal),
                   ),
                 ),
               ),

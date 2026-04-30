@@ -12,6 +12,7 @@ abstract final class AppRoutes {
   static String threadDetail(String chatId, String threadRootId) =>
       '/thread/$chatId/$threadRootId';
   static const settings = '/settings';
+  static const splitSettingsModal = '/settings-modal';
   static const language = '/settings/language';
   static const fontSize = '/settings/font-size';
   static const profile = '/settings/profile';

@@ -21,6 +21,7 @@ import 'package:chahua/features/settings/presentation/font_size_settings_view.da
 import 'package:chahua/features/settings/presentation/language_settings_view.dart';
 import 'package:chahua/features/settings/presentation/notification_settings_view.dart';
 import 'package:chahua/features/settings/presentation/profile_settings_view.dart';
+import 'package:chahua/features/settings/presentation/settings_modal_page.dart';
 import 'package:chahua/features/settings/presentation/settings_page.dart';
 import 'package:chahua/features/stickers/presentation/sticker_pack_detail_page.dart';
 import 'package:chahua/features/stickers/presentation/sticker_pack_list_page.dart';
@@ -96,6 +97,35 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return CupertinoPage(
             key: state.pageKey,
             child: StickerPackDetailPage(packId: packId),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.splitSettingsModal,
+        pageBuilder: (context, state) {
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            opaque: false,
+            barrierDismissible: true,
+            barrierColor: CupertinoColors.black.withAlpha(76),
+            transitionDuration: const Duration(milliseconds: 180),
+            reverseTransitionDuration: const Duration(milliseconds: 140),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+                  final curved = CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOutCubic,
+                    reverseCurve: Curves.easeInCubic,
+                  );
+                  return FadeTransition(
+                    opacity: curved,
+                    child: ScaleTransition(
+                      scale: Tween<double>(begin: 0.98, end: 1).animate(curved),
+                      child: child,
+                    ),
+                  );
+                },
+            child: const SettingsModalPage(),
           );
         },
       ),

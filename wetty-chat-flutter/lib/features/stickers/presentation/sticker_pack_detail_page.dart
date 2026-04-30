@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/style_config.dart';
 import '../../../core/session/dev_session_store.dart';
@@ -61,7 +60,7 @@ class _StickerPackDetailPageState extends ConsumerState<StickerPackDetailPage> {
       await ref
           .read(stickerPackDetailViewModelProvider(widget.packId).notifier)
           .deletePack();
-      if (mounted) context.pop();
+      if (mounted) Navigator.of(context).pop();
     }
   }
 
@@ -75,7 +74,7 @@ class _StickerPackDetailPageState extends ConsumerState<StickerPackDetailPage> {
       await ref
           .read(stickerPackDetailViewModelProvider(widget.packId).notifier)
           .unsubscribePack();
-      if (mounted) context.pop();
+      if (mounted) Navigator.of(context).pop();
     }
   }
 

@@ -20,11 +20,13 @@ class ChatListV2Page extends ConsumerStatefulWidget {
     this.embedded = false,
     this.selectedChatId,
     this.selectedThreadRootId,
+    this.onOpenSettings,
   });
 
   final bool embedded;
   final String? selectedChatId;
   final int? selectedThreadRootId;
+  final VoidCallback? onOpenSettings;
 
   @override
   ConsumerState<ChatListV2Page> createState() => _ChatListV2PageState();
@@ -185,6 +187,16 @@ class _ChatListV2PageState extends ConsumerState<ChatListV2Page> {
           children: [
             CupertinoNavigationBar(
               backgroundColor: chromeBackgroundColor,
+              leading: widget.onOpenSettings == null
+                  ? null
+                  : CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: widget.onOpenSettings,
+                      child: Icon(
+                        CupertinoIcons.person_crop_circle,
+                        semanticLabel: l10n.tabSettings,
+                      ),
+                    ),
               middle: Text(l10n.tabChats),
             ),
             Expanded(

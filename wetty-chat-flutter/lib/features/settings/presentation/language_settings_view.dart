@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/settings/app_settings_store.dart';
 import '../../../l10n/app_localizations.dart';
@@ -32,7 +31,7 @@ class LanguageSettingsPage extends ConsumerWidget {
                     : null,
                 onTap: () {
                   ref.read(appSettingsProvider.notifier).setLanguage(language);
-                  context.pop();
+                  Navigator.of(context).pop();
                 },
               ),
           ],
