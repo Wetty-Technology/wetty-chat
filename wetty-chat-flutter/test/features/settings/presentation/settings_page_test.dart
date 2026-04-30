@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:chahua/core/providers/shared_preferences_provider.dart';
 import 'package:chahua/features/settings/presentation/cache_settings_view.dart';
-import 'package:chahua/features/settings/presentation/settings_view.dart';
+import 'package:chahua/features/settings/presentation/settings_page.dart';
 import 'package:chahua/l10n/app_localizations.dart';
 import '../../../test_utils/path_provider_mock.dart';
 

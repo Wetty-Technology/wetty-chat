@@ -1,16 +1,35 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import '../../../l10n/app_localizations.dart';
 
-import '../../../app/routing/route_names.dart';
 import '../../../app/theme/style_config.dart';
 import '../../../core/session/dev_session_store.dart';
 import '../../../core/settings/app_settings_store.dart';
+import '../../../l10n/app_localizations.dart';
 import 'settings_components.dart';
 
-class SettingsPage extends ConsumerWidget {
-  const SettingsPage({super.key});
+class SettingsContent extends ConsumerWidget {
+  const SettingsContent({
+    super.key,
+    required this.onOpenStickerPacks,
+    required this.onOpenLanguage,
+    required this.onOpenFontSize,
+    required this.onOpenCache,
+    required this.onOpenProfile,
+    required this.onOpenDevSession,
+    required this.onOpenNotifications,
+    this.leading,
+    this.automaticallyImplyLeading = true,
+  });
+
+  final VoidCallback onOpenStickerPacks;
+  final VoidCallback onOpenLanguage;
+  final VoidCallback onOpenFontSize;
+  final VoidCallback onOpenCache;
+  final VoidCallback onOpenProfile;
+  final VoidCallback onOpenDevSession;
+  final VoidCallback onOpenNotifications;
+  final Widget? leading;
+  final bool automaticallyImplyLeading;
 
   List<SettingsSectionData> _sections(
     BuildContext context,
@@ -53,7 +72,7 @@ class SettingsPage extends ConsumerWidget {
             iconColor: const Color(0xFFFF6482),
             titleFontSize: AppFontSizes.body,
             titleFontWeight: FontWeight.w500,
-            onTap: () => context.push(AppRoutes.stickerPacks),
+            onTap: onOpenStickerPacks,
           ),
         ],
       ),
@@ -68,7 +87,7 @@ class SettingsPage extends ConsumerWidget {
             trailingTextSize: AppFontSizes.body,
             titleFontSize: AppFontSizes.body,
             titleFontWeight: FontWeight.w500,
-            onTap: () => context.push(AppRoutes.language),
+            onTap: onOpenLanguage,
           ),
           SettingsItemData(
             title: l10n.settingsTextSize,
@@ -76,7 +95,7 @@ class SettingsPage extends ConsumerWidget {
             iconColor: const Color(0xFF34A853),
             titleFontSize: AppFontSizes.body,
             titleFontWeight: FontWeight.w500,
-            onTap: () => context.push(AppRoutes.fontSize),
+            onTap: onOpenFontSize,
           ),
           SettingsItemData(
             title: l10n.settingsCache,
@@ -84,7 +103,7 @@ class SettingsPage extends ConsumerWidget {
             iconColor: const Color(0xFF5E5CE6),
             titleFontSize: AppFontSizes.body,
             titleFontWeight: FontWeight.w500,
-            onTap: () => context.push(AppRoutes.cache),
+            onTap: onOpenCache,
           ),
         ],
       ),
@@ -97,7 +116,7 @@ class SettingsPage extends ConsumerWidget {
             iconColor: const Color(0xFF34AADC),
             titleFontSize: AppFontSizes.body,
             titleFontWeight: FontWeight.w500,
-            onTap: () => context.push(AppRoutes.profile),
+            onTap: onOpenProfile,
           ),
           SettingsItemData(
             title: 'Developer Session',
@@ -107,7 +126,7 @@ class SettingsPage extends ConsumerWidget {
             trailingTextSize: AppFontSizes.body,
             titleFontSize: AppFontSizes.body,
             titleFontWeight: FontWeight.w500,
-            onTap: () => context.push(AppRoutes.devSession),
+            onTap: onOpenDevSession,
           ),
         ],
       ),
@@ -120,7 +139,7 @@ class SettingsPage extends ConsumerWidget {
             iconColor: const Color(0xFFFF9500),
             titleFontSize: AppFontSizes.body,
             titleFontWeight: FontWeight.w500,
-            onTap: () => context.push(AppRoutes.notifications),
+            onTap: onOpenNotifications,
           ),
         ],
       ),
@@ -134,7 +153,11 @@ class SettingsPage extends ConsumerWidget {
     final session = ref.watch(authSessionProvider);
     final sections = _sections(context, ref, settings, session);
     return CupertinoPageScaffold(
-      navigationBar: CupertinoNavigationBar(middle: Text(l10n.tabSettings)),
+      navigationBar: CupertinoNavigationBar(
+        automaticallyImplyLeading: automaticallyImplyLeading,
+        leading: leading,
+        middle: Text(l10n.tabSettings),
+      ),
       child: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),

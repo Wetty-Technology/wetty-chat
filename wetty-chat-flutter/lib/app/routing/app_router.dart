@@ -21,7 +21,7 @@ import 'package:chahua/features/settings/presentation/font_size_settings_view.da
 import 'package:chahua/features/settings/presentation/language_settings_view.dart';
 import 'package:chahua/features/settings/presentation/notification_settings_view.dart';
 import 'package:chahua/features/settings/presentation/profile_settings_view.dart';
-import 'package:chahua/features/settings/presentation/settings_view.dart';
+import 'package:chahua/features/settings/presentation/settings_page.dart';
 import 'package:chahua/features/stickers/presentation/sticker_pack_detail_page.dart';
 import 'package:chahua/features/stickers/presentation/sticker_pack_list_page.dart';
 
