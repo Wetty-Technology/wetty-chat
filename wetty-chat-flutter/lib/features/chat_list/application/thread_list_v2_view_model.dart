@@ -6,6 +6,10 @@ import '../data/thread_list_v2_repository.dart';
 import '../model/thread_list_item.dart';
 import 'thread_list_v2_store.dart';
 
+/// Selects which thread list a [ThreadListV2ViewModel] instance manages.
+///
+/// The provider is a family keyed by this scope. The active scope backs the
+/// normal Threads tab; the archived scope backs the archive folder page.
 enum ThreadListV2Scope { active, archived }
 
 typedef ThreadListV2ViewState = ({
@@ -17,6 +21,13 @@ typedef ThreadListV2ViewState = ({
   String? errorMessage,
 });
 
+/// Drives one scoped thread list surface.
+///
+/// This VM is shared by active and archived thread lists. Each provider
+/// instance listens to the shared [threadListV2StoreProvider] but projects only
+/// the list selected by [scope]. Active refreshes also probe whether archived
+/// threads exist so the folder row can appear or disappear; archived refreshes
+/// load only archived threads.
 class ThreadListV2ViewModel extends AsyncNotifier<ThreadListV2ViewState> {
   ThreadListV2ViewModel(this.scope);
 
@@ -187,10 +198,17 @@ final threadListV2ViewModelProvider =
       ThreadListV2Scope
     >(ThreadListV2ViewModel.new);
 
+/// View model for the normal Threads tab.
+///
+/// Loads active threads and probes archived-thread existence for the archive
+/// folder row.
 final activeThreadListV2ViewModelProvider = threadListV2ViewModelProvider(
   ThreadListV2Scope.active,
 );
 
+/// View model for the archived-threads page.
+///
+/// Loads and paginates only archived threads.
 final archivedThreadListV2ViewModelProvider = threadListV2ViewModelProvider(
   ThreadListV2Scope.archived,
 );

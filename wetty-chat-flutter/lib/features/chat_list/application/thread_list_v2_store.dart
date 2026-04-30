@@ -9,6 +9,11 @@ import '../model/thread_list_item.dart';
 import '../../shared/data/read_state_models.dart';
 import 'realtime_projection_policy.dart';
 
+/// Cached paginated state for one thread list.
+///
+/// The store keeps one list for active threads and one for archived threads.
+/// [isLoaded] means this list has completed a real initial page request, even
+/// if that request returned no threads.
 typedef ThreadListV2ListState = ({
   List<ThreadListItem> threads,
   String? nextCursor,
@@ -23,6 +28,14 @@ typedef ThreadUnreadTotals = ({
   int archivedMessageCount,
 });
 
+/// Shared state for the thread-list surfaces.
+///
+/// Active and archived thread lists live in the same store so realtime events
+/// and read-state updates can update whichever list currently contains a
+/// thread. [hasArchivedThreads] is a lightweight existence flag used by the
+/// Threads tab to decide whether to show the archive folder row; it is separate
+/// from [archived] so probing for the folder does not mark the archived page
+/// list as loaded.
 typedef ThreadListV2StoreState = ({
   ThreadListV2ListState active,
   ThreadListV2ListState archived,
@@ -62,6 +75,11 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
     );
   }
 
+  /// Records whether the user has any archived threads.
+  ///
+  /// This is set by a small archived-thread probe from the active Threads tab.
+  /// It should not be used as a substitute for loading
+  /// [ThreadListV2StoreState.archived].
   void replaceHasArchivedThreads(bool hasArchivedThreads) {
     _replaceState(hasArchivedThreads: hasArchivedThreads);
   }
