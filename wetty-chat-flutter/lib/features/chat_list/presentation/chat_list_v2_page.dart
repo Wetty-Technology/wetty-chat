@@ -3,11 +3,14 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:chahua/app/theme/style_config.dart';
+import 'package:chahua/core/notifications/unread_badge_provider.dart';
+import 'package:chahua/core/session/current_user_profile.dart';
+import 'package:chahua/core/session/dev_session_store.dart';
+import 'package:chahua/core/settings/app_settings_store.dart';
+import 'package:chahua/features/shared/presentation/app_avatar.dart';
 import 'package:chahua/l10n/app_localizations.dart';
 
-import '../../../app/theme/style_config.dart';
-import '../../../core/notifications/unread_badge_provider.dart';
-import '../../../core/settings/app_settings_store.dart';
 import 'widgets/chat_list_segment.dart';
 import '../application/all_list_v2_view_model.dart';
 import '../application/group_list_v2_view_model.dart';
@@ -189,13 +192,9 @@ class _ChatListV2PageState extends ConsumerState<ChatListV2Page> {
               backgroundColor: chromeBackgroundColor,
               leading: widget.onOpenSettings == null
                   ? null
-                  : CupertinoButton(
-                      padding: EdgeInsets.zero,
-                      onPressed: widget.onOpenSettings,
-                      child: Icon(
-                        CupertinoIcons.person_crop_circle,
-                        semanticLabel: l10n.tabSettings,
-                      ),
+                  : _CurrentUserSettingsButton(
+                      semanticLabel: l10n.tabSettings,
+                      onPressed: widget.onOpenSettings!,
                     ),
               middle: Text(l10n.tabChats),
             ),
@@ -213,6 +212,41 @@ class _ChatListV2PageState extends ConsumerState<ChatListV2Page> {
         middle: Text(l10n.tabChats),
       ),
       child: SafeArea(bottom: false, child: scrollView),
+    );
+  }
+}
+
+class _CurrentUserSettingsButton extends ConsumerWidget {
+  const _CurrentUserSettingsButton({
+    required this.semanticLabel,
+    required this.onPressed,
+  });
+
+  final String semanticLabel;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final session = ref.watch(authSessionProvider);
+    final profile = ref
+        .watch(currentUserProfileProvider)
+        .maybeWhen(data: (profile) => profile, orElse: () => null);
+    final fallbackName = profile?.username ?? session.currentUserId.toString();
+
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      minimumSize: const Size.square(44),
+      onPressed: onPressed,
+      child: Semantics(
+        label: semanticLabel,
+        button: true,
+        child: AppAvatar(
+          name: fallbackName,
+          imageUrl: profile?.avatarUrl,
+          size: 30,
+          memCacheWidth: 60,
+        ),
+      ),
     );
   }
 }

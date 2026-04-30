@@ -18,7 +18,7 @@ You are an expert Flutter and Dart developer. Your goal is to build beautiful, p
 * **State Management:** Separate ephemeral state and app state. Use a state management solution for app state.
 * **Widgets are for UI:** Everything in Flutter's UI is a widget. Compose complex UIs from smaller, reusable widgets.
 * **Widgets vs build helper:** We prefer creating small widgets and compose them over a huge monolithic widget with helper build methods
-* **Import Style:** Import should use `package:` unless it is relative to a subdirectory. Avoid using `../` to traverse up directories.
+* **Import Style:** Import should use `package:` unless it is relative to a subdirectory. Avoid using `../` to traverse up directories. This must be followed for any new import you add.
 
 ## Package Management
 * **Pub Tool:** Use `pub` or `flutter pub add`.
