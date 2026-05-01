@@ -35,6 +35,7 @@ platform :ios do
       )
 
       sync_appstore_signing(readonly: true)
+      sync_dev_signing(readonly: true)
 
       Dir.chdir("../..") do
         sh("pwd")
@@ -43,12 +44,7 @@ platform :ios do
           "flutter build ipa " \
           "--release " \
           "--build-number #{ENV.fetch('FLUTTER_BUILD_NUMBER')} " \
-          "--export-options-plist=ios/ExportOptions-AppStore.plist " \
-          "-- " \
-          "DEVELOPMENT_TEAM=9422PL3GFR " \
-          "CODE_SIGN_STYLE=Manual " \
-          "CODE_SIGN_IDENTITY='Apple Distribution' " \
-          "PROVISIONING_PROFILE_SPECIFIER='match AppStore app.chahua.chat'"
+          "--export-options-plist=ios/ExportOptions-AppStore.plist"
         )
       end
     ensure
