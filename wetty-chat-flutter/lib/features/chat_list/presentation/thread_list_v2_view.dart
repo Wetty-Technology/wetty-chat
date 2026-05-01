@@ -125,17 +125,32 @@ class ThreadListV2View extends ConsumerWidget {
   }
 }
 
-class _ArchivedThreadsFolderRow extends StatelessWidget {
+class _ArchivedThreadsFolderRow extends ConsumerWidget {
   const _ArchivedThreadsFolderRow({required this.unreadCount});
 
   final int unreadCount;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     return ListRowInteractionSurface(
       isActive: false,
-      onTap: () => context.go(AppRoutes.archivedThreads),
+      onTap: () async {
+        await context.push(
+          AppRoutes.archivedThreads,
+          extra: {
+            'disableTransition': ChatWorkspaceLayoutScope.isSplitLayout(
+              context,
+            ),
+          },
+        );
+        if (!context.mounted) {
+          return;
+        }
+        await ref
+            .read(activeThreadListV2ViewModelProvider.notifier)
+            .refreshThreads();
+      },
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
