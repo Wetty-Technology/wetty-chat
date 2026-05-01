@@ -37,6 +37,9 @@ platform :ios do
       sync_appstore_signing(readonly: true)
 
       Dir.chdir("..") do
+        sh("pwd")
+        sh("ls -la")
+        sh("ls -la ios")
         sh("flutter pub get")
         sh(
           "flutter build ipa " \
