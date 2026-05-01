@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:chahua/features/shared/data/read_state_repository.dart';
@@ -180,6 +182,30 @@ class ThreadListV2ViewModel extends AsyncNotifier<ThreadListV2ViewState> {
         ));
       }
     }
+  }
+
+  /// Refreshes archived threads when the archive page becomes visible.
+  ///
+  /// The first archive-page visit is handled by [_loadInitial]. Later visits
+  /// can reuse the scoped provider, so the page sends this intent to make the
+  /// archived list fresh without teaching the widget about repository calls.
+  Future<void> refreshOnPageOpen() async {
+    if (scope != ThreadListV2Scope.archived) {
+      return;
+    }
+
+    final wasLoadedBeforeOpen = ref
+        .read(threadListV2StoreProvider)
+        .archived
+        .isLoaded;
+    if (state.value == null) {
+      await future;
+    }
+    if (!wasLoadedBeforeOpen) {
+      return;
+    }
+
+    await refreshThreads();
   }
 
   Future<void> archiveThread(ThreadListItem thread) async {
