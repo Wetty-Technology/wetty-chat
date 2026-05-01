@@ -240,7 +240,9 @@ class _UnreadBadge extends StatelessWidget {
       margin: const EdgeInsets.only(left: 8),
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: isMuted ? CupertinoColors.systemGrey : CupertinoColors.systemRed,
+        color: isMuted
+            ? CupertinoColors.systemGrey
+            : context.appColors.unreadBadge,
         borderRadius: BorderRadius.circular(10),
       ),
       constraints: const BoxConstraints(minWidth: 20),

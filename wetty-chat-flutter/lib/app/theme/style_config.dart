@@ -33,6 +33,7 @@ class AppColors {
     required this.textOnAccent,
     required this.separator,
     required this.accentPrimary,
+    required this.unreadBadge,
     required this.inactive,
     required this.chatBackground,
     required this.chatSentBubble,
@@ -67,6 +68,7 @@ class AppColors {
   final Color textOnAccent;
   final Color separator;
   final Color accentPrimary;
+  final Color unreadBadge;
   final Color inactive;
   final Color chatBackground;
   final Color chatSentBubble;
@@ -101,6 +103,7 @@ class AppColors {
     textOnAccent: CupertinoColors.white,
     separator: Color(0xFFDADDE3),
     accentPrimary: Color(0xFF2B7ACD),
+    unreadBadge: Color(0xFFE05144),
     inactive: Color(0xFF8E8E93),
     chatBackground: Color.from(
       alpha: 1.0,
@@ -141,6 +144,7 @@ class AppColors {
     textOnAccent: CupertinoColors.white,
     separator: Color(0xFF3A3A3C),
     accentPrimary: Color(0xFF2B7ACD),
+    unreadBadge: Color(0xFFE05144),
     inactive: Color(0xFF8E8E93),
     chatBackground: Color(0xFF000000),
     chatSentBubble: Color(0xFF2B7ACD),

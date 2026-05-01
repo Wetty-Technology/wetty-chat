@@ -92,7 +92,7 @@ class _SegmentLabel extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
             decoration: BoxDecoration(
-              color: CupertinoColors.systemRed,
+              color: context.appColors.unreadBadge,
               borderRadius: BorderRadius.circular(8),
             ),
             constraints: const BoxConstraints(minWidth: 16),
