@@ -22,4 +22,31 @@ platform :ios do
       force: options.fetch(:force, false)
     )
   end
+
+  desc "Build CI App"
+  lane :ci_build_ipa do
+    keychain_name = "wetty-chat-ios-ci-#{ENV.fetch('BUILD_NUMBER', Time.now.to_i.to_s)}"
+
+    begin
+      setup_ci(
+        force: true,
+        keychain_name: keychain_name,
+        timeout: 3600
+      )
+
+      sync_appstore_signing(readonly: true)
+
+      Dir.chdir("..") do
+        sh("flutter pub get")
+        sh(
+          "flutter build ipa " \
+          "--release " \
+          "--build-number #{ENV.fetch('FLUTTER_BUILD_NUMBER')} " \
+          "--export-options-plist=ios/ExportOptions-AppStore.plist"
+        )
+      end
+    ensure
+      delete_keychain(name: keychain_name)
+    end
+  end
 end
