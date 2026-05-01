@@ -4,10 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:chahua/core/api/services/sticker_api_service.dart';
 import 'package:chahua/core/api/models/messages_api_models.dart';
 import 'package:chahua/core/api/models/stickers_api_models.dart';
 import 'package:chahua/core/session/dev_session_store.dart';
-import 'package:chahua/features/stickers/data/sticker_api_service.dart';
 import 'package:chahua/features/stickers/presentation/sticker_pack_detail_page.dart';
 import 'package:chahua/features/stickers/presentation/sticker_preview_modal.dart';
 

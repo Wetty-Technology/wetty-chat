@@ -17,12 +17,14 @@ class StickerBubbleV2 extends StatelessWidget {
     required this.message,
     this.onTapReply,
     this.onOpenThread,
+    this.onOpenSticker,
     this.onToggleReaction,
   });
 
   final ConversationMessageV2 message;
   final VoidCallback? onTapReply;
   final VoidCallback? onOpenThread;
+  final ValueChanged<String>? onOpenSticker;
   final ValueChanged<String>? onToggleReaction;
 
   static const double _stickerSize = 160;
@@ -60,6 +62,35 @@ class StickerBubbleV2 extends StatelessWidget {
       _ => null,
     };
 
+    final stickerStack = Stack(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: StickerImage(
+            media: sticker?.media,
+            emoji: sticker?.emoji,
+            size: _stickerSize,
+          ),
+        ),
+        Positioned(
+          right: 4,
+          bottom: 4,
+          child: MediaFooterChip(child: MetaFooter(message: message)),
+        ),
+      ],
+    );
+    final effectiveStickerId = sticker?.id;
+    final stickerContent =
+        theme.isInteractive &&
+            effectiveStickerId != null &&
+            onOpenSticker != null
+        ? GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => onOpenSticker!(effectiveStickerId),
+            child: stickerStack,
+          )
+        : stickerStack;
+
     final children = <Widget>[
       if (message.replyToMessage != null)
         ReplyQuote(
@@ -67,23 +98,7 @@ class StickerBubbleV2 extends StatelessWidget {
           variant: ReplyQuoteVariant.overSticker,
           onTap: onTapReply,
         ),
-      Stack(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: StickerImage(
-              media: sticker?.media,
-              emoji: sticker?.emoji,
-              size: _stickerSize,
-            ),
-          ),
-          Positioned(
-            right: 4,
-            bottom: 4,
-            child: MediaFooterChip(child: MetaFooter(message: message)),
-          ),
-        ],
-      ),
+      stickerContent,
     ];
 
     final threadInfo = message.threadInfo;

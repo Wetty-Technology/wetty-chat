@@ -3,10 +3,10 @@ import 'dart:typed_data';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:chahua/core/api/services/sticker_api_service.dart';
 import '../../../app/theme/style_config.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
 import '../application/sticker_pack_detail_view_model.dart';
-import '../data/sticker_api_service.dart';
 
 /// Pushes a full-page modal for adding a sticker to a pack.
 void showAddStickerPage(

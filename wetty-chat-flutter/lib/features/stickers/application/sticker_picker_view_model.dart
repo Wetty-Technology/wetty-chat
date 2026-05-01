@@ -1,10 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:chahua/core/api/services/sticker_api_service.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
-import '../data/sticker_api_service.dart';
 import '../data/sticker_pack_order_store.dart';
-import '../models/sticker_api_mapper.dart';
 import '../models/sticker_models.dart';
 
 List<StickerPackSummary> _sortPacksByOrder(
@@ -111,9 +110,11 @@ class StickerPickerViewModel extends Notifier<StickerPickerState> {
         _api.fetchOwnedPacks(),
         _api.fetchSubscribedPacks(),
       ]);
-      final ownedPacks = results[0].packs.map((p) => p.toDomain()).toList();
+      final ownedPacks = results[0].packs
+          .map(StickerPackSummary.fromDto)
+          .toList();
       final subscribedPacks = results[1].packs
-          .map((p) => p.toDomain())
+          .map(StickerPackSummary.fromDto)
           .toList();
 
       // Deduplicate: owned packs first, then subscribed packs not already in owned.

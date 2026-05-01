@@ -1,9 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:chahua/core/api/services/sticker_api_service.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
-import '../data/sticker_api_service.dart';
-import '../models/sticker_api_mapper.dart';
 import '../models/sticker_models.dart';
 import 'sticker_pack_list_view_model.dart';
 import 'sticker_picker_view_model.dart';
@@ -34,7 +33,7 @@ class StickerPackDetailViewModel extends AsyncNotifier<StickerPackDetailState> {
   Future<StickerPackDetailState> build() async {
     final api = ref.read(stickerApiServiceProvider);
     final detailDto = await api.fetchPackDetail(arg);
-    final packDetail = detailDto.toDomain();
+    final packDetail = StickerPackDetail.fromDto(detailDto);
 
     return StickerPackDetailState(
       pack: packDetail,

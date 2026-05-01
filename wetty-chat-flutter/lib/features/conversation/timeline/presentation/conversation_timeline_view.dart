@@ -13,6 +13,7 @@ import 'package:chahua/features/conversation/timeline/model/message_visibility_w
 import 'package:chahua/features/conversation/message_bubble/presentation/message_row_v2.dart';
 import 'package:chahua/features/conversation/timeline/presentation/jump_to_latest_fab.dart';
 import 'package:chahua/l10n/app_localizations.dart';
+import 'package:chahua/features/stickers/presentation/sticker_preview_modal.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/rendering.dart';
@@ -450,6 +451,10 @@ class _ConversationTimelineViewState
     context.push(AppRoutes.attachmentViewer, extra: viewerRequest);
   }
 
+  void _openSticker(String stickerId) {
+    unawaited(showStickerPreviewModal(context, stickerId));
+  }
+
   Map<String, ({bool showSenderName, bool showAvatar})> _buildRowPresentation(
     List<ConversationMessageV2> orderedMessages,
   ) {
@@ -546,6 +551,7 @@ class _ConversationTimelineViewState
                 ? () => widget.onOpenThread!(message)
                 : null,
             onOpenAttachment: _openAttachment,
+            onOpenSticker: _openSticker,
           ),
         );
       },

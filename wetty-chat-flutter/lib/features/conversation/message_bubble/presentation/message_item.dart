@@ -22,6 +22,7 @@ class MessageItem extends ConsumerWidget {
     this.onTapReply,
     this.onOpenThread,
     this.onOpenAttachment,
+    this.onOpenSticker,
   });
 
   final ConversationMessageV2 message;
@@ -33,6 +34,7 @@ class MessageItem extends ConsumerWidget {
   final VoidCallback? onTapReply;
   final VoidCallback? onOpenThread;
   final ValueChanged<MessageAttachmentOpenRequest>? onOpenAttachment;
+  final ValueChanged<String>? onOpenSticker;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -50,6 +52,7 @@ class MessageItem extends ConsumerWidget {
           message: message,
           onTapReply: onTapReply,
           onOpenThread: onOpenThread,
+          onOpenSticker: onOpenSticker,
           onToggleReaction: onToggleReaction,
         ),
         AudioMessageContent() => VoiceBubbleV2(

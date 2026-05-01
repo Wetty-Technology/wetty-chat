@@ -1,9 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:chahua/core/api/services/sticker_api_service.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
-import '../data/sticker_api_service.dart';
-import '../models/sticker_api_mapper.dart';
 import '../models/sticker_models.dart';
 import 'sticker_picker_view_model.dart';
 
@@ -49,13 +48,13 @@ class StickerDetailViewModel extends AsyncNotifier<StickerDetailState> {
 
     // Fetch sticker detail (returns sticker + packs it belongs to).
     final detailDto = await api.fetchStickerDetail(stickerId);
-    final sticker = detailDto.toStickerSummary();
+    final sticker = StickerSummary.fromDetailDto(detailDto);
 
     // Get the first pack, if any.
     if (detailDto.packs.isEmpty) {
       return StickerDetailState(sticker: sticker);
     }
-    final packSummary = detailDto.packs.first.toDomain();
+    final packSummary = StickerPackSummary.fromDto(detailDto.packs.first);
 
     // Fetch full pack detail to get all stickers.
     final packDetailDto = await api.fetchPackDetail(packSummary.id);

@@ -28,6 +28,7 @@ class MessageRowV2 extends StatefulWidget {
     this.onTapReply,
     this.onOpenThread,
     this.onOpenAttachment,
+    this.onOpenSticker,
     this.showSenderName = true,
     this.showAvatar = true,
   });
@@ -40,6 +41,7 @@ class MessageRowV2 extends StatefulWidget {
   final VoidCallback? onTapReply;
   final VoidCallback? onOpenThread;
   final ValueChanged<MessageAttachmentOpenRequest>? onOpenAttachment;
+  final ValueChanged<String>? onOpenSticker;
   final bool showSenderName;
   final bool showAvatar;
 
@@ -119,6 +121,7 @@ class _MessageRowV2State extends State<MessageRowV2> {
           onTapReply: widget.onTapReply,
           onOpenThread: widget.onOpenThread,
           onOpenAttachment: widget.onOpenAttachment,
+          onOpenSticker: widget.onOpenSticker,
         );
 
         // NOTE: Early return here!!!

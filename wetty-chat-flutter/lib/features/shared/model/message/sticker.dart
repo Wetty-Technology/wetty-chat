@@ -1,6 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'package:chahua/core/api/models/messages_api_models.dart';
+import 'package:chahua/core/api/models/stickers_api_models.dart';
 
 part 'sticker.freezed.dart';
 
@@ -43,6 +44,18 @@ abstract class StickerSummary with _$StickerSummary {
 
   factory StickerSummary.fromDto(StickerSummaryDto dto) => StickerSummary(
     id: dto.id ?? (throw StateError('StickerSummaryDto.id is required')),
+    media: dto.media == null ? null : StickerMedia.fromDto(dto.media!),
+    emoji: dto.emoji,
+    name: dto.name,
+    description: dto.description,
+    createdAt: dto.createdAt,
+    isFavorited: dto.isFavorited,
+  );
+
+  factory StickerSummary.fromDetailDto(
+    StickerDetailResponseDto dto,
+  ) => StickerSummary(
+    id: dto.id ?? (throw StateError('StickerDetailResponseDto.id is required')),
     media: dto.media == null ? null : StickerMedia.fromDto(dto.media!),
     emoji: dto.emoji,
     name: dto.name,

@@ -4,10 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:chahua/core/api/services/sticker_api_service.dart';
 import 'package:chahua/core/api/models/messages_api_models.dart';
 import 'package:chahua/core/api/models/stickers_api_models.dart';
 import 'package:chahua/core/providers/shared_preferences_provider.dart';
-import 'package:chahua/features/stickers/data/sticker_api_service.dart';
 import 'package:chahua/features/stickers/presentation/sticker_picker_panel.dart';
 
 void main() {

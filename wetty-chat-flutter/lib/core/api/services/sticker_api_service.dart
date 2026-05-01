@@ -1,10 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/api/models/messages_api_models.dart';
-import '../../../core/api/models/stickers_api_models.dart';
-import '../../../core/api/models/websocket_api_models.dart';
-import '../../../core/network/dio_client.dart';
+import 'package:chahua/core/api/models/messages_api_models.dart';
+import 'package:chahua/core/api/models/stickers_api_models.dart';
+import 'package:chahua/core/api/models/websocket_api_models.dart';
+import 'package:chahua/core/network/dio_client.dart';
 
 class StickerApiService {
   final Dio _dio;
