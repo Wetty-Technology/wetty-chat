@@ -64,6 +64,14 @@ class ConversationTimelineMessageStore
     putScope(identity, existingScope.copyWith(hasReachedOldest: true));
   }
 
+  void markReachedLatest(ConversationIdentity identity) {
+    final existingScope = scopeFor(identity);
+    if (existingScope == null) {
+      return;
+    }
+    putScope(identity, existingScope.copyWith(hasReachedLatest: true));
+  }
+
   void insertBeforeAnchor(
     ConversationIdentity identity,
     int anchorServerMessageId,
@@ -91,41 +99,58 @@ class ConversationTimelineMessageStore
   void insertAfterAnchor(
     ConversationIdentity identity,
     int anchorServerMessageId,
-    ConversationTimelineCanonicalSegment segment,
-  ) {
+    ConversationTimelineCanonicalSegment segment, {
+    required bool hasReachedLatest,
+  }) {
     assert(
       segment.firstServerMessageId > anchorServerMessageId,
       'insertAfterAnchor requires the incoming segment to be strictly after the anchor',
     );
     final existingScope = scopeFor(identity);
-    final segments = _normalizeAfterAnchorSegments(
+    final normalizedSegments = _normalizeAfterAnchorSegments(
       existingScope?.segments ?? const <ConversationTimelineCanonicalSegment>[],
       incoming: segment,
       anchorServerMessageId: anchorServerMessageId,
     );
+    final segments = hasReachedLatest
+        ? normalizedSegments
+              .where(
+                (item) => !item.startsAfterServerMessageId(
+                  segment.lastServerMessageId,
+                ),
+              )
+              .toList(growable: false)
+        : normalizedSegments;
 
     putScope(
       identity,
       (existingScope ?? const ConversationTimelineCanonicalScope()).copyWith(
         segments: segments,
+        hasReachedLatest:
+            hasReachedLatest || (existingScope?.hasReachedLatest ?? false),
       ),
     );
   }
 
   void insertAround(
     ConversationIdentity identity,
-    ConversationTimelineCanonicalSegment segment,
-  ) {
+    ConversationTimelineCanonicalSegment segment, {
+    required bool hasReachedLatest,
+  }) {
     final existingScope = scopeFor(identity);
-    final segments = _normalizeAroundSegments(
-      existingScope?.segments ?? const <ConversationTimelineCanonicalSegment>[],
-      incoming: segment,
-    );
+    final existingSegments =
+        existingScope?.segments ??
+        const <ConversationTimelineCanonicalSegment>[];
+    final segments = hasReachedLatest
+        ? _normalizeLatestSegments(existingSegments, incoming: segment)
+        : _normalizeAroundSegments(existingSegments, incoming: segment);
 
     putScope(
       identity,
       (existingScope ?? const ConversationTimelineCanonicalScope()).copyWith(
         segments: segments,
+        hasReachedLatest:
+            hasReachedLatest || (existingScope?.hasReachedLatest ?? false),
       ),
     );
   }
@@ -150,7 +175,7 @@ class ConversationTimelineMessageStore
       identity,
       (existingScope ?? const ConversationTimelineCanonicalScope()).copyWith(
         segments: segments,
-        hasLatestSegment: true,
+        hasReachedLatest: true,
       ),
     );
   }
@@ -175,12 +200,12 @@ class ConversationTimelineMessageStore
       'store newServerBackedMessage: identity=$identity '
       'serverId=${message.serverMessageId} clientId=${message.clientGeneratedId} '
       'hasScope=${existingScope != null} '
-      'hasLatest=${existingScope?.hasLatestSegment} '
+      'hasLatest=${existingScope?.hasReachedLatest} '
       'segments=${existingScope?.segments.length ?? 0} '
       'optimistic=${existingScope?.optimisticMessages.length ?? 0}',
       name: 'ConversationTimeline',
     );
-    if (existingScope == null || !existingScope.hasLatestSegment) {
+    if (existingScope == null || !existingScope.hasReachedLatest) {
       return;
     }
 
@@ -209,7 +234,7 @@ class ConversationTimelineMessageStore
             orderedMessages: updatedLatestMessages,
           ),
         ],
-        hasLatestSegment: true,
+        hasReachedLatest: true,
       ),
     );
     log(
@@ -237,7 +262,7 @@ class ConversationTimelineMessageStore
     log(
       'store newOptimisticMessage: identity=$identity '
       'clientId=${message.clientGeneratedId} '
-      'hasLatestBefore=${existingScope?.hasLatestSegment} '
+      'hasLatestBefore=${existingScope?.hasReachedLatest} '
       'segmentsBefore=${existingScope?.segments.length ?? 0} '
       'optimisticBefore=${optimisticMessages.length}',
       name: 'ConversationTimeline',
@@ -252,7 +277,7 @@ class ConversationTimelineMessageStore
       putScope(
         identity,
         (existingScope ?? const ConversationTimelineCanonicalScope()).copyWith(
-          hasLatestSegment: true,
+          hasReachedLatest: true,
           optimisticMessages: optimisticMessages.toList(growable: false),
         ),
       );
@@ -270,7 +295,7 @@ class ConversationTimelineMessageStore
     putScope(
       identity,
       (existingScope ?? const ConversationTimelineCanonicalScope()).copyWith(
-        hasLatestSegment: true,
+        hasReachedLatest: true,
         optimisticMessages: optimisticMessages.toList(growable: false),
       ),
     );
@@ -622,7 +647,7 @@ final conversationTimelineActiveSegmentProvider =
       }
 
       if (args.mode.isLatest) {
-        if (!scope.hasLatestSegment) {
+        if (!scope.hasReachedLatest) {
           return null;
         }
 
@@ -672,7 +697,7 @@ ConversationTimelineActiveSegment _activeSegmentForScopeSegment(
   required int selectedIndex,
 }) {
   final isLatestSegment =
-      scope.hasLatestSegment && selectedIndex == scope.segments.length - 1;
+      scope.hasReachedLatest && selectedIndex == scope.segments.length - 1;
   final isFirstSegment = selectedIndex == 0;
   final orderedMessages = isLatestSegment
       ? _mergeLatestSliceMessages(

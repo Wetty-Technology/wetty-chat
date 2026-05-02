@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ConversationTimelineCanonicalScope {
 
- List<ConversationTimelineCanonicalSegment> get segments; bool get hasLatestSegment; bool get hasReachedOldest; List<ConversationMessageV2> get optimisticMessages;
+ List<ConversationTimelineCanonicalSegment> get segments; bool get hasReachedLatest; bool get hasReachedOldest; List<ConversationMessageV2> get optimisticMessages;
 /// Create a copy of ConversationTimelineCanonicalScope
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $ConversationTimelineCanonicalScopeCopyWith<ConversationTimelineCanonicalScope> 
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ConversationTimelineCanonicalScope&&const DeepCollectionEquality().equals(other.segments, segments)&&(identical(other.hasLatestSegment, hasLatestSegment) || other.hasLatestSegment == hasLatestSegment)&&(identical(other.hasReachedOldest, hasReachedOldest) || other.hasReachedOldest == hasReachedOldest)&&const DeepCollectionEquality().equals(other.optimisticMessages, optimisticMessages));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ConversationTimelineCanonicalScope&&const DeepCollectionEquality().equals(other.segments, segments)&&(identical(other.hasReachedLatest, hasReachedLatest) || other.hasReachedLatest == hasReachedLatest)&&(identical(other.hasReachedOldest, hasReachedOldest) || other.hasReachedOldest == hasReachedOldest)&&const DeepCollectionEquality().equals(other.optimisticMessages, optimisticMessages));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(segments),hasLatestSegment,hasReachedOldest,const DeepCollectionEquality().hash(optimisticMessages));
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(segments),hasReachedLatest,hasReachedOldest,const DeepCollectionEquality().hash(optimisticMessages));
 
 @override
 String toString() {
-  return 'ConversationTimelineCanonicalScope(segments: $segments, hasLatestSegment: $hasLatestSegment, hasReachedOldest: $hasReachedOldest, optimisticMessages: $optimisticMessages)';
+  return 'ConversationTimelineCanonicalScope(segments: $segments, hasReachedLatest: $hasReachedLatest, hasReachedOldest: $hasReachedOldest, optimisticMessages: $optimisticMessages)';
 }
 
 
@@ -45,7 +45,7 @@ abstract mixin class $ConversationTimelineCanonicalScopeCopyWith<$Res>  {
   factory $ConversationTimelineCanonicalScopeCopyWith(ConversationTimelineCanonicalScope value, $Res Function(ConversationTimelineCanonicalScope) _then) = _$ConversationTimelineCanonicalScopeCopyWithImpl;
 @useResult
 $Res call({
- List<ConversationTimelineCanonicalSegment> segments, bool hasLatestSegment, bool hasReachedOldest, List<ConversationMessageV2> optimisticMessages
+ List<ConversationTimelineCanonicalSegment> segments, bool hasReachedLatest, bool hasReachedOldest, List<ConversationMessageV2> optimisticMessages
 });
 
 
@@ -62,10 +62,10 @@ class _$ConversationTimelineCanonicalScopeCopyWithImpl<$Res>
 
 /// Create a copy of ConversationTimelineCanonicalScope
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? segments = null,Object? hasLatestSegment = null,Object? hasReachedOldest = null,Object? optimisticMessages = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? segments = null,Object? hasReachedLatest = null,Object? hasReachedOldest = null,Object? optimisticMessages = null,}) {
   return _then(_self.copyWith(
 segments: null == segments ? _self.segments : segments // ignore: cast_nullable_to_non_nullable
-as List<ConversationTimelineCanonicalSegment>,hasLatestSegment: null == hasLatestSegment ? _self.hasLatestSegment : hasLatestSegment // ignore: cast_nullable_to_non_nullable
+as List<ConversationTimelineCanonicalSegment>,hasReachedLatest: null == hasReachedLatest ? _self.hasReachedLatest : hasReachedLatest // ignore: cast_nullable_to_non_nullable
 as bool,hasReachedOldest: null == hasReachedOldest ? _self.hasReachedOldest : hasReachedOldest // ignore: cast_nullable_to_non_nullable
 as bool,optimisticMessages: null == optimisticMessages ? _self.optimisticMessages : optimisticMessages // ignore: cast_nullable_to_non_nullable
 as List<ConversationMessageV2>,
@@ -153,10 +153,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<ConversationTimelineCanonicalSegment> segments,  bool hasLatestSegment,  bool hasReachedOldest,  List<ConversationMessageV2> optimisticMessages)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<ConversationTimelineCanonicalSegment> segments,  bool hasReachedLatest,  bool hasReachedOldest,  List<ConversationMessageV2> optimisticMessages)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ConversationTimelineCanonicalScope() when $default != null:
-return $default(_that.segments,_that.hasLatestSegment,_that.hasReachedOldest,_that.optimisticMessages);case _:
+return $default(_that.segments,_that.hasReachedLatest,_that.hasReachedOldest,_that.optimisticMessages);case _:
   return orElse();
 
 }
@@ -174,10 +174,10 @@ return $default(_that.segments,_that.hasLatestSegment,_that.hasReachedOldest,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<ConversationTimelineCanonicalSegment> segments,  bool hasLatestSegment,  bool hasReachedOldest,  List<ConversationMessageV2> optimisticMessages)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<ConversationTimelineCanonicalSegment> segments,  bool hasReachedLatest,  bool hasReachedOldest,  List<ConversationMessageV2> optimisticMessages)  $default,) {final _that = this;
 switch (_that) {
 case _ConversationTimelineCanonicalScope():
-return $default(_that.segments,_that.hasLatestSegment,_that.hasReachedOldest,_that.optimisticMessages);case _:
+return $default(_that.segments,_that.hasReachedLatest,_that.hasReachedOldest,_that.optimisticMessages);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -194,10 +194,10 @@ return $default(_that.segments,_that.hasLatestSegment,_that.hasReachedOldest,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<ConversationTimelineCanonicalSegment> segments,  bool hasLatestSegment,  bool hasReachedOldest,  List<ConversationMessageV2> optimisticMessages)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<ConversationTimelineCanonicalSegment> segments,  bool hasReachedLatest,  bool hasReachedOldest,  List<ConversationMessageV2> optimisticMessages)?  $default,) {final _that = this;
 switch (_that) {
 case _ConversationTimelineCanonicalScope() when $default != null:
-return $default(_that.segments,_that.hasLatestSegment,_that.hasReachedOldest,_that.optimisticMessages);case _:
+return $default(_that.segments,_that.hasReachedLatest,_that.hasReachedOldest,_that.optimisticMessages);case _:
   return null;
 
 }
@@ -209,7 +209,7 @@ return $default(_that.segments,_that.hasLatestSegment,_that.hasReachedOldest,_th
 
 
 class _ConversationTimelineCanonicalScope implements ConversationTimelineCanonicalScope {
-  const _ConversationTimelineCanonicalScope({final  List<ConversationTimelineCanonicalSegment> segments = const <ConversationTimelineCanonicalSegment>[], this.hasLatestSegment = false, this.hasReachedOldest = false, final  List<ConversationMessageV2> optimisticMessages = const <ConversationMessageV2>[]}): _segments = segments,_optimisticMessages = optimisticMessages;
+  const _ConversationTimelineCanonicalScope({final  List<ConversationTimelineCanonicalSegment> segments = const <ConversationTimelineCanonicalSegment>[], this.hasReachedLatest = false, this.hasReachedOldest = false, final  List<ConversationMessageV2> optimisticMessages = const <ConversationMessageV2>[]}): _segments = segments,_optimisticMessages = optimisticMessages;
   
 
  final  List<ConversationTimelineCanonicalSegment> _segments;
@@ -219,7 +219,7 @@ class _ConversationTimelineCanonicalScope implements ConversationTimelineCanonic
   return EqualUnmodifiableListView(_segments);
 }
 
-@override@JsonKey() final  bool hasLatestSegment;
+@override@JsonKey() final  bool hasReachedLatest;
 @override@JsonKey() final  bool hasReachedOldest;
  final  List<ConversationMessageV2> _optimisticMessages;
 @override@JsonKey() List<ConversationMessageV2> get optimisticMessages {
@@ -239,16 +239,16 @@ _$ConversationTimelineCanonicalScopeCopyWith<_ConversationTimelineCanonicalScope
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ConversationTimelineCanonicalScope&&const DeepCollectionEquality().equals(other._segments, _segments)&&(identical(other.hasLatestSegment, hasLatestSegment) || other.hasLatestSegment == hasLatestSegment)&&(identical(other.hasReachedOldest, hasReachedOldest) || other.hasReachedOldest == hasReachedOldest)&&const DeepCollectionEquality().equals(other._optimisticMessages, _optimisticMessages));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ConversationTimelineCanonicalScope&&const DeepCollectionEquality().equals(other._segments, _segments)&&(identical(other.hasReachedLatest, hasReachedLatest) || other.hasReachedLatest == hasReachedLatest)&&(identical(other.hasReachedOldest, hasReachedOldest) || other.hasReachedOldest == hasReachedOldest)&&const DeepCollectionEquality().equals(other._optimisticMessages, _optimisticMessages));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_segments),hasLatestSegment,hasReachedOldest,const DeepCollectionEquality().hash(_optimisticMessages));
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_segments),hasReachedLatest,hasReachedOldest,const DeepCollectionEquality().hash(_optimisticMessages));
 
 @override
 String toString() {
-  return 'ConversationTimelineCanonicalScope(segments: $segments, hasLatestSegment: $hasLatestSegment, hasReachedOldest: $hasReachedOldest, optimisticMessages: $optimisticMessages)';
+  return 'ConversationTimelineCanonicalScope(segments: $segments, hasReachedLatest: $hasReachedLatest, hasReachedOldest: $hasReachedOldest, optimisticMessages: $optimisticMessages)';
 }
 
 
@@ -259,7 +259,7 @@ abstract mixin class _$ConversationTimelineCanonicalScopeCopyWith<$Res> implemen
   factory _$ConversationTimelineCanonicalScopeCopyWith(_ConversationTimelineCanonicalScope value, $Res Function(_ConversationTimelineCanonicalScope) _then) = __$ConversationTimelineCanonicalScopeCopyWithImpl;
 @override @useResult
 $Res call({
- List<ConversationTimelineCanonicalSegment> segments, bool hasLatestSegment, bool hasReachedOldest, List<ConversationMessageV2> optimisticMessages
+ List<ConversationTimelineCanonicalSegment> segments, bool hasReachedLatest, bool hasReachedOldest, List<ConversationMessageV2> optimisticMessages
 });
 
 
@@ -276,10 +276,10 @@ class __$ConversationTimelineCanonicalScopeCopyWithImpl<$Res>
 
 /// Create a copy of ConversationTimelineCanonicalScope
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? segments = null,Object? hasLatestSegment = null,Object? hasReachedOldest = null,Object? optimisticMessages = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? segments = null,Object? hasReachedLatest = null,Object? hasReachedOldest = null,Object? optimisticMessages = null,}) {
   return _then(_ConversationTimelineCanonicalScope(
 segments: null == segments ? _self._segments : segments // ignore: cast_nullable_to_non_nullable
-as List<ConversationTimelineCanonicalSegment>,hasLatestSegment: null == hasLatestSegment ? _self.hasLatestSegment : hasLatestSegment // ignore: cast_nullable_to_non_nullable
+as List<ConversationTimelineCanonicalSegment>,hasReachedLatest: null == hasReachedLatest ? _self.hasReachedLatest : hasReachedLatest // ignore: cast_nullable_to_non_nullable
 as bool,hasReachedOldest: null == hasReachedOldest ? _self.hasReachedOldest : hasReachedOldest // ignore: cast_nullable_to_non_nullable
 as bool,optimisticMessages: null == optimisticMessages ? _self._optimisticMessages : optimisticMessages // ignore: cast_nullable_to_non_nullable
 as List<ConversationMessageV2>,

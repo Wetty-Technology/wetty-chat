@@ -47,7 +47,7 @@ class ConversationTimelineV2RealtimeApplier {
       if (!_matchesMessagePayload(identity, payload)) {
         continue;
       }
-      if (!scope.hasLatestSegment) {
+      if (!scope.hasReachedLatest) {
         continue;
       }
 

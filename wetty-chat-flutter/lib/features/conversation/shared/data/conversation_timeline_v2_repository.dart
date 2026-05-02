@@ -217,6 +217,7 @@ class ConversationTimelineV2Repository {
     final response = await ref
         .read(messageApiServiceV2Provider)
         .fetchConversationMessages(identity, max: limit);
+    final hasMoreOlder = response.nextCursor != null;
 
     if (response.messages.isEmpty) {
       ref
@@ -224,7 +225,7 @@ class ConversationTimelineV2Repository {
           .putScope(
             identity,
             const ConversationTimelineCanonicalScope(
-              hasLatestSegment: true,
+              hasReachedLatest: true,
               hasReachedOldest: true,
             ),
           );
@@ -240,6 +241,12 @@ class ConversationTimelineV2Repository {
     ref
         .read(conversationTimelineMessageStoreProvider.notifier)
         .insertLatest(identity, latestSegment);
+
+    if (!hasMoreOlder) {
+      ref
+          .read(conversationTimelineMessageStoreProvider.notifier)
+          .markReachedOldest(identity);
+    }
   }
 
   Future<void> loadOlderBeforeAnchor(
@@ -274,6 +281,7 @@ class ConversationTimelineV2Repository {
           before: anchorServerMessageId,
           max: limit,
         );
+    final hasMoreOlder = response.nextCursor != null;
 
     if (response.messages.isEmpty) {
       ref
@@ -293,6 +301,12 @@ class ConversationTimelineV2Repository {
                 .toList(growable: false),
           ),
         );
+
+    if (!hasMoreOlder) {
+      ref
+          .read(conversationTimelineMessageStoreProvider.notifier)
+          .markReachedOldest(identity);
+    }
   }
 
   Future<void> _loadNewerAfterAnchor(
@@ -306,6 +320,8 @@ class ConversationTimelineV2Repository {
           after: anchorServerMessageId,
           max: limit,
         );
+    final hasMoreNewer = response.prevCursor != null;
+    final hasReachedLatest = !hasMoreNewer;
 
     if (response.messages.isNotEmpty) {
       ref
@@ -318,7 +334,15 @@ class ConversationTimelineV2Repository {
                   .map(ConversationMessageV2.fromMessageItemDto)
                   .toList(growable: false),
             ),
+            hasReachedLatest: hasReachedLatest,
           );
+      return;
+    }
+
+    if (hasReachedLatest) {
+      ref
+          .read(conversationTimelineMessageStoreProvider.notifier)
+          .markReachedLatest(identity);
     }
   }
 
@@ -333,6 +357,9 @@ class ConversationTimelineV2Repository {
           around: targetServerMessageId,
           max: limit,
         );
+    final hasMoreOlder = response.nextCursor != null;
+    final hasMoreNewer = response.prevCursor != null;
+    final hasReachedLatest = !hasMoreNewer;
 
     if (response.messages.isEmpty) {
       return;
@@ -354,7 +381,14 @@ class ConversationTimelineV2Repository {
                 .map(ConversationMessageV2.fromMessageItemDto)
                 .toList(growable: false),
           ),
+          hasReachedLatest: hasReachedLatest,
         );
+
+    if (!hasMoreOlder) {
+      ref
+          .read(conversationTimelineMessageStoreProvider.notifier)
+          .markReachedOldest(identity);
+    }
   }
 }
 

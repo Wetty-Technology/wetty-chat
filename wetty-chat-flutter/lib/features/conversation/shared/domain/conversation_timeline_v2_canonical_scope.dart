@@ -107,7 +107,7 @@ abstract class ConversationTimelineCanonicalScope
   const factory ConversationTimelineCanonicalScope({
     @Default(<ConversationTimelineCanonicalSegment>[])
     List<ConversationTimelineCanonicalSegment> segments,
-    @Default(false) bool hasLatestSegment,
+    @Default(false) bool hasReachedLatest,
     @Default(false) bool hasReachedOldest,
     @Default(<ConversationMessageV2>[])
     List<ConversationMessageV2> optimisticMessages,

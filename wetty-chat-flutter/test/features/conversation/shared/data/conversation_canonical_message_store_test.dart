@@ -222,7 +222,12 @@ void main() {
           conversationTimelineMessageStoreProvider.notifier,
         );
 
-        store.insertAfterAnchor(_identity, 2, _segment(3, 4));
+        store.insertAfterAnchor(
+          _identity,
+          2,
+          _segment(3, 4),
+          hasReachedLatest: false,
+        );
 
         final segments = container
             .read(conversationTimelineMessageStoreProvider)[_identity]!
@@ -244,7 +249,12 @@ void main() {
 
         store.putScope(_identity, _scope([_segment(1, 5)]));
 
-        store.insertAfterAnchor(_identity, 2, _segment(3, 4));
+        store.insertAfterAnchor(
+          _identity,
+          2,
+          _segment(3, 4),
+          hasReachedLatest: false,
+        );
 
         final segments = container
             .read(conversationTimelineMessageStoreProvider)[_identity]!
@@ -266,7 +276,12 @@ void main() {
 
         store.putScope(_identity, _scope([_segment(1, 6), _segment(9, 10)]));
 
-        store.insertAfterAnchor(_identity, 3, _segment(4, 5));
+        store.insertAfterAnchor(
+          _identity,
+          3,
+          _segment(4, 5),
+          hasReachedLatest: false,
+        );
 
         final segments = container
             .read(conversationTimelineMessageStoreProvider)[_identity]!
@@ -290,7 +305,12 @@ void main() {
 
         store.putScope(_identity, _scope([_segment(1, 2), _segment(5, 6)]));
 
-        store.insertAfterAnchor(_identity, 1, _segment(3, 4));
+        store.insertAfterAnchor(
+          _identity,
+          1,
+          _segment(3, 4),
+          hasReachedLatest: false,
+        );
 
         final segments = container
             .read(conversationTimelineMessageStoreProvider)[_identity]!
@@ -315,7 +335,12 @@ void main() {
 
           store.putScope(_identity, _scope([_segment(1, 2), _segment(5, 6)]));
 
-          store.insertAfterAnchor(_identity, 2, _segment(3, 4));
+          store.insertAfterAnchor(
+            _identity,
+            2,
+            _segment(3, 4),
+            hasReachedLatest: false,
+          );
 
           final segments = container
               .read(conversationTimelineMessageStoreProvider)[_identity]!
@@ -341,7 +366,12 @@ void main() {
 
           store.putScope(_identity, _scope([_segment(1, 2)]));
 
-          store.insertAfterAnchor(_identity, 2, _segment(3, 4));
+          store.insertAfterAnchor(
+            _identity,
+            2,
+            _segment(3, 4),
+            hasReachedLatest: false,
+          );
 
           final segments = container
               .read(conversationTimelineMessageStoreProvider)[_identity]!
@@ -365,7 +395,12 @@ void main() {
 
         store.putScope(_identity, _scope([_segment(1, 3), _segment(4, 6)]));
 
-        store.insertAfterAnchor(_identity, 2, _segment(3, 4));
+        store.insertAfterAnchor(
+          _identity,
+          2,
+          _segment(3, 4),
+          hasReachedLatest: false,
+        );
 
         final segments = container
             .read(conversationTimelineMessageStoreProvider)[_identity]!
@@ -374,6 +409,39 @@ void main() {
           [1, 2, 3, 4],
           [5, 6],
         ]);
+      });
+
+      test('marks the merged tail as latest when the fetch reaches latest', () {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final store = container.read(
+          conversationTimelineMessageStoreProvider.notifier,
+        );
+
+        store.putScope(_identity, _scope([_segment(1, 2), _segment(5, 6)]));
+
+        store.insertAfterAnchor(
+          _identity,
+          2,
+          _segment(3, 4),
+          hasReachedLatest: true,
+        );
+
+        final scope = container.read(
+          conversationTimelineMessageStoreProvider,
+        )[_identity]!;
+        expect(_segmentIds(scope.segments), [
+          [1, 2, 3, 4],
+        ]);
+
+        final activeSegment = container.read(
+          conversationTimelineActiveSegmentProvider((
+            identity: _identity,
+            mode: const ConversationTimelineActiveSegmentMode.around(2),
+          )),
+        )!;
+        expect(activeSegment.isLatestSlice, true);
+        expect(activeSegment.canLoadAfter, false);
       });
     });
 
@@ -387,7 +455,7 @@ void main() {
           conversationTimelineMessageStoreProvider.notifier,
         );
 
-        store.insertAround(_identity, _segment(3, 4));
+        store.insertAround(_identity, _segment(3, 4), hasReachedLatest: false);
 
         final segments = container
             .read(conversationTimelineMessageStoreProvider)[_identity]!
@@ -409,7 +477,7 @@ void main() {
 
         store.putScope(_identity, _scope([_segment(1, 5)]));
 
-        store.insertAround(_identity, _segment(3, 4));
+        store.insertAround(_identity, _segment(3, 4), hasReachedLatest: false);
 
         final segments = container
             .read(conversationTimelineMessageStoreProvider)[_identity]!
@@ -434,7 +502,11 @@ void main() {
 
           store.putScope(_identity, _scope([_segment(1, 2), _segment(5, 6)]));
 
-          store.insertAround(_identity, _segment(3, 4));
+          store.insertAround(
+            _identity,
+            _segment(3, 4),
+            hasReachedLatest: false,
+          );
 
           final segments = container
               .read(conversationTimelineMessageStoreProvider)[_identity]!
@@ -458,7 +530,7 @@ void main() {
 
         store.putScope(_identity, _scope([_segment(1, 2), _segment(7, 8)]));
 
-        store.insertAround(_identity, _segment(4, 5));
+        store.insertAround(_identity, _segment(4, 5), hasReachedLatest: false);
 
         final segments = container
             .read(conversationTimelineMessageStoreProvider)[_identity]!
@@ -482,7 +554,7 @@ void main() {
 
         store.putScope(_identity, _scope([_segment(1, 3), _segment(4, 6)]));
 
-        store.insertAround(_identity, _segment(3, 4));
+        store.insertAround(_identity, _segment(3, 4), hasReachedLatest: false);
 
         final segments = container
             .read(conversationTimelineMessageStoreProvider)[_identity]!
@@ -506,7 +578,7 @@ void main() {
 
         store.putScope(_identity, _scope([_segment(1, 3), _segment(4, 6)]));
 
-        store.insertAround(_identity, _segment(1, 10));
+        store.insertAround(_identity, _segment(1, 10), hasReachedLatest: false);
 
         final segments = container
             .read(conversationTimelineMessageStoreProvider)[_identity]!
@@ -514,6 +586,80 @@ void main() {
         expect(_segmentIds(segments), [
           [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         ]);
+      });
+
+      test('keeps newer loading enabled when the fetch has newer pages', () {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final store = container.read(
+          conversationTimelineMessageStoreProvider.notifier,
+        );
+
+        store.insertAround(_identity, _segment(3, 4), hasReachedLatest: false);
+
+        final activeSegment = container.read(
+          conversationTimelineActiveSegmentProvider((
+            identity: _identity,
+            mode: const ConversationTimelineActiveSegmentMode.around(3),
+          )),
+        )!;
+        expect(activeSegment.isLatestSlice, false);
+        expect(activeSegment.canLoadAfter, true);
+      });
+
+      test(
+        'marks the around segment as latest when the fetch reaches latest',
+        () {
+          final container = ProviderContainer();
+          addTearDown(container.dispose);
+          final store = container.read(
+            conversationTimelineMessageStoreProvider.notifier,
+          );
+
+          store.putScope(_identity, _scope([_segment(1, 2), _segment(5, 6)]));
+
+          store.insertAround(_identity, _segment(3, 4), hasReachedLatest: true);
+
+          final scope = container.read(
+            conversationTimelineMessageStoreProvider,
+          )[_identity]!;
+          expect(_segmentIds(scope.segments), [
+            [1, 2],
+            [3, 4],
+          ]);
+
+          final activeSegment = container.read(
+            conversationTimelineActiveSegmentProvider((
+              identity: _identity,
+              mode: const ConversationTimelineActiveSegmentMode.around(3),
+            )),
+          )!;
+          expect(activeSegment.isLatestSlice, true);
+          expect(activeSegment.canLoadAfter, false);
+        },
+      );
+    });
+
+    group('markReachedLatest', () {
+      test('disables newer loading for the current tail', () {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final store = container.read(
+          conversationTimelineMessageStoreProvider.notifier,
+        );
+
+        store.putScope(_identity, _scope([_segment(1, 3)]));
+
+        store.markReachedLatest(_identity);
+
+        final activeSegment = container.read(
+          conversationTimelineActiveSegmentProvider((
+            identity: _identity,
+            mode: const ConversationTimelineActiveSegmentMode.around(2),
+          )),
+        )!;
+        expect(activeSegment.isLatestSlice, true);
+        expect(activeSegment.canLoadAfter, false);
       });
     });
 
@@ -535,7 +681,7 @@ void main() {
         expect(_segmentIds(scope.segments), [
           [3, 4],
         ]);
-        expect(scope.hasLatestSegment, true);
+        expect(scope.hasReachedLatest, true);
       });
 
       test('splits a segment that overlaps the incoming range', () {
@@ -558,7 +704,7 @@ void main() {
           [1, 2],
           [3, 4],
         ]);
-        expect(scope.hasLatestSegment, true);
+        expect(scope.hasReachedLatest, true);
       });
 
       test('push new segment at end', () {
@@ -581,7 +727,7 @@ void main() {
           [1, 2, 3, 4, 5],
           [7, 8, 9, 10],
         ]);
-        expect(scope.hasLatestSegment, true);
+        expect(scope.hasReachedLatest, true);
       });
 
       test(
@@ -606,7 +752,7 @@ void main() {
             [1, 2],
             [3, 4],
           ]);
-          expect(scope.hasLatestSegment, true);
+          expect(scope.hasReachedLatest, true);
         },
       );
 
@@ -630,7 +776,7 @@ void main() {
           [1, 2],
           [4, 5],
         ]);
-        expect(scope.hasLatestSegment, true);
+        expect(scope.hasReachedLatest, true);
       });
 
       test('replaces overlapping ranges across multiple cached segments', () {
@@ -653,7 +799,7 @@ void main() {
           [1, 2],
           [3, 4],
         ]);
-        expect(scope.hasLatestSegment, true);
+        expect(scope.hasReachedLatest, true);
       });
 
       test('replaces entire segments', () {
@@ -675,7 +821,7 @@ void main() {
         expect(_segmentIds(scope.segments), [
           [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         ]);
-        expect(scope.hasLatestSegment, true);
+        expect(scope.hasReachedLatest, true);
       });
     });
 
@@ -713,7 +859,7 @@ void main() {
 
           store.putScope(
             _identity,
-            _scope([_segment(1, 3), _segment(10, 12)], hasLatestSegment: false),
+            _scope([_segment(1, 3), _segment(10, 12)], hasReachedLatest: false),
           );
 
           store.newMessage(_identity, _message(15));
@@ -725,7 +871,7 @@ void main() {
             [1, 2, 3],
             [10, 11, 12],
           ]);
-          expect(scope.hasLatestSegment, false);
+          expect(scope.hasReachedLatest, false);
         },
       );
 
@@ -740,7 +886,7 @@ void main() {
 
         store.putScope(
           _identity,
-          _scope([_segment(1, 3), _segment(10, 12)], hasLatestSegment: true),
+          _scope([_segment(1, 3), _segment(10, 12)], hasReachedLatest: true),
         );
 
         store.newMessage(_identity, _message(13));
@@ -752,7 +898,7 @@ void main() {
           [1, 2, 3],
           [10, 11, 12, 13],
         ]);
-        expect(scope.hasLatestSegment, true);
+        expect(scope.hasReachedLatest, true);
       });
 
       test('replaces an existing latest message with the same server id', () {
@@ -764,7 +910,7 @@ void main() {
 
         store.putScope(
           _identity,
-          _scope([_segment(10, 12)], hasLatestSegment: true),
+          _scope([_segment(10, 12)], hasReachedLatest: true),
         );
 
         store.newMessage(_identity, _messageWithCustomText(11, 'updated-11'));
@@ -796,7 +942,7 @@ void main() {
               ConversationTimelineCanonicalSegment(
                 orderedMessages: [_message(10), _message(12)],
               ),
-            ], hasLatestSegment: true),
+            ], hasReachedLatest: true),
           );
 
           store.newMessage(_identity, _message(11));
@@ -825,7 +971,7 @@ void main() {
               ConversationTimelineCanonicalSegment(
                 orderedMessages: [_message(11), _message(12)],
               ),
-            ], hasLatestSegment: true),
+            ], hasReachedLatest: true),
           );
 
           store.newMessage(_identity, _message(10));
@@ -850,7 +996,7 @@ void main() {
 
         store.putScope(
           _identity,
-          _scope([_segment(1, 3)], hasLatestSegment: true),
+          _scope([_segment(1, 3)], hasReachedLatest: true),
         );
 
         store.newMessage(_identity, _optimisticMessage('client-4'));
@@ -878,7 +1024,7 @@ void main() {
           _identity,
           _scope(
             [_segment(1, 3)],
-            hasLatestSegment: true,
+            hasReachedLatest: true,
             optimisticMessages: [_optimisticMessage('client-4')],
           ),
         );
@@ -908,7 +1054,7 @@ void main() {
             _identity,
             _scope(
               [_segment(1, 3)],
-              hasLatestSegment: true,
+              hasReachedLatest: true,
               optimisticMessages: [_optimisticMessage('client-4')],
             ),
           );
@@ -944,7 +1090,7 @@ void main() {
           _identity,
           _scope(
             [_segment(1, 3), _segment(10, 12)],
-            hasLatestSegment: true,
+            hasReachedLatest: true,
             optimisticMessages: [_optimisticMessage('client-13')],
           ),
         );
@@ -981,7 +1127,7 @@ void main() {
                   orderedMessages: [_message(1), _message(2), _message(3)],
                 ),
               ],
-              hasLatestSegment: true,
+              hasReachedLatest: true,
               optimisticMessages: [_optimisticMessage('client-3')],
             ),
           );
@@ -1015,7 +1161,7 @@ void main() {
             _identity,
             _scope(
               [_segment(1, 3)],
-              hasLatestSegment: true,
+              hasReachedLatest: true,
               optimisticMessages: [_optimisticMessage('client-4')],
             ),
           );
@@ -1103,13 +1249,13 @@ List<List<int>> _segmentIds(
 
 ConversationTimelineCanonicalScope _scope(
   List<ConversationTimelineCanonicalSegment> segments, {
-  bool hasLatestSegment = false,
+  bool hasReachedLatest = false,
   bool hasReachedOldest = false,
   List<ConversationMessageV2> optimisticMessages = const [],
 }) {
   return ConversationTimelineCanonicalScope(
     segments: segments,
-    hasLatestSegment: hasLatestSegment,
+    hasReachedLatest: hasReachedLatest,
     hasReachedOldest: hasReachedOldest,
     optimisticMessages: optimisticMessages,
   );

@@ -653,7 +653,8 @@ class _ConversationTimelineViewState
                   ' | before=${state.beforeMessages.length}'
                   ' after=${state.afterMessages.length}'
                   ' | visible=${_lastVisibilityWindow?.firstVisibleMessageId.toString() ?? 'null'}'
-                  '..${_lastVisibilityWindow?.lastVisibleMessageId.toString() ?? 'null'}',
+                  '..${_lastVisibilityWindow?.lastVisibleMessageId.toString() ?? 'null'}'
+                  ' canLoadNewer=${state.canLoadNewer} isNearBottom=${_latestViewportFacts.isNearBottom}',
                 ),
               ),
             ),
