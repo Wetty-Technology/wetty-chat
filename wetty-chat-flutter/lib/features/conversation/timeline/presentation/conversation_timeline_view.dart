@@ -179,7 +179,6 @@ class _ConversationTimelineViewState
   void didUpdateWidget(covariant ConversationTimelineView oldWidget) {
     super.didUpdateWidget(oldWidget);
     assert(oldWidget._identity == widget._identity, 'identity changed');
-    debugPrint('didUpdateWidget: ConversationTimeline');
     if (oldWidget.launchRequest != widget.launchRequest) {
       _scheduleInitializeLaunchRequest();
     }

@@ -1,8 +1,8 @@
+import 'package:chahua/app/theme/style_config.dart';
+import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-import 'package:chahua/features/shared/model/message/message.dart';
 
 import '../../domain/bubble_theme_v2.dart';
 
@@ -106,7 +106,7 @@ class LinkifiedText extends StatelessWidget {
                   style: textStyle.copyWith(
                     color: mentionTextColor,
                     fontSize: (textStyle.fontSize ?? 14) * 0.9,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: AppFontWeights.semibold,
                     height: 1,
                   ),
                 ),

@@ -13,7 +13,7 @@ class MetaFooter extends StatelessWidget {
     super.key,
     required this.message,
     this.color,
-    this.fontWeight = FontWeight.w400,
+    this.fontWeight = AppFontWeights.regular,
   });
 
   final ConversationMessageV2 message;
@@ -54,7 +54,7 @@ class MetaFooter extends StatelessWidget {
               style: appBubbleTextStyle(
                 context,
                 color: metaColor,
-                fontSize: AppFontSizes.bubbleMeta,
+                fontSize: AppFontSizes.caption,
                 fontWeight: fontWeight,
               ),
             ),
@@ -64,7 +64,7 @@ class MetaFooter extends StatelessWidget {
           style: appBubbleTextStyle(
             context,
             color: metaColor,
-            fontSize: AppFontSizes.bubbleMeta,
+            fontSize: AppFontSizes.caption,
             fontWeight: fontWeight,
           ),
         ),

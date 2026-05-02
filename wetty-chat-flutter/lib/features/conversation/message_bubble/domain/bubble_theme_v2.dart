@@ -71,7 +71,7 @@ class BubbleThemeV2 extends InheritedWidget {
   final Color metaColor;
   final Color linkColor;
 
-  double get minBubbleContentHeight => chatMessageFontSize * 1.28;
+  double get minBubbleContentHeight => AppFontSizes.bodyLarge * 1.28;
 
   static BubbleThemeV2 of(BuildContext context) {
     final theme = context.dependOnInheritedWidgetOfExactType<BubbleThemeV2>();
@@ -106,7 +106,11 @@ double measureMetaWidth(
   final metaPainter = TextPainter(
     text: TextSpan(
       text: metaText,
-      style: appBubbleMetaTextStyle(context, fontSize: AppFontSizes.bubbleMeta),
+      style: appBubbleMetaTextStyle(
+        context,
+        fontSize: AppFontSizes.caption,
+        fontWeight: AppFontWeights.regular,
+      ),
     ),
     maxLines: 1,
     textDirection: TextDirection.ltr,

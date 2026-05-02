@@ -1,4 +1,3 @@
-import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:chahua/features/conversation/media/presentation/attachment_viewer_request.dart';
 import 'package:flutter/cupertino.dart';
@@ -105,22 +104,13 @@ class TextBubbleV2 extends StatelessWidget {
             borderRadius: borderRadius,
             child: DecoratedBox(
               decoration: BoxDecoration(color: theme.bubbleColor),
-              child: DefaultTextStyle(
-                style: appBubbleTextStyle(
-                  context,
-                  color: theme.textColor,
-                  fontSize: theme.chatMessageFontSize,
-                  height: 1.28,
-                  fontWeight: AppFontWeights.medium,
-                ),
-                child: TextBubbleVisualWithTextContent(
-                  message: message,
-                  theme: theme,
-                  showSenderName: showSenderName,
-                  onTapReply: onTapReply,
-                  onOpenThread: onOpenThread,
-                  onOpenAttachment: onOpenAttachment,
-                ),
+              child: TextBubbleVisualWithTextContent(
+                message: message,
+                theme: theme,
+                showSenderName: showSenderName,
+                onTapReply: onTapReply,
+                onOpenThread: onOpenThread,
+                onOpenAttachment: onOpenAttachment,
               ),
             ),
           ),
@@ -135,22 +125,13 @@ class TextBubbleV2 extends StatelessWidget {
               color: theme.bubbleColor,
               borderRadius: borderRadius,
             ),
-            child: DefaultTextStyle(
-              style: appBubbleTextStyle(
-                context,
-                color: theme.textColor,
-                fontSize: theme.chatMessageFontSize,
-                height: 1.28,
-                fontWeight: AppFontWeights.semibold,
-              ),
-              child: TextBubblePlainContent(
-                message: message,
-                theme: theme,
-                showSenderName: showSenderName,
-                onTapReply: onTapReply,
-                onOpenThread: onOpenThread,
-                onOpenAttachment: onOpenAttachment,
-              ),
+            child: TextBubblePlainContent(
+              message: message,
+              theme: theme,
+              showSenderName: showSenderName,
+              onTapReply: onTapReply,
+              onOpenThread: onOpenThread,
+              onOpenAttachment: onOpenAttachment,
             ),
           ),
         ),

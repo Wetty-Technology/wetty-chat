@@ -36,7 +36,7 @@ class SystemBubbleV2 extends StatelessWidget {
             text: TextSpan(
               style: appSecondaryTextStyle(
                 context,
-                fontSize: AppFontSizes.bodySmall,
+                fontSize: AppFontSizes.meta,
                 height: _lineHeight,
               ),
               children: [
@@ -45,9 +45,9 @@ class SystemBubbleV2 extends StatelessWidget {
                     text: senderName,
                     style: appSecondaryTextStyle(
                       context,
-                      fontSize: AppFontSizes.bodySmall,
+                      fontSize: AppFontSizes.meta,
                       height: _lineHeight,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: AppFontWeights.semibold,
                     ),
                   ),
                 if (hasSenderName) const TextSpan(text: ' '),

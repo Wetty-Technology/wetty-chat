@@ -30,7 +30,7 @@ class SenderHeader extends StatelessWidget {
             senderName,
             style: appBubbleTextStyle(
               context,
-              fontWeight: FontWeight.w700,
+              fontWeight: AppFontWeights.bold,
               fontSize: AppFontSizes.body,
               color: theme.textColor,
             ),

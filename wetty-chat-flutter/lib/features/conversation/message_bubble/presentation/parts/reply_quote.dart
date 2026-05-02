@@ -57,8 +57,8 @@ class ReplyQuote extends StatelessWidget {
             replySender,
             style: appBubbleTextStyle(
               context,
-              fontWeight: FontWeight.w600,
-              fontSize: 11,
+              fontWeight: AppFontWeights.semibold,
+              fontSize: AppFontSizes.caption,
               color: theme.textColor.withAlpha(217),
             ),
           ),
@@ -68,8 +68,8 @@ class ReplyQuote extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: appBubbleTextStyle(
               context,
-              fontSize: 12,
-              fontWeight: FontWeight.w400,
+              fontSize: AppFontSizes.meta,
+              fontWeight: AppFontWeights.regular,
               color: theme.textColor.withAlpha(179),
             ),
           ),

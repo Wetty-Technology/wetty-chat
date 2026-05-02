@@ -62,7 +62,7 @@ class VideoAttachmentPreview extends StatelessWidget {
                   style: appOnDarkTextStyle(
                     context,
                     fontSize: AppFontSizes.meta,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: AppFontWeights.semibold,
                   ),
                 ),
               ),

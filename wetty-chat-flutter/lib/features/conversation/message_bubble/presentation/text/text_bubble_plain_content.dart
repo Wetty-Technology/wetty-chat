@@ -31,7 +31,6 @@ class TextBubblePlainContent extends StatelessWidget {
   final VoidCallback? onOpenThread;
   final ValueChanged<MessageAttachmentOpenRequest>? onOpenAttachment;
 
-  static const FontWeight _bubbleFontWeight = FontWeight.w400;
   @override
   Widget build(BuildContext context) {
     final isThreadView =
@@ -66,9 +65,9 @@ class TextBubblePlainContent extends StatelessWidget {
           style: appBubbleTextStyle(
             context,
             color: theme.metaColor,
-            fontSize: theme.chatMessageFontSize,
+            fontSize: AppFontSizes.bodyLarge,
             fontStyle: FontStyle.italic,
-            fontWeight: _bubbleFontWeight,
+            fontWeight: AppFontWeights.regular,
           ),
         ),
       );
@@ -128,7 +127,6 @@ class TextBubbleMessageBody extends StatelessWidget {
   final ConversationMessageV2 message;
   final BubbleThemeV2 theme;
 
-  static const FontWeight _bubbleFontWeight = AppFontWeights.medium;
   static const double _emptyBubbleMinWidth = 48;
 
   @override
@@ -160,7 +158,7 @@ class TextBubbleMessageBody extends StatelessWidget {
                 color: theme.textColor,
                 fontSize: theme.chatMessageFontSize,
                 height: 1.28,
-                fontWeight: _bubbleFontWeight,
+                fontWeight: AppFontWeights.medium,
               ),
               mentions: mentions,
               currentUserId: null,

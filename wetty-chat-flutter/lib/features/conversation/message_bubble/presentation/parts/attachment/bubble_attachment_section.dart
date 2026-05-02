@@ -90,7 +90,7 @@ class _FileAttachmentTile extends StatelessWidget {
   final BubbleThemeV2 theme;
   final VoidCallback? onTap;
 
-  static const FontWeight _attachmentFontWeight = FontWeight.w400;
+  static const FontWeight _attachmentFontWeight = AppFontWeights.regular;
 
   @override
   Widget build(BuildContext context) {

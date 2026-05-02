@@ -42,8 +42,8 @@ class ThreadIndicator extends StatelessWidget {
               l10n.threadReplyCount(threadInfo.replyCount),
               style: appBubbleTextStyle(
                 context,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+                fontSize: AppFontSizes.meta,
+                fontWeight: AppFontWeights.semibold,
                 color: theme.textColor,
               ),
             ),

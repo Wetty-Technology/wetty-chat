@@ -193,7 +193,7 @@ class _BubbleAttachmentPreview extends StatelessWidget {
                   context,
                   color: CupertinoColors.white,
                   fontSize: 28,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: AppFontWeights.bold,
                 ),
               ),
             ),
@@ -355,7 +355,7 @@ class _FileAttachmentTile extends StatelessWidget {
   final AttachmentItem attachment;
   final BubbleThemeV2 theme;
 
-  static const FontWeight _attachmentFontWeight = FontWeight.w400;
+  static const FontWeight _attachmentFontWeight = AppFontWeights.regular;
 
   @override
   Widget build(BuildContext context) {

@@ -28,7 +28,7 @@ class StickerBubbleV2 extends StatelessWidget {
   final ValueChanged<String>? onToggleReaction;
 
   static const double _stickerSize = 160;
-  static const FontWeight _bubbleFontWeight = FontWeight.w400;
+  static const FontWeight _bubbleFontWeight = AppFontWeights.regular;
 
   @override
   Widget build(BuildContext context) {

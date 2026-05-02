@@ -17,7 +17,7 @@ class BubbleReactions extends StatelessWidget {
   static const double _reactionPillHorizontalPadding = 8;
   static const double _reactionPillGap = 6;
   static const double _reactionEmojiFontSize = 18.5;
-  static const FontWeight _bubbleFontWeight = FontWeight.w400;
+  static const FontWeight _bubbleFontWeight = AppFontWeights.regular;
 
   final List<ReactionSummary> reactions;
 
@@ -97,8 +97,8 @@ class BubbleReactions extends StatelessWidget {
         width += _measureTextWidth(
           context,
           '+${reaction.count - _maxVisibleReactors}',
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
+          fontSize: AppFontSizes.caption,
+          fontWeight: AppFontWeights.semibold,
         );
       }
       return width;
@@ -110,7 +110,7 @@ class BubbleReactions extends StatelessWidget {
         context,
         '${reaction.count}',
         fontSize: AppFontSizes.meta,
-        fontWeight: FontWeight.w600,
+        fontWeight: AppFontWeights.semibold,
       );
     }
 
@@ -189,7 +189,7 @@ class BubbleReactions extends StatelessWidget {
                       context,
                       color: pillForeground.withAlpha(179),
                       fontSize: AppFontSizes.meta,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: AppFontWeights.semibold,
                     ),
                   ),
                 ],
@@ -277,8 +277,8 @@ class _ReactionReactorStrip extends StatelessWidget {
             style: appBubbleTextStyle(
               context,
               color: textColor.withAlpha(204),
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
+              fontSize: AppFontSizes.caption,
+              fontWeight: AppFontWeights.semibold,
             ),
           ),
         ],
