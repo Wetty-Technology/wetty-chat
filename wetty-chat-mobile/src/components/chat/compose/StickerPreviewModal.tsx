@@ -195,7 +195,12 @@ function StickerPreviewModalContent({ stickerId, isDesktop, onDismiss }: Sticker
   if (isDesktop) {
     return (
       <IonModal isOpen onDidDismiss={onDismiss}>
-        <IonContent>{renderContent()}</IonContent>
+        <IonContent className={styles.desktopModalContent}>
+          <button type="button" className={styles.desktopCloseBtn} onClick={onDismiss} aria-label={t`Close`}>
+            <IonIcon icon={close} />
+          </button>
+          {renderContent()}
+        </IonContent>
         {renderActionButton()}
       </IonModal>
     );
