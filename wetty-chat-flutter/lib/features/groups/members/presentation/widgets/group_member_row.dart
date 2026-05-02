@@ -77,10 +77,10 @@ class _GroupMemberAvatar extends StatelessWidget {
       size: _size,
       memCacheWidth: 112,
       fallbackBackgroundColor: CupertinoColors.systemGrey4.resolveFrom(context),
-      fallbackTextStyle: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w600,
-        color: CupertinoColors.white,
+      fallbackTextStyle: appOnDarkTextStyle(
+        context,
+        fontSize: AppFontSizes.bodyLarge,
+        fontWeight: AppFontWeights.semibold,
       ),
     );
   }
@@ -110,9 +110,9 @@ class _RoleChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         child: Text(
           role,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
+          style: appCaptionTextStyle(
+            context,
+            fontWeight: AppFontWeights.semibold,
             color: textColor,
           ),
         ),

@@ -167,10 +167,10 @@ class _BottomNavItem extends StatelessWidget {
               const SizedBox(height: 3),
               Text(
                 data.label,
-                style: TextStyle(
+                style: appCaptionTextStyle(
+                  context,
                   color: color,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: AppFontWeights.medium,
                 ),
               ),
             ],
@@ -214,7 +214,7 @@ class _TabBadge extends StatelessWidget {
         style: appOnDarkTextStyle(
           context,
           fontSize: AppFontSizes.unreadBadge,
-          fontWeight: FontWeight.w600,
+          fontWeight: AppFontWeights.semibold,
         ),
       ),
     );

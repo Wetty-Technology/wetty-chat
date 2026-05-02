@@ -346,6 +346,7 @@ class _VoiceBubbleV2State extends ConsumerState<VoiceBubbleV2> {
     required String text,
     required bool isError,
   }) {
+    final style = _statusTextStyle(context, theme, isError: isError);
     return Row(
       children: [
         Expanded(
@@ -353,12 +354,7 @@ class _VoiceBubbleV2State extends ConsumerState<VoiceBubbleV2> {
             text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: appSecondaryTextStyle(context, fontSize: AppFontSizes.meta)
-                .copyWith(
-                  color: isError
-                      ? CupertinoColors.systemRed.resolveFrom(context)
-                      : theme.metaColor,
-                ),
+            style: style,
           ),
         ),
         const SizedBox(width: 8),
@@ -386,17 +382,25 @@ class _VoiceBubbleV2State extends ConsumerState<VoiceBubbleV2> {
     String text, {
     required bool isError,
   }) {
-    final style = appSecondaryTextStyle(context, fontSize: AppFontSizes.meta)
-        .copyWith(
-          color: isError
-              ? CupertinoColors.systemRed.resolveFrom(context)
-              : theme.metaColor,
-        );
+    final style = _statusTextStyle(context, theme, isError: isError);
     final painter = TextPainter(
       text: TextSpan(text: text, style: style),
       maxLines: 1,
       textDirection: TextDirection.ltr,
     )..layout(maxWidth: double.infinity);
     return painter.width;
+  }
+
+  TextStyle _statusTextStyle(
+    BuildContext context,
+    BubbleThemeV2 theme, {
+    required bool isError,
+  }) {
+    return appMetaTextStyle(
+      context,
+      color: isError
+          ? CupertinoColors.systemRed.resolveFrom(context)
+          : theme.metaColor,
+    );
   }
 }

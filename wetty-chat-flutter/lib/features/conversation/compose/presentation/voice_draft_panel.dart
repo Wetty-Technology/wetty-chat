@@ -81,7 +81,7 @@ class VoiceDraftPanel extends StatelessWidget {
                   style: appTextStyle(
                     context,
                     fontSize: AppFontSizes.body,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: AppFontWeights.semibold,
                   ),
                 ),
                 const SizedBox(width: 8),

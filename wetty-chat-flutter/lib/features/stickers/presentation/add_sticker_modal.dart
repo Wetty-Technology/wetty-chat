@@ -112,9 +112,12 @@ class _AddStickerPageState extends ConsumerState<AddStickerPage> {
           onPressed: _isUploading ? null : _onAdd,
           child: _isUploading
               ? const CupertinoActivityIndicator()
-              : const Text(
+              : Text(
                   'Add',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                  style: appBodyTextStyle(
+                    context,
+                    fontWeight: AppFontWeights.semibold,
+                  ),
                 ),
         ),
       ),
@@ -142,9 +145,9 @@ class _AddStickerPageState extends ConsumerState<AddStickerPage> {
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Text(
                       _errorMessage!,
-                      style: const TextStyle(
+                      style: appMetaTextStyle(
+                        context,
                         color: CupertinoColors.destructiveRed,
-                        fontSize: AppFontSizes.bodySmall,
                       ),
                     ),
                   ),

@@ -78,10 +78,7 @@ class _StickerPreviewSheetState extends ConsumerState<_StickerPreviewSheet> {
             child: Center(
               child: Text(
                 'Failed to load sticker details',
-                style: TextStyle(
-                  color: colors.textSecondary,
-                  fontSize: AppFontSizes.body,
-                ),
+                style: appBodyTextStyle(context, color: colors.textSecondary),
               ),
             ),
           ),
@@ -177,10 +174,7 @@ class _StickerPreviewSheetState extends ConsumerState<_StickerPreviewSheet> {
           ),
           Text(
             '${state.packStickers.length} stickers',
-            style: appSecondaryTextStyle(
-              context,
-              fontSize: AppFontSizes.bodySmall,
-            ),
+            style: appMetaTextStyle(context),
           ),
         ],
       ),

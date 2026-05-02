@@ -91,7 +91,10 @@ class _StickerPackListPageState extends ConsumerState<StickerPackListPage> {
                       ),
                       title: Text(
                         'Create New Pack',
-                        style: TextStyle(color: colors.accentPrimary),
+                        style: appBodyTextStyle(
+                          context,
+                          color: colors.accentPrimary,
+                        ),
                       ),
                       onTap: _showCreatePackDialog,
                     ),
@@ -148,13 +151,10 @@ class _PackListTile extends StatelessWidget {
               size: 32,
             )
           : Icon(CupertinoIcons.cube, size: 32, color: colors.textSecondary),
-      title: Text(
-        pack.name,
-        style: appTextStyle(context, fontSize: AppFontSizes.body),
-      ),
+      title: Text(pack.name, style: appBodyTextStyle(context)),
       subtitle: Text(
         '${pack.stickerCount} stickers',
-        style: appSecondaryTextStyle(context, fontSize: AppFontSizes.bodySmall),
+        style: appMetaTextStyle(context),
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
@@ -168,10 +168,10 @@ class _PackListTile extends StatelessWidget {
               ),
               child: Text(
                 'Owned',
-                style: TextStyle(
+                style: appMetaTextStyle(
+                  context,
                   color: colors.accentPrimary,
-                  fontSize: AppFontSizes.meta,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: AppFontWeights.medium,
                 ),
               ),
             ),

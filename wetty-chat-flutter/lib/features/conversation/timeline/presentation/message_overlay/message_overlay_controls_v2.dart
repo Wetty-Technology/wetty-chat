@@ -106,7 +106,10 @@ class _ActionButton extends StatelessWidget {
           Expanded(
             child: Text(
               action.label,
-              style: appTextStyle(context, fontWeight: FontWeight.w500),
+              style: appBodyTextStyle(
+                context,
+                fontWeight: AppFontWeights.medium,
+              ),
             ),
           ),
         ],

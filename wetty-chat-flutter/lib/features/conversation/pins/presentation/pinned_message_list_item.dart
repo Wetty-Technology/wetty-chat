@@ -59,8 +59,8 @@ class PinnedMessageListItem extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: appTextStyle(
                     context,
-                    fontSize: AppFontSizes.bodySmall,
-                    fontWeight: FontWeight.w600,
+                    fontSize: AppFontSizes.meta,
+                    fontWeight: AppFontWeights.semibold,
                     color: colors.textPrimary,
                   ),
                 ),
@@ -71,7 +71,7 @@ class PinnedMessageListItem extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: appTextStyle(
                     context,
-                    fontSize: AppFontSizes.bodySmall,
+                    fontSize: AppFontSizes.meta,
                     color: colors.textSecondary,
                   ),
                 ),

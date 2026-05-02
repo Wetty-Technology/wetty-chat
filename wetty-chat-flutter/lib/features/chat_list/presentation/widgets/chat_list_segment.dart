@@ -73,7 +73,10 @@ class _SegmentLabel extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8),
         child: Text(
           label,
-          style: appTextStyle(context, fontSize: AppFontSizes.bodySmall),
+          style: appMetaTextStyle(
+            context,
+            color: context.appColors.textPrimary,
+          ),
         ),
       );
     }
@@ -86,7 +89,10 @@ class _SegmentLabel extends StatelessWidget {
         children: [
           Text(
             label,
-            style: appTextStyle(context, fontSize: AppFontSizes.bodySmall),
+            style: appMetaTextStyle(
+              context,
+              color: context.appColors.textPrimary,
+            ),
           ),
           const SizedBox(width: 4),
           Container(
@@ -102,7 +108,7 @@ class _SegmentLabel extends StatelessWidget {
               style: appOnDarkTextStyle(
                 context,
                 fontSize: AppFontSizes.unreadBadge,
-                fontWeight: FontWeight.w600,
+                fontWeight: AppFontWeights.semibold,
               ),
             ),
           ),

@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../app/theme/style_config.dart';
 import '../../../core/notifications/push_notification_provider.dart';
 import '../../../l10n/app_localizations.dart';
 
@@ -63,9 +64,9 @@ class NotificationSettingsPage extends ConsumerWidget {
                   CupertinoListTile(
                     title: Text(
                       pushState.lastError!,
-                      style: const TextStyle(
+                      style: appMetaTextStyle(
+                        context,
                         color: CupertinoColors.destructiveRed,
-                        fontSize: 13,
                       ),
                     ),
                   ),

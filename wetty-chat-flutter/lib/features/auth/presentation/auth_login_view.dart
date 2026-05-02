@@ -127,7 +127,7 @@ class _AuthLoginPageState extends ConsumerState<AuthLoginPage> {
               style: appTextStyle(
                 context,
                 fontSize: AppFontSizes.body,
-                fontWeight: FontWeight.w600,
+                fontWeight: AppFontWeights.semibold,
               ),
             ),
             const SizedBox(height: 8),
@@ -144,7 +144,7 @@ class _AuthLoginPageState extends ConsumerState<AuthLoginPage> {
               style: appTextStyle(
                 context,
                 fontSize: AppFontSizes.body,
-                fontWeight: FontWeight.w600,
+                fontWeight: AppFontWeights.semibold,
               ),
             ),
             const SizedBox(height: 8),
@@ -169,7 +169,7 @@ class _AuthLoginPageState extends ConsumerState<AuthLoginPage> {
                 _errorText!,
                 style: appTextStyle(
                   context,
-                  fontSize: AppFontSizes.bodySmall,
+                  fontSize: AppFontSizes.meta,
                   color: CupertinoColors.systemRed.resolveFrom(context),
                 ),
               ),

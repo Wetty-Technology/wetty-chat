@@ -143,6 +143,7 @@ class ThreadListRow extends StatelessWidget {
   ) {
     final unreadCount = thread.unreadCount;
     final hasPreview = previewText.isNotEmpty;
+    final previewStyle = appMetaTextStyle(context);
 
     return Row(
       children: [
@@ -150,12 +151,13 @@ class ThreadListRow extends StatelessWidget {
           child: hasPreview
               ? Text.rich(
                   TextSpan(
+                    style: previewStyle,
                     children: [
                       TextSpan(
                         text: '$senderName: ',
-                        style: appTextStyle(
-                          context,
-                          fontWeight: FontWeight.w500,
+                        style: previewStyle.copyWith(
+                          color: context.appColors.textPrimary,
+                          fontWeight: AppFontWeights.medium,
                         ),
                       ),
                       TextSpan(text: previewText),
@@ -163,20 +165,13 @@ class ThreadListRow extends StatelessWidget {
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: appTextStyle(
-                    context,
-                    fontSize: AppFontSizes.bodySmall,
-                  ),
                 )
               : Text(
                   AppLocalizations.of(
                     context,
                   )!.threadReplyCount(thread.replyCount),
                   maxLines: 1,
-                  style: appSecondaryTextStyle(
-                    context,
-                    fontSize: AppFontSizes.bodySmall,
-                  ),
+                  style: previewStyle,
                 ),
         ),
         if (unreadCount > 0) _unreadBadge(context, unreadCount),
@@ -199,7 +194,7 @@ class ThreadListRow extends StatelessWidget {
         style: appOnDarkTextStyle(
           context,
           fontSize: AppFontSizes.unreadBadge,
-          fontWeight: FontWeight.w600,
+          fontWeight: AppFontWeights.semibold,
         ),
       ),
     );
@@ -287,7 +282,7 @@ class _OverlayAvatar extends StatelessWidget {
       fallbackTextStyle: appOnDarkTextStyle(
         context,
         fontSize: fontSize,
-        fontWeight: FontWeight.w600,
+        fontWeight: AppFontWeights.semibold,
       ),
     );
   }

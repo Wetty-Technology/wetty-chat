@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_swipe_action_cell/flutter_swipe_action_cell.dart';
+import 'package:chahua/app/theme/style_config.dart';
 
 /// iOS-style swipe-to-action row for chat list items.
 /// Partial swipe reveals the action button; full swipe triggers it automatically.
@@ -39,7 +40,7 @@ class SwipeToActionRow extends StatelessWidget {
           color: color,
           icon: Icon(icon, color: CupertinoColors.white),
           title: label,
-          style: const TextStyle(color: CupertinoColors.white, fontSize: 12),
+          style: appCaptionTextStyle(context, color: CupertinoColors.white),
         ),
       ],
       child: child,

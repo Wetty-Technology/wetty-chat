@@ -63,7 +63,7 @@ class FontSizeSettingsPage extends ConsumerWidget {
                           style: appOnDarkTextStyle(
                             context,
                             fontSize: AppFontSizes.meta,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: AppFontWeights.semibold,
                           ),
                         ),
                       ),
@@ -86,7 +86,7 @@ class FontSizeSettingsPage extends ConsumerWidget {
                                 style: appSecondaryTextStyle(
                                   context,
                                   fontSize: AppFontSizes.meta,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: AppFontWeights.semibold,
                                 ),
                               ),
                               const SizedBox(height: 4),

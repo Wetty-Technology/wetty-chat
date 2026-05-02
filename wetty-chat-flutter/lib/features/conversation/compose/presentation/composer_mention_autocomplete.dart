@@ -69,9 +69,8 @@ class ComposerMentionAutocomplete extends StatelessWidget {
                             displayName,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: appTextStyle(
+                            style: appBodyTextStyle(
                               context,
-                              fontSize: 14,
                               color: colors.textPrimary,
                             ),
                           ),
@@ -101,8 +100,8 @@ class _MentionAvatar extends StatelessWidget {
       memCacheWidth: 72,
       fallbackTextStyle: appOnDarkTextStyle(
         context,
-        fontSize: AppFontSizes.bodySmall,
-        fontWeight: FontWeight.w600,
+        fontSize: AppFontSizes.meta,
+        fontWeight: AppFontWeights.semibold,
       ),
     );
   }

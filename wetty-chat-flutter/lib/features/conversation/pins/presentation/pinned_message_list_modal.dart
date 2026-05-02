@@ -141,7 +141,7 @@ class _PinnedMessageListModalState extends State<PinnedMessageListModal> {
                           style: appTextStyle(
                             context,
                             fontSize: AppFontSizes.sectionTitle,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: AppFontWeights.semibold,
                           ),
                         ),
                       ),

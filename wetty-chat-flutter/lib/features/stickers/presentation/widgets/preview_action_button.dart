@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:chahua/app/theme/style_config.dart';
 import '../../../../core/session/dev_session_store.dart';
 import '../../application/sticker_detail_view_model.dart';
 
@@ -39,9 +40,12 @@ class PreviewActionButton extends ConsumerWidget {
             ? CupertinoButton(
                 color: CupertinoColors.destructiveRed.withAlpha(30),
                 onPressed: onToggleSubscription,
-                child: const Text(
+                child: Text(
                   'Unsubscribe',
-                  style: TextStyle(color: CupertinoColors.destructiveRed),
+                  style: appBodyTextStyle(
+                    context,
+                    color: CupertinoColors.destructiveRed,
+                  ),
                 ),
               )
             : CupertinoButton.filled(

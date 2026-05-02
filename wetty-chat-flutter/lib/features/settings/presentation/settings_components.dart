@@ -113,7 +113,7 @@ class SettingsActionRow extends StatelessWidget {
               item.title,
               style: appTextStyle(
                 context,
-                fontSize: item.titleFontSize ?? AppFontSizes.bodySmall,
+                fontSize: item.titleFontSize ?? AppFontSizes.meta,
                 color: item.titleColor ?? defaultLabelColor,
                 fontWeight: item.titleFontWeight,
               ),

@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/theme/style_config.dart';
 import '../../../core/cache/app_cache_service.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../conversation/timeline/presentation/voice_message_playback_controller_v2.dart';
@@ -66,7 +67,8 @@ class _CacheSettingsPageState extends ConsumerState<CacheSettingsPage> {
                   CupertinoListTile(
                     title: Text(
                       l10n.settingsClearCache,
-                      style: const TextStyle(
+                      style: appBodyTextStyle(
+                        context,
                         color: CupertinoColors.destructiveRed,
                       ),
                     ),

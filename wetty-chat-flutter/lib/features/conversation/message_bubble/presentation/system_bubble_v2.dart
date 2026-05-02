@@ -22,6 +22,7 @@ class SystemBubbleV2 extends StatelessWidget {
             SystemMessageContent(:final text) => text,
             _ => '',
           };
+    final baseStyle = appMetaTextStyle(context, height: _lineHeight);
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -34,19 +35,12 @@ class SystemBubbleV2 extends StatelessWidget {
           child: RichText(
             textAlign: TextAlign.center,
             text: TextSpan(
-              style: appSecondaryTextStyle(
-                context,
-                fontSize: AppFontSizes.meta,
-                height: _lineHeight,
-              ),
+              style: baseStyle,
               children: [
                 if (hasSenderName)
                   TextSpan(
                     text: senderName,
-                    style: appSecondaryTextStyle(
-                      context,
-                      fontSize: AppFontSizes.meta,
-                      height: _lineHeight,
+                    style: baseStyle.copyWith(
                       fontWeight: AppFontWeights.semibold,
                     ),
                   ),

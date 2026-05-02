@@ -40,7 +40,7 @@ class PinnedMessageCountButton extends StatelessWidget {
                 style: appTextStyle(
                   context,
                   fontSize: AppFontSizes.meta,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: AppFontWeights.bold,
                   color: colors.textPrimary,
                 ),
               ),

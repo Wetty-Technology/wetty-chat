@@ -1,3 +1,4 @@
+import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/core/cache/app_cached_network_image.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:flutter/cupertino.dart';
@@ -113,7 +114,7 @@ class _VideoStickerPlaceholder extends StatelessWidget {
                   color: CupertinoColors.black.withAlpha(140),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
@@ -121,13 +122,13 @@ class _VideoStickerPlaceholder extends StatelessWidget {
                       color: CupertinoColors.white,
                       size: 10,
                     ),
-                    SizedBox(width: 2),
+                    const SizedBox(width: 2),
                     Text(
                       'Video',
-                      style: TextStyle(
-                        color: CupertinoColors.white,
+                      style: appOnDarkTextStyle(
+                        context,
                         fontSize: 9,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: AppFontWeights.medium,
                       ),
                     ),
                   ],

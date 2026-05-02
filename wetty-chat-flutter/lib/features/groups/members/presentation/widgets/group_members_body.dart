@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:chahua/app/theme/style_config.dart';
 import '../../application/group_members_view_model.dart';
 import '../../data/group_member_models.dart';
 import 'group_member_row.dart';
@@ -148,7 +149,8 @@ class _MembersEmptyState extends StatelessWidget {
         child: Text(
           hasSearch ? 'No matching members found.' : 'No members found.',
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: appBodyTextStyle(
+            context,
             color: CupertinoColors.secondaryLabel.resolveFrom(context),
           ),
         ),

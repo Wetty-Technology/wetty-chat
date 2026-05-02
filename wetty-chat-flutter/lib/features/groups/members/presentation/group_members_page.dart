@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:chahua/app/theme/style_config.dart';
 import '../../../../core/session/dev_session_store.dart';
 import '../application/group_members_view_model.dart';
 import '../data/group_member_models.dart';
@@ -248,7 +249,7 @@ class _ToastWidgetState extends State<_ToastWidget> {
         child: Text(
           widget.message,
           textAlign: TextAlign.center,
-          style: const TextStyle(color: CupertinoColors.white),
+          style: appBodyTextStyle(context, color: CupertinoColors.white),
         ),
       ),
     );

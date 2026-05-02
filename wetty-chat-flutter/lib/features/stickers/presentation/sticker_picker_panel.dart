@@ -71,7 +71,7 @@ class _StickerPickerPanelState extends ConsumerState<StickerPickerPanel> {
       return Center(
         child: Text(
           'No stickers',
-          style: TextStyle(color: colors.textSecondary, fontSize: 14),
+          style: appBodyTextStyle(context, color: colors.textSecondary),
         ),
       );
     }

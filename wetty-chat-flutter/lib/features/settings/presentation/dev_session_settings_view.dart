@@ -136,7 +136,7 @@ class _DevSessionSettingsPageState
               style: appTextStyle(
                 context,
                 fontSize: AppFontSizes.body,
-                fontWeight: FontWeight.w600,
+                fontWeight: AppFontWeights.semibold,
               ),
             ),
             const SizedBox(height: 8),
@@ -169,7 +169,7 @@ class _DevSessionSettingsPageState
               style: appTextStyle(
                 context,
                 fontSize: AppFontSizes.body,
-                fontWeight: FontWeight.w600,
+                fontWeight: AppFontWeights.semibold,
               ),
             ),
             const SizedBox(height: 8),
@@ -203,7 +203,7 @@ class _DevSessionSettingsPageState
                 _errorText!,
                 style: appTextStyle(
                   context,
-                  fontSize: AppFontSizes.bodySmall,
+                  fontSize: AppFontSizes.meta,
                   color: CupertinoColors.systemRed.resolveFrom(context),
                 ),
               ),

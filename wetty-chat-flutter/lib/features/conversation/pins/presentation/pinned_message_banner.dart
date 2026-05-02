@@ -63,7 +63,7 @@ class PinnedMessageBanner extends StatelessWidget {
                       style: appTextStyle(
                         context,
                         fontSize: AppFontSizes.meta,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: AppFontWeights.semibold,
                         color: colors.textSecondary,
                       ),
                     ),
@@ -74,7 +74,7 @@ class PinnedMessageBanner extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: appTextStyle(
                         context,
-                        fontSize: AppFontSizes.bodySmall,
+                        fontSize: AppFontSizes.meta,
                         color: colors.textPrimary,
                       ),
                     ),

@@ -30,7 +30,8 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
   bool _isLeavingGroup = false;
 
   TextStyle _placeholderStyle(BuildContext context) {
-    return TextStyle(
+    return appBodyTextStyle(
+      context,
       color: CupertinoColors.placeholderText.resolveFrom(context),
     );
   }
@@ -202,17 +203,13 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
           fallbackTextStyle: appOnDarkTextStyle(
             context,
             fontSize: 32,
-            fontWeight: FontWeight.w600,
+            fontWeight: AppFontWeights.semibold,
           ),
         ),
         const SizedBox(height: 12),
         Text(
           metadata.displayName,
-          style: appTextStyle(
-            context,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          style: appTitleTextStyle(context, fontWeight: AppFontWeights.bold),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 4),
@@ -286,7 +283,7 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
             const SizedBox(height: 4),
             Text(
               label,
-              style: TextStyle(fontSize: 12, color: resolvedColor),
+              style: appCaptionTextStyle(context, color: resolvedColor),
               textAlign: TextAlign.center,
             ),
           ],
@@ -386,7 +383,7 @@ class _ToastWidgetState extends State<_ToastWidget> {
         child: Text(
           widget.message,
           textAlign: TextAlign.center,
-          style: const TextStyle(color: CupertinoColors.white),
+          style: appBodyTextStyle(context, color: CupertinoColors.white),
         ),
       ),
     );

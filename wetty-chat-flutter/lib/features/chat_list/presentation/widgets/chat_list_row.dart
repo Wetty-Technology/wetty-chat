@@ -51,7 +51,7 @@ class ChatListRow extends StatelessWidget {
                   fallbackTextStyle: appOnDarkTextStyle(
                     context,
                     fontSize: 20,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: AppFontWeights.semibold,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -153,29 +153,23 @@ class _Subtitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final previewStyle = appMetaTextStyle(context);
     if (_hasDraft) {
       return Row(
         children: [
           Expanded(
             child: Text.rich(
               TextSpan(
+                style: previewStyle,
                 children: [
                   TextSpan(
                     text: '${l10n.draftPrefix} ',
-                    style: appTextStyle(
-                      context,
-                      fontSize: AppFontSizes.bodySmall,
+                    style: previewStyle.copyWith(
                       color: CupertinoColors.destructiveRed,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: AppFontWeights.medium,
                     ),
                   ),
-                  TextSpan(
-                    text: draftText,
-                    style: appSecondaryTextStyle(
-                      context,
-                      fontSize: AppFontSizes.bodySmall,
-                    ),
-                  ),
+                  TextSpan(text: draftText),
                 ],
               ),
               maxLines: 1,
@@ -194,12 +188,13 @@ class _Subtitle extends StatelessWidget {
           child: _hasMessagePreview
               ? Text.rich(
                   TextSpan(
+                    style: previewStyle,
                     children: [
                       TextSpan(
                         text: '$senderName: ',
-                        style: appTextStyle(
-                          context,
-                          fontWeight: FontWeight.bold,
+                        style: previewStyle.copyWith(
+                          color: context.appColors.textPrimary,
+                          fontWeight: AppFontWeights.bold,
                         ),
                       ),
                       TextSpan(text: lastMessageText),
@@ -207,19 +202,12 @@ class _Subtitle extends StatelessWidget {
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: appSecondaryTextStyle(
-                    context,
-                    fontSize: AppFontSizes.bodySmall,
-                  ),
                 )
               : Text(
                   l10n.noMessagesYet,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: appSecondaryTextStyle(
-                    context,
-                    fontSize: AppFontSizes.bodySmall,
-                  ),
+                  style: previewStyle,
                 ),
         ),
         if (unreadCount > 0) _UnreadBadge(count: unreadCount, isMuted: isMuted),
@@ -252,7 +240,7 @@ class _UnreadBadge extends StatelessWidget {
         style: appOnDarkTextStyle(
           context,
           fontSize: AppFontSizes.unreadBadge,
-          fontWeight: FontWeight.w600,
+          fontWeight: AppFontWeights.semibold,
         ),
       ),
     );

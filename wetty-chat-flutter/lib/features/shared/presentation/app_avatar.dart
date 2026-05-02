@@ -34,7 +34,7 @@ class AppAvatar extends StatelessWidget {
           appOnDarkTextStyle(
             context,
             fontSize: size * 0.42,
-            fontWeight: FontWeight.w600,
+            fontWeight: AppFontWeights.semibold,
           ),
     );
 

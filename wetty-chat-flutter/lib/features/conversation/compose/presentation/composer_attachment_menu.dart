@@ -112,7 +112,7 @@ class _AttachmentSourceAction extends StatelessWidget {
                 textAlign: TextAlign.left,
                 style: appTextStyle(
                   context,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: AppFontWeights.semibold,
                   fontSize: AppFontSizes.body,
                 ),
               ),

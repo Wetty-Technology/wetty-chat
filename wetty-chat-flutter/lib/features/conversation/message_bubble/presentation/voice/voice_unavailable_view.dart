@@ -22,10 +22,7 @@ class VoiceUnavailableView extends StatelessWidget {
         Expanded(
           child: Text(
             statusText,
-            style: appSecondaryTextStyle(
-              context,
-              fontSize: AppFontSizes.meta,
-            ).copyWith(color: metaColor),
+            style: appMetaTextStyle(context, color: metaColor),
           ),
         ),
       ],

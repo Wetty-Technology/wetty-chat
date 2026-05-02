@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:extended_image/extended_image.dart';
+import 'package:chahua/app/theme/style_config.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:chahua/l10n/app_localizations.dart';
@@ -308,10 +309,10 @@ class _AttachmentViewerPageState extends ConsumerState<AttachmentViewerPage> {
                             child: Text(
                               title,
                               key: const Key('attachment-viewer-count'),
-                              style: const TextStyle(
-                                color: CupertinoColors.white,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
+                              style: appOnDarkTextStyle(
+                                context,
+                                fontSize: AppFontSizes.meta,
+                                fontWeight: AppFontWeights.semibold,
                               ),
                             ),
                           ),
@@ -693,10 +694,10 @@ class _ViewerStatusBadge extends StatelessWidget {
       ),
       child: Text(
         message,
-        style: const TextStyle(
-          color: CupertinoColors.white,
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
+        style: appOnDarkTextStyle(
+          context,
+          fontSize: AppFontSizes.meta,
+          fontWeight: AppFontWeights.semibold,
         ),
       ),
     );
@@ -1350,10 +1351,10 @@ class _VideoViewerPageState extends State<_VideoViewerPage> {
                                       key: const Key(
                                         'attachment-viewer-video-elapsed',
                                       ),
-                                      style: const TextStyle(
-                                        color: CupertinoColors.white,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
+                                      style: appOnDarkTextStyle(
+                                        context,
+                                        fontSize: AppFontSizes.meta,
+                                        fontWeight: AppFontWeights.semibold,
                                       ),
                                     ),
                                     const SizedBox(width: 10),
@@ -1379,10 +1380,10 @@ class _VideoViewerPageState extends State<_VideoViewerPage> {
                                       key: const Key(
                                         'attachment-viewer-video-remaining',
                                       ),
-                                      style: const TextStyle(
-                                        color: CupertinoColors.white,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
+                                      style: appOnDarkTextStyle(
+                                        context,
+                                        fontSize: AppFontSizes.meta,
+                                        fontWeight: AppFontWeights.semibold,
                                       ),
                                     ),
                                   ],
@@ -1427,10 +1428,9 @@ class _ImageLoadError extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               AppLocalizations.of(context)!.mediaImageLoadFailed,
-              style: TextStyle(
+              style: appSubtitleTextStyle(
+                context,
                 color: CupertinoColors.white,
-                fontSize: 17,
-                fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 16),
@@ -1466,10 +1466,9 @@ class _VideoLoadError extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               AppLocalizations.of(context)!.mediaVideoLoadFailed,
-              style: TextStyle(
+              style: appSubtitleTextStyle(
+                context,
                 color: CupertinoColors.white,
-                fontSize: 17,
-                fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 16),

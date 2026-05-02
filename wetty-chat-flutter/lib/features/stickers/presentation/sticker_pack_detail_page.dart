@@ -150,18 +150,24 @@ class _StickerPackDetailPageState extends ConsumerState<StickerPackDetailPage> {
               return CupertinoButton(
                 padding: EdgeInsets.zero,
                 onPressed: _confirmDeletePack,
-                child: const Text(
+                child: Text(
                   'Delete',
-                  style: TextStyle(color: CupertinoColors.destructiveRed),
+                  style: appBodyTextStyle(
+                    context,
+                    color: CupertinoColors.destructiveRed,
+                  ),
                 ),
               );
             }
             return CupertinoButton(
               padding: EdgeInsets.zero,
               onPressed: _confirmUnsubscribe,
-              child: const Text(
+              child: Text(
                 'Unsubscribe',
-                style: TextStyle(color: CupertinoColors.destructiveRed),
+                style: appBodyTextStyle(
+                  context,
+                  color: CupertinoColors.destructiveRed,
+                ),
               ),
             );
           },
@@ -173,10 +179,7 @@ class _StickerPackDetailPageState extends ConsumerState<StickerPackDetailPage> {
           error: (error, _) => Center(
             child: Text(
               'Failed to load pack details',
-              style: TextStyle(
-                color: colors.textSecondary,
-                fontSize: AppFontSizes.body,
-              ),
+              style: appBodyTextStyle(context, color: colors.textSecondary),
             ),
           ),
           data: (state) {
@@ -199,7 +202,7 @@ class _StickerPackDetailPageState extends ConsumerState<StickerPackDetailPage> {
                       'Tap a sticker to remove it from this pack.',
                       style: appSecondaryTextStyle(
                         context,
-                        fontSize: AppFontSizes.bodySmall,
+                        fontSize: AppFontSizes.meta,
                       ),
                     ),
                   ),

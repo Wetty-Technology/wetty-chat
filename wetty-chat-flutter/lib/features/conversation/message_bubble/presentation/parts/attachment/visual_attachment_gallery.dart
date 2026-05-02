@@ -387,7 +387,7 @@ class _FileAttachmentTile extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: appBubbleTextStyle(
                 context,
-                fontSize: AppFontSizes.bodySmall,
+                fontSize: AppFontSizes.meta,
                 fontWeight: _attachmentFontWeight,
                 color: context.appColors.textPrimary,
               ),
