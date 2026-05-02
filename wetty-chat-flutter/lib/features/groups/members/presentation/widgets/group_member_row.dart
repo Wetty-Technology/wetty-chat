@@ -1,3 +1,4 @@
+import 'package:chahua/app/theme/style_config.dart';
 import 'package:flutter/cupertino.dart';
 
 import '../../../../shared/presentation/app_avatar.dart';
@@ -40,7 +41,7 @@ class GroupMemberRow extends StatelessWidget {
                 displayName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 16, color: labelColor),
+                style: appBodyLargeTextStyle(context, color: labelColor),
               ),
             ),
             const SizedBox(width: 12),

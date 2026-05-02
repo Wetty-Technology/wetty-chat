@@ -99,9 +99,9 @@ class _NewThreadInstruction extends StatelessWidget {
         child: Text(
           l10n.newThreadInstruction,
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: appMetaTextStyle(
+            context,
             color: colors.textSecondary,
-            fontSize: 13,
             height: 1.25,
           ),
         ),

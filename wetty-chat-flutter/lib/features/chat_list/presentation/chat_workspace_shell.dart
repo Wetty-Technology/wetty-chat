@@ -109,7 +109,7 @@ class _EmptyDetailPane extends StatelessWidget {
       child: Center(
         child: Text(
           l10n.selectChatPlaceholder,
-          style: TextStyle(color: colors.textSecondary, fontSize: 16),
+          style: appBodyLargeTextStyle(context, color: colors.textSecondary),
         ),
       ),
     );

@@ -128,9 +128,9 @@ class _PackTab extends StatelessWidget {
             ? StickerImage(media: preview.media, emoji: preview.emoji, size: 24)
             : Text(
                 pack.name.isNotEmpty ? pack.name[0].toUpperCase() : '?',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+                style: appBodyLargeTextStyle(
+                  context,
+                  fontWeight: AppFontWeights.semibold,
                   color: isSelected
                       ? colors.accentPrimary
                       : colors.textSecondary,

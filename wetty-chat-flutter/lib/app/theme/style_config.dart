@@ -1,18 +1,42 @@
 import 'package:flutter/cupertino.dart';
 
+class AppFontFamilies {
+  const AppFontFamilies._();
+
+  // Intentionally null so each platform can use its native font cascade.
+  // On iOS this lets Apple choose SF for Latin and PingFang for CJK text.
+  static const String? system = null;
+}
+
+class AppFontWeights {
+  const AppFontWeights._();
+
+  static const FontWeight regular = FontWeight.w400;
+  static const FontWeight medium = FontWeight.w500;
+  static const FontWeight semibold = FontWeight.w600;
+  static const FontWeight bold = FontWeight.w700;
+}
+
 class AppFontSizes {
   const AppFontSizes._();
 
-  static const double appTitle = 17;
-  static const double sectionTitle = 17;
-  static const double chatEntryTitle = 16;
+  static const double caption = 11;
+  static const double meta = 13;
   static const double body = 14;
-  static const double bodySmall = 13;
-  static const double meta = 12;
-  static const double unreadBadge = 11;
+  static const double bodyLarge = 16;
+  static const double subtitle = 17;
+  static const double title = 18;
 
-  static const double bubbleText = 16;
-  static const double bubbleMeta = 11;
+  static const double bodySmall = meta;
+  static const double appTitle = title;
+  static const double sectionTitle = title;
+  static const double navigationTitle = title;
+  static const double display = title;
+
+  static const double chatEntryTitle = bodyLarge;
+  static const double unreadBadge = caption;
+  static const double bubbleText = bodyLarge;
+  static const double bubbleMeta = caption;
   static const double replyQuote = 14;
 }
 
@@ -173,7 +197,8 @@ class AppColors {
 
 const appBaseTextStyle = TextStyle(
   color: CupertinoColors.label,
-  fontWeight: FontWeight.w400,
+  fontFamily: AppFontFamilies.system,
+  fontWeight: AppFontWeights.regular,
 );
 
 const appCupertinoTheme = CupertinoThemeData(
@@ -181,21 +206,25 @@ const appCupertinoTheme = CupertinoThemeData(
     textStyle: appBaseTextStyle,
     actionTextStyle: TextStyle(
       color: CupertinoColors.activeBlue,
-      fontWeight: FontWeight.w400,
+      fontFamily: AppFontFamilies.system,
+      fontWeight: AppFontWeights.regular,
     ),
     tabLabelTextStyle: appBaseTextStyle,
     navTitleTextStyle: TextStyle(
       color: CupertinoColors.label,
-      fontSize: 18,
-      fontWeight: FontWeight.w600,
+      fontFamily: AppFontFamilies.system,
+      fontSize: AppFontSizes.navigationTitle,
+      fontWeight: AppFontWeights.semibold,
     ),
     navLargeTitleTextStyle: TextStyle(
       color: CupertinoColors.label,
-      fontWeight: FontWeight.w700,
+      fontFamily: AppFontFamilies.system,
+      fontWeight: AppFontWeights.bold,
     ),
     navActionTextStyle: TextStyle(
       color: CupertinoColors.activeBlue,
-      fontWeight: FontWeight.w400,
+      fontFamily: AppFontFamilies.system,
+      fontWeight: AppFontWeights.regular,
     ),
     pickerTextStyle: appBaseTextStyle,
     dateTimePickerTextStyle: appBaseTextStyle,
@@ -231,6 +260,91 @@ TextStyle appTextStyle(
   );
 }
 
+TextStyle appCaptionTextStyle(
+  BuildContext context, {
+  Color? color,
+  FontWeight? fontWeight,
+  double? height,
+  FontStyle? fontStyle,
+}) {
+  return appTextStyle(
+    context,
+    color: color,
+    fontSize: AppFontSizes.caption,
+    fontWeight: fontWeight,
+    height: height,
+    fontStyle: fontStyle,
+  );
+}
+
+TextStyle appMetaTextStyle(
+  BuildContext context, {
+  Color? color,
+  FontWeight? fontWeight,
+  double? height,
+  FontStyle? fontStyle,
+}) {
+  return appTextStyle(
+    context,
+    color: color ?? context.appColors.textSecondary,
+    fontSize: AppFontSizes.meta,
+    fontWeight: fontWeight,
+    height: height,
+    fontStyle: fontStyle,
+  );
+}
+
+TextStyle appBodyTextStyle(
+  BuildContext context, {
+  Color? color,
+  FontWeight? fontWeight,
+  double? height,
+  FontStyle? fontStyle,
+}) {
+  return appTextStyle(
+    context,
+    color: color,
+    fontSize: AppFontSizes.body,
+    fontWeight: fontWeight,
+    height: height,
+    fontStyle: fontStyle,
+  );
+}
+
+TextStyle appBodyLargeTextStyle(
+  BuildContext context, {
+  Color? color,
+  FontWeight? fontWeight,
+  double? height,
+  FontStyle? fontStyle,
+}) {
+  return appTextStyle(
+    context,
+    color: color,
+    fontSize: AppFontSizes.bodyLarge,
+    fontWeight: fontWeight,
+    height: height,
+    fontStyle: fontStyle,
+  );
+}
+
+TextStyle appSubtitleTextStyle(
+  BuildContext context, {
+  Color? color,
+  FontWeight? fontWeight,
+  double? height,
+  FontStyle? fontStyle,
+}) {
+  return appTextStyle(
+    context,
+    color: color,
+    fontSize: AppFontSizes.subtitle,
+    fontWeight: fontWeight ?? AppFontWeights.semibold,
+    height: height,
+    fontStyle: fontStyle,
+  );
+}
+
 TextStyle appSecondaryTextStyle(
   BuildContext context, {
   double? fontSize,
@@ -257,8 +371,8 @@ TextStyle appTitleTextStyle(
   return appTextStyle(
     context,
     color: color,
-    fontSize: fontSize,
-    fontWeight: fontWeight ?? FontWeight.w600,
+    fontSize: fontSize ?? AppFontSizes.title,
+    fontWeight: fontWeight ?? AppFontWeights.semibold,
   );
 }
 
@@ -317,7 +431,7 @@ TextStyle appChatEntryTitleTextStyle(
     context,
     color: color,
     fontSize: AppFontSizes.chatEntryTitle,
-    fontWeight: fontWeight ?? FontWeight.w600,
+    fontWeight: fontWeight ?? AppFontWeights.semibold,
   );
 }
 
@@ -330,6 +444,6 @@ TextStyle appSectionTitleTextStyle(
     context,
     color: color,
     fontSize: AppFontSizes.sectionTitle,
-    fontWeight: fontWeight ?? FontWeight.w600,
+    fontWeight: fontWeight ?? AppFontWeights.semibold,
   );
 }

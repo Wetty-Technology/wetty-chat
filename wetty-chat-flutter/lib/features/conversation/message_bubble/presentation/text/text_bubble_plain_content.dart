@@ -128,7 +128,7 @@ class TextBubbleMessageBody extends StatelessWidget {
   final ConversationMessageV2 message;
   final BubbleThemeV2 theme;
 
-  static const FontWeight _bubbleFontWeight = FontWeight.w400;
+  static const FontWeight _bubbleFontWeight = AppFontWeights.medium;
   static const double _emptyBubbleMinWidth = 48;
 
   @override

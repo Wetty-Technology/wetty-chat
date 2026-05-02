@@ -111,7 +111,7 @@ class TextBubbleV2 extends StatelessWidget {
                   color: theme.textColor,
                   fontSize: theme.chatMessageFontSize,
                   height: 1.28,
-                  fontWeight: FontWeight.w400,
+                  fontWeight: AppFontWeights.medium,
                 ),
                 child: TextBubbleVisualWithTextContent(
                   message: message,
@@ -141,7 +141,7 @@ class TextBubbleV2 extends StatelessWidget {
                 color: theme.textColor,
                 fontSize: theme.chatMessageFontSize,
                 height: 1.28,
-                fontWeight: FontWeight.w400,
+                fontWeight: AppFontWeights.semibold,
               ),
               child: TextBubblePlainContent(
                 message: message,
