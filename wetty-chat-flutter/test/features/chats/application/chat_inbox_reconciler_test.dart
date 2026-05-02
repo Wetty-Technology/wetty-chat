@@ -16,7 +16,6 @@ import 'package:chahua/features/chat_list/application/group_list_v2_store.dart';
 import 'package:chahua/features/chat_list/application/group_list_v2_view_model.dart';
 import 'package:chahua/features/chat_list/application/thread_list_v2_store.dart';
 import 'package:chahua/features/chat_list/application/thread_list_v2_view_model.dart';
-import 'package:chahua/features/chat_list/model/thread_list_item.dart';
 import 'package:chahua/features/shared/application/chat_inbox_reconciler.dart';
 
 void main() {
@@ -85,7 +84,7 @@ void main() {
       expect(badge.threadUnreadTotal, 2);
       expect(badge.combinedUnreadTotal, 6);
       expect(chatService.fetchChatsCalls, 1);
-      expect(threadService.fetchThreadsCalls, 2);
+      expect(threadService.fetchThreadsCalls, 3);
       expect(chatService.fetchUnreadCountCalls, greaterThanOrEqualTo(1));
       expect(threadService.fetchUnreadCountCalls, greaterThanOrEqualTo(1));
     });
@@ -187,11 +186,11 @@ void main() {
       );
       expect(container.read(unreadBadgeProvider).threadUnreadTotal, 2);
       expect(chatService.fetchChatsCalls, 0);
-      expect(threadService.fetchThreadsCalls, 2);
+      expect(threadService.fetchThreadsCalls, 3);
       expect(threadService.fetchUnreadCountCalls, greaterThanOrEqualTo(1));
     });
 
-    test('reconcileThreads refreshes loaded archived threads', () async {
+    test('reconcileThreads refreshes active and archived threads', () async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
       final chatService = _FakeChatApiService(
@@ -219,13 +218,6 @@ void main() {
         ],
       );
       addTearDown(container.dispose);
-      container
-          .read(threadListV2StoreProvider.notifier)
-          .replaceArchivedPage(
-            threads: [
-              _threadDto(rootId: 250, archived: true),
-            ].map(ThreadListItem.fromDto).toList(growable: false),
-          );
 
       await container.read(chatInboxReconcilerProvider).reconcileThreads();
 

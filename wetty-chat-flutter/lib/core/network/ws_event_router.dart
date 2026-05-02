@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 
@@ -75,6 +76,7 @@ final wsEventRouterProvider = Provider<void>((ref) {
         reconcileThreadsIfNeeded(shouldReconcile);
         return;
       case ThreadMembershipChangedWsEvent():
+        debugPrint('ThreadMembershipChangedWsEvent');
         reconcileThreadsIfNeeded(true);
         return;
       case ReactionUpdatedWsEvent():

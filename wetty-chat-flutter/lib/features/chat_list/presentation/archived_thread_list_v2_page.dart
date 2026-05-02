@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:chahua/app/routing/route_names.dart';
 import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/l10n/app_localizations.dart';
@@ -45,16 +43,6 @@ class _ArchivedThreadListV2PageState
   void initState() {
     super.initState();
     _scrollController = ScrollController()..addListener(_onScroll);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) {
-        return;
-      }
-      unawaited(
-        ref
-            .read(archivedThreadListV2ViewModelProvider.notifier)
-            .refreshOnPageOpen(),
-      );
-    });
   }
 
   @override

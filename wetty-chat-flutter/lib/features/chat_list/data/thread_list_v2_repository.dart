@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:chahua/core/api/models/thread_api_models.dart';
@@ -13,6 +14,7 @@ class ThreadListV2Repository {
   final Ref ref;
 
   Future<void> loadThreads({int limit = 20}) async {
+    debugPrint('loadThreads');
     final results = await Future.wait([
       ref
           .read(threadApiServiceProvider)
@@ -69,6 +71,7 @@ class ThreadListV2Repository {
   }
 
   Future<void> loadArchivedThreads({int limit = 20}) async {
+    debugPrint('loadArchivedThreads');
     final response = await ref
         .read(threadApiServiceProvider)
         .fetchThreads(limit: limit, archived: true);

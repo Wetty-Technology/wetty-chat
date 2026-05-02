@@ -2,10 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:chahua/core/notifications/unread_badge_provider.dart';
 import 'package:chahua/core/session/dev_session_store.dart';
-import 'package:chahua/features/chat_list/application/thread_list_v2_store.dart';
 import 'package:chahua/features/chat_list/application/group_list_v2_view_model.dart';
 import 'package:chahua/features/chat_list/application/thread_list_v2_view_model.dart';
-import 'package:chahua/features/chat_list/data/thread_list_v2_repository.dart';
 
 class ChatInboxReconciler {
   ChatInboxReconciler(this._ref);
@@ -53,27 +51,21 @@ class ChatInboxReconciler {
   }
 
   Future<void> _refreshThreads() async {
-    final current = _ref.read(activeThreadListV2ViewModelProvider).value;
-    if (current == null) {
-      await _ref.read(activeThreadListV2ViewModelProvider.future);
-    } else {
-      await _ref
-          .read(activeThreadListV2ViewModelProvider.notifier)
-          .refreshThreads();
-    }
+    await Future.wait([
+      _refreshThreadScope(ThreadListV2Scope.active),
+      _refreshThreadScope(ThreadListV2Scope.archived),
+    ]);
+  }
 
-    final archived = _ref.read(threadListV2StoreProvider).archived;
-    if (!archived.isLoaded) {
+  Future<void> _refreshThreadScope(ThreadListV2Scope scope) async {
+    final provider = threadListV2ViewModelProvider(scope);
+    final current = _ref.read(provider).value;
+    if (current == null) {
+      await _ref.read(provider.future);
       return;
     }
 
-    await _ref
-        .read(threadListV2RepositoryProvider)
-        .loadArchivedThreads(limit: _refreshLimit(archived));
-  }
-
-  int _refreshLimit(ThreadListV2ListState listState) {
-    return listState.threads.isEmpty ? 20 : listState.threads.length;
+    await _ref.read(provider.notifier).refreshThreads();
   }
 }
 
