@@ -48,6 +48,19 @@
   }
 }
 
+.desktopModalContent {
+  position: relative;
+}
+
+.desktopCloseBtn {
+  @extend .sheetCloseBtn;
+
+  position: absolute;
+  top: calc(12px + var(--ion-safe-area-top, 0px));
+  right: 12px;
+  z-index: 10;
+}
+
 .sheetTitle {
   font-size: 17px;
   font-weight: 600;
