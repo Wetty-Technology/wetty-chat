@@ -26,6 +26,7 @@ const ACTIVITY_WRITE_THROTTLE: Duration = Duration::from_secs(5 * 60);
 const PURGE_INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
 const PURGE_RESTART_DELAY: Duration = Duration::from_secs(1);
 const STALE_CLIENT_RETENTION_DAYS: u64 = 45;
+const WS_UPGRADE_PATHS: [&str; 2] = ["/ws", "/ws/"];
 
 #[derive(Clone, Copy)]
 struct CachedActivity {
@@ -436,6 +437,7 @@ pub async fn track_client_activity(
     request: Request<axum::body::Body>,
     next: Next,
 ) -> Response {
+    let record_app_version = should_record_app_version_request(request.uri().path());
     let app_version = request
         .headers()
         .get(X_APP_VERSION)
@@ -458,12 +460,18 @@ pub async fn track_client_activity(
         }
     }
 
-    let version = app_version.as_deref().unwrap_or("unknown");
-    state
-        .metrics
-        .record_app_version_request(version, resolved_client_id.as_deref());
+    if record_app_version {
+        let version = app_version.as_deref().unwrap_or("unknown");
+        state
+            .metrics
+            .record_app_version_request(version, resolved_client_id.as_deref());
+    }
 
     next.run(request).await
+}
+
+fn should_record_app_version_request(path: &str) -> bool {
+    !WS_UPGRADE_PATHS.contains(&path)
 }
 
 #[cfg(test)]
@@ -483,6 +491,14 @@ mod tests {
             legacy_subscriptions_purged: 0,
         }
         .is_zero());
+    }
+
+    #[test]
+    fn app_version_tracking_excludes_websocket_upgrade_path() {
+        assert!(!should_record_app_version_request("/ws"));
+        assert!(!should_record_app_version_request("/ws/"));
+        assert!(should_record_app_version_request("/ws/ticket"));
+        assert!(should_record_app_version_request("/chats"));
     }
 
     #[test]
