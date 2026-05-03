@@ -1,3 +1,4 @@
+mod chat_attachments;
 mod messages;
 mod reactions;
 
@@ -1562,6 +1563,7 @@ pub fn router() -> OpenApiRouter<crate::AppState> {
                     "/messages",
                     messages_router().nest("/{message_id}/reactions", reactions_router()),
                 )
+                .nest("/attachments", self::chat_attachments::router())
                 .routes(utoipa_axum::routes!(mark_as_read))
                 .routes(utoipa_axum::routes!(mark_as_unread))
                 .routes(utoipa_axum::routes!(get_chat_unread_count))
