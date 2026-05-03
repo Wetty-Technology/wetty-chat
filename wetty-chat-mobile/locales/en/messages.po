@@ -381,6 +381,9 @@ msgstr "Failed to jump to message"
 msgid "Failed to leave group"
 msgstr "Failed to leave group"
 
+msgid "Failed to load attachments"
+msgstr "Failed to load attachments"
+
 msgid "Failed to load chat details"
 msgstr "Failed to load chat details"
 
@@ -507,6 +510,9 @@ msgstr "Group Settings"
 msgid "Groups"
 msgstr "Groups"
 
+msgid "Images"
+msgstr "Images"
+
 msgid "indefinitely"
 msgstr "indefinitely"
 
@@ -578,6 +584,9 @@ msgstr "Leaving..."
 msgid "Left group"
 msgstr "Left group"
 
+msgid "Load More"
+msgstr "Load More"
+
 msgid "Loading invite…"
 msgstr "Loading invite…"
 
@@ -592,6 +601,9 @@ msgstr "Manage"
 
 msgid "Manage Invite Links"
 msgstr "Manage Invite Links"
+
+msgid "Media & Files"
+msgstr "Media & Files"
 
 msgid "Member"
 msgstr "Member"
@@ -689,6 +701,9 @@ msgstr "No group description yet."
 msgid "No groups found."
 msgstr "No groups found."
 
+msgid "No images yet"
+msgstr "No images yet"
+
 msgid "No JWT token available"
 msgstr "No JWT token available"
 
@@ -718,6 +733,9 @@ msgstr "No stickers"
 
 msgid "No threads yet"
 msgstr "No threads yet"
+
+msgid "No videos yet"
+msgstr "No videos yet"
 
 msgid "Not now"
 msgstr "Not now"
@@ -1134,6 +1152,9 @@ msgstr "User {uid}"
 
 msgid "User ID"
 msgstr "User ID"
+
+msgid "Videos"
+msgstr "Videos"
 
 msgid "View all pinned messages"
 msgstr "View all pinned messages"

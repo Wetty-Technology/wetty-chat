@@ -381,6 +381,9 @@ msgstr "跳转到消息失败"
 msgid "Failed to leave group"
 msgstr "退出群组失败"
 
+msgid "Failed to load attachments"
+msgstr "无法加载附件"
+
 msgid "Failed to load chat details"
 msgstr "加载聊天详情失败"
 
@@ -507,6 +510,9 @@ msgstr "群组设置"
 msgid "Groups"
 msgstr "群组"
 
+msgid "Images"
+msgstr "图片"
+
 msgid "indefinitely"
 msgstr "永久"
 
@@ -578,6 +584,9 @@ msgstr "正在退出..."
 msgid "Left group"
 msgstr "已退出群组"
 
+msgid "Load More"
+msgstr "加载更多"
+
 msgid "Loading invite…"
 msgstr "正在加载邀请…"
 
@@ -592,6 +601,9 @@ msgstr "管理"
 
 msgid "Manage Invite Links"
 msgstr "管理邀请链接"
+
+msgid "Media & Files"
+msgstr "媒体与文件"
 
 msgid "Member"
 msgstr "成员"
@@ -689,6 +701,9 @@ msgstr "暂无群组描述。"
 msgid "No groups found."
 msgstr "未找到群组。"
 
+msgid "No images yet"
+msgstr "暂无图片"
+
 msgid "No JWT token available"
 msgstr "没有可用的 JWT 令牌"
 
@@ -718,6 +733,9 @@ msgstr "没有贴纸"
 
 msgid "No threads yet"
 msgstr "暂无话题"
+
+msgid "No videos yet"
+msgstr "暂无视频"
 
 msgid "Not now"
 msgstr "暂不"
@@ -1134,6 +1152,9 @@ msgstr "用户 {uid}"
 
 msgid "User ID"
 msgstr "用户 ID"
+
+msgid "Videos"
+msgstr "视频"
 
 msgid "View all pinned messages"
 msgstr "查看全部置顶消息"

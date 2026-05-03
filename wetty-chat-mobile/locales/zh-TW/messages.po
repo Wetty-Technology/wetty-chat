@@ -381,6 +381,9 @@ msgstr "跳轉到訊息失敗"
 msgid "Failed to leave group"
 msgstr "退出群組失敗"
 
+msgid "Failed to load attachments"
+msgstr "無法載入附件"
+
 msgid "Failed to load chat details"
 msgstr "載入聊天詳情失敗"
 
@@ -507,6 +510,9 @@ msgstr "群組設定"
 msgid "Groups"
 msgstr "群組"
 
+msgid "Images"
+msgstr "圖片"
+
 msgid "indefinitely"
 msgstr "永久"
 
@@ -578,6 +584,9 @@ msgstr "正在退出..."
 msgid "Left group"
 msgstr "已退出群組"
 
+msgid "Load More"
+msgstr "載入更多"
+
 msgid "Loading invite…"
 msgstr "正在載入邀請…"
 
@@ -592,6 +601,9 @@ msgstr "管理"
 
 msgid "Manage Invite Links"
 msgstr "管理邀請連結"
+
+msgid "Media & Files"
+msgstr "媒體與檔案"
 
 msgid "Member"
 msgstr "成員"
@@ -689,6 +701,9 @@ msgstr "尚無群組描述。"
 msgid "No groups found."
 msgstr "找不到群組。"
 
+msgid "No images yet"
+msgstr "暫無圖片"
+
 msgid "No JWT token available"
 msgstr "沒有可用的 JWT 權杖"
 
@@ -718,6 +733,9 @@ msgstr "沒有貼紙"
 
 msgid "No threads yet"
 msgstr "尚無話題"
+
+msgid "No videos yet"
+msgstr "暫無影片"
 
 msgid "Not now"
 msgstr "暫時不要"
@@ -1134,6 +1152,9 @@ msgstr "使用者 {uid}"
 
 msgid "User ID"
 msgstr "使用者 ID"
+
+msgid "Videos"
+msgstr "影片"
 
 msgid "View all pinned messages"
 msgstr "查看所有已釘選的訊息"
