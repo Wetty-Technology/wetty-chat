@@ -321,6 +321,24 @@ abstract class AppLocalizations {
   /// **'Text Size'**
   String get settingsTextSize;
 
+  /// Unread badge color setting label and page title
+  ///
+  /// In en, this message translates to:
+  /// **'Badge Color'**
+  String get badgeColor;
+
+  /// Header for the badge color preview section
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get badgeColorPreview;
+
+  /// Action to reset the unread badge color to the default
+  ///
+  /// In en, this message translates to:
+  /// **'Reset to Default'**
+  String get resetBadgeColor;
+
   /// Cache settings entry label
   ///
   /// In en, this message translates to:

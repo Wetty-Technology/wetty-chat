@@ -63,7 +63,7 @@ class _StickerPreviewPanelState extends ConsumerState<_StickerPreviewPanel> {
     );
   }
 
-  Widget _buildError(AppColors colors, Object error) {
+  Widget _buildError(AppColorTheme colors, Object error) {
     return SafeArea(
       top: false,
       child: Column(
@@ -85,7 +85,7 @@ class _StickerPreviewPanelState extends ConsumerState<_StickerPreviewPanel> {
 
   Widget _buildContent(
     BuildContext context,
-    AppColors colors,
+    AppColorTheme colors,
     StickerDetailState state,
   ) {
     final heroSticker = _selectedStickerId != null
@@ -138,7 +138,7 @@ class _StickerPreviewPanelState extends ConsumerState<_StickerPreviewPanel> {
     );
   }
 
-  Widget _buildHeroSection(AppColors colors, StickerSummary? sticker) {
+  Widget _buildHeroSection(AppColorTheme colors, StickerSummary? sticker) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Column(
@@ -154,7 +154,7 @@ class _StickerPreviewPanelState extends ConsumerState<_StickerPreviewPanel> {
     );
   }
 
-  Widget _buildPackHeader(AppColors colors, StickerDetailState state) {
+  Widget _buildPackHeader(AppColorTheme colors, StickerDetailState state) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(

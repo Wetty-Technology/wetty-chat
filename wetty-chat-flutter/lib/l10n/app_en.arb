@@ -112,6 +112,15 @@
   "settingsTextSize": "Text Size",
   "@settingsTextSize": { "description": "Text size setting label" },
 
+  "badgeColor": "Badge Color",
+  "@badgeColor": { "description": "Unread badge color setting label and page title" },
+
+  "badgeColorPreview": "Preview",
+  "@badgeColorPreview": { "description": "Header for the badge color preview section" },
+
+  "resetBadgeColor": "Reset to Default",
+  "@resetBadgeColor": { "description": "Action to reset the unread badge color to the default" },
+
   "settingsCache": "Cache",
   "@settingsCache": { "description": "Cache settings entry label" },
 

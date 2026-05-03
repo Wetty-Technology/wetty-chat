@@ -18,6 +18,7 @@ abstract final class AppRoutes {
   static const cache = '/settings/general/cache';
   static const appearance = '/settings/appearance';
   static const fontSize = '/settings/appearance/text-size';
+  static const badgeColor = '/settings/appearance/badge-color';
   static const devSession = '/settings/developer-session';
   static const notifications = '/settings/notifications';
   static const stickerPackDetailRoot = '/sticker-packs';

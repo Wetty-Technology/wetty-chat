@@ -102,12 +102,15 @@ class _WettyChatAppState extends ConsumerState<WettyChatApp>
       }
     });
 
-    return CupertinoApp.router(
-      theme: appCupertinoTheme,
-      locale: locale,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      routerConfig: router,
+    return AppColorThemeScope(
+      overrides: settings.colorThemeOverrides,
+      child: CupertinoApp.router(
+        theme: appCupertinoTheme,
+        locale: locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        routerConfig: router,
+      ),
     );
   }
 }

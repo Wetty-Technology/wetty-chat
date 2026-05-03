@@ -1,4 +1,5 @@
 export 'presentation/appearance/appearance_settings_view.dart';
+export 'presentation/appearance/badge_color_settings_view.dart';
 export 'presentation/appearance/font_size_settings_view.dart';
 export 'presentation/developer/dev_session_settings_view.dart';
 export 'presentation/general/cache_settings_view.dart';

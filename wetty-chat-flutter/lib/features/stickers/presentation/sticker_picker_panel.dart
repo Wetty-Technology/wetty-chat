@@ -61,7 +61,10 @@ class _StickerPickerPanelState extends ConsumerState<StickerPickerPanel> {
     );
   }
 
-  Widget _buildStickerGrid(StickerPickerState pickerState, AppColors colors) {
+  Widget _buildStickerGrid(
+    StickerPickerState pickerState,
+    AppColorTheme colors,
+  ) {
     if (pickerState.isLoadingPacks || pickerState.isLoadingCurrentStickers) {
       return const Center(child: CupertinoActivityIndicator());
     }

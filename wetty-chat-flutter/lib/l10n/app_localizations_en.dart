@@ -120,6 +120,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTextSize => 'Text Size';
 
   @override
+  String get badgeColor => 'Badge Color';
+
+  @override
+  String get badgeColorPreview => 'Preview';
+
+  @override
+  String get resetBadgeColor => 'Reset to Default';
+
+  @override
   String get settingsCache => 'Cache';
 
   @override

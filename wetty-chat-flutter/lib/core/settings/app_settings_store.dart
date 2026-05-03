@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:ui';
 
+import 'package:chahua/app/theme/style_config.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -49,12 +51,15 @@ typedef AppSettingsState = ({
   double fontSize,
   AppLanguage language,
   bool showAllTab,
+  AppColorThemeOverrides colorThemeOverrides,
 });
 
 class AppSettingsNotifier extends Notifier<AppSettingsState> {
   static const String _chatMessageFontSizeKey = 'chat_message_font_size';
   static const String _languageKey = 'app_language';
   static const String _showAllTabKey = 'chat_list_show_all_tab';
+  static const String _colorThemeOverridesKey =
+      'appearance_color_theme_overrides';
   static const double minChatMessageFontSize = 14;
   static const double maxChatMessageFontSize = 18;
   static const int chatMessageFontSizeSteps = 5;
@@ -74,7 +79,13 @@ class AppSettingsNotifier extends Notifier<AppSettingsState> {
     );
     final language = AppLanguage.fromStorage(_prefs.getString(_languageKey));
     final showAllTab = _prefs.getBool(_showAllTabKey) ?? true;
-    return (fontSize: fontSize, language: language, showAllTab: showAllTab);
+    final colorThemeOverrides = _readColorThemeOverrides();
+    return (
+      fontSize: fontSize,
+      language: language,
+      showAllTab: showAllTab,
+      colorThemeOverrides: colorThemeOverrides,
+    );
   }
 
   void setChatMessageFontSize(double value) {
@@ -86,6 +97,7 @@ class AppSettingsNotifier extends Notifier<AppSettingsState> {
       fontSize: next,
       language: state.language,
       showAllTab: state.showAllTab,
+      colorThemeOverrides: state.colorThemeOverrides,
     );
     _prefs.setDouble(_chatMessageFontSizeKey, next);
   }
@@ -96,6 +108,7 @@ class AppSettingsNotifier extends Notifier<AppSettingsState> {
       fontSize: state.fontSize,
       language: language,
       showAllTab: state.showAllTab,
+      colorThemeOverrides: state.colorThemeOverrides,
     );
     _prefs.setString(_languageKey, language.storageValue);
   }
@@ -106,8 +119,68 @@ class AppSettingsNotifier extends Notifier<AppSettingsState> {
       fontSize: state.fontSize,
       language: state.language,
       showAllTab: value,
+      colorThemeOverrides: state.colorThemeOverrides,
     );
     _prefs.setBool(_showAllTabKey, value);
+  }
+
+  void setUnreadBadgeColor(Color color) {
+    final next = state.colorThemeOverrides.copyWith(
+      unreadBadge: color.withValues(alpha: 1),
+    );
+    if (next == state.colorThemeOverrides) return;
+    _setColorThemeOverrides(next);
+  }
+
+  void resetUnreadBadgeColor() {
+    final next = state.colorThemeOverrides.copyWith(unreadBadge: null);
+    if (next == state.colorThemeOverrides) return;
+    _setColorThemeOverrides(next);
+  }
+
+  AppColorThemeOverrides _readColorThemeOverrides() {
+    final raw = _prefs.getString(_colorThemeOverridesKey);
+    if (raw == null || raw.isEmpty) return const AppColorThemeOverrides();
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) {
+        return const AppColorThemeOverrides();
+      }
+      return AppColorThemeOverrides(
+        unreadBadge: _colorFromArgb(decoded['unreadBadge']),
+      );
+    } on FormatException {
+      return const AppColorThemeOverrides();
+    } on TypeError {
+      return const AppColorThemeOverrides();
+    }
+  }
+
+  void _setColorThemeOverrides(AppColorThemeOverrides overrides) {
+    state = (
+      fontSize: state.fontSize,
+      language: state.language,
+      showAllTab: state.showAllTab,
+      colorThemeOverrides: overrides,
+    );
+    if (overrides.isEmpty) {
+      _prefs.remove(_colorThemeOverridesKey);
+      return;
+    }
+    _prefs.setString(_colorThemeOverridesKey, jsonEncode(_toJson(overrides)));
+  }
+
+  static Color? _colorFromArgb(Object? value) {
+    if (value is! int) return null;
+    if (value < 0 || value > 0xFFFFFFFF) return null;
+    return Color(value);
+  }
+
+  static Map<String, Object?> _toJson(AppColorThemeOverrides overrides) {
+    return {
+      if (overrides.unreadBadge != null)
+        'unreadBadge': overrides.unreadBadge!.toARGB32(),
+    };
   }
 
   static double _snapChatMessageFontSize(double value) {

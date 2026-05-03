@@ -8,6 +8,7 @@ import '../../shared/presentation/cupertino_modal_close_button.dart';
 import '../../stickers/presentation/sticker_pack_detail_page.dart';
 import '../../stickers/presentation/sticker_pack_list_page.dart';
 import 'appearance/appearance_settings_view.dart';
+import 'appearance/badge_color_settings_view.dart';
 import 'appearance/font_size_settings_view.dart';
 import 'developer/dev_session_settings_view.dart';
 import 'general/cache_settings_view.dart';
@@ -97,6 +98,8 @@ class _SettingsModalNavigator extends StatelessWidget {
                 AppearanceSettingsPage(
                   onOpenFontSize: () =>
                       _push(context, const FontSizeSettingsPage()),
+                  onOpenBadgeColor: () =>
+                      _push(context, const BadgeColorSettingsPage()),
                 ),
               ),
               onOpenDevSession: () =>

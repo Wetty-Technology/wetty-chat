@@ -16,6 +16,7 @@ import 'package:chahua/features/conversation/shared/presentation/thread_detail_v
 import 'package:chahua/features/groups/members/presentation/group_members_view.dart';
 import 'package:chahua/features/groups/settings/presentation/group_settings_view.dart';
 import 'package:chahua/features/settings/presentation/appearance/appearance_settings_view.dart';
+import 'package:chahua/features/settings/presentation/appearance/badge_color_settings_view.dart';
 import 'package:chahua/features/settings/presentation/appearance/font_size_settings_view.dart';
 import 'package:chahua/features/settings/presentation/developer/dev_session_settings_view.dart';
 import 'package:chahua/features/settings/presentation/general/cache_settings_view.dart';
@@ -323,6 +324,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                         pageBuilder: (context, state) => CupertinoPage(
                           key: state.pageKey,
                           child: const FontSizeSettingsPage(),
+                        ),
+                      ),
+                      GoRoute(
+                        path: 'badge-color',
+                        pageBuilder: (context, state) => CupertinoPage(
+                          key: state.pageKey,
+                          child: const BadgeColorSettingsPage(),
                         ),
                       ),
                     ],

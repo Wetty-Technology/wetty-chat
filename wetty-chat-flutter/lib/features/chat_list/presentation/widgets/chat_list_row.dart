@@ -239,6 +239,9 @@ class _UnreadBadge extends StatelessWidget {
         textAlign: TextAlign.center,
         style: appOnDarkTextStyle(
           context,
+          color: isMuted
+              ? CupertinoColors.white
+              : context.appColors.unreadBadgeText,
           fontSize: AppFontSizes.unreadBadge,
           fontWeight: AppFontWeights.semibold,
         ),

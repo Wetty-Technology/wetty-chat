@@ -46,8 +46,57 @@ class IconSizes {
   static const double iconSize = 22;
 }
 
-class AppColors {
-  const AppColors({
+class AppColorThemeOverrides {
+  const AppColorThemeOverrides({this.unreadBadge});
+
+  final Color? unreadBadge;
+
+  bool get isEmpty => unreadBadge == null;
+
+  AppColorThemeOverrides copyWith({Object? unreadBadge = _unsetColor}) {
+    return AppColorThemeOverrides(
+      unreadBadge: identical(unreadBadge, _unsetColor)
+          ? this.unreadBadge
+          : unreadBadge as Color?,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is AppColorThemeOverrides && unreadBadge == other.unreadBadge;
+  }
+
+  @override
+  int get hashCode => unreadBadge.hashCode;
+}
+
+const Object _unsetColor = Object();
+
+class AppColorThemeScope extends InheritedWidget {
+  const AppColorThemeScope({
+    super.key,
+    required this.overrides,
+    required super.child,
+  });
+
+  final AppColorThemeOverrides overrides;
+
+  static AppColorThemeOverrides maybeOf(BuildContext context) {
+    return context
+            .dependOnInheritedWidgetOfExactType<AppColorThemeScope>()
+            ?.overrides ??
+        const AppColorThemeOverrides();
+  }
+
+  @override
+  bool updateShouldNotify(AppColorThemeScope oldWidget) {
+    return overrides != oldWidget.overrides;
+  }
+}
+
+class AppColorTheme {
+  const AppColorTheme({
     required this.backgroundPrimary,
     required this.backgroundSecondary,
     required this.surfaceCard,
@@ -58,6 +107,7 @@ class AppColors {
     required this.separator,
     required this.accentPrimary,
     required this.unreadBadge,
+    required this.unreadBadgeText,
     required this.inactive,
     required this.chatBackground,
     required this.chatSentBubble,
@@ -93,6 +143,7 @@ class AppColors {
   final Color separator;
   final Color accentPrimary;
   final Color unreadBadge;
+  final Color unreadBadgeText;
   final Color inactive;
   final Color chatBackground;
   final Color chatSentBubble;
@@ -117,7 +168,111 @@ class AppColors {
   final Color composerReplyPreviewDivider;
   final Color composerReplyPreviewTitle;
 
-  static const light = AppColors(
+  AppColorTheme copyWith({
+    Color? backgroundPrimary,
+    Color? backgroundSecondary,
+    Color? surfaceCard,
+    Color? surfaceMuted,
+    Color? textPrimary,
+    Color? textSecondary,
+    Color? textOnAccent,
+    Color? separator,
+    Color? accentPrimary,
+    Color? unreadBadge,
+    Color? unreadBadgeText,
+    Color? inactive,
+    Color? chatBackground,
+    Color? chatSentBubble,
+    Color? chatReceivedBubble,
+    Color? chatSentMeta,
+    Color? chatReceivedMeta,
+    Color? chatLinkOnSent,
+    Color? chatLinkOnReceived,
+    Color? chatReplyActionBackground,
+    Color? chatAttachmentChipSent,
+    Color? chatAttachmentChipReceived,
+    Color? chatThreadChipSent,
+    Color? chatThreadChipReceived,
+    Color? chatReactionSent,
+    Color? chatReactionSentActive,
+    Color? chatReactionReceived,
+    Color? chatReactionReceivedActive,
+    Color? avatarBackground,
+    Color? inputSurface,
+    Color? inputBorder,
+    Color? composerReplyPreviewSurface,
+    Color? composerReplyPreviewDivider,
+    Color? composerReplyPreviewTitle,
+  }) {
+    final resolvedUnreadBadge = unreadBadge ?? this.unreadBadge;
+    return AppColorTheme(
+      backgroundPrimary: backgroundPrimary ?? this.backgroundPrimary,
+      backgroundSecondary: backgroundSecondary ?? this.backgroundSecondary,
+      surfaceCard: surfaceCard ?? this.surfaceCard,
+      surfaceMuted: surfaceMuted ?? this.surfaceMuted,
+      textPrimary: textPrimary ?? this.textPrimary,
+      textSecondary: textSecondary ?? this.textSecondary,
+      textOnAccent: textOnAccent ?? this.textOnAccent,
+      separator: separator ?? this.separator,
+      accentPrimary: accentPrimary ?? this.accentPrimary,
+      unreadBadge: resolvedUnreadBadge,
+      unreadBadgeText:
+          unreadBadgeText ??
+          (unreadBadge == null
+              ? this.unreadBadgeText
+              : badgeTextColorFor(resolvedUnreadBadge)),
+      inactive: inactive ?? this.inactive,
+      chatBackground: chatBackground ?? this.chatBackground,
+      chatSentBubble: chatSentBubble ?? this.chatSentBubble,
+      chatReceivedBubble: chatReceivedBubble ?? this.chatReceivedBubble,
+      chatSentMeta: chatSentMeta ?? this.chatSentMeta,
+      chatReceivedMeta: chatReceivedMeta ?? this.chatReceivedMeta,
+      chatLinkOnSent: chatLinkOnSent ?? this.chatLinkOnSent,
+      chatLinkOnReceived: chatLinkOnReceived ?? this.chatLinkOnReceived,
+      chatReplyActionBackground:
+          chatReplyActionBackground ?? this.chatReplyActionBackground,
+      chatAttachmentChipSent:
+          chatAttachmentChipSent ?? this.chatAttachmentChipSent,
+      chatAttachmentChipReceived:
+          chatAttachmentChipReceived ?? this.chatAttachmentChipReceived,
+      chatThreadChipSent: chatThreadChipSent ?? this.chatThreadChipSent,
+      chatThreadChipReceived:
+          chatThreadChipReceived ?? this.chatThreadChipReceived,
+      chatReactionSent: chatReactionSent ?? this.chatReactionSent,
+      chatReactionSentActive:
+          chatReactionSentActive ?? this.chatReactionSentActive,
+      chatReactionReceived: chatReactionReceived ?? this.chatReactionReceived,
+      chatReactionReceivedActive:
+          chatReactionReceivedActive ?? this.chatReactionReceivedActive,
+      avatarBackground: avatarBackground ?? this.avatarBackground,
+      inputSurface: inputSurface ?? this.inputSurface,
+      inputBorder: inputBorder ?? this.inputBorder,
+      composerReplyPreviewSurface:
+          composerReplyPreviewSurface ?? this.composerReplyPreviewSurface,
+      composerReplyPreviewDivider:
+          composerReplyPreviewDivider ?? this.composerReplyPreviewDivider,
+      composerReplyPreviewTitle:
+          composerReplyPreviewTitle ?? this.composerReplyPreviewTitle,
+    );
+  }
+
+  static AppColorTheme resolve({
+    required Brightness brightness,
+    required AppColorThemeOverrides overrides,
+  }) {
+    final defaults = brightness == Brightness.dark
+        ? AppColorTheme.darkDefaults
+        : AppColorTheme.lightDefaults;
+    return defaults.copyWith(unreadBadge: overrides.unreadBadge);
+  }
+
+  static Color badgeTextColorFor(Color background) {
+    return background.computeLuminance() > 0.5
+        ? CupertinoColors.black
+        : CupertinoColors.white;
+  }
+
+  static const lightDefaults = AppColorTheme(
     backgroundPrimary: Color(0xFFF0F0F0),
     backgroundSecondary: Color(0xFFFFFFFF),
     surfaceCard: Color(0xFFFFFFFF),
@@ -128,6 +283,7 @@ class AppColors {
     separator: Color(0xFFDADDE3),
     accentPrimary: Color(0xFF2B7ACD),
     unreadBadge: Color(0xFFE05144),
+    unreadBadgeText: CupertinoColors.white,
     inactive: Color(0xFF8E8E93),
     chatBackground: Color.from(
       alpha: 1.0,
@@ -158,7 +314,7 @@ class AppColors {
     composerReplyPreviewTitle: Color(0xFF2B7ACD),
   );
 
-  static const dark = AppColors(
+  static const darkDefaults = AppColorTheme(
     backgroundPrimary: Color(0xFF111214),
     backgroundSecondary: Color(0xFF18191C),
     surfaceCard: Color(0xFF1C1C1E),
@@ -169,6 +325,7 @@ class AppColors {
     separator: Color(0xFF3A3A3C),
     accentPrimary: Color(0xFF2B7ACD),
     unreadBadge: Color(0xFFE05144),
+    unreadBadgeText: CupertinoColors.white,
     inactive: Color(0xFF8E8E93),
     chatBackground: Color(0xFF000000),
     chatSentBubble: Color(0xFF2B7ACD),
@@ -236,7 +393,10 @@ extension AppThemeContext on BuildContext {
 
   bool get isDarkMode => appBrightness == Brightness.dark;
 
-  AppColors get appColors => isDarkMode ? AppColors.dark : AppColors.light;
+  AppColorTheme get appColors => AppColorTheme.resolve(
+    brightness: appBrightness,
+    overrides: AppColorThemeScope.maybeOf(this),
+  );
 }
 
 TextStyle appTextStyle(

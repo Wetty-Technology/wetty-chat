@@ -8,9 +8,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class AppearanceSettingsPage extends ConsumerWidget {
-  const AppearanceSettingsPage({super.key, this.onOpenFontSize});
+  const AppearanceSettingsPage({
+    super.key,
+    this.onOpenFontSize,
+    this.onOpenBadgeColor,
+  });
 
   final VoidCallback? onOpenFontSize;
+  final VoidCallback? onOpenBadgeColor;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -60,10 +65,45 @@ class AppearanceSettingsPage extends ConsumerWidget {
                         onOpenFontSize ??
                         () => context.push(AppRoutes.fontSize),
                   ),
+                  SettingsItemData(
+                    title: l10n.badgeColor,
+                    icon: CupertinoIcons.circle_grid_hex,
+                    iconColor: context.appColors.unreadBadge,
+                    titleFontSize: AppFontSizes.body,
+                    titleFontWeight: AppFontWeights.medium,
+                    trailingWidget: _ColorSwatch(
+                      color: context.appColors.unreadBadge,
+                    ),
+                    onTap:
+                        onOpenBadgeColor ??
+                        () => context.push(AppRoutes.badgeColor),
+                  ),
                 ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ColorSwatch extends StatelessWidget {
+  const _ColorSwatch({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 22,
+      height: 22,
+      margin: const EdgeInsets.only(right: 8),
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: CupertinoColors.separator.resolveFrom(context),
         ),
       ),
     );

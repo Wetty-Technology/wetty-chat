@@ -193,6 +193,7 @@ class ThreadListRow extends StatelessWidget {
         textAlign: TextAlign.center,
         style: appOnDarkTextStyle(
           context,
+          color: context.appColors.unreadBadgeText,
           fontSize: AppFontSizes.unreadBadge,
           fontWeight: AppFontWeights.semibold,
         ),

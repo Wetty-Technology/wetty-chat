@@ -120,6 +120,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsTextSize => '字体大小';
 
   @override
+  String get badgeColor => '徽标颜色';
+
+  @override
+  String get badgeColorPreview => '预览';
+
+  @override
+  String get resetBadgeColor => '恢复默认';
+
+  @override
   String get settingsCache => '缓存';
 
   @override
@@ -522,6 +531,15 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get settingsTextSize => '字型大小';
+
+  @override
+  String get badgeColor => '徽章顏色';
+
+  @override
+  String get badgeColorPreview => '預覽';
+
+  @override
+  String get resetBadgeColor => '恢復預設';
 
   @override
   String get settingsCache => '快取';
