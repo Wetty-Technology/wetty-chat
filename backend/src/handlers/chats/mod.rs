@@ -1235,14 +1235,12 @@ async fn mark_as_read(
 
     check_membership(conn, chat_id, uid)?;
 
-    crate::services::chat::mark_chat_as_read(conn, chat_id, uid, body.message_id)?;
-
-    let unread_count =
-        crate::services::chat::get_chat_unread_count(conn, chat_id, Some(body.message_id))?;
+    let read_state =
+        crate::services::chat::mark_chat_as_read_state(conn, chat_id, uid, body.message_id)?;
 
     Ok(Json(MarkChatReadStateResponse {
-        last_read_message_id: Some(body.message_id),
-        unread_count,
+        last_read_message_id: read_state.last_read_message_id,
+        unread_count: read_state.unread_count,
     }))
 }
 

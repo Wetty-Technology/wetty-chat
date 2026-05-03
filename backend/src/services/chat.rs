@@ -30,6 +30,12 @@ struct ChatUnreadCountRow {
     unread_count: i64,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ChatReadState {
+    pub last_read_message_id: Option<i64>,
+    pub unread_count: i64,
+}
+
 #[derive(QueryableByName)]
 pub struct UnreadSummaryCounts {
     #[diesel(sql_type = diesel::sql_types::BigInt)]
@@ -220,6 +226,19 @@ pub fn get_chat_unread_count(
         .map(|row| row.unread_count.min(MAX_UNREAD_COUNT))
 }
 
+pub fn get_chat_last_read_message_id(
+    conn: &mut PgConnection,
+    chat_id: i64,
+    uid: i32,
+) -> Result<Option<i64>, diesel::result::Error> {
+    use crate::schema::group_membership::dsl as gm_dsl;
+
+    group_membership::table
+        .filter(gm_dsl::chat_id.eq(chat_id).and(gm_dsl::uid.eq(uid)))
+        .select(gm_dsl::last_read_message_id)
+        .first(conn)
+}
+
 pub fn mark_chat_as_read(
     conn: &mut PgConnection,
     chat_id: i64,
@@ -241,4 +260,21 @@ pub fn mark_chat_as_read(
     .execute(conn)?;
 
     Ok(updated > 0)
+}
+
+pub fn mark_chat_as_read_state(
+    conn: &mut PgConnection,
+    chat_id: i64,
+    uid: i32,
+    message_id: i64,
+) -> Result<ChatReadState, diesel::result::Error> {
+    mark_chat_as_read(conn, chat_id, uid, message_id)?;
+
+    let last_read_message_id = get_chat_last_read_message_id(conn, chat_id, uid)?;
+    let unread_count = get_chat_unread_count(conn, chat_id, last_read_message_id)?;
+
+    Ok(ChatReadState {
+        last_read_message_id,
+        unread_count,
+    })
 }

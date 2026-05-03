@@ -122,14 +122,12 @@ async fn mark_thread_read(
 ) -> Result<Json<MarkThreadReadResponse>, AppError> {
     let conn = &mut *conn;
 
-    thread_svc::mark_thread_as_read(conn, thread_root_id, uid, body.message_id)?;
-
-    let unread_count =
-        thread_svc::get_thread_unread_count(conn, thread_root_id, uid, Some(body.message_id))?;
+    let read_state =
+        thread_svc::mark_thread_as_read_state(conn, thread_root_id, uid, body.message_id)?;
 
     Ok(Json(MarkThreadReadResponse {
-        last_read_message_id: Some(body.message_id),
-        unread_count,
+        last_read_message_id: read_state.last_read_message_id,
+        unread_count: read_state.unread_count,
     }))
 }
 

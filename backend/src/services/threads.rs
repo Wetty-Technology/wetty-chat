@@ -145,10 +145,31 @@ pub fn mark_thread_as_read(
     Ok(updated > 0)
 }
 
+pub fn get_thread_last_read_message_id(
+    conn: &mut PgConnection,
+    thread_root_id: i64,
+    uid: i32,
+) -> Result<Option<i64>, diesel::result::Error> {
+    thread_subscriptions::table
+        .filter(
+            thread_subscriptions::thread_root_id
+                .eq(thread_root_id)
+                .and(thread_subscriptions::uid.eq(uid)),
+        )
+        .select(thread_subscriptions::last_read_message_id)
+        .first(conn)
+}
+
 #[derive(QueryableByName)]
 struct ThreadUnreadCountRow {
     #[diesel(sql_type = diesel::sql_types::BigInt)]
     unread_count: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ThreadReadState {
+    pub last_read_message_id: Option<i64>,
+    pub unread_count: i64,
 }
 
 pub fn get_thread_unread_count(
@@ -178,6 +199,23 @@ pub fn get_thread_unread_count(
     query
         .get_result::<ThreadUnreadCountRow>(conn)
         .map(|row| row.unread_count.min(MAX_UNREAD_COUNT))
+}
+
+pub fn mark_thread_as_read_state(
+    conn: &mut PgConnection,
+    thread_root_id: i64,
+    uid: i32,
+    message_id: i64,
+) -> Result<ThreadReadState, diesel::result::Error> {
+    mark_thread_as_read(conn, thread_root_id, uid, message_id)?;
+
+    let last_read_message_id = get_thread_last_read_message_id(conn, thread_root_id, uid)?;
+    let unread_count = get_thread_unread_count(conn, thread_root_id, uid, last_read_message_id)?;
+
+    Ok(ThreadReadState {
+        last_read_message_id,
+        unread_count,
+    })
 }
 
 /// Get all UIDs subscribed to a given thread.
