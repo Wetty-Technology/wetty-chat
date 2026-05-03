@@ -177,6 +177,25 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsNotifications => '通知';
 
   @override
+  String get settingsLocalNotificationsHeader => '本地通知';
+
+  @override
+  String get settingsBackgroundUnreadChecks => '后台未读检查';
+
+  @override
+  String get settingsBackgroundUnreadChecksSubtitle => '不使用 FCM 或第三方推送服务器';
+
+  @override
+  String get settingsBackgroundUnreadChecksFooter =>
+      'Android 会大约每 15 分钟或更久在后台检查未读数。受电量和网络限制影响，通知可能延迟送达。';
+
+  @override
+  String get settingsNotificationPermission => '通知权限';
+
+  @override
+  String get settingsEnableNotifications => '开启通知';
+
+  @override
   String get settingsDeveloperSession => '开发者会话';
 
   @override
@@ -588,6 +607,25 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get settingsNotifications => '通知';
+
+  @override
+  String get settingsLocalNotificationsHeader => '本機通知';
+
+  @override
+  String get settingsBackgroundUnreadChecks => '背景未讀檢查';
+
+  @override
+  String get settingsBackgroundUnreadChecksSubtitle => '不使用 FCM 或第三方推播伺服器';
+
+  @override
+  String get settingsBackgroundUnreadChecksFooter =>
+      'Android 會大約每 15 分鐘或更久在背景檢查未讀數。受電量和網路限制影響，通知可能延遲送達。';
+
+  @override
+  String get settingsNotificationPermission => '通知權限';
+
+  @override
+  String get settingsEnableNotifications => '開啟通知';
 
   @override
   String get settingsDeveloperSession => '開發者工作階段';

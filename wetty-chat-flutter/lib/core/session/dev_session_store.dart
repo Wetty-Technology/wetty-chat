@@ -63,8 +63,8 @@ class AuthSessionState {
 
 class AuthSessionNotifier extends Notifier<AuthSessionState> {
   static const int defaultUserId = 1;
-  static const String _userIdStorageKey = 'dev_session_user_id';
-  static const String _jwtTokenStorageKey = 'auth_session_jwt_token';
+  static const String userIdStorageKey = 'dev_session_user_id';
+  static const String jwtTokenStorageKey = 'auth_session_jwt_token';
 
   late SharedPreferences _prefs;
   late AuthBootstrapApi _authApi;
@@ -75,8 +75,8 @@ class AuthSessionNotifier extends Notifier<AuthSessionState> {
   AuthSessionState build() {
     _prefs = ref.read(sharedPreferencesProvider);
     _authApi = ref.read(authBootstrapApiProvider);
-    final developerUserId = _prefs.getInt(_userIdStorageKey) ?? defaultUserId;
-    final jwtToken = _prefs.getString(_jwtTokenStorageKey);
+    final developerUserId = _prefs.getInt(userIdStorageKey) ?? defaultUserId;
+    final jwtToken = _prefs.getString(jwtTokenStorageKey);
     return AuthSessionState(
       status: AuthBootstrapStatus.bootstrapping,
       mode: AuthSessionMode.none,
@@ -106,7 +106,7 @@ class AuthSessionNotifier extends Notifier<AuthSessionState> {
   Future<void> _runBootstrap() async {
     state = state.copyWith(status: AuthBootstrapStatus.bootstrapping);
 
-    final developerUserId = _prefs.getInt(_userIdStorageKey) ?? defaultUserId;
+    final developerUserId = _prefs.getInt(userIdStorageKey) ?? defaultUserId;
 
     try {
       final devHeaders = legacyApiAuthHeadersForUser(developerUserId);
@@ -122,7 +122,7 @@ class AuthSessionNotifier extends Notifier<AuthSessionState> {
         return;
       }
 
-      final persistedToken = _prefs.getString(_jwtTokenStorageKey);
+      final persistedToken = _prefs.getString(jwtTokenStorageKey);
       if (persistedToken != null && persistedToken.trim().isNotEmpty) {
         final normalizedToken = await _validateJwtToken(persistedToken);
         if (normalizedToken != null) {
@@ -130,7 +130,7 @@ class AuthSessionNotifier extends Notifier<AuthSessionState> {
             'Authorization': 'Bearer $normalizedToken',
           });
           if (me != null) {
-            await _prefs.setString(_jwtTokenStorageKey, normalizedToken);
+            await _prefs.setString(jwtTokenStorageKey, normalizedToken);
             state = AuthSessionState(
               status: AuthBootstrapStatus.authenticated,
               mode: AuthSessionMode.jwt,
@@ -141,7 +141,7 @@ class AuthSessionNotifier extends Notifier<AuthSessionState> {
             return;
           }
         }
-        await _prefs.remove(_jwtTokenStorageKey);
+        await _prefs.remove(jwtTokenStorageKey);
       }
     } catch (error, stackTrace) {
       debugPrint('[auth:bootstrap] exception during bootstrap: $error');
@@ -197,7 +197,7 @@ class AuthSessionNotifier extends Notifier<AuthSessionState> {
       throw Exception('Failed to load the authenticated user.');
     }
 
-    await _prefs.setString(_jwtTokenStorageKey, normalizedToken);
+    await _prefs.setString(jwtTokenStorageKey, normalizedToken);
     state = AuthSessionState(
       status: AuthBootstrapStatus.authenticated,
       mode: AuthSessionMode.jwt,
@@ -208,7 +208,7 @@ class AuthSessionNotifier extends Notifier<AuthSessionState> {
   }
 
   Future<void> setCurrentUserId(int userId) async {
-    await _prefs.setInt(_userIdStorageKey, userId);
+    await _prefs.setInt(userIdStorageKey, userId);
     if (state.developerUserId == userId && state.mode == AuthSessionMode.jwt) {
       return;
     }
@@ -225,7 +225,7 @@ class AuthSessionNotifier extends Notifier<AuthSessionState> {
     debugPrint('[auth:clear-jwt] clearing stored jwt and re-running bootstrap');
     // Push unsubscribe is handled reactively in app.dart via the auth listener,
     // which fires when the state transitions away from authenticated.
-    await _prefs.remove(_jwtTokenStorageKey);
+    await _prefs.remove(jwtTokenStorageKey);
     state = AuthSessionState(
       status: AuthBootstrapStatus.bootstrapping,
       mode: AuthSessionMode.none,
@@ -240,7 +240,7 @@ class AuthSessionNotifier extends Notifier<AuthSessionState> {
   }
 
   Future<void> resetToDefault() async {
-    await _prefs.remove(_userIdStorageKey);
+    await _prefs.remove(userIdStorageKey);
     await setCurrentUserId(defaultUserId);
   }
 
