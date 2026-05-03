@@ -2,23 +2,24 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../app/routing/route_names.dart';
-import '../../../app/theme/style_config.dart';
-import 'package:chahua/features/shared/presentation/sticker_image_widget.dart';
+import 'package:chahua/app/routing/route_names.dart';
+import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
+import 'package:chahua/features/shared/presentation/adaptive_cupertino_popup.dart';
+import 'package:chahua/features/shared/presentation/sticker_image_widget.dart';
 import '../application/sticker_detail_view_model.dart';
 import 'widgets/preview_action_button.dart';
 import 'widgets/preview_header.dart';
 import 'widgets/preview_sticker_grid.dart';
 
-/// Shows a Cupertino-style bottom sheet previewing a sticker and its pack.
+/// Shows an adaptive Cupertino-style preview for a sticker and its pack.
 Future<void> showStickerPreviewModal(
   BuildContext context,
   String stickerId,
 ) async {
-  final selectedPackId = await showCupertinoModalPopup<String>(
+  final selectedPackId = await showAdaptiveCupertinoPopup<String>(
     context: context,
-    builder: (context) => _StickerPreviewSheet(stickerId: stickerId),
+    builder: (context) => _StickerPreviewPanel(stickerId: stickerId),
   );
 
   if (!context.mounted || selectedPackId == null) {
@@ -32,17 +33,17 @@ Future<void> showStickerPreviewModal(
   context.push(AppRoutes.stickerPackDetail(selectedPackId));
 }
 
-class _StickerPreviewSheet extends ConsumerStatefulWidget {
-  const _StickerPreviewSheet({required this.stickerId});
+class _StickerPreviewPanel extends ConsumerStatefulWidget {
+  const _StickerPreviewPanel({required this.stickerId});
 
   final String stickerId;
 
   @override
-  ConsumerState<_StickerPreviewSheet> createState() =>
-      _StickerPreviewSheetState();
+  ConsumerState<_StickerPreviewPanel> createState() =>
+      _StickerPreviewPanelState();
 }
 
-class _StickerPreviewSheetState extends ConsumerState<_StickerPreviewSheet> {
+class _StickerPreviewPanelState extends ConsumerState<_StickerPreviewPanel> {
   String? _selectedStickerId;
 
   @override
@@ -51,14 +52,9 @@ class _StickerPreviewSheetState extends ConsumerState<_StickerPreviewSheet> {
       stickerDetailViewModelProvider(widget.stickerId),
     );
     final colors = context.appColors;
-    final screenHeight = MediaQuery.of(context).size.height;
 
-    return Container(
-      height: screenHeight * 0.5,
-      decoration: BoxDecoration(
-        color: CupertinoColors.systemBackground.resolveFrom(context),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-      ),
+    return ColoredBox(
+      color: CupertinoColors.systemBackground.resolveFrom(context),
       child: asyncState.when(
         loading: () => const Center(child: CupertinoActivityIndicator()),
         error: (error, _) => _buildError(colors, error),
