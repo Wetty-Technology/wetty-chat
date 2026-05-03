@@ -2,7 +2,6 @@ ARG BUILDER_BASE_REPOSITORY=ghcr.io/wetty-technology/wetty-chat-backend-builder-
 ARG BUILDER_BASE_TAG=rust-1.95.0-trixie
 ARG RUNTIME_BASE_IMAGE=ghcr.io/wetty-technology/wetty-chat-backend-runtime-base:trixie
 ARG TARGETARCH
-ARG TARGETPLATFORM
 ARG BUILDPLATFORM
 
 # Build stage
@@ -45,7 +44,7 @@ RUN export TARGET_TRIPLE=$(cat /app/target-triple.txt) && \
     cp target/$TARGET_TRIPLE/release/wetty-chat-backend /app/wetty-chat-backend
 
 # Runtime stage
-FROM --platform=$TARGETPLATFORM ${RUNTIME_BASE_IMAGE}
+FROM ${RUNTIME_BASE_IMAGE}
 
 WORKDIR /app
 
