@@ -39,6 +39,7 @@ import styles from './ChatSettings.module.scss';
 import { ChatAdminSettings } from './ChatAdminSettings';
 import { ShareInviteModal } from '@/components/chat/settings/ShareInviteModal';
 import { GroupSettingsActionButton } from '@/components/chat/settings/GroupSettingsActionButton';
+import { ChatAttachmentSection } from '@/components/chat/attachments/ChatAttachmentSection';
 
 interface ChatSettingsCoreProps {
   chatId?: string;
@@ -157,6 +158,8 @@ function ChatSettingsContent({
           </GroupSettingsActionButton>
         </ChatRoleGate>
       </div>
+
+      <ChatAttachmentSection chatId={chatId} />
 
       <ChatRoleGate chatId={chatId} allow="admin" role={myRole}>
         <ChatAdminSettings

@@ -14,7 +14,7 @@ const MAX_SCALE = 5;
 const EPSILON = 0.001;
 const SWIPE_THRESHOLD = 56;
 
-interface ImageViewerItem {
+export interface ImageViewerItem {
   src: string;
   kind: string;
   fileName?: string;
