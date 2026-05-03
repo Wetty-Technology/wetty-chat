@@ -13,16 +13,17 @@ abstract final class AppRoutes {
       '/thread/$chatId/$threadRootId';
   static const settings = '/settings';
   static const splitSettingsModal = '/settings-modal';
-  static const language = '/settings/language';
-  static const fontSize = '/settings/font-size';
-  static const profile = '/settings/profile';
-  static const devSession = '/settings/dev-session';
+  static const general = '/settings/general';
+  static const language = '/settings/general/language';
+  static const cache = '/settings/general/cache';
+  static const appearance = '/settings/appearance';
+  static const fontSize = '/settings/appearance/text-size';
+  static const devSession = '/settings/developer-session';
   static const notifications = '/settings/notifications';
-  static const cache = '/settings/cache';
   static const stickerPackDetailRoot = '/sticker-packs';
   static String stickerPackDetail(String packId) => '/sticker-packs/$packId';
-  static const stickerPacks = '/settings/sticker-packs';
+  static const stickerPacks = '/settings/stickers';
   static String settingsStickerPackDetail(String packId) =>
-      '/settings/sticker-packs/$packId';
+      '/settings/stickers/$packId';
   static const attachmentViewer = '/attachment-viewer';
 }

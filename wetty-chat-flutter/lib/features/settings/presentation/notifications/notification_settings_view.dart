@@ -2,9 +2,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../app/theme/style_config.dart';
-import '../../../core/notifications/push_notification_provider.dart';
-import '../../../l10n/app_localizations.dart';
+import 'package:chahua/app/theme/style_config.dart';
+import 'package:chahua/core/notifications/push_notification_provider.dart';
+import 'package:chahua/l10n/app_localizations.dart';
 
 class NotificationSettingsPage extends ConsumerWidget {
   const NotificationSettingsPage({super.key});

@@ -145,6 +145,12 @@
   "settingsGeneral": "General",
   "@settingsGeneral": { "description": "General settings section header" },
 
+  "settingsAppearance": "Appearance",
+  "@settingsAppearance": { "description": "Appearance settings section header" },
+
+  "settingsEmojisAndStickers": "Emojis & Stickers",
+  "@settingsEmojisAndStickers": { "description": "Emojis and stickers settings entry label" },
+
   "settingsUser": "User",
   "@settingsUser": { "description": "User settings section header" },
 
@@ -153,6 +159,9 @@
 
   "settingsNotifications": "Notifications",
   "@settingsNotifications": { "description": "Notifications setting label" },
+
+  "settingsDeveloperSession": "Developer Session",
+  "@settingsDeveloperSession": { "description": "Developer session settings entry label" },
 
   "logOut": "Log Out",
   "@logOut": { "description": "Log out button label" },

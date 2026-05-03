@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:chahua/features/shared/presentation/app_divider.dart';
 import 'package:chahua/l10n/app_localizations.dart';
 
-import '../../../app/theme/style_config.dart';
-import '../../../core/settings/app_settings_store.dart';
-import 'settings_components.dart';
+import 'package:chahua/app/theme/style_config.dart';
+import 'package:chahua/core/settings/app_settings_store.dart';
+import 'package:chahua/features/settings/presentation/settings_components.dart';
 
 class FontSizeSettingsPage extends ConsumerWidget {
   const FontSizeSettingsPage({super.key});

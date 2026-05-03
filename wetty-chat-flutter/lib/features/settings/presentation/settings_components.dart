@@ -4,9 +4,9 @@ import '../../../app/theme/style_config.dart';
 import '../../../core/settings/app_settings_store.dart';
 
 class SettingsSectionData {
-  const SettingsSectionData({required this.title, required this.items});
+  const SettingsSectionData({this.title, required this.items});
 
-  final String title;
+  final String? title;
   final List<SettingsItemData> items;
 }
 
@@ -52,10 +52,14 @@ class SettingsSectionCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 2, bottom: 8),
-          child: Text(section.title, style: appSectionTitleTextStyle(context)),
-        ),
+        if (section.title != null)
+          Padding(
+            padding: const EdgeInsets.only(left: 2, bottom: 8),
+            child: Text(
+              section.title!,
+              style: appSectionTitleTextStyle(context),
+            ),
+          ),
         Container(
           decoration: BoxDecoration(
             color: CupertinoColors.systemBackground.resolveFrom(context),

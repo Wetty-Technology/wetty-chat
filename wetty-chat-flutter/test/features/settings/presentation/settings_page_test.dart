@@ -5,7 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:chahua/core/providers/shared_preferences_provider.dart';
-import 'package:chahua/features/settings/presentation/cache_settings_view.dart';
+import 'package:chahua/features/settings/presentation/general/cache_settings_view.dart';
+import 'package:chahua/features/settings/presentation/general/general_settings_view.dart';
 import 'package:chahua/features/settings/presentation/settings_modal_page.dart';
 import 'package:chahua/features/settings/presentation/settings_page.dart';
 import 'package:chahua/l10n/app_localizations.dart';
@@ -15,7 +16,7 @@ void main() {
   setUpAll(setUpPathProviderMock);
   tearDownAll(tearDownPathProviderMock);
 
-  testWidgets('settings page shows cache entry and opens cache page', (
+  testWidgets('settings page opens general submenu and cache page', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues(const <String, Object>{});
@@ -33,8 +34,14 @@ void main() {
           builder: (context, state) => const SettingsPage(),
           routes: [
             GoRoute(
-              path: 'cache',
-              builder: (context, state) => const CacheSettingsPage(),
+              path: 'general',
+              builder: (context, state) => const GeneralSettingsPage(),
+              routes: [
+                GoRoute(
+                  path: 'cache',
+                  builder: (context, state) => const CacheSettingsPage(),
+                ),
+              ],
             ),
           ],
         ),
@@ -54,6 +61,14 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
+    expect(find.text('General'), findsOneWidget);
+    expect(find.text('Appearance'), findsOneWidget);
+
+    await tester.tap(find.text('General'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Language'), findsOneWidget);
     expect(find.text('Cache'), findsOneWidget);
 
     await tester.tap(find.text('Cache'));
@@ -83,6 +98,12 @@ void main() {
         ),
       ),
     );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('General'), findsOneWidget);
+
+    await tester.tap(find.text('General'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 

@@ -155,6 +155,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsGeneral => 'General';
 
   @override
+  String get settingsAppearance => 'Appearance';
+
+  @override
+  String get settingsEmojisAndStickers => 'Emojis & Stickers';
+
+  @override
   String get settingsUser => 'User';
 
   @override
@@ -162,6 +168,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsNotifications => 'Notifications';
+
+  @override
+  String get settingsDeveloperSession => 'Developer Session';
 
   @override
   String get logOut => 'Log Out';

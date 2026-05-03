@@ -53,9 +53,12 @@
   "settingsChat": "聊天",
   "settingsShowAllTab": "顯示「全部」分頁",
   "settingsGeneral": "一般",
+  "settingsAppearance": "外觀",
+  "settingsEmojisAndStickers": "表情與貼圖",
   "settingsUser": "使用者",
   "settingsProfile": "個人資料",
   "settingsNotifications": "通知",
+  "settingsDeveloperSession": "開發者工作階段",
 
   "logOut": "登出",
   "logOutConfirmTitle": "登出？",

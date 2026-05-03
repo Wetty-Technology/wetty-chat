@@ -2,9 +2,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../app/routing/route_names.dart';
-import '../../../app/theme/style_config.dart';
-import '../../../core/session/dev_session_store.dart';
+import 'package:chahua/app/routing/route_names.dart';
+import 'package:chahua/app/theme/style_config.dart';
+import 'package:chahua/core/session/dev_session_store.dart';
 
 class DevSessionSettingsPage extends ConsumerStatefulWidget {
   const DevSessionSettingsPage({super.key});

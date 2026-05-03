@@ -11,10 +11,8 @@ class SettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return SettingsContent(
       onOpenStickerPacks: () => context.push(AppRoutes.stickerPacks),
-      onOpenLanguage: () => context.push(AppRoutes.language),
-      onOpenFontSize: () => context.push(AppRoutes.fontSize),
-      onOpenCache: () => context.push(AppRoutes.cache),
-      onOpenProfile: () => context.push(AppRoutes.profile),
+      onOpenGeneral: () => context.push(AppRoutes.general),
+      onOpenAppearance: () => context.push(AppRoutes.appearance),
       onOpenDevSession: () => context.push(AppRoutes.devSession),
       onOpenNotifications: () => context.push(AppRoutes.notifications),
     );

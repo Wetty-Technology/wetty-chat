@@ -387,6 +387,18 @@ abstract class AppLocalizations {
   /// **'General'**
   String get settingsGeneral;
 
+  /// Appearance settings section header
+  ///
+  /// In en, this message translates to:
+  /// **'Appearance'**
+  String get settingsAppearance;
+
+  /// Emojis and stickers settings entry label
+  ///
+  /// In en, this message translates to:
+  /// **'Emojis & Stickers'**
+  String get settingsEmojisAndStickers;
+
   /// User settings section header
   ///
   /// In en, this message translates to:
@@ -404,6 +416,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Notifications'**
   String get settingsNotifications;
+
+  /// Developer session settings entry label
+  ///
+  /// In en, this message translates to:
+  /// **'Developer Session'**
+  String get settingsDeveloperSession;
 
   /// Log out button label
   ///

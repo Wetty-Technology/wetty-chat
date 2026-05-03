@@ -1,8 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/settings/app_settings_store.dart';
-import '../../../l10n/app_localizations.dart';
+import 'package:chahua/core/settings/app_settings_store.dart';
+import 'package:chahua/l10n/app_localizations.dart';
 
 class LanguageSettingsPage extends ConsumerWidget {
   const LanguageSettingsPage({super.key});

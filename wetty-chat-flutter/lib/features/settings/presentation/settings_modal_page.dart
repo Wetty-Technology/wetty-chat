@@ -4,14 +4,16 @@ import 'package:flutter/cupertino.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../shared/presentation/cupertino_modal_close_button.dart';
 import '../../stickers/presentation/sticker_pack_detail_page.dart';
 import '../../stickers/presentation/sticker_pack_list_page.dart';
-import 'cache_settings_view.dart';
-import 'dev_session_settings_view.dart';
-import 'font_size_settings_view.dart';
-import 'language_settings_view.dart';
-import 'notification_settings_view.dart';
-import 'profile_settings_view.dart';
+import 'appearance/appearance_settings_view.dart';
+import 'appearance/font_size_settings_view.dart';
+import 'developer/dev_session_settings_view.dart';
+import 'general/cache_settings_view.dart';
+import 'general/general_settings_view.dart';
+import 'general/language_settings_view.dart';
+import 'notifications/notification_settings_view.dart';
 import 'settings_content.dart';
 
 class SettingsModalPage extends StatelessWidget {
@@ -77,18 +79,26 @@ class _SettingsModalNavigator extends StatelessWidget {
             final l10n = AppLocalizations.of(context)!;
             return SettingsContent(
               automaticallyImplyLeading: false,
-              leading: CupertinoButton(
-                padding: EdgeInsets.zero,
+              leading: CupertinoModalCloseButton(
                 onPressed: onClose,
-                child: Icon(CupertinoIcons.xmark, semanticLabel: l10n.close),
+                semanticLabel: l10n.close,
               ),
               onOpenStickerPacks: () => _openStickerPacks(context),
-              onOpenLanguage: () =>
-                  _push(context, const LanguageSettingsPage()),
-              onOpenFontSize: () =>
-                  _push(context, const FontSizeSettingsPage()),
-              onOpenCache: () => _push(context, const CacheSettingsPage()),
-              onOpenProfile: () => _push(context, const ProfileSettingsPage()),
+              onOpenGeneral: () => _push(
+                context,
+                GeneralSettingsPage(
+                  onOpenLanguage: () =>
+                      _push(context, const LanguageSettingsPage()),
+                  onOpenCache: () => _push(context, const CacheSettingsPage()),
+                ),
+              ),
+              onOpenAppearance: () => _push(
+                context,
+                AppearanceSettingsPage(
+                  onOpenFontSize: () =>
+                      _push(context, const FontSizeSettingsPage()),
+                ),
+              ),
               onOpenDevSession: () =>
                   _push(context, const DevSessionSettingsPage()),
               onOpenNotifications: () =>

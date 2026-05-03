@@ -1,7 +1,12 @@
-export 'presentation/font_size_settings_view.dart';
-export 'presentation/notification_settings_view.dart';
-export 'presentation/profile_settings_view.dart';
-export 'presentation/cache_settings_view.dart';
+export 'presentation/appearance/appearance_settings_view.dart';
+export 'presentation/appearance/font_size_settings_view.dart';
+export 'presentation/developer/dev_session_settings_view.dart';
+export 'presentation/general/cache_settings_view.dart';
+export 'presentation/general/general_settings_view.dart';
+export 'presentation/general/language_settings_view.dart';
+export 'presentation/notifications/notification_settings_view.dart';
+export 'presentation/profile/profile_settings_view.dart';
+export 'presentation/settings_profile_hero.dart';
 export 'presentation/settings_content.dart';
 export 'presentation/settings_modal_page.dart';
 export 'presentation/settings_page.dart';

@@ -153,6 +153,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsGeneral => '通用';
 
   @override
+  String get settingsAppearance => '外观';
+
+  @override
+  String get settingsEmojisAndStickers => '表情与贴纸';
+
+  @override
   String get settingsUser => '用户';
 
   @override
@@ -160,6 +166,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsNotifications => '通知';
+
+  @override
+  String get settingsDeveloperSession => '开发者会话';
 
   @override
   String get logOut => '退出登录';
@@ -548,6 +557,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get settingsGeneral => '一般';
 
   @override
+  String get settingsAppearance => '外觀';
+
+  @override
+  String get settingsEmojisAndStickers => '表情與貼圖';
+
+  @override
   String get settingsUser => '使用者';
 
   @override
@@ -555,6 +570,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get settingsNotifications => '通知';
+
+  @override
+  String get settingsDeveloperSession => '開發者工作階段';
 
   @override
   String get logOut => '登出';

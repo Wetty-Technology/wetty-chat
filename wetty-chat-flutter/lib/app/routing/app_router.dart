@@ -15,12 +15,13 @@ import 'package:chahua/features/conversation/shared/presentation/chat_detail_v2_
 import 'package:chahua/features/conversation/shared/presentation/thread_detail_v2_view.dart';
 import 'package:chahua/features/groups/members/presentation/group_members_view.dart';
 import 'package:chahua/features/groups/settings/presentation/group_settings_view.dart';
-import 'package:chahua/features/settings/presentation/cache_settings_view.dart';
-import 'package:chahua/features/settings/presentation/dev_session_settings_view.dart';
-import 'package:chahua/features/settings/presentation/font_size_settings_view.dart';
-import 'package:chahua/features/settings/presentation/language_settings_view.dart';
-import 'package:chahua/features/settings/presentation/notification_settings_view.dart';
-import 'package:chahua/features/settings/presentation/profile_settings_view.dart';
+import 'package:chahua/features/settings/presentation/appearance/appearance_settings_view.dart';
+import 'package:chahua/features/settings/presentation/appearance/font_size_settings_view.dart';
+import 'package:chahua/features/settings/presentation/developer/dev_session_settings_view.dart';
+import 'package:chahua/features/settings/presentation/general/cache_settings_view.dart';
+import 'package:chahua/features/settings/presentation/general/general_settings_view.dart';
+import 'package:chahua/features/settings/presentation/general/language_settings_view.dart';
+import 'package:chahua/features/settings/presentation/notifications/notification_settings_view.dart';
 import 'package:chahua/features/settings/presentation/settings_modal_page.dart';
 import 'package:chahua/features/settings/presentation/settings_page.dart';
 import 'package:chahua/features/stickers/presentation/sticker_pack_detail_page.dart';
@@ -288,28 +289,73 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 ),
                 routes: [
                   GoRoute(
-                    path: 'language',
+                    path: 'general',
                     pageBuilder: (context, state) => CupertinoPage(
                       key: state.pageKey,
-                      child: const LanguageSettingsPage(),
+                      child: const GeneralSettingsPage(),
                     ),
+                    routes: [
+                      GoRoute(
+                        path: 'language',
+                        pageBuilder: (context, state) => CupertinoPage(
+                          key: state.pageKey,
+                          child: const LanguageSettingsPage(),
+                        ),
+                      ),
+                      GoRoute(
+                        path: 'cache',
+                        pageBuilder: (context, state) => CupertinoPage(
+                          key: state.pageKey,
+                          child: const CacheSettingsPage(),
+                        ),
+                      ),
+                    ],
+                  ),
+                  GoRoute(
+                    path: 'appearance',
+                    pageBuilder: (context, state) => CupertinoPage(
+                      key: state.pageKey,
+                      child: const AppearanceSettingsPage(),
+                    ),
+                    routes: [
+                      GoRoute(
+                        path: 'text-size',
+                        pageBuilder: (context, state) => CupertinoPage(
+                          key: state.pageKey,
+                          child: const FontSizeSettingsPage(),
+                        ),
+                      ),
+                    ],
+                  ),
+                  GoRoute(
+                    path: 'language',
+                    redirect: (_, _) => AppRoutes.language,
                   ),
                   GoRoute(
                     path: 'font-size',
-                    pageBuilder: (context, state) => CupertinoPage(
-                      key: state.pageKey,
-                      child: const FontSizeSettingsPage(),
+                    redirect: (_, _) => AppRoutes.fontSize,
+                  ),
+                  GoRoute(path: 'cache', redirect: (_, _) => AppRoutes.cache),
+                  GoRoute(
+                    path: 'dev-session',
+                    redirect: (_, _) => AppRoutes.devSession,
+                  ),
+                  GoRoute(
+                    path: 'sticker-packs/:packId',
+                    redirect: (_, state) => AppRoutes.settingsStickerPackDetail(
+                      state.pathParameters['packId']!,
                     ),
+                  ),
+                  GoRoute(
+                    path: 'sticker-packs',
+                    redirect: (_, _) => AppRoutes.stickerPacks,
                   ),
                   GoRoute(
                     path: 'profile',
-                    pageBuilder: (context, state) => CupertinoPage(
-                      key: state.pageKey,
-                      child: const ProfileSettingsPage(),
-                    ),
+                    redirect: (_, _) => AppRoutes.settings,
                   ),
                   GoRoute(
-                    path: 'dev-session',
+                    path: 'developer-session',
                     pageBuilder: (context, state) => CupertinoPage(
                       key: state.pageKey,
                       child: const DevSessionSettingsPage(),
@@ -323,14 +369,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     ),
                   ),
                   GoRoute(
-                    path: 'cache',
-                    pageBuilder: (context, state) => CupertinoPage(
-                      key: state.pageKey,
-                      child: const CacheSettingsPage(),
-                    ),
-                  ),
-                  GoRoute(
-                    path: 'sticker-packs',
+                    path: 'stickers',
                     pageBuilder: (context, state) => CupertinoPage(
                       key: state.pageKey,
                       child: const StickerPackListPage(),
