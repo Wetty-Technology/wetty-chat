@@ -6,7 +6,7 @@ import { addCircleOutline, arrowBack, settings } from 'ionicons/icons';
 import { ChatList } from '@/components/chat/lists/ChatList';
 import type { ChatListTab } from '@/components/chat/lists/ChatListSegment';
 import ChatThreadCore from '@/pages/chat-thread/chat-thread';
-import ChatSettingsCore from '@/pages/chat-thread/chat-settings';
+import GroupInfoCore from '@/pages/chat-thread/group-info';
 import ChatMembersCore from '@/pages/chat-thread/chat-members';
 import ChatInvitesCore from '@/pages/chat-thread/manage-invites';
 import CreateChatCore from '@/pages/create-chat';
@@ -29,7 +29,7 @@ interface DesktopRouteMatches {
   activeChatId: string | undefined;
   archivedMatch: { tab?: string } | null;
   threadMatch: { id: string; threadId: string } | null;
-  settingsMatch: { id: string } | null;
+  groupInfoMatch: { id: string } | null;
   membersMatch: { id: string } | null;
   invitesMatch: { id: string } | null;
   joinPreviewMatch: { inviteCode: string } | null;
@@ -51,8 +51,8 @@ function getDesktopRouteMatches(pathname: string): DesktopRouteMatches {
     path: '/chats/archived/:tab?',
     exact: true,
   });
-  const settingsRaw = matchPath<{ id: string }>(pathname, {
-    path: '/chats/chat/:id/settings',
+  const groupInfoRaw = matchPath<{ id: string }>(pathname, {
+    path: '/chats/chat/:id/group-info',
     exact: true,
   });
   const membersRaw = matchPath<{ id: string }>(pathname, {
@@ -104,14 +104,14 @@ function getDesktopRouteMatches(pathname: string): DesktopRouteMatches {
   return {
     activeChatId:
       threadRaw?.params.id ??
-      settingsRaw?.params.id ??
+      groupInfoRaw?.params.id ??
       membersRaw?.params.id ??
       invitesRaw?.params.id ??
       chatRaw?.params.id ??
       undefined,
     archivedMatch: archivedRaw?.params ?? null,
     threadMatch: threadRaw?.params ?? null,
-    settingsMatch: settingsRaw?.params ?? null,
+    groupInfoMatch: groupInfoRaw?.params ?? null,
     membersMatch: membersRaw?.params ?? null,
     invitesMatch: invitesRaw?.params ?? null,
     joinPreviewMatch: joinPreviewRaw?.params ?? null,
@@ -194,7 +194,7 @@ export function DesktopSplitLayout() {
     activeChatId,
     archivedMatch,
     threadMatch,
-    settingsMatch,
+    groupInfoMatch,
     membersMatch,
     invitesMatch,
     joinPreviewMatch,
@@ -348,9 +348,9 @@ export function DesktopSplitLayout() {
         {/* Overlay layer: sub-page (thread) */}
         {subPageOverlay && <div className={styles.desktopSplitPane}>{subPageOverlay}</div>}
 
-        {/* Settings modal */}
-        <ChatModal chatId={settingsMatch?.id ?? null} routePath="/chats/chat/:id/settings">
-          {(chatId, backAction) => <ChatSettingsCore chatId={chatId} backAction={backAction} />}
+        {/* Group info modal */}
+        <ChatModal chatId={groupInfoMatch?.id ?? null} routePath="/chats/chat/:id/group-info">
+          {(chatId, backAction) => <GroupInfoCore chatId={chatId} backAction={backAction} />}
         </ChatModal>
 
         {/* Members modal */}
@@ -362,7 +362,7 @@ export function DesktopSplitLayout() {
           {(chatId) => (
             <ChatInvitesCore
               chatId={chatId}
-              backAction={{ type: 'close', onClose: () => history.push(`/chats/chat/${chatId}/settings`) }}
+              backAction={{ type: 'close', onClose: () => history.push(`/chats/chat/${chatId}/group-info`) }}
             />
           )}
         </ChatModal>

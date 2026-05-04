@@ -485,5 +485,5 @@ export default function ChatInvitesCore({ chatId: propChatId, backAction }: Chat
 
 export function ChatInvitesPage() {
   const { id } = useParams<{ id: string }>();
-  return <ChatInvitesCore chatId={id} backAction={{ type: 'back', defaultHref: `/chats/chat/${id}/settings` }} />;
+  return <ChatInvitesCore chatId={id} backAction={{ type: 'back', defaultHref: `/chats/chat/${id}/group-info` }} />;
 }

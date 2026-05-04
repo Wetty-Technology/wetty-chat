@@ -35,18 +35,18 @@ import { GroupProfile } from '@/components/chat/profiles/GroupProfile';
 import { ChatRoleGate } from '@/components/chat/permissions/ChatRoleGate';
 import { ChatMuteSettingItem } from '@/components/chat/settings/ChatMuteSettingItem';
 import type { BackAction } from '@/types/back-action';
-import styles from './ChatSettings.module.scss';
-import { ChatAdminSettings } from './ChatAdminSettings';
+import styles from './GroupInfo.module.scss';
+import { ChatAdminSettings } from '../ChatAdminSettings';
 import { ShareInviteModal } from '@/components/chat/settings/ShareInviteModal';
 import { GroupSettingsActionButton } from '@/components/chat/settings/GroupSettingsActionButton';
 import { ChatAttachmentSection } from '@/components/chat/attachments/ChatAttachmentSection';
 
-interface ChatSettingsCoreProps {
+interface GroupInfoCoreProps {
   chatId?: string;
   backAction?: BackAction;
 }
 
-interface ChatSettingsFormState {
+interface GroupInfoFormState {
   name: string;
   description: string;
   avatarUrl: string;
@@ -62,7 +62,7 @@ function getInitialFormState(cachedMeta?: {
   avatar?: string | null;
   visibility?: string;
   myRole?: GroupRole | null;
-}): ChatSettingsFormState {
+}): GroupInfoFormState {
   return {
     name: cachedMeta?.name || '',
     description: cachedMeta?.description || '',
@@ -73,9 +73,9 @@ function getInitialFormState(cachedMeta?: {
   };
 }
 
-interface ChatSettingsContentProps {
+interface GroupInfoContentProps {
   chatId: string;
-  formState: ChatSettingsFormState;
+  formState: GroupInfoFormState;
   mutedUntil: string | null;
   archived: boolean;
   myRole: GroupRole | null;
@@ -91,7 +91,7 @@ interface ChatSettingsContentProps {
   onSave: () => void;
 }
 
-function ChatSettingsContent({
+function GroupInfoContent({
   chatId,
   formState,
   mutedUntil,
@@ -107,7 +107,7 @@ function ChatSettingsContent({
   onUploadAvatar,
   onLeaveGroup,
   onSave,
-}: ChatSettingsContentProps) {
+}: GroupInfoContentProps) {
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const canEditAvatar = myRole === 'admin';
@@ -189,11 +189,11 @@ function ChatSettingsContent({
   );
 }
 
-function hasLoadedChatSettingsMeta(cachedMeta?: { visibility?: string; myRole?: GroupRole | null }): boolean {
+function hasLoadedGroupInfoMeta(cachedMeta?: { visibility?: string; myRole?: GroupRole | null }): boolean {
   return !!cachedMeta?.visibility && cachedMeta.myRole !== undefined;
 }
 
-function getMetadataSnapshot(state: Pick<ChatSettingsFormState, 'name' | 'description' | 'visibility'>) {
+function getMetadataSnapshot(state: Pick<GroupInfoFormState, 'name' | 'description' | 'visibility'>) {
   return {
     name: state.name.trim(),
     description: state.description.trim(),
@@ -201,7 +201,7 @@ function getMetadataSnapshot(state: Pick<ChatSettingsFormState, 'name' | 'descri
   };
 }
 
-function ChatSettingsSession({ chatId, backAction }: { chatId: string; backAction?: BackAction }) {
+function GroupInfoSession({ chatId, backAction }: { chatId: string; backAction?: BackAction }) {
   const history = useHistory();
   const dispatch = useDispatch();
   const [presentToast] = useIonToast();
@@ -210,8 +210,8 @@ function ChatSettingsSession({ chatId, backAction }: { chatId: string; backActio
   const mutedUntil = useSelector((state: RootState) => selectChatMutedUntil(state, chatId));
   const archived = useSelector((state: RootState) => selectIsChatArchived(state, chatId));
   const currentUserId = useSelector((state: RootState) => state.user.uid);
-  const [formState, setFormState] = useState<ChatSettingsFormState>(() => getInitialFormState(cachedMeta));
-  const [loading, setLoading] = useState(() => !hasLoadedChatSettingsMeta(cachedMeta));
+  const [formState, setFormState] = useState<GroupInfoFormState>(() => getInitialFormState(cachedMeta));
+  const [loading, setLoading] = useState(() => !hasLoadedGroupInfoMeta(cachedMeta));
   const [saving, setSaving] = useState(false);
   const [leavingGroup, setLeavingGroup] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -231,7 +231,7 @@ function ChatSettingsSession({ chatId, backAction }: { chatId: string; backActio
   const saveDisabled = saving || uploadingAvatar || !hasUnsavedMetadataChanges;
 
   useEffect(() => {
-    if (hasLoadedChatSettingsMeta(cachedMeta)) {
+    if (hasLoadedGroupInfoMeta(cachedMeta)) {
       return;
     }
 
@@ -449,7 +449,7 @@ function ChatSettingsSession({ chatId, backAction }: { chatId: string; backActio
         presentToast({ message: t`Group details saved`, duration: 2000 });
       })
       .catch((err: Error) => {
-        presentToast({ message: err.message || t`Failed to save settings`, duration: 3000 });
+        presentToast({ message: err.message || t`Failed to save group info`, duration: 3000 });
       })
       .finally(() => setSaving(false));
   };
@@ -517,7 +517,7 @@ function ChatSettingsSession({ chatId, backAction }: { chatId: string; backActio
     });
   };
 
-  const updateFormState = <K extends keyof ChatSettingsFormState>(key: K, value: ChatSettingsFormState[K]) => {
+  const updateFormState = <K extends keyof GroupInfoFormState>(key: K, value: GroupInfoFormState[K]) => {
     setFormState((current) => ({ ...current, [key]: value }));
   };
 
@@ -529,7 +529,7 @@ function ChatSettingsSession({ chatId, backAction }: { chatId: string; backActio
             {backAction && <BackButton action={{ type: 'callback', onBack: handleBack }} />}
           </IonButtons>
           <IonTitle>
-            <Trans>Group Settings</Trans>
+            <Trans>Group Info</Trans>
           </IonTitle>
         </IonToolbar>
       </IonHeader>
@@ -539,7 +539,7 @@ function ChatSettingsSession({ chatId, backAction }: { chatId: string; backActio
             <IonSpinner />
           </div>
         ) : (
-          <ChatSettingsContent
+          <GroupInfoContent
             chatId={chatId}
             formState={formState}
             mutedUntil={mutedUntil}
@@ -562,7 +562,7 @@ function ChatSettingsSession({ chatId, backAction }: { chatId: string; backActio
   );
 }
 
-export default function ChatSettingsCore({ chatId: propChatId, backAction }: ChatSettingsCoreProps) {
+export default function GroupInfoCore({ chatId: propChatId, backAction }: GroupInfoCoreProps) {
   const { id } = useParams<{ id: string }>();
   const chatId = propChatId ?? (id ? String(id) : '');
 
@@ -570,10 +570,10 @@ export default function ChatSettingsCore({ chatId: propChatId, backAction }: Cha
     return null;
   }
 
-  return <ChatSettingsSession key={chatId} chatId={chatId} backAction={backAction} />;
+  return <GroupInfoSession key={chatId} chatId={chatId} backAction={backAction} />;
 }
 
-export function ChatSettingsPage() {
+export function GroupInfoPage() {
   const { id } = useParams<{ id: string }>();
-  return <ChatSettingsCore chatId={id} backAction={{ type: 'back', defaultHref: `/chats/chat/${id}` }} />;
+  return <GroupInfoCore chatId={id} backAction={{ type: 'back', defaultHref: `/chats/chat/${id}` }} />;
 }

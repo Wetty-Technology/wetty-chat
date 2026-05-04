@@ -12,7 +12,7 @@ import { CreateChatPage } from '@/pages/create-chat';
 import InvitePreviewPage from '@/pages/invite-preview';
 import JoinChatPage from '@/pages/join-chat';
 import { ChatThreadPage } from '@/pages/chat-thread/chat-thread';
-import { ChatSettingsPage } from '@/pages/chat-thread/chat-settings';
+import { GroupInfoPage } from '@/pages/chat-thread/group-info';
 import { ChatMembersPage } from '@/pages/chat-thread/chat-members';
 import { ChatInvitesPage } from '@/pages/chat-thread/manage-invites';
 import SettingsPage from '@/pages/settings';
@@ -76,7 +76,7 @@ const MobileLayout: React.FC = () => {
         <Route path="/chats/join/:inviteCode" exact component={InvitePreviewPage} />
         <Route path="/chats/chat/:id" exact component={ChatThreadPage} />
         <Route path="/chats/chat/:id/thread/:threadId" exact component={ChatThreadPage} />
-        <Route path="/chats/chat/:id/settings" exact component={ChatSettingsPage} />
+        <Route path="/chats/chat/:id/group-info" exact component={GroupInfoPage} />
         <Route path="/chats/chat/:id/invites" exact component={ChatInvitesPage} />
         <Route path="/chats/chat/:id/members" exact component={ChatMembersPage} />
         <Route path="/chats/chat/:id/stickers/:packId" exact component={StickerPackDetailPage} />
