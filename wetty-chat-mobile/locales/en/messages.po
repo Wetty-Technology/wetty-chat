@@ -441,8 +441,8 @@ msgstr "Failed to remove sticker"
 msgid "Failed to revoke invite"
 msgstr "Failed to revoke invite"
 
-msgid "Failed to save settings"
-msgstr "Failed to save settings"
+msgid "Failed to save group info"
+msgstr "Failed to save group info"
 
 msgid "Failed to send"
 msgstr "Failed to send"
@@ -494,6 +494,9 @@ msgstr "Group"
 
 msgid "Group details saved"
 msgstr "Group details saved"
+
+msgid "Group Info"
+msgstr "Group Info"
 
 msgid "Group invite"
 msgstr "Group invite"

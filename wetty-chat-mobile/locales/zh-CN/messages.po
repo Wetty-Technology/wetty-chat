@@ -441,8 +441,8 @@ msgstr "移除贴纸失败"
 msgid "Failed to revoke invite"
 msgstr "撤销邀请失败"
 
-msgid "Failed to save settings"
-msgstr "保存设置失败"
+msgid "Failed to save group info"
+msgstr "保存群组信息失败"
 
 msgid "Failed to send"
 msgstr "发送失败"
@@ -494,6 +494,9 @@ msgstr "群组"
 
 msgid "Group details saved"
 msgstr "群组资料已保存"
+
+msgid "Group Info"
+msgstr "群组信息"
 
 msgid "Group invite"
 msgstr "群组邀请"
