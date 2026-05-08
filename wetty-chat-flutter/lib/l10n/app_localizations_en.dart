@@ -300,6 +300,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noThreadsYet => 'No threads yet';
 
   @override
+  String get archived => 'Archived';
+
+  @override
   String get archivedThreads => 'Archived threads';
 
   @override
