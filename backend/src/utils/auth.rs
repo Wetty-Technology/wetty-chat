@@ -11,6 +11,9 @@ use rc4::{consts::U64, Key, KeyInit, Rc4, StreamCipher};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
+use crate::errors::AppError;
+use crate::services::service_tokens::{self, AuthenticatedServiceToken};
+
 pub const X_USER_ID: &str = "x-user-id";
 pub const X_CLIENT_ID: &str = "x-client-id";
 pub const X_APP_VERSION: &str = "x-app-version";
@@ -32,6 +35,19 @@ pub struct AuthContext {
     pub uid: i32,
     pub client_id: Option<String>,
     pub source: AuthSource,
+}
+
+#[allow(dead_code)]
+#[derive(Clone, Debug)]
+pub struct ServiceTokenPrincipal {
+    pub id: i64,
+}
+
+#[allow(dead_code)]
+#[derive(Clone, Debug)]
+pub enum Principal {
+    User(AuthContext),
+    ServiceToken(ServiceTokenPrincipal),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -137,6 +153,27 @@ pub fn extract_auth_context(
     }
 
     extract_legacy_auth_context(headers, state)
+}
+
+#[allow(dead_code)]
+pub fn extract_principal(
+    headers: &HeaderMap,
+    state: &crate::AppState,
+) -> Result<Principal, AppError> {
+    if let Some(token) = bearer_token(headers).map_err(AppError::from)? {
+        if token.starts_with(service_tokens::TOKEN_PREFIX) {
+            let mut conn = state.db.get()?;
+            let service_token =
+                service_tokens::authenticate(&mut conn, &state.service_token_hash_key, token)?;
+            return Ok(Principal::ServiceToken(ServiceTokenPrincipal::from(
+                service_token,
+            )));
+        }
+    }
+
+    extract_auth_context(headers, state)
+        .map(Principal::User)
+        .map_err(AppError::from)
 }
 
 fn extract_legacy_auth_context(
@@ -308,6 +345,17 @@ impl FromRequestParts<crate::AppState> for CurrentUid {
     }
 }
 
+impl FromRequestParts<crate::AppState> for Principal {
+    type Rejection = AppError;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &crate::AppState,
+    ) -> Result<Self, Self::Rejection> {
+        extract_principal(&parts.headers, state)
+    }
+}
+
 impl FromRequestParts<crate::AppState> for ClientId {
     type Rejection = (StatusCode, &'static str);
 
@@ -318,6 +366,12 @@ impl FromRequestParts<crate::AppState> for ClientId {
         resolve_client_id(&parts.headers, state)?
             .ok_or((StatusCode::BAD_REQUEST, "Missing X-Client-Id header"))
             .map(ClientId)
+    }
+}
+
+impl From<AuthenticatedServiceToken> for ServiceTokenPrincipal {
+    fn from(value: AuthenticatedServiceToken) -> Self {
+        Self { id: value.id }
     }
 }
 

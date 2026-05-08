@@ -270,6 +270,21 @@ diesel::table! {
 }
 
 diesel::table! {
+    service_tokens (id) {
+        id -> Int8,
+        token -> Text,
+        secret_hash -> Text,
+        name -> Text,
+        created_by_uid -> Int4,
+        revoked_at -> Nullable<Timestamptz>,
+        last_used_at -> Nullable<Timestamptz>,
+        metadata -> Jsonb,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     sticker_pack_stickers (pack_id, sticker_id) {
         pack_id -> Int8,
         sticker_id -> Int8,
@@ -391,6 +406,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     policy_assignments,
     policy_permissions,
     push_subscriptions,
+    service_tokens,
     sticker_pack_stickers,
     sticker_packs,
     stickers,

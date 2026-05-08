@@ -83,6 +83,7 @@ pub(crate) struct AppState {
     pub discuz_avatar_public_url: Option<String>,
     pub discuz_avatar_path: Option<String>,
     pub jwt_signing_key: Vec<u8>,
+    pub service_token_hash_key: Vec<u8>,
 }
 
 #[tokio::main]
@@ -165,6 +166,25 @@ async fn main() {
         "JWT_SIGNING_KEY_BASE64 must decode to at least 32 bytes"
     );
 
+    let service_token_hash_key = match std::env::var("SERVICE_TOKEN_HASH_KEY_BASE64").ok() {
+        Some(raw) => {
+            let key = base64::engine::general_purpose::STANDARD
+                .decode(raw)
+                .expect("SERVICE_TOKEN_HASH_KEY_BASE64 must be valid base64");
+            assert!(
+                key.len() >= 32,
+                "SERVICE_TOKEN_HASH_KEY_BASE64 must decode to at least 32 bytes"
+            );
+            key
+        }
+        None => {
+            tracing::warn!(
+                "SERVICE_TOKEN_HASH_KEY_BASE64 not set; falling back to JWT signing key"
+            );
+            jwt_signing_key.clone()
+        }
+    };
+
     let state = AppState {
         db: pool.clone(),
         id_gen: Arc::new(utils::ids::new_generator()),
@@ -195,6 +215,7 @@ async fn main() {
         discuz_avatar_public_url,
         discuz_avatar_path,
         jwt_signing_key,
+        service_token_hash_key,
     };
 
     services::audio_transcode::start(state.clone());

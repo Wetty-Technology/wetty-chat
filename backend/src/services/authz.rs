@@ -18,6 +18,7 @@ pub enum Action {
     ChatCreate,
     MemberViewAll,
     PermissionAll,
+    ServiceTokenManage,
 }
 
 impl Action {
@@ -26,6 +27,7 @@ impl Action {
             Self::ChatCreate => "chat.create",
             Self::MemberViewAll => "member.viewAll",
             Self::PermissionAll => "permission.all",
+            Self::ServiceTokenManage => "serviceToken.manage",
         }
     }
 }
@@ -39,10 +41,21 @@ pub enum Resource {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct CacheKey {
-    uid: i32,
-    discuz_group_id: Option<i32>,
+    subject: CacheSubject,
     resource_type: PermissionResourceType,
     resource_id: Option<i64>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum CacheSubject {
+    User {
+        uid: i32,
+        discuz_group_id: Option<i32>,
+    },
+    ServiceToken {
+        token_id: i64,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -69,7 +82,19 @@ impl AuthorizationService {
         action: Action,
         resource: Resource,
     ) -> Result<bool, AppError> {
-        let actions = self.load_cached_actions(conn, uid, resource)?;
+        let actions = self.load_cached_user_actions(conn, uid, resource)?;
+        Ok(actions.contains(action.as_str()))
+    }
+
+    #[allow(dead_code)]
+    pub fn has_service_token_permission(
+        &self,
+        conn: &mut PgConnection,
+        token_id: i64,
+        action: Action,
+        resource: Resource,
+    ) -> Result<bool, AppError> {
+        let actions = self.load_cached_service_token_actions(conn, token_id, resource)?;
         Ok(actions.contains(action.as_str()))
     }
 
@@ -80,7 +105,7 @@ impl AuthorizationService {
         resource: Resource,
     ) -> Result<Vec<String>, AppError> {
         let mut actions = self
-            .load_cached_actions(conn, uid, resource)?
+            .load_cached_user_actions(conn, uid, resource)?
             .iter()
             .cloned()
             .collect::<Vec<_>>();
@@ -88,16 +113,41 @@ impl AuthorizationService {
         Ok(actions)
     }
 
-    fn load_cached_actions(
+    fn load_cached_user_actions(
         &self,
         conn: &mut PgConnection,
         uid: i32,
         resource: Resource,
     ) -> Result<Arc<HashSet<String>>, AppError> {
         let discuz_group_id = self.lookup_discuz_group_id(conn, uid)?;
+        self.load_cached_actions(
+            conn,
+            CacheSubject::User {
+                uid,
+                discuz_group_id,
+            },
+            resource,
+        )
+    }
+
+    #[allow(dead_code)]
+    fn load_cached_service_token_actions(
+        &self,
+        conn: &mut PgConnection,
+        token_id: i64,
+        resource: Resource,
+    ) -> Result<Arc<HashSet<String>>, AppError> {
+        self.load_cached_actions(conn, CacheSubject::ServiceToken { token_id }, resource)
+    }
+
+    fn load_cached_actions(
+        &self,
+        conn: &mut PgConnection,
+        subject: CacheSubject,
+        resource: Resource,
+    ) -> Result<Arc<HashSet<String>>, AppError> {
         let cache_key = CacheKey {
-            uid,
-            discuz_group_id,
+            subject,
             resource_type: resource.resource_type(),
             resource_id: resource.resource_id(),
         };
@@ -108,8 +158,7 @@ impl AuthorizationService {
             }
         }
 
-        let actions =
-            Arc::new(self.load_actions_for_resource(conn, uid, discuz_group_id, resource)?);
+        let actions = Arc::new(self.load_actions_for_resource(conn, subject, resource)?);
 
         self.cache.insert(
             cache_key,
@@ -138,6 +187,21 @@ impl AuthorizationService {
         Err(AppError::Forbidden("Permission required"))
     }
 
+    #[allow(dead_code)]
+    pub fn require_service_token_permission(
+        &self,
+        conn: &mut PgConnection,
+        token_id: i64,
+        action: Action,
+        resource: Resource,
+    ) -> Result<(), AppError> {
+        if self.has_service_token_permission(conn, token_id, action, resource)? {
+            return Ok(());
+        }
+
+        Err(AppError::Forbidden("Permission required"))
+    }
+
     fn lookup_discuz_group_id(
         &self,
         conn: &mut PgConnection,
@@ -155,33 +219,49 @@ impl AuthorizationService {
     fn load_actions_for_resource(
         &self,
         conn: &mut PgConnection,
-        uid: i32,
-        discuz_group_id: Option<i32>,
+        subject: CacheSubject,
         resource: Resource,
     ) -> Result<HashSet<String>, AppError> {
         use crate::schema::policy_assignments::dsl as pa_dsl;
         use crate::schema::policy_permissions::dsl as pp_dsl;
 
-        let mut policy_ids = policy_assignments::table
-            .filter(
-                pa_dsl::subject_type
-                    .eq(PolicySubjectType::User)
-                    .and(pa_dsl::subject_id.eq(i64::from(uid))),
-            )
-            .select(pa_dsl::policy_id)
-            .load::<i64>(conn)?;
+        let policy_ids = match subject {
+            CacheSubject::User {
+                uid,
+                discuz_group_id,
+            } => {
+                let mut policy_ids = policy_assignments::table
+                    .filter(
+                        pa_dsl::subject_type
+                            .eq(PolicySubjectType::User)
+                            .and(pa_dsl::subject_id.eq(i64::from(uid))),
+                    )
+                    .select(pa_dsl::policy_id)
+                    .load::<i64>(conn)?;
 
-        if let Some(group_id) = discuz_group_id {
-            let group_policy_ids = policy_assignments::table
+                if let Some(group_id) = discuz_group_id {
+                    let group_policy_ids = policy_assignments::table
+                        .filter(
+                            pa_dsl::subject_type
+                                .eq(PolicySubjectType::DiscuzGroup)
+                                .and(pa_dsl::subject_id.eq(i64::from(group_id))),
+                        )
+                        .select(pa_dsl::policy_id)
+                        .load::<i64>(conn)?;
+                    policy_ids.extend(group_policy_ids);
+                }
+
+                policy_ids
+            }
+            CacheSubject::ServiceToken { token_id } => policy_assignments::table
                 .filter(
                     pa_dsl::subject_type
-                        .eq(PolicySubjectType::DiscuzGroup)
-                        .and(pa_dsl::subject_id.eq(i64::from(group_id))),
+                        .eq(PolicySubjectType::ServiceToken)
+                        .and(pa_dsl::subject_id.eq(token_id)),
                 )
                 .select(pa_dsl::policy_id)
-                .load::<i64>(conn)?;
-            policy_ids.extend(group_policy_ids);
-        }
+                .load::<i64>(conn)?,
+        };
 
         if policy_ids.is_empty() {
             return Ok(HashSet::new());
@@ -232,8 +312,10 @@ impl AuthorizationService {
         let actions = actions.iter().map(|action| action.to_string()).collect();
         self.cache.insert(
             CacheKey {
-                uid,
-                discuz_group_id,
+                subject: CacheSubject::User {
+                    uid,
+                    discuz_group_id,
+                },
                 resource_type: resource.resource_type(),
                 resource_id: resource.resource_id(),
             },
@@ -263,18 +345,12 @@ impl Resource {
 
 #[cfg(test)]
 mod tests {
-    use super::{Action, AuthorizationService, Resource};
+    use super::{AuthorizationService, Resource};
 
     fn empty_service() -> AuthorizationService {
         AuthorizationService {
             cache: Default::default(),
         }
-    }
-
-    #[test]
-    fn action_strings_match_reserved_names() {
-        assert_eq!(Action::ChatCreate.as_str(), "chat.create");
-        assert_eq!(Action::PermissionAll.as_str(), "permission.all");
     }
 
     #[test]

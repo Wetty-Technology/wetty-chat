@@ -190,6 +190,7 @@ pub enum PushEnvironment {
 pub enum PolicySubjectType {
     User,
     DiscuzGroup,
+    ServiceToken,
 }
 
 #[derive(
@@ -298,6 +299,36 @@ pub struct NewPolicyAssignment {
     pub subject_type: PolicySubjectType,
     pub subject_id: i64,
     pub policy_id: i64,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Queryable, Selectable, Serialize, Insertable)]
+#[diesel(table_name = schema::service_tokens)]
+pub struct ServiceToken {
+    pub id: i64,
+    pub token: String,
+    pub secret_hash: String,
+    pub name: String,
+    pub created_by_uid: i32,
+    pub revoked_at: Option<DateTime<Utc>>,
+    pub last_used_at: Option<DateTime<Utc>>,
+    pub metadata: serde_json::Value,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Insertable)]
+#[diesel(table_name = schema::service_tokens)]
+pub struct NewServiceToken {
+    pub id: i64,
+    pub token: String,
+    pub secret_hash: String,
+    pub name: String,
+    pub created_by_uid: i32,
+    pub revoked_at: Option<DateTime<Utc>>,
+    pub last_used_at: Option<DateTime<Utc>>,
+    pub metadata: serde_json::Value,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

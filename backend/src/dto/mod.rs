@@ -6,6 +6,7 @@ pub mod members;
 pub mod messages;
 pub mod pins;
 pub mod push;
+pub mod service_tokens;
 pub mod stickers;
 pub mod threads;
 pub mod users;
