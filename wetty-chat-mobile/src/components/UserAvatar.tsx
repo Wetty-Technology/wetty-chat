@@ -1,9 +1,12 @@
+import { IonIcon } from '@ionic/react';
+import { personCircle } from 'ionicons/icons';
 import styles from './UserAvatar.module.scss';
 
 interface UserAvatarProps {
   name: string;
   avatarUrl?: string | null;
   size?: number;
+  fallback?: 'initials' | 'icon';
   className?: string;
   style?: React.CSSProperties;
   onClick?: () => void;
@@ -23,7 +26,15 @@ function colorForUser(name: string): string {
   return `hsl(${hue}, 55%, 50%)`;
 }
 
-export function UserAvatar({ name, avatarUrl, size = 36, className, style, onClick }: UserAvatarProps) {
+export function UserAvatar({
+  name,
+  avatarUrl,
+  size = 36,
+  fallback = 'initials',
+  className,
+  style,
+  onClick,
+}: UserAvatarProps) {
   const base: React.CSSProperties = {
     width: size,
     height: size,
@@ -35,6 +46,21 @@ export function UserAvatar({ name, avatarUrl, size = 36, className, style, onCli
     return (
       <div className={classes} style={base} onClick={onClick}>
         <img src={avatarUrl} alt="" className={styles.image} />
+      </div>
+    );
+  }
+
+  if (fallback === 'icon') {
+    return (
+      <div
+        className={`${classes} ${styles.iconFallback}`}
+        style={{
+          ...base,
+          fontSize: size,
+        }}
+        onClick={onClick}
+      >
+        <IonIcon icon={personCircle} aria-hidden="true" />
       </div>
     );
   }

@@ -1,8 +1,10 @@
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { matchPath, useHistory, useLocation } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { Trans } from '@lingui/react/macro';
 import { IonButton, IonButtons, IonHeader, IonIcon, IonModal, IonTitle, IonToolbar } from '@ionic/react';
-import { addCircleOutline, arrowBack, settings } from 'ionicons/icons';
+import { addCircleOutline, arrowBack } from 'ionicons/icons';
+import { UserAvatar } from '@/components/UserAvatar';
 import { ChatList } from '@/components/chat/lists/ChatList';
 import type { ChatListTab } from '@/components/chat/lists/ChatListSegment';
 import ChatThreadCore from '@/pages/chat-thread/chat-thread';
@@ -22,6 +24,7 @@ import type { ChatThreadRouteState } from '@/types/chatThreadNavigation';
 import styles from './DesktopSplitLayout.module.scss';
 import { HeaderActionMenu, type HeaderActionMenuItem } from '@/components/HeaderActionMenu';
 import { useHasGlobalPermission } from '@/hooks/useHasGlobalPermission';
+import type { RootState } from '@/store';
 
 type DesktopRouteState = ChatThreadRouteState;
 
@@ -177,6 +180,7 @@ export function DesktopSplitLayout() {
   const history = useHistory();
   const location = useLocation<DesktopRouteState | undefined>();
   const canCreateChat = useHasGlobalPermission('chat.create');
+  const currentUser = useSelector((state: RootState) => state.user);
   const skipNextGlobalSettingsDismiss = useRef(false);
   const headerActions: HeaderActionMenuItem[] = [
     ...(canCreateChat
@@ -328,7 +332,13 @@ export function DesktopSplitLayout() {
                 </IonButton>
               ) : (
                 <IonButton onClick={openSettingsModal} aria-label="Open settings">
-                  <IonIcon slot="icon-only" icon={settings} />
+                  <UserAvatar
+                    name={currentUser.username ?? 'User'}
+                    avatarUrl={currentUser.avatarUrl}
+                    size={26}
+                    fallback="icon"
+                    className={styles.settingsAvatar}
+                  />
                 </IonButton>
               )}
             </IonButtons>
