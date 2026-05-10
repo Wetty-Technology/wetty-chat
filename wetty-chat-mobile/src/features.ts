@@ -20,7 +20,7 @@ export const FEATURES = {
     description: 'Shows the chat attachments section in the group info page.',
   },
   landingInviteModal: {
-    enabled: false,
+    enabled: true,
     description: 'Shows invite preview and redeem modal on the install landing page.',
   },
   pendingInvitePwaModal: {
