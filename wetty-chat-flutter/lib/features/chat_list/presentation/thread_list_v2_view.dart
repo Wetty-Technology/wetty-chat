@@ -143,7 +143,7 @@ class _ArchivedThreadsFolderRow extends ConsumerWidget {
       isActive: false,
       onTap: () {
         context.push(
-          AppRoutes.archivedThreads,
+          AppRoutes.archivedChats,
           extra: {
             'disableTransition': ChatWorkspaceLayoutScope.isSplitLayout(
               context,
