@@ -27,7 +27,7 @@ void main() {
 
       container
           .read(groupListV2StoreProvider.notifier)
-          .replacePage(
+          .replaceActivePage(
             groups: const [ChatListItem(id: '42', name: 'Stale Name')],
           );
 
@@ -47,7 +47,7 @@ void main() {
       expect(updated.name, 'Updated Name');
       expect(container.read(provider).value?.name, 'Updated Name');
       expect(
-        container.read(groupListV2StoreProvider).groups.first.name,
+        container.read(groupListV2StoreProvider).active.groups.first.name,
         'Updated Name',
       );
     },

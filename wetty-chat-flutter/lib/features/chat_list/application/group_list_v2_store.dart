@@ -1,3 +1,5 @@
+import 'dart:developer' show log;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/models/messages_api_models.dart';
@@ -6,38 +8,135 @@ import '../../../core/notifications/unread_badge_provider.dart';
 import '../../../core/session/dev_session_store.dart';
 import '../model/chat_list_item.dart';
 import '../../shared/data/read_state_models.dart';
+import 'chat_list_v2_scope.dart';
 import 'realtime_projection_policy.dart';
 
-typedef GroupListV2StoreState = ({
+typedef GroupListV2ListState = ({
   List<ChatListItem> groups,
   String? nextCursor,
   bool hasMore,
+  bool isLoaded,
 });
+
+typedef GroupListV2StoreState = ({
+  GroupListV2ListState active,
+  GroupListV2ListState archived,
+  bool hasArchivedGroups,
+});
+
+typedef _GroupLocation = ({ChatListV2Scope scope, int index});
 
 class GroupListV2Store extends Notifier<GroupListV2StoreState> {
   @override
   GroupListV2StoreState build() {
-    return (groups: const [], nextCursor: null, hasMore: false);
-  }
-
-  void replacePage({required List<ChatListItem> groups, String? nextCursor}) {
-    state = (
-      groups: groups,
-      nextCursor: nextCursor,
-      hasMore: nextCursor != null && nextCursor.isNotEmpty,
+    return (
+      active: _emptyListState(),
+      archived: _emptyListState(),
+      hasArchivedGroups: false,
     );
   }
 
-  void appendPage({required List<ChatListItem> groups, String? nextCursor}) {
-    final existingIds = state.groups.map((group) => group.id).toSet();
-    final appended = groups
-        .where((group) => !existingIds.contains(group.id))
-        .toList(growable: false);
+  void replaceActivePage({
+    required List<ChatListItem> groups,
+    String? nextCursor,
+  }) {
+    _replaceState(
+      active: _listStateWithPage(
+        groups.map((group) => group.copyWith(archived: false)).toList(),
+        nextCursor,
+      ),
+    );
+  }
 
-    state = (
-      groups: [...state.groups, ...appended],
-      nextCursor: nextCursor,
-      hasMore: nextCursor != null && nextCursor.isNotEmpty,
+  void replaceArchivedPage({
+    required List<ChatListItem> groups,
+    String? nextCursor,
+  }) {
+    _replaceState(
+      archived: _listStateWithPage(
+        groups.map((group) => group.copyWith(archived: true)).toList(),
+        nextCursor,
+      ),
+      hasArchivedGroups: groups.isNotEmpty,
+    );
+  }
+
+  void replaceHasArchivedGroups(bool hasArchivedGroups) {
+    _replaceState(hasArchivedGroups: hasArchivedGroups);
+  }
+
+  void appendActivePage({
+    required List<ChatListItem> groups,
+    String? nextCursor,
+  }) {
+    _replaceState(
+      active: _listStateWithAppendedPage(
+        state.active,
+        groups.map((group) => group.copyWith(archived: false)).toList(),
+        nextCursor,
+      ),
+    );
+  }
+
+  void appendArchivedPage({
+    required List<ChatListItem> groups,
+    String? nextCursor,
+  }) {
+    _replaceState(
+      archived: _listStateWithAppendedPage(
+        state.archived,
+        groups.map((group) => group.copyWith(archived: true)).toList(),
+        nextCursor,
+      ),
+      hasArchivedGroups: state.hasArchivedGroups || groups.isNotEmpty,
+    );
+  }
+
+  void archiveGroup(ChatListItem group) {
+    final updated = group.copyWith(archived: true);
+    final activeIndex = state.active.groups.indexWhere(
+      (candidate) => candidate.id == group.id,
+    );
+    final previousActive = activeIndex < 0
+        ? null
+        : state.active.groups[activeIndex];
+    final nextActive = _listStateWithoutGroup(state.active, group.id);
+    final nextArchived = state.archived.isLoaded
+        ? _listStateWithUpsertedGroup(state.archived, updated)
+        : state.archived;
+
+    _replaceState(
+      active: nextActive,
+      archived: nextArchived,
+      hasArchivedGroups: true,
+    );
+    if (previousActive != null) {
+      _applyUnreadBadgeDelta(
+        previous: previousActive,
+        updated: previousActive.copyWith(unreadCount: 0),
+        scope: ChatListV2Scope.active,
+      );
+    }
+  }
+
+  void unarchiveGroup(ChatListItem group) {
+    final updated = group.copyWith(archived: false);
+    final nextArchived = _listStateWithoutGroup(state.archived, group.id);
+    final nextActive = state.active.isLoaded
+        ? _listStateWithUpsertedGroup(state.active, updated)
+        : state.active;
+
+    _replaceState(
+      active: nextActive,
+      archived: nextArchived,
+      hasArchivedGroups: nextArchived.isLoaded
+          ? nextArchived.groups.isNotEmpty
+          : state.hasArchivedGroups,
+    );
+    _applyUnreadBadgeDelta(
+      previous: updated.copyWith(unreadCount: 0),
+      updated: updated,
+      scope: ChatListV2Scope.active,
     );
   }
 
@@ -46,17 +145,9 @@ class GroupListV2Store extends Notifier<GroupListV2StoreState> {
     required String name,
     DateTime? mutedUntil,
   }) {
-    final index = state.groups.indexWhere((group) => group.id == chatId);
-    if (index < 0) {
-      return;
-    }
-
-    final groups = [...state.groups];
-    groups[index] = groups[index].copyWith(name: name, mutedUntil: mutedUntil);
-    state = (
-      groups: groups,
-      nextCursor: state.nextCursor,
-      hasMore: state.hasMore,
+    _replaceGroupWhereFound(
+      chatId,
+      (group) => group.copyWith(name: name, mutedUntil: mutedUntil),
     );
   }
 
@@ -64,25 +155,33 @@ class GroupListV2Store extends Notifier<GroupListV2StoreState> {
     required String chatId,
     required DateTime? mutedUntil,
   }) {
-    final index = state.groups.indexWhere((group) => group.id == chatId);
-    if (index < 0) {
-      return;
-    }
-
-    final groups = [...state.groups];
-    groups[index] = groups[index].copyWith(mutedUntil: mutedUntil);
-    state = (
-      groups: groups,
-      nextCursor: state.nextCursor,
-      hasMore: state.hasMore,
+    _replaceGroupWhereFound(
+      chatId,
+      (group) => group.copyWith(mutedUntil: mutedUntil),
     );
   }
 
   void removeGroup(String chatId) {
-    state = (
-      groups: state.groups.where((group) => group.id != chatId).toList(),
-      nextCursor: state.nextCursor,
-      hasMore: state.hasMore,
+    final wasInActive = _containsGroup(state.active, chatId);
+    final wasInArchived = _containsGroup(state.archived, chatId);
+    if (wasInActive && wasInArchived) {
+      log(
+        'group existed in both active and archived lists before removal',
+        name: 'wetty.chatList.groupStore',
+        error: {'chatId': chatId},
+      );
+    }
+
+    // Leaving a group invalidates membership globally. A group should only
+    // exist in one bucket, but remove from both to repair stale projections.
+    final nextActive = _listStateWithoutGroup(state.active, chatId);
+    final nextArchived = _listStateWithoutGroup(state.archived, chatId);
+    _replaceState(
+      active: nextActive,
+      archived: nextArchived,
+      hasArchivedGroups: nextArchived.isLoaded
+          ? nextArchived.groups.isNotEmpty
+          : state.hasArchivedGroups,
     );
   }
 
@@ -91,24 +190,26 @@ class GroupListV2Store extends Notifier<GroupListV2StoreState> {
     int? messageId,
     required ChatReadStateUpdate response,
   }) {
-    final index = state.groups.indexWhere((group) => group.id == chatId);
-    if (index < 0) {
+    final location = _locationOfGroup(chatId);
+    if (location == null) {
       return;
     }
 
-    final previous = state.groups[index];
-    final groups = [...state.groups];
+    final listState = _listStateForScope(location.scope);
+    final previous = listState.groups[location.index];
     final updated = previous.copyWith(
       unreadCount: response.unreadCount,
       lastReadMessageId: response.lastReadMessageId ?? messageId?.toString(),
     );
-    groups[index] = updated;
-    state = (
-      groups: groups,
-      nextCursor: state.nextCursor,
-      hasMore: state.hasMore,
+    _replaceListGroups(
+      scope: location.scope,
+      groups: _replaceChatAt(listState.groups, location.index, updated),
     );
-    _applyUnreadBadgeDelta(previous: previous, updated: updated);
+    _applyUnreadBadgeDelta(
+      previous: previous,
+      updated: updated,
+      scope: location.scope,
+    );
   }
 
   bool applyRealtimeEvent(ApiWsEvent event) {
@@ -130,23 +231,27 @@ class GroupListV2Store extends Notifier<GroupListV2StoreState> {
     }
 
     final chatId = payload.chatId.toString();
-    final index = state.groups.indexWhere((group) => group.id == chatId);
-    if (index < 0) {
+    final location = _locationOfGroup(chatId);
+    if (location == null) {
       return true;
     }
 
-    final previous = state.groups[index];
+    final listState = _listStateForScope(location.scope);
+    final previous = listState.groups[location.index];
     final isCurrentUserMessage =
         payload.sender.uid == ref.read(authSessionProvider).currentUserId;
     if (matchesChatPreview(previous.lastMessage, payload)) {
       if (isCurrentUserMessage && previous.unreadCount > 0) {
         final updated = previous.copyWith(unreadCount: 0);
-        state = (
-          groups: _replaceChatAt(state.groups, index, updated),
-          nextCursor: state.nextCursor,
-          hasMore: state.hasMore,
+        _replaceListGroups(
+          scope: location.scope,
+          groups: _replaceChatAt(listState.groups, location.index, updated),
         );
-        _applyUnreadBadgeDelta(previous: previous, updated: updated);
+        _applyUnreadBadgeDelta(
+          previous: previous,
+          updated: updated,
+          scope: location.scope,
+        );
       }
       return false;
     }
@@ -158,12 +263,15 @@ class GroupListV2Store extends Notifier<GroupListV2StoreState> {
       unreadCount: isCurrentUserMessage ? 0 : previous.unreadCount + 1,
     );
 
-    state = (
-      groups: _moveChatToFront(state.groups, index, updated),
-      nextCursor: state.nextCursor,
-      hasMore: state.hasMore,
+    _replaceListGroups(
+      scope: location.scope,
+      groups: _moveChatToFront(listState.groups, location.index, updated),
     );
-    _applyUnreadBadgeDelta(previous: previous, updated: updated);
+    _applyUnreadBadgeDelta(
+      previous: previous,
+      updated: updated,
+      scope: location.scope,
+    );
     return false;
   }
 
@@ -173,12 +281,13 @@ class GroupListV2Store extends Notifier<GroupListV2StoreState> {
     }
 
     final chatId = payload.chatId.toString();
-    final index = state.groups.indexWhere((group) => group.id == chatId);
-    if (index < 0) {
+    final location = _locationOfGroup(chatId);
+    if (location == null) {
       return false;
     }
 
-    final previous = state.groups[index];
+    final listState = _listStateForScope(location.scope);
+    final previous = listState.groups[location.index];
     if (!matchesChatPreview(previous.lastMessage, payload)) {
       return false;
     }
@@ -187,19 +296,96 @@ class GroupListV2Store extends Notifier<GroupListV2StoreState> {
       return true;
     }
 
-    state = (
+    _replaceListGroups(
+      scope: location.scope,
       groups: _replaceChatAt(
-        state.groups,
-        index,
+        listState.groups,
+        location.index,
         previous.copyWith(
           lastMessage: messagePreviewFromMessageItemDto(payload),
           lastMessageAt: payload.createdAt,
         ),
       ),
-      nextCursor: state.nextCursor,
-      hasMore: state.hasMore,
     );
     return false;
+  }
+
+  _GroupLocation? _locationOfGroup(String chatId) {
+    final activeIndex = state.active.groups.indexWhere(
+      (group) => group.id == chatId,
+    );
+    if (activeIndex >= 0) {
+      return (scope: ChatListV2Scope.active, index: activeIndex);
+    }
+
+    final archivedIndex = state.archived.groups.indexWhere(
+      (group) => group.id == chatId,
+    );
+    if (archivedIndex >= 0) {
+      return (scope: ChatListV2Scope.archived, index: archivedIndex);
+    }
+
+    return null;
+  }
+
+  void _replaceGroupWhereFound(
+    String chatId,
+    ChatListItem Function(ChatListItem group) update,
+  ) {
+    final activeIndex = state.active.groups.indexWhere(
+      (group) => group.id == chatId,
+    );
+    final archivedIndex = state.archived.groups.indexWhere(
+      (group) => group.id == chatId,
+    );
+
+    _replaceState(
+      active: activeIndex < 0
+          ? null
+          : _listStateWithReplacedGroup(
+              state.active,
+              activeIndex,
+              update(state.active.groups[activeIndex]),
+            ),
+      archived: archivedIndex < 0
+          ? null
+          : _listStateWithReplacedGroup(
+              state.archived,
+              archivedIndex,
+              update(state.archived.groups[archivedIndex]),
+            ),
+    );
+  }
+
+  void _replaceListGroups({
+    required ChatListV2Scope scope,
+    required List<ChatListItem> groups,
+  }) {
+    final listState = _listStateForScope(scope);
+    final updatedList = (
+      groups: groups,
+      nextCursor: listState.nextCursor,
+      hasMore: listState.hasMore,
+      isLoaded: listState.isLoaded,
+    );
+    switch (scope) {
+      case ChatListV2Scope.active:
+        _replaceState(active: updatedList);
+      case ChatListV2Scope.archived:
+        _replaceState(
+          archived: updatedList,
+          hasArchivedGroups: updatedList.isLoaded
+              ? updatedList.groups.isNotEmpty
+              : state.hasArchivedGroups,
+        );
+    }
+  }
+
+  GroupListV2ListState _listStateForScope(ChatListV2Scope scope) {
+    return switch (scope) {
+      ChatListV2Scope.active => state.active,
+      ChatListV2Scope.archived => state.archived,
+    };
   }
 
   List<ChatListItem> _replaceChatAt(
@@ -225,7 +411,12 @@ class GroupListV2Store extends Notifier<GroupListV2StoreState> {
   void _applyUnreadBadgeDelta({
     required ChatListItem previous,
     required ChatListItem updated,
+    required ChatListV2Scope scope,
   }) {
+    if (scope == ChatListV2Scope.archived) {
+      return;
+    }
+
     final previousContribution = chatBadgeContribution(
       unreadCount: previous.unreadCount,
       mutedUntil: previous.mutedUntil,
@@ -238,6 +429,127 @@ class GroupListV2Store extends Notifier<GroupListV2StoreState> {
         .read(unreadBadgeProvider.notifier)
         .applyChatUnreadDelta(nextContribution - previousContribution);
   }
+
+  void _replaceState({
+    GroupListV2ListState? active,
+    GroupListV2ListState? archived,
+    bool? hasArchivedGroups,
+  }) {
+    state = (
+      active: active ?? state.active,
+      archived: archived ?? state.archived,
+      hasArchivedGroups: hasArchivedGroups ?? state.hasArchivedGroups,
+    );
+  }
+}
+
+GroupListV2ListState _emptyListState() {
+  return (
+    groups: const <ChatListItem>[],
+    nextCursor: null,
+    hasMore: false,
+    isLoaded: false,
+  );
+}
+
+GroupListV2ListState _listStateWithPage(
+  List<ChatListItem> groups,
+  String? nextCursor,
+) {
+  return (
+    groups: groups,
+    nextCursor: nextCursor,
+    hasMore: nextCursor != null && nextCursor.isNotEmpty,
+    isLoaded: true,
+  );
+}
+
+GroupListV2ListState _listStateWithAppendedPage(
+  GroupListV2ListState listState,
+  List<ChatListItem> groups,
+  String? nextCursor,
+) {
+  final existingIds = listState.groups.map((group) => group.id).toSet();
+  final appended = groups
+      .where((group) => !existingIds.contains(group.id))
+      .toList(growable: false);
+
+  return (
+    groups: [...listState.groups, ...appended],
+    nextCursor: nextCursor,
+    hasMore: nextCursor != null && nextCursor.isNotEmpty,
+    isLoaded: true,
+  );
+}
+
+GroupListV2ListState _listStateWithoutGroup(
+  GroupListV2ListState listState,
+  String chatId,
+) {
+  return (
+    groups: listState.groups
+        .where((group) => group.id != chatId)
+        .toList(growable: false),
+    nextCursor: listState.nextCursor,
+    hasMore: listState.hasMore,
+    isLoaded: listState.isLoaded,
+  );
+}
+
+GroupListV2ListState _listStateWithReplacedGroup(
+  GroupListV2ListState listState,
+  int index,
+  ChatListItem updated,
+) {
+  final groups = [...listState.groups];
+  groups[index] = updated;
+  return (
+    groups: groups,
+    nextCursor: listState.nextCursor,
+    hasMore: listState.hasMore,
+    isLoaded: listState.isLoaded,
+  );
+}
+
+GroupListV2ListState _listStateWithUpsertedGroup(
+  GroupListV2ListState listState,
+  ChatListItem group,
+) {
+  final existingIndex = listState.groups.indexWhere(
+    (candidate) => candidate.id == group.id,
+  );
+  if (existingIndex >= 0) {
+    return _listStateWithReplacedGroup(listState, existingIndex, group);
+  }
+
+  final insertAt = listState.groups.indexWhere((candidate) {
+    final groupActivity = group.lastMessageAt;
+    final candidateActivity = candidate.lastMessageAt;
+    if (groupActivity == null) {
+      return false;
+    }
+    if (candidateActivity == null) {
+      return true;
+    }
+    return groupActivity.isAfter(candidateActivity);
+  });
+  final groups = [...listState.groups];
+  if (insertAt < 0) {
+    groups.add(group);
+  } else {
+    groups.insert(insertAt, group);
+  }
+
+  return (
+    groups: groups,
+    nextCursor: listState.nextCursor,
+    hasMore: listState.hasMore,
+    isLoaded: listState.isLoaded,
+  );
+}
+
+bool _containsGroup(GroupListV2ListState listState, String chatId) {
+  return listState.groups.any((group) => group.id == chatId);
 }
 
 final groupListV2StoreProvider =
@@ -247,8 +559,12 @@ final groupListV2StoreProvider =
 
 final groupByIdProvider = Provider.family<ChatListItem?, String>((ref, chatId) {
   return ref.watch(
-    groupListV2StoreProvider.select(
-      (state) => state.groups.where((group) => group.id == chatId).firstOrNull,
-    ),
+    groupListV2StoreProvider.select((state) {
+      ChatListItem? findIn(List<ChatListItem> groups) {
+        return groups.where((group) => group.id == chatId).firstOrNull;
+      }
+
+      return findIn(state.active.groups) ?? findIn(state.archived.groups);
+    }),
   );
 });

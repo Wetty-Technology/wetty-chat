@@ -28,7 +28,7 @@ void main() {
         addTearDown(container.dispose);
         container
             .read(groupListV2StoreProvider.notifier)
-            .replacePage(groups: [_chat(unreadCount: 3)]);
+            .replaceActivePage(groups: [_chat(unreadCount: 3)]);
 
         final shouldRefresh = container
             .read(groupListV2StoreProvider.notifier)
@@ -38,7 +38,11 @@ void main() {
               ),
             );
 
-        final group = container.read(groupListV2StoreProvider).groups.single;
+        final group = container
+            .read(groupListV2StoreProvider)
+            .active
+            .groups
+            .single;
         expect(shouldRefresh, isFalse);
         expect(group.lastMessage?.messageId, 102);
         expect(group.lastMessage?.message, 'mine');
@@ -52,7 +56,7 @@ void main() {
       addTearDown(container.dispose);
       container
           .read(groupListV2StoreProvider.notifier)
-          .replacePage(groups: [_chat(unreadCount: 2)]);
+          .replaceActivePage(groups: [_chat(unreadCount: 2)]);
 
       final shouldRefresh = container
           .read(groupListV2StoreProvider.notifier)
@@ -62,7 +66,11 @@ void main() {
             ),
           );
 
-      final group = container.read(groupListV2StoreProvider).groups.single;
+      final group = container
+          .read(groupListV2StoreProvider)
+          .active
+          .groups
+          .single;
       expect(shouldRefresh, isFalse);
       expect(group.lastMessage?.messageId, 103);
       expect(group.unreadCount, 3);

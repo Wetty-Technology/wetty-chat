@@ -25,7 +25,7 @@ class GroupListV2ViewModel extends AsyncNotifier<GroupListV2ViewState> {
 
   Future<GroupListV2ViewState> _loadInitial() async {
     await ref.read(groupListV2RepositoryProvider).loadGroups();
-    final storeState = ref.read(groupListV2StoreProvider);
+    final storeState = ref.read(groupListV2StoreProvider).active;
     return (
       groups: storeState.groups,
       hasMore: storeState.hasMore,
@@ -41,7 +41,7 @@ class GroupListV2ViewModel extends AsyncNotifier<GroupListV2ViewState> {
     if (current == null) {
       return;
     }
-    final storeState = ref.read(groupListV2StoreProvider);
+    final storeState = ref.read(groupListV2StoreProvider).active;
     state = AsyncData((
       groups: storeState.groups,
       hasMore: storeState.hasMore,
@@ -74,7 +74,7 @@ class GroupListV2ViewModel extends AsyncNotifier<GroupListV2ViewState> {
     } catch (_) {
       // Silently fail pagination.
     } finally {
-      final storeState = ref.read(groupListV2StoreProvider);
+      final storeState = ref.read(groupListV2StoreProvider).active;
       final latest = state.value;
       if (latest != null) {
         state = AsyncData((
@@ -109,7 +109,7 @@ class GroupListV2ViewModel extends AsyncNotifier<GroupListV2ViewState> {
     try {
       await ref.read(groupListV2RepositoryProvider).loadGroups();
       ref.read(readStateRepositoryProvider).resetChatBaselines();
-      final storeState = ref.read(groupListV2StoreProvider);
+      final storeState = ref.read(groupListV2StoreProvider).active;
       state = AsyncData((
         groups: storeState.groups,
         hasMore: storeState.hasMore,
@@ -136,6 +136,7 @@ class GroupListV2ViewModel extends AsyncNotifier<GroupListV2ViewState> {
   Future<void> toggleGroupReadState({required String chatId}) async {
     final group = ref
         .read(groupListV2StoreProvider)
+        .active
         .groups
         .where((group) => group.id == chatId)
         .firstOrNull;

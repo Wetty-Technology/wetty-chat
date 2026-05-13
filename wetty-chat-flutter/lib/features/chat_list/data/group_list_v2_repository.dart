@@ -19,11 +19,11 @@ class GroupListV2Repository {
         .toList(growable: false);
     ref
         .read(groupListV2StoreProvider.notifier)
-        .replacePage(groups: groups, nextCursor: response.nextCursor);
+        .replaceActivePage(groups: groups, nextCursor: response.nextCursor);
   }
 
   Future<void> loadMoreGroups({int limit = 20}) async {
-    final current = ref.read(groupListV2StoreProvider);
+    final current = ref.read(groupListV2StoreProvider).active;
     if (!current.hasMore || current.groups.isEmpty) {
       return;
     }
@@ -36,7 +36,7 @@ class GroupListV2Repository {
         .toList(growable: false);
     ref
         .read(groupListV2StoreProvider.notifier)
-        .appendPage(groups: groups, nextCursor: response.nextCursor);
+        .appendActivePage(groups: groups, nextCursor: response.nextCursor);
   }
 }
 

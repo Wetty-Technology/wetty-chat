@@ -6,7 +6,7 @@ import 'thread_list_v2_store.dart';
 
 final allListV2ItemsProvider = Provider<List<AllListV2Item>>((ref) {
   final groups = ref.watch(
-    groupListV2StoreProvider.select((state) => state.groups),
+    groupListV2StoreProvider.select((state) => state.active.groups),
   );
   final threads = ref.watch(
     threadListV2StoreProvider.select((state) => state.active.threads),

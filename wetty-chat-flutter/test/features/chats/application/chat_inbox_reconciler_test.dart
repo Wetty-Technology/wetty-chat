@@ -127,7 +127,10 @@ void main() {
 
         await container.read(chatInboxReconcilerProvider).reconcileGroups();
 
-        expect(container.read(groupListV2StoreProvider).groups, hasLength(1));
+        expect(
+          container.read(groupListV2StoreProvider).active.groups,
+          hasLength(1),
+        );
         expect(
           container.read(threadListV2StoreProvider).active.threads,
           isEmpty,
@@ -176,7 +179,7 @@ void main() {
 
       await container.read(chatInboxReconcilerProvider).reconcileThreads();
 
-      expect(container.read(groupListV2StoreProvider).groups, isEmpty);
+      expect(container.read(groupListV2StoreProvider).active.groups, isEmpty);
       expect(
         container.read(threadListV2StoreProvider).active.threads,
         hasLength(1),
