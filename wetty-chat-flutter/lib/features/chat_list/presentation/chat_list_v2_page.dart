@@ -19,6 +19,18 @@ import '../application/thread_list_v2_view_model.dart';
 import 'widgets/chat_list_v2_tab_body.dart';
 import 'widgets/websocket_connection_banner.dart';
 
+final _chatListV2SelectedTabProvider =
+    NotifierProvider<_ChatListV2SelectedTab, ChatListTab>(
+      _ChatListV2SelectedTab.new,
+    );
+
+class _ChatListV2SelectedTab extends Notifier<ChatListTab> {
+  @override
+  ChatListTab build() => ChatListTab.all;
+
+  void select(ChatListTab tab) => state = tab;
+}
+
 class ChatListV2Page extends ConsumerStatefulWidget {
   const ChatListV2Page({
     super.key,
@@ -41,7 +53,6 @@ class ChatListV2Page extends ConsumerStatefulWidget {
 
 class _ChatListV2PageState extends ConsumerState<ChatListV2Page> {
   late final ScrollController _scrollController;
-  ChatListTab? _activeTab;
   bool _isScrolledUnder = false;
 
   bool get _supportsPullToRefresh {
@@ -71,15 +82,11 @@ class _ChatListV2PageState extends ConsumerState<ChatListV2Page> {
     super.dispose();
   }
 
-  ChatListTab _effectiveTab(bool showAllTab) {
-    final tab = _activeTab;
-    if (tab == null) {
-      return showAllTab ? ChatListTab.all : ChatListTab.groups;
-    }
-    if (!showAllTab && tab == ChatListTab.all) {
+  ChatListTab _effectiveTab(bool showAllTab, ChatListTab selectedTab) {
+    if (!showAllTab && selectedTab == ChatListTab.all) {
       return ChatListTab.groups;
     }
-    return tab;
+    return selectedTab;
   }
 
   void _onScroll() {
@@ -91,7 +98,10 @@ class _ChatListV2PageState extends ConsumerState<ChatListV2Page> {
     }
 
     final settings = ref.read(appSettingsProvider);
-    final activeTab = _effectiveTab(settings.showAllTab);
+    final activeTab = _effectiveTab(
+      settings.showAllTab,
+      ref.read(_chatListV2SelectedTabProvider),
+    );
     if (activeTab == ChatListTab.groups) {
       final viewState = ref.read(groupListV2ViewModelProvider).value;
       if (viewState == null || !viewState.hasMore || viewState.isLoadingMore) {
@@ -149,7 +159,8 @@ class _ChatListV2PageState extends ConsumerState<ChatListV2Page> {
     final l10n = AppLocalizations.of(context)!;
     final settings = ref.watch(appSettingsProvider);
     final showAllTab = settings.showAllTab;
-    final activeTab = _effectiveTab(showAllTab);
+    final selectedTab = ref.watch(_chatListV2SelectedTabProvider);
+    final activeTab = _effectiveTab(showAllTab, selectedTab);
 
     final unreadState = ref.watch(unreadBadgeProvider);
 
@@ -179,7 +190,8 @@ class _ChatListV2PageState extends ConsumerState<ChatListV2Page> {
             allUnreadCount: allUnread,
             groupsUnreadCount: groupsUnread,
             threadsUnreadCount: threadsUnread,
-            onTabChanged: (tab) => setState(() => _activeTab = tab),
+            onTabChanged: (tab) =>
+                ref.read(_chatListV2SelectedTabProvider.notifier).select(tab),
           ),
         ),
         if (_supportsPullToRefresh)
