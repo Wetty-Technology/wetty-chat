@@ -10,10 +10,15 @@ class ChatApiService {
 
   ChatApiService(this._dio);
 
-  Future<ListChatsResponseDto> fetchChats({int? limit, String? after}) async {
+  Future<ListChatsResponseDto> fetchChats({
+    int? limit,
+    String? after,
+    bool? archived,
+  }) async {
     final query = <String, String>{};
     if (limit != null) query['limit'] = limit.toString();
     if (after != null && after.isNotEmpty) query['after'] = after;
+    if (archived != null) query['archived'] = archived.toString();
     final response = await _dio.get<Map<String, dynamic>>(
       '/chats',
       queryParameters: query.isEmpty ? null : query,
@@ -40,6 +45,16 @@ class ChatApiService {
       data: {},
     );
     return MarkChatReadStateResponseDto.fromJson(response.data!);
+  }
+
+  /// PUT /chats/{chatId}/archive — returns 204.
+  Future<void> archiveChat(String chatId) async {
+    await _dio.put<void>('/chats/$chatId/archive');
+  }
+
+  /// DELETE /chats/{chatId}/archive — returns 204.
+  Future<void> unarchiveChat(String chatId) async {
+    await _dio.delete<void>('/chats/$chatId/archive');
   }
 }
 

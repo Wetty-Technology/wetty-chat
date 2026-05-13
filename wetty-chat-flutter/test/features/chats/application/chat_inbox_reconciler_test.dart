@@ -263,7 +263,11 @@ class _FakeChatApiService extends ChatApiService {
   int fetchUnreadCountCalls = 0;
 
   @override
-  Future<ListChatsResponseDto> fetchChats({int? limit, String? after}) async {
+  Future<ListChatsResponseDto> fetchChats({
+    int? limit,
+    String? after,
+    bool? archived,
+  }) async {
     final index = fetchChatsCalls < chatResponses.length
         ? fetchChatsCalls
         : chatResponses.length - 1;
