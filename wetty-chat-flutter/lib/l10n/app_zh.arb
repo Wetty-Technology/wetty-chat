@@ -61,6 +61,12 @@
   "settingsUser": "用户",
   "settingsProfile": "个人资料",
   "settingsNotifications": "通知",
+  "settingsLocalNotificationsHeader": "本地通知",
+  "settingsBackgroundUnreadChecks": "后台未读检查",
+  "settingsBackgroundUnreadChecksSubtitle": "不使用 FCM 或第三方推送服务器",
+  "settingsBackgroundUnreadChecksFooter": "Android 会大约每 15 分钟或更久在后台检查未读数。受电量和网络限制影响，通知可能延迟送达。",
+  "settingsNotificationPermission": "通知权限",
+  "settingsEnableNotifications": "开启通知",
   "settingsDeveloperSession": "开发者会话",
 
   "logOut": "退出登录",

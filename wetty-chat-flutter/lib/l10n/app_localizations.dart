@@ -435,6 +435,42 @@ abstract class AppLocalizations {
   /// **'Notifications'**
   String get settingsNotifications;
 
+  /// Header for Android local notification settings
+  ///
+  /// In en, this message translates to:
+  /// **'LOCAL NOTIFICATIONS'**
+  String get settingsLocalNotificationsHeader;
+
+  /// Toggle label for delayed Android unread polling
+  ///
+  /// In en, this message translates to:
+  /// **'Background unread checks'**
+  String get settingsBackgroundUnreadChecks;
+
+  /// Subtitle for Android unread polling toggle
+  ///
+  /// In en, this message translates to:
+  /// **'No FCM or third-party push server'**
+  String get settingsBackgroundUnreadChecksSubtitle;
+
+  /// Footer explaining delayed Android background polling behavior
+  ///
+  /// In en, this message translates to:
+  /// **'Android will check unread counts in the background about every 15 minutes or later. Delivery can be delayed by battery and network limits.'**
+  String get settingsBackgroundUnreadChecksFooter;
+
+  /// Label for notification permission status
+  ///
+  /// In en, this message translates to:
+  /// **'Notification Permission'**
+  String get settingsNotificationPermission;
+
+  /// Action to request notification permission
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Notifications'**
+  String get settingsEnableNotifications;
+
   /// Developer session settings entry label
   ///
   /// In en, this message translates to:

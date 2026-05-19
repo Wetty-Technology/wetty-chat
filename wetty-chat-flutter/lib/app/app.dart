@@ -8,6 +8,8 @@ import '../core/network/api_config.dart';
 import '../core/network/ws_app_visibility.dart';
 import '../core/network/ws_event_router.dart';
 import '../core/network/websocket_service.dart';
+import '../core/notifications/background_polling_notifications.dart';
+import '../core/notifications/local_notification_service.dart';
 import '../core/notifications/notification_tap_handler.dart';
 import '../core/notifications/push_platform_client.dart';
 import '../core/notifications/push_notification_provider.dart';
@@ -16,6 +18,7 @@ import '../core/session/dev_session_store.dart';
 import '../core/settings/app_settings_store.dart';
 import '../features/shared/application/app_refresh_coordinator.dart';
 import 'routing/app_router.dart';
+import 'routing/route_names.dart';
 import 'theme/style_config.dart';
 
 class WettyChatApp extends ConsumerStatefulWidget {
@@ -28,6 +31,7 @@ class WettyChatApp extends ConsumerStatefulWidget {
 class _WettyChatAppState extends ConsumerState<WettyChatApp>
     with WidgetsBindingObserver {
   NotificationTapHandler? _tapHandler;
+  StreamSubscription<String?>? _localNotificationTapSub;
   bool _pushInitialized = false;
 
   @override
@@ -40,6 +44,7 @@ class _WettyChatAppState extends ConsumerState<WettyChatApp>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _tapHandler?.dispose();
+    _localNotificationTapSub?.cancel();
     super.dispose();
   }
 
@@ -71,6 +76,25 @@ class _WettyChatAppState extends ConsumerState<WettyChatApp>
           .recover(AppRefreshReason.notificationHandled),
     );
     _tapHandler!.handleLaunchNotification();
+    _localNotificationTapSub = LocalNotificationService.onPayloadTapped.listen(
+      _handleLocalNotificationPayload,
+    );
+    unawaited(_handleLaunchLocalNotification());
+  }
+
+  Future<void> _handleLaunchLocalNotification() async {
+    final payload = await LocalNotificationService.getLaunchPayload();
+    _handleLocalNotificationPayload(payload);
+  }
+
+  void _handleLocalNotificationPayload(String? payload) {
+    if (!LocalNotificationService.isUnreadSummaryPayload(payload)) return;
+    ref.read(appRouterProvider).go(AppRoutes.chats);
+    unawaited(
+      ref
+          .read(appRefreshCoordinatorProvider)
+          .recover(AppRefreshReason.notificationHandled),
+    );
   }
 
   @override
@@ -96,9 +120,15 @@ class _WettyChatAppState extends ConsumerState<WettyChatApp>
       if (next.isAuthenticated && prev?.isAuthenticated != true) {
         // User just logged in — ensure push subscription is active.
         ref.read(pushNotificationProvider.notifier).ensureSubscribed();
+        ref
+            .read(backgroundPollingNotificationProvider.notifier)
+            .ensureScheduledForAuthenticatedSession();
       } else if (!next.isAuthenticated && prev?.isAuthenticated == true) {
         // User logged out — unsubscribe from push.
         ref.read(pushNotificationProvider.notifier).unsubscribe();
+        ref
+            .read(backgroundPollingNotificationProvider.notifier)
+            .cancelScheduledTask();
       }
     });
 

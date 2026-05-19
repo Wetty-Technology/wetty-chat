@@ -179,6 +179,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsNotifications => 'Notifications';
 
   @override
+  String get settingsLocalNotificationsHeader => 'LOCAL NOTIFICATIONS';
+
+  @override
+  String get settingsBackgroundUnreadChecks => 'Background unread checks';
+
+  @override
+  String get settingsBackgroundUnreadChecksSubtitle =>
+      'No FCM or third-party push server';
+
+  @override
+  String get settingsBackgroundUnreadChecksFooter =>
+      'Android will check unread counts in the background about every 15 minutes or later. Delivery can be delayed by battery and network limits.';
+
+  @override
+  String get settingsNotificationPermission => 'Notification Permission';
+
+  @override
+  String get settingsEnableNotifications => 'Enable Notifications';
+
+  @override
   String get settingsDeveloperSession => 'Developer Session';
 
   @override

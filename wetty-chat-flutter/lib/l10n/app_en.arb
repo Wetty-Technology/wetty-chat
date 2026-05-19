@@ -169,6 +169,24 @@
   "settingsNotifications": "Notifications",
   "@settingsNotifications": { "description": "Notifications setting label" },
 
+  "settingsLocalNotificationsHeader": "LOCAL NOTIFICATIONS",
+  "@settingsLocalNotificationsHeader": { "description": "Header for Android local notification settings" },
+
+  "settingsBackgroundUnreadChecks": "Background unread checks",
+  "@settingsBackgroundUnreadChecks": { "description": "Toggle label for delayed Android unread polling" },
+
+  "settingsBackgroundUnreadChecksSubtitle": "No FCM or third-party push server",
+  "@settingsBackgroundUnreadChecksSubtitle": { "description": "Subtitle for Android unread polling toggle" },
+
+  "settingsBackgroundUnreadChecksFooter": "Android will check unread counts in the background about every 15 minutes or later. Delivery can be delayed by battery and network limits.",
+  "@settingsBackgroundUnreadChecksFooter": { "description": "Footer explaining delayed Android background polling behavior" },
+
+  "settingsNotificationPermission": "Notification Permission",
+  "@settingsNotificationPermission": { "description": "Label for notification permission status" },
+
+  "settingsEnableNotifications": "Enable Notifications",
+  "@settingsEnableNotifications": { "description": "Action to request notification permission" },
+
   "settingsDeveloperSession": "Developer Session",
   "@settingsDeveloperSession": { "description": "Developer session settings entry label" },
 
