@@ -84,6 +84,27 @@ void main() {
       },
     );
 
+    testWidgets('allows the user to scroll away from live edge', (
+      tester,
+    ) async {
+      final api = _FakeMessageApiService(_messages(1, 20));
+      final container = await _container(api);
+      addTearDown(container.dispose);
+
+      await _pumpTimeline(tester, container: container, viewportHeight: 600);
+      await _settleTimeline(tester);
+      _expectRowBottomPinnedToViewport(tester, 20);
+
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, 16));
+      await tester.pump();
+      await tester.pump();
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, 16));
+      await tester.pump();
+      await tester.pump();
+
+      _expectRowBottomBelowViewport(tester, 20);
+    });
+
     testWidgets(
       're-pins latest message when it mutates while viewport is near live edge',
       (tester) async {
@@ -293,6 +314,13 @@ void _expectRowBottomPinnedToViewport(WidgetTester tester, int messageId) {
   final viewport = tester.getRect(find.byKey(_viewportKey));
   final row = tester.getRect(_rowFinder(messageId));
   expect(row.bottom, closeTo(viewport.bottom, 1));
+  expect(row.top < viewport.bottom, isTrue);
+}
+
+void _expectRowBottomBelowViewport(WidgetTester tester, int messageId) {
+  final viewport = tester.getRect(find.byKey(_viewportKey));
+  final row = tester.getRect(_rowFinder(messageId));
+  expect(row.bottom, greaterThan(viewport.bottom + 1));
   expect(row.top < viewport.bottom, isTrue);
 }
 

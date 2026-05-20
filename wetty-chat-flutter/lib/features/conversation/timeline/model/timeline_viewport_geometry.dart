@@ -37,8 +37,111 @@ class TimelineViewportAnchor {
   final String stableKey;
   final int? messageId;
   final double viewportDy;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is TimelineViewportAnchor &&
+            runtimeType == other.runtimeType &&
+            stableKey == other.stableKey &&
+            messageId == other.messageId &&
+            viewportDy == other.viewportDy;
+  }
+
+  @override
+  int get hashCode => Object.hash(stableKey, messageId, viewportDy);
 }
 
+@immutable
+class TimelineViewportMessageSnapshot {
+  const TimelineViewportMessageSnapshot({
+    required this.stableKey,
+    required this.topViewportDy,
+    required this.bottomViewportDy,
+    this.messageId,
+  });
+
+  final String stableKey;
+  final int? messageId;
+  final double topViewportDy;
+  final double bottomViewportDy;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is TimelineViewportMessageSnapshot &&
+            runtimeType == other.runtimeType &&
+            stableKey == other.stableKey &&
+            messageId == other.messageId &&
+            topViewportDy == other.topViewportDy &&
+            bottomViewportDy == other.bottomViewportDy;
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(stableKey, messageId, topViewportDy, bottomViewportDy);
+}
+
+@immutable
+class TimelineViewportSnapshot {
+  const TimelineViewportSnapshot({
+    required this.isNearTop,
+    required this.isNearBottom,
+    required this.distanceToTop,
+    required this.distanceToBottom,
+    required this.viewportExtent,
+    required this.viewportAtLiveEdge,
+    this.centerAnchor,
+    this.tail,
+  });
+
+  static const empty = TimelineViewportSnapshot(
+    isNearTop: false,
+    isNearBottom: true,
+    distanceToTop: 0,
+    distanceToBottom: 0,
+    viewportExtent: 0,
+    viewportAtLiveEdge: false,
+  );
+
+  final bool isNearTop;
+  final bool isNearBottom;
+  final double distanceToTop;
+  final double distanceToBottom;
+  final double viewportExtent;
+  final bool viewportAtLiveEdge;
+  final TimelineViewportAnchor? centerAnchor;
+  final TimelineViewportMessageSnapshot? tail;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is TimelineViewportSnapshot &&
+            runtimeType == other.runtimeType &&
+            isNearTop == other.isNearTop &&
+            isNearBottom == other.isNearBottom &&
+            distanceToTop == other.distanceToTop &&
+            distanceToBottom == other.distanceToBottom &&
+            viewportExtent == other.viewportExtent &&
+            viewportAtLiveEdge == other.viewportAtLiveEdge &&
+            centerAnchor == other.centerAnchor &&
+            tail == other.tail;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    isNearTop,
+    isNearBottom,
+    distanceToTop,
+    distanceToBottom,
+    viewportExtent,
+    viewportAtLiveEdge,
+    centerAnchor,
+    tail,
+  );
+}
+
+/// Computes where the center seam should sit for top-preferred jump placement.
 double resolveTimelineTopPreferredAnchorAlignment({
   required double afterExtent,
   required double viewportExtent,
@@ -53,6 +156,7 @@ double resolveTimelineTopPreferredAnchorAlignment({
   return 1.0 - visibleFractionBelowAnchor;
 }
 
+/// Resolves the first and last server-backed rows that intersect the viewport.
 MessageVisibilityWindow? resolveTimelineMessageVisibilityWindow({
   required Iterable<TimelineMessageGeometry> measurements,
   required double viewportTop,
@@ -81,6 +185,7 @@ MessageVisibilityWindow? resolveTimelineMessageVisibilityWindow({
   );
 }
 
+/// Selects a deterministic visible row anchor for future y-position restores.
 TimelineViewportAnchor? resolveTimelineViewportAnchor({
   required Iterable<TimelineMessageGeometry> measurements,
   required double viewportTop,
@@ -116,6 +221,58 @@ TimelineViewportAnchor? resolveTimelineViewportAnchor({
   );
 }
 
+/// Builds the viewport contract reported from the widget to the view model.
+TimelineViewportSnapshot resolveTimelineViewportSnapshot({
+  required Iterable<TimelineMessageGeometry> measurements,
+  required String? renderedTailStableKey,
+  required double viewportTop,
+  required double viewportBottom,
+  required double pixels,
+  required double minScrollExtent,
+  required double maxScrollExtent,
+  required double edgeThreshold,
+  double liveEdgeTolerance = 1.0,
+}) {
+  final materializedMeasurements = measurements.toList(growable: false);
+  final distanceToTop = math.max(0.0, pixels - minScrollExtent);
+  final distanceToBottom = math.max(0.0, maxScrollExtent - pixels);
+  final viewportExtent = math.max(0.0, viewportBottom - viewportTop);
+  TimelineViewportMessageSnapshot? tail;
+
+  if (renderedTailStableKey != null) {
+    for (final measurement in materializedMeasurements) {
+      if (measurement.stableKey != renderedTailStableKey) {
+        continue;
+      }
+      tail = TimelineViewportMessageSnapshot(
+        stableKey: measurement.stableKey,
+        messageId: measurement.messageId,
+        topViewportDy: measurement.top - viewportTop,
+        bottomViewportDy: measurement.bottom - viewportTop,
+      );
+      break;
+    }
+  }
+
+  return TimelineViewportSnapshot(
+    isNearTop: distanceToTop <= edgeThreshold,
+    isNearBottom: distanceToBottom <= edgeThreshold,
+    distanceToTop: distanceToTop,
+    distanceToBottom: distanceToBottom,
+    viewportExtent: viewportExtent,
+    viewportAtLiveEdge:
+        tail != null &&
+        (tail.bottomViewportDy - viewportExtent).abs() <= liveEdgeTolerance,
+    centerAnchor: resolveTimelineViewportAnchor(
+      measurements: materializedMeasurements,
+      viewportTop: viewportTop,
+      viewportBottom: viewportBottom,
+    ),
+    tail: tail,
+  );
+}
+
+/// Computes the scroll delta needed to restore an anchor to its old viewport y.
 double resolveTimelineAnchorCorrectionDelta({
   required double previousViewportDy,
   required double currentViewportDy,
@@ -123,6 +280,7 @@ double resolveTimelineAnchorCorrectionDelta({
   return currentViewportDy - previousViewportDy;
 }
 
+/// Applies an anchor correction delta to the current scroll offset.
 double resolveTimelineAnchorCorrectedOffset({
   required double currentScrollOffset,
   required double previousViewportDy,

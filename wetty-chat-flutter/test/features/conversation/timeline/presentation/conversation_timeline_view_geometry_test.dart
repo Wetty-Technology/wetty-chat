@@ -205,6 +205,148 @@ void main() {
     });
   });
 
+  group('resolveTimelineViewportSnapshot', () {
+    test('marks the viewport at live edge when the tail is bottom pinned', () {
+      final snapshot = resolveTimelineViewportSnapshot(
+        viewportTop: 100,
+        viewportBottom: 700,
+        pixels: 400,
+        minScrollExtent: 0,
+        maxScrollExtent: 400,
+        edgeThreshold: 80,
+        renderedTailStableKey: 'server:20',
+        measurements: const [
+          TimelineMessageGeometry(
+            stableKey: 'server:19',
+            messageId: 19,
+            top: 560,
+            bottom: 620,
+          ),
+          TimelineMessageGeometry(
+            stableKey: 'server:20',
+            messageId: 20,
+            top: 620,
+            bottom: 700,
+          ),
+        ],
+      );
+
+      expect(snapshot.isNearBottom, isTrue);
+      expect(snapshot.distanceToBottom, 0);
+      expect(snapshot.viewportExtent, 600);
+      expect(snapshot.tail?.bottomViewportDy, 600);
+      expect(snapshot.viewportAtLiveEdge, isTrue);
+    });
+
+    test('distinguishes near bottom from visually pinned live edge', () {
+      final snapshot = resolveTimelineViewportSnapshot(
+        viewportTop: 100,
+        viewportBottom: 700,
+        pixels: 352,
+        minScrollExtent: 0,
+        maxScrollExtent: 400,
+        edgeThreshold: 80,
+        renderedTailStableKey: 'server:20',
+        measurements: const [
+          TimelineMessageGeometry(
+            stableKey: 'server:20',
+            messageId: 20,
+            top: 650,
+            bottom: 729,
+          ),
+        ],
+      );
+
+      expect(snapshot.distanceToBottom, 48);
+      expect(snapshot.isNearBottom, isTrue);
+      expect(snapshot.tail?.bottomViewportDy, 629);
+      expect(snapshot.viewportAtLiveEdge, isFalse);
+    });
+
+    test('marks the viewport away from bottom outside the edge threshold', () {
+      final snapshot = resolveTimelineViewportSnapshot(
+        viewportTop: 100,
+        viewportBottom: 700,
+        pixels: 240,
+        minScrollExtent: 0,
+        maxScrollExtent: 400,
+        edgeThreshold: 80,
+        renderedTailStableKey: 'server:20',
+        measurements: const [
+          TimelineMessageGeometry(
+            stableKey: 'server:20',
+            messageId: 20,
+            top: 500,
+            bottom: 580,
+          ),
+        ],
+      );
+
+      expect(snapshot.distanceToBottom, 160);
+      expect(snapshot.isNearBottom, isFalse);
+      expect(snapshot.viewportAtLiveEdge, isFalse);
+    });
+
+    test('does not report live edge when the rendered tail is missing', () {
+      final snapshot = resolveTimelineViewportSnapshot(
+        viewportTop: 100,
+        viewportBottom: 700,
+        pixels: 400,
+        minScrollExtent: 0,
+        maxScrollExtent: 400,
+        edgeThreshold: 80,
+        renderedTailStableKey: 'server:20',
+        measurements: const [
+          TimelineMessageGeometry(
+            stableKey: 'server:19',
+            messageId: 19,
+            top: 620,
+            bottom: 700,
+          ),
+        ],
+      );
+
+      expect(snapshot.tail, isNull);
+      expect(snapshot.viewportAtLiveEdge, isFalse);
+    });
+
+    test('includes the center-preferred visible anchor', () {
+      final snapshot = resolveTimelineViewportSnapshot(
+        viewportTop: 100,
+        viewportBottom: 500,
+        pixels: 200,
+        minScrollExtent: 0,
+        maxScrollExtent: 200,
+        edgeThreshold: 80,
+        renderedTailStableKey: 'server:3',
+        measurements: const [
+          TimelineMessageGeometry(
+            stableKey: 'server:1',
+            messageId: 1,
+            top: 120,
+            bottom: 180,
+          ),
+          TimelineMessageGeometry(
+            stableKey: 'server:2',
+            messageId: 2,
+            top: 260,
+            bottom: 340,
+          ),
+          TimelineMessageGeometry(
+            stableKey: 'server:3',
+            messageId: 3,
+            top: 430,
+            bottom: 500,
+          ),
+        ],
+      );
+
+      expect(snapshot.centerAnchor?.stableKey, 'server:2');
+      expect(snapshot.centerAnchor?.messageId, 2);
+      expect(snapshot.centerAnchor?.viewportDy, 160);
+    });
+  });
+
   group('resolveTimelineAnchorCorrectedOffset', () {
     test(
       'increases scroll offset when the anchor moved lower in the viewport',
