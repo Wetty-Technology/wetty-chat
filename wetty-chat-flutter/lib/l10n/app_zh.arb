@@ -33,6 +33,15 @@
 
   "groupMembers": "群组成员",
   "groupSettings": "群组设置",
+  "messageSearchAction": "搜索",
+  "messageSearchTitle": "搜索",
+  "messageSearchPlaceholder": "搜索消息",
+  "messageSearchEmptyPrompt": "搜索此聊天中的消息",
+  "messageSearchMinChars": "请输入至少 2 个字符",
+  "messageSearchNoResults": "未找到消息",
+  "messageSearchFailed": "搜索消息失败",
+  "messageSearchThreadContext": "在话题中",
+  "messageSearchLoadMore": "加载更多",
   "noMembers": "暂无成员",
   "retry": "重试",
 

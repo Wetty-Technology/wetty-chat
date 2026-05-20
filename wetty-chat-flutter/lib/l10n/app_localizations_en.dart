@@ -96,6 +96,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get groupSettings => 'Group Settings';
 
   @override
+  String get messageSearchAction => 'Search';
+
+  @override
+  String get messageSearchTitle => 'Search';
+
+  @override
+  String get messageSearchPlaceholder => 'Search messages';
+
+  @override
+  String get messageSearchEmptyPrompt => 'Search messages in this chat';
+
+  @override
+  String get messageSearchMinChars => 'Enter at least 2 characters';
+
+  @override
+  String get messageSearchNoResults => 'No messages found';
+
+  @override
+  String get messageSearchFailed => 'Failed to search messages';
+
+  @override
+  String get messageSearchThreadContext => 'In thread';
+
+  @override
+  String get messageSearchLoadMore => 'Load More';
+
+  @override
   String get noMembers => 'No members';
 
   @override

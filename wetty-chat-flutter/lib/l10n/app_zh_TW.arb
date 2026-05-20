@@ -33,6 +33,15 @@
 
   "groupMembers": "群組成員",
   "groupSettings": "群組設定",
+  "messageSearchAction": "搜尋",
+  "messageSearchTitle": "搜尋",
+  "messageSearchPlaceholder": "搜尋訊息",
+  "messageSearchEmptyPrompt": "搜尋此聊天中的訊息",
+  "messageSearchMinChars": "請輸入至少 2 個字元",
+  "messageSearchNoResults": "找不到訊息",
+  "messageSearchFailed": "搜尋訊息失敗",
+  "messageSearchThreadContext": "在話題中",
+  "messageSearchLoadMore": "載入更多",
   "noMembers": "暫無成員",
   "retry": "重試",
 

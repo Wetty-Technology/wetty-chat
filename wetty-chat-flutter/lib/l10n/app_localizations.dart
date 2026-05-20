@@ -273,6 +273,60 @@ abstract class AppLocalizations {
   /// **'Group Settings'**
   String get groupSettings;
 
+  /// Group info action label for message search
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get messageSearchAction;
+
+  /// Message search page title
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get messageSearchTitle;
+
+  /// Placeholder for the message search field
+  ///
+  /// In en, this message translates to:
+  /// **'Search messages'**
+  String get messageSearchPlaceholder;
+
+  /// Empty prompt before entering a message search query
+  ///
+  /// In en, this message translates to:
+  /// **'Search messages in this chat'**
+  String get messageSearchEmptyPrompt;
+
+  /// Message shown when a search query is too short
+  ///
+  /// In en, this message translates to:
+  /// **'Enter at least 2 characters'**
+  String get messageSearchMinChars;
+
+  /// Empty state when message search returns no results
+  ///
+  /// In en, this message translates to:
+  /// **'No messages found'**
+  String get messageSearchNoResults;
+
+  /// Error state when message search request fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to search messages'**
+  String get messageSearchFailed;
+
+  /// Label shown on a search result that belongs to a thread
+  ///
+  /// In en, this message translates to:
+  /// **'In thread'**
+  String get messageSearchThreadContext;
+
+  /// Button label for loading more message search results
+  ///
+  /// In en, this message translates to:
+  /// **'Load More'**
+  String get messageSearchLoadMore;
+
   /// Placeholder when group has no members
   ///
   /// In en, this message translates to:
