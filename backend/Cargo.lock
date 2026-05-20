@@ -4924,6 +4924,7 @@ dependencies = [
  "futures",
  "hex",
  "hmac",
+ "http 0.2.12",
  "image",
  "jsonwebtoken",
  "matroska",

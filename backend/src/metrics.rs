@@ -46,6 +46,8 @@ pub(crate) struct Metrics {
     push_notification_jobs_total: IntCounterVec,
     push_notification_job_duration_seconds: HistogramVec,
     push_notifications_suppressed_total: IntCounter,
+    push_delivery_failures_total: IntCounterVec,
+    push_subscription_prunes_total: IntCounterVec,
     ws_connected_users: IntGauge,
     ws_active_connections: IntGauge,
     ws_inactive_connections: IntGauge,
@@ -147,6 +149,22 @@ impl Metrics {
             "Total number of push notifications skipped because a user had active websocket presence"
         ))
         .expect("push_notifications_suppressed_total metric should be valid");
+        let push_delivery_failures_total = IntCounterVec::new(
+            opts!(
+                "push_delivery_failures_total",
+                "Total number of classified push delivery failures"
+            ),
+            &["provider", "class"],
+        )
+        .expect("push_delivery_failures_total metric should be valid");
+        let push_subscription_prunes_total = IntCounterVec::new(
+            opts!(
+                "push_subscription_prunes_total",
+                "Total number of push subscriptions pruned after delivery failures"
+            ),
+            &["provider", "reason"],
+        )
+        .expect("push_subscription_prunes_total metric should be valid");
         let ws_connected_users = IntGauge::with_opts(opts!(
             "ws_connected_users",
             "Current number of users with at least one active websocket connection"
@@ -398,6 +416,12 @@ impl Metrics {
             .register(Box::new(push_notifications_suppressed_total.clone()))
             .expect("push_notifications_suppressed_total registration should succeed");
         registry
+            .register(Box::new(push_delivery_failures_total.clone()))
+            .expect("push_delivery_failures_total registration should succeed");
+        registry
+            .register(Box::new(push_subscription_prunes_total.clone()))
+            .expect("push_subscription_prunes_total registration should succeed");
+        registry
             .register(Box::new(ws_connected_users.clone()))
             .expect("ws_connected_users registration should succeed");
         registry
@@ -501,6 +525,8 @@ impl Metrics {
             push_notification_jobs_total,
             push_notification_job_duration_seconds,
             push_notifications_suppressed_total,
+            push_delivery_failures_total,
+            push_subscription_prunes_total,
             ws_connected_users,
             ws_active_connections,
             ws_inactive_connections,
@@ -640,6 +666,18 @@ impl Metrics {
 
     pub(crate) fn record_push_suppressed(&self) {
         self.push_notifications_suppressed_total.inc();
+    }
+
+    pub(crate) fn record_push_delivery_failure(&self, provider: &str, class: &str) {
+        self.push_delivery_failures_total
+            .with_label_values(&[provider, class])
+            .inc();
+    }
+
+    pub(crate) fn record_push_subscription_prune(&self, provider: &str, reason: &str) {
+        self.push_subscription_prunes_total
+            .with_label_values(&[provider, reason])
+            .inc();
     }
 
     pub(crate) fn record_ws_connection_open(&self) {
