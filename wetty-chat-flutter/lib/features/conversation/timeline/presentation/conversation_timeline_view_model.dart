@@ -233,7 +233,7 @@ class ConversationTimelineViewModel
         previousSnapshot != null &&
         (previousSnapshot.viewportExtent - snapshot.viewportExtent).abs() > 0.5;
     if (viewportExtentChanged &&
-        (_activeSegment?.isLatestSlice ?? false) &&
+        (_activeSegmentMode?.isLatest ?? false) &&
         snapshot.isNearBottom &&
         !snapshot.viewportAtLiveEdge) {
       _publishViewportCommand(
@@ -516,6 +516,7 @@ class ConversationTimelineViewModel
         ? null
         : segment.orderedMessages.last.stableKey;
     final shouldSettleLiveEdge =
+        (_activeSegmentMode?.isLatest ?? false) &&
         segment.isLatestSlice &&
         (_latestViewportSnapshot?.isNearBottom ?? false) &&
         _lastRenderedTailStableKey != null &&

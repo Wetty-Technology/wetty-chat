@@ -7,6 +7,7 @@ import 'package:chahua/features/conversation/shared/application/conversation_can
 import 'package:chahua/features/conversation/shared/domain/conversation_identity.dart';
 import 'package:chahua/features/conversation/shared/domain/launch_request.dart';
 import 'package:chahua/features/conversation/timeline/presentation/conversation_timeline_view.dart';
+import 'package:chahua/features/conversation/timeline/presentation/conversation_timeline_view_model.dart';
 import 'package:chahua/features/shared/data/read_state_repository.dart';
 import 'package:chahua/features/shared/model/message/message.dart';
 import 'package:chahua/l10n/app_localizations.dart';
@@ -104,6 +105,59 @@ void main() {
 
       _expectRowBottomBelowViewport(tester, 20);
     });
+
+    testWidgets(
+      'jump to message from sticky live edge reveals the target row',
+      (tester) async {
+        final api = _FakeMessageApiService(_messages(1, 20));
+        final container = await _container(api);
+        addTearDown(container.dispose);
+
+        await _pumpTimeline(tester, container: container, viewportHeight: 600);
+        await _settleTimeline(tester);
+        _expectRowBottomPinnedToViewport(tester, 20);
+
+        await container
+            .read(conversationTimelineViewModelProvider(_identity).notifier)
+            .jumpToMessageServerId(6);
+        await tester.pumpAndSettle();
+
+        _expectRowVisibleInViewport(tester, 6);
+        _expectRowBelowViewport(tester, 20);
+      },
+    );
+
+    testWidgets(
+      'far jump loads a historical segment and reveals the target row',
+      (tester) async {
+        final api = _FakeMessageApiService(
+          _messages(81, 100),
+          aroundResponses: {
+            40: _response(
+              messages: _messages(36, 60),
+              nextCursor: '35',
+              prevCursor: '61',
+            ),
+          },
+        );
+        final container = await _container(api);
+        addTearDown(container.dispose);
+
+        await _pumpTimeline(tester, container: container, viewportHeight: 600);
+        await _settleTimeline(tester);
+        _expectRowBottomPinnedToViewport(tester, 100);
+        expect(_rowFinder(40), findsNothing);
+
+        await container
+            .read(conversationTimelineViewModelProvider(_identity).notifier)
+            .jumpToMessageServerId(40);
+        await tester.pumpAndSettle();
+
+        expect(api.requests.any((request) => request.around == 40), isTrue);
+        _expectRowVisibleInViewport(tester, 40);
+        expect(_rowFinder(100), findsNothing);
+      },
+    );
 
     testWidgets(
       're-pins latest message when it mutates while viewport is near live edge',
@@ -324,6 +378,21 @@ void _expectRowBottomBelowViewport(WidgetTester tester, int messageId) {
   expect(row.top < viewport.bottom, isTrue);
 }
 
+void _expectRowBelowViewport(WidgetTester tester, int messageId) {
+  final viewport = tester.getRect(find.byKey(_viewportKey));
+  final row = tester.getRect(_rowFinder(messageId));
+  expect(row.top, greaterThanOrEqualTo(viewport.bottom));
+}
+
+void _expectRowVisibleInViewport(WidgetTester tester, int messageId) {
+  final finder = _rowFinder(messageId);
+  expect(finder, findsOneWidget);
+  final viewport = tester.getRect(find.byKey(_viewportKey));
+  final row = tester.getRect(finder);
+  expect(row.bottom, greaterThan(viewport.top));
+  expect(row.top, lessThan(viewport.bottom));
+}
+
 Finder _rowFinder(int messageId) {
   return find.byWidgetPredicate(
     (widget) =>
@@ -352,9 +421,15 @@ MessageItemDto _message(int id, {int reactionCount = 0, String? text}) {
 }
 
 class _FakeMessageApiService extends MessageApiServiceV2 {
-  _FakeMessageApiService(this.messages) : super(Dio(), 7);
+  _FakeMessageApiService(
+    this.messages, {
+    Map<int, ListMessagesResponseDto>? aroundResponses,
+  }) : aroundResponses = aroundResponses ?? const {},
+       super(Dio(), 7);
 
   final List<MessageItemDto> messages;
+  final Map<int, ListMessagesResponseDto> aroundResponses;
+  final requests = <({int? before, int? after, int? around, int? max})>[];
 
   @override
   Future<ListMessagesResponseDto> fetchConversationMessages(
@@ -364,6 +439,11 @@ class _FakeMessageApiService extends MessageApiServiceV2 {
     int? after,
     int? around,
   }) async {
+    requests.add((before: before, after: after, around: around, max: max));
+    final aroundResponse = aroundResponses[around];
+    if (aroundResponse != null) {
+      return aroundResponse;
+    }
     return ListMessagesResponseDto(messages: messages);
   }
 
@@ -386,4 +466,16 @@ class _NoopReadStateRepository extends ReadStateRepository {
     required ConversationIdentity identity,
     required int messageId,
   }) {}
+}
+
+ListMessagesResponseDto _response({
+  required List<MessageItemDto> messages,
+  String? nextCursor,
+  String? prevCursor,
+}) {
+  return ListMessagesResponseDto(
+    messages: messages,
+    nextCursor: nextCursor,
+    prevCursor: prevCursor,
+  );
 }

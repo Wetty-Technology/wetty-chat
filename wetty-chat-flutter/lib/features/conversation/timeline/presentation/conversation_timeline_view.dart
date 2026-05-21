@@ -149,6 +149,9 @@ class _ConversationTimelineViewState
         _topPreferredAnchorAlignment = nextAlignment;
         _isTopPreferredAnchorResolved = true;
       });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _resetToCenterOrigin();
+      });
     });
   }
 
@@ -331,7 +334,7 @@ class _ConversationTimelineViewState
         break;
       case ConversationTimelineViewportCommandKind.resetToCenterOrigin:
         // There are two cases for this, for now we are not caring, just forcing a new scrollable.
-        _scrollViewKey = UniqueKey();
+        _resetScrollableIdentity();
         if (state.viewportCommand.placement ==
             ConversationTimelineViewportPlacement.topPreferred) {
           _scheduleTopPreferredMeasurement(resetResolution: true);
@@ -362,6 +365,34 @@ class _ConversationTimelineViewState
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scheduleViewportMeasurement();
     });
+  }
+
+  /// Recreates the scrollable and controller so reset commands do not inherit pixels.
+  void _resetScrollableIdentity() {
+    final previousController = _scrollController;
+    previousController.removeListener(_handleScrollChanged);
+    _scrollController = ScrollController();
+    _scrollController.addListener(_handleScrollChanged);
+    _scrollViewKey = UniqueKey();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      previousController.dispose();
+    });
+  }
+
+  /// Moves the recreated center-anchored scrollable back to its origin.
+  void _resetToCenterOrigin() {
+    if (!mounted || !_scrollController.hasClients) {
+      return;
+    }
+    final position = _scrollController.position;
+    final targetPixels = 0.0.clamp(
+      position.minScrollExtent,
+      position.maxScrollExtent,
+    );
+    if ((position.pixels - targetPixels).abs() <= 0.5) {
+      return;
+    }
+    _scrollController.jumpTo(targetPixels);
   }
 
   Future<void> _scrollToBottom() async {
