@@ -5,11 +5,11 @@ afterEach(() => {
 });
 
 describe('feature gates', () => {
-  it('keeps message search behind an explicit gate by default', async () => {
+  it('keeps demoPage behind an explicit gate by default', async () => {
     vi.stubGlobal('__FEATURE_GATES_ENABLED__', false);
     const { FEATURES, isFeatureEnabled } = await import('./features');
 
-    expect(FEATURES.messageSearch.enabled).toBe(false);
-    expect(isFeatureEnabled('messageSearch')).toBe(false);
+    expect(FEATURES.demoPage.enabled).toBe(false);
+    expect(isFeatureEnabled('demoPage')).toBe(false);
   });
 });

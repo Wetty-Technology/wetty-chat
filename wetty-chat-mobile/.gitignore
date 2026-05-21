@@ -12,4 +12,5 @@ dist
 *-dist
 *.local
 
+coverage/
 test_output/

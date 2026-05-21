@@ -65,15 +65,15 @@ Browser tests should prove that the wiring works. Core correctness should remain
 
 ## Priority Matrix
 
-| Surface | Primary Layer | Notes |
-| --- | --- | --- |
-| Landing auth handoff | DOM | `?token=...` must record the JWT with or without `&invite=...`. |
-| Message timeline | Unit | Keep the reducer and selector matrix broad. |
-| WebSocket event projection | Unit / integration | Inject events and assert store state, including duplicate API/websocket delivery. |
-| API auth headers | Unit | Cover JWT vs client ID and production `401` behavior. |
-| Desktop/mobile routing | DOM / browser | DOM for route decisions, browser for Ionic/back-stack behavior. |
-| Localization | Script / unit | `lingui:compile --strict` should become part of CI once catalog churn is under control. |
-| Virtual scroll | Browser | Unit-test helpers where possible, but verify one real viewport path. |
+| Surface                    | Primary Layer      | Notes                                                                                   |
+| -------------------------- | ------------------ | --------------------------------------------------------------------------------------- |
+| Landing auth handoff       | DOM                | `?token=...` must record the JWT with or without `&invite=...`.                         |
+| Message timeline           | Unit               | Keep the reducer and selector matrix broad.                                             |
+| WebSocket event projection | Unit / integration | Inject events and assert store state, including duplicate API/websocket delivery.       |
+| API auth headers           | Unit               | Cover JWT vs client ID and production `401` behavior.                                   |
+| Desktop/mobile routing     | DOM / browser      | DOM for route decisions, browser for Ionic/back-stack behavior.                         |
+| Localization               | Script / unit      | `lingui:compile --strict` should become part of CI once catalog churn is under control. |
+| Virtual scroll             | Browser            | Unit-test helpers where possible, but verify one real viewport path.                    |
 
 ## Test Naming
 
