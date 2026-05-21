@@ -121,6 +121,7 @@
   "noThreadsYet": "暂无话题",
   "archived": "已归档",
   "archivedThreads": "已归档话题",
+  "archivedGroups": "已归档群组",
   "noArchivedThreads": "暂无已归档话题",
   "noChatsOrThreadsYet": "暂无聊天或话题",
   "threadReplyCount": "{count} 条回复",

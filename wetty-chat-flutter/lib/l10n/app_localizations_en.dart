@@ -360,6 +360,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get archivedThreads => 'Archived threads';
 
   @override
+  String get archivedGroups => 'Archived groups';
+
+  @override
   String get noArchivedThreads => 'No archived threads';
 
   @override

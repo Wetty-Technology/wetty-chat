@@ -121,6 +121,7 @@
   "noThreadsYet": "暫無話題",
   "archived": "已封存",
   "archivedThreads": "已封存話題",
+  "archivedGroups": "已封存群組",
   "noArchivedThreads": "暫無已封存話題",
   "noChatsOrThreadsYet": "暫無聊天或話題",
   "threadReplyCount": "{count} 則回覆",

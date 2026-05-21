@@ -354,6 +354,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get archivedThreads => '已归档话题';
 
   @override
+  String get archivedGroups => '已归档群组';
+
+  @override
   String get noArchivedThreads => '暂无已归档话题';
 
   @override
@@ -861,6 +864,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get archivedThreads => '已封存話題';
+
+  @override
+  String get archivedGroups => '已封存群組';
 
   @override
   String get noArchivedThreads => '暫無已封存話題';

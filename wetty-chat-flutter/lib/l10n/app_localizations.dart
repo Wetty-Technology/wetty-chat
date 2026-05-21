@@ -789,6 +789,12 @@ abstract class AppLocalizations {
   /// **'Archived threads'**
   String get archivedThreads;
 
+  /// Folder row label for archived groups
+  ///
+  /// In en, this message translates to:
+  /// **'Archived groups'**
+  String get archivedGroups;
+
   /// Empty state for the archived thread list
   ///
   /// In en, this message translates to:

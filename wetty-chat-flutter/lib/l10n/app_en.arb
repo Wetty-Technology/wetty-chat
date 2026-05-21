@@ -344,6 +344,9 @@
   "archivedThreads": "Archived threads",
   "@archivedThreads": { "description": "Title and folder row label for archived threads" },
 
+  "archivedGroups": "Archived groups",
+  "@archivedGroups": { "description": "Folder row label for archived groups" },
+
   "noArchivedThreads": "No archived threads",
   "@noArchivedThreads": { "description": "Empty state for the archived thread list" },
 
