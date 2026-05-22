@@ -398,15 +398,23 @@ class ConversationTimelineViewModel
   }
 
   void jumpToUnread(int lastReadMessageId) {
-    unawaited(
-      _repository.refreshAroundServerMessageId(
-        lastReadMessageId,
-        limit: _initialLoadedWindowSize,
-      ),
-    );
+    unawaited(_jumpToUnreadAfterResolvingBoundary(lastReadMessageId));
+  }
+
+  Future<void> _jumpToUnreadAfterResolvingBoundary(
+    int lastReadMessageId,
+  ) async {
+    final anchorServerMessageId = await _repository
+        .refreshUnreadAroundReadBoundary(
+          lastReadMessageId,
+          limit: _initialLoadedWindowSize,
+        );
+    if (anchorServerMessageId == null) {
+      return;
+    }
 
     final aroundMode = ConversationTimelineActiveSegmentMode.around(
-      lastReadMessageId,
+      anchorServerMessageId,
     );
     _setActiveSegmentMode(aroundMode);
     _highlightedServerMessageId = null;
@@ -515,8 +523,11 @@ class ConversationTimelineViewModel
     final currentTailStableKey = segment.orderedMessages.isEmpty
         ? null
         : segment.orderedMessages.last.stableKey;
+    final canFollowLiveEdge =
+        (_activeSegmentMode?.isLatest ?? false) ||
+        _highlightFirstServerMessageIdAfter != null;
     final shouldSettleLiveEdge =
-        (_activeSegmentMode?.isLatest ?? false) &&
+        canFollowLiveEdge &&
         segment.isLatestSlice &&
         (_latestViewportSnapshot?.isNearBottom ?? false) &&
         _lastRenderedTailStableKey != null &&

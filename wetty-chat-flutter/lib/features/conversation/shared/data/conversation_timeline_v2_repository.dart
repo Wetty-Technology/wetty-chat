@@ -270,6 +270,13 @@ class ConversationTimelineV2Repository {
     return _refreshAroundServerMessageId(targetServerMessageId, limit: limit);
   }
 
+  Future<int?> refreshUnreadAroundReadBoundary(
+    int lastReadMessageId, {
+    required int limit,
+  }) {
+    return _refreshAroundReadBoundary(lastReadMessageId, limit: limit);
+  }
+
   Future<void> _loadOlderBeforeAnchor(
     int anchorServerMessageId, {
     required int limit,
@@ -389,6 +396,51 @@ class ConversationTimelineV2Repository {
           .read(conversationTimelineMessageStoreProvider.notifier)
           .markReachedOldest(identity);
     }
+  }
+
+  Future<int?> _refreshAroundReadBoundary(
+    int lastReadMessageId, {
+    required int limit,
+  }) async {
+    final response = await ref
+        .read(messageApiServiceV2Provider)
+        .fetchConversationMessages(
+          identity,
+          around: lastReadMessageId,
+          max: limit,
+        );
+    final hasMoreOlder = response.nextCursor != null;
+    final hasMoreNewer = response.prevCursor != null;
+    final hasReachedLatest = !hasMoreNewer;
+
+    if (response.messages.isEmpty) {
+      return null;
+    }
+
+    ref
+        .read(conversationTimelineMessageStoreProvider.notifier)
+        .insertAround(
+          identity,
+          ConversationTimelineCanonicalSegment(
+            orderedMessages: response.messages
+                .map(ConversationMessageV2.fromMessageItemDto)
+                .toList(growable: false),
+          ),
+          hasReachedLatest: hasReachedLatest,
+        );
+
+    if (!hasMoreOlder) {
+      ref
+          .read(conversationTimelineMessageStoreProvider.notifier)
+          .markReachedOldest(identity);
+    }
+
+    for (final message in response.messages) {
+      if (message.id > lastReadMessageId) {
+        return message.id;
+      }
+    }
+    return response.messages.first.id;
   }
 }
 

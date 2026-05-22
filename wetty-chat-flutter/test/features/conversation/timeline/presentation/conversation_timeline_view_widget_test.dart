@@ -160,6 +160,187 @@ void main() {
     );
 
     testWidgets(
+      'unread launch renders first unread row when response omits read boundary',
+      (tester) async {
+        final api = _FakeMessageApiService(
+          const [],
+          aroundResponses: {
+            20: _response(
+              messages: _messages(21, 40),
+              nextCursor: '20',
+              prevCursor: null,
+            ),
+          },
+        );
+        final container = await _container(api);
+        addTearDown(container.dispose);
+
+        await _pumpTimeline(
+          tester,
+          container: container,
+          viewportHeight: 600,
+          launchRequest: const LaunchRequest.unread(lastReadMessageId: 20),
+        );
+        await _settleTimeline(tester);
+
+        expect(api.requests.any((request) => request.around == 20), isTrue);
+        expect(find.byType(CupertinoActivityIndicator), findsNothing);
+        _expectRowVisibleInViewport(tester, 21);
+        await _flushHighlightClearTimer(tester);
+      },
+    );
+
+    testWidgets(
+      'pins incoming message after unread launch reaches latest slice',
+      (tester) async {
+        final api = _FakeMessageApiService(
+          const [],
+          aroundResponses: {
+            20: _response(messages: _messages(20, 21), nextCursor: '19'),
+          },
+        );
+        final container = await _container(api);
+        addTearDown(container.dispose);
+
+        await _pumpTimeline(
+          tester,
+          container: container,
+          viewportHeight: 600,
+          launchRequest: const LaunchRequest.unread(lastReadMessageId: 20),
+        );
+        await tester.pumpAndSettle();
+        await tester.drag(find.byType(CustomScrollView), const Offset(0, -48));
+        await tester.pumpAndSettle();
+        _expectRowBottomPinnedToViewport(tester, 21);
+
+        _appendMessage(container, _message(22));
+        await tester.pump();
+        await tester.pump();
+
+        _expectRowBottomPinnedToViewport(tester, 22);
+        await _flushHighlightClearTimer(tester);
+      },
+    );
+
+    testWidgets(
+      'keeps unread latest row pinned when unread live-edge viewport shrinks',
+      (tester) async {
+        final api = _FakeMessageApiService(
+          const [],
+          aroundResponses: {
+            20: _response(messages: _messages(20, 21), nextCursor: '19'),
+          },
+        );
+        final container = await _container(api);
+        addTearDown(container.dispose);
+        const launchRequest = LaunchRequest.unread(lastReadMessageId: 20);
+
+        await _pumpTimeline(
+          tester,
+          container: container,
+          viewportHeight: 600,
+          launchRequest: launchRequest,
+        );
+        await tester.pumpAndSettle();
+        await tester.drag(find.byType(CustomScrollView), const Offset(0, -48));
+        await tester.pumpAndSettle();
+        _expectRowBottomPinnedToViewport(tester, 21);
+
+        await _pumpTimeline(
+          tester,
+          container: container,
+          viewportHeight: 360,
+          launchRequest: launchRequest,
+        );
+        await tester.pump();
+
+        _expectRowBottomPinnedToViewport(tester, 21);
+        await _flushHighlightClearTimer(tester);
+      },
+    );
+
+    testWidgets(
+      'pins incoming message after unread live-edge viewport shrinks',
+      (tester) async {
+        final api = _FakeMessageApiService(
+          const [],
+          aroundResponses: {
+            20: _response(messages: _messages(20, 21), nextCursor: '19'),
+          },
+        );
+        final container = await _container(api);
+        addTearDown(container.dispose);
+        const launchRequest = LaunchRequest.unread(lastReadMessageId: 20);
+
+        await _pumpTimeline(
+          tester,
+          container: container,
+          viewportHeight: 600,
+          launchRequest: launchRequest,
+        );
+        await tester.pumpAndSettle();
+        await tester.drag(find.byType(CustomScrollView), const Offset(0, -48));
+        await tester.pumpAndSettle();
+        _expectRowBottomPinnedToViewport(tester, 21);
+
+        await _pumpTimeline(
+          tester,
+          container: container,
+          viewportHeight: 360,
+          launchRequest: launchRequest,
+        );
+        await tester.pump();
+        _expectRowBottomPinnedToViewport(tester, 21);
+
+        _appendMessage(container, _message(22));
+        await tester.pump();
+        await tester.pump();
+
+        _expectRowBottomPinnedToViewport(tester, 22);
+        await _flushHighlightClearTimer(tester);
+      },
+    );
+
+    testWidgets(
+      'pins incoming message when latest segment is entirely before center',
+      (tester) async {
+        final api = _FakeMessageApiService(_messages(1, 20));
+        final container = await _container(api);
+        addTearDown(container.dispose);
+
+        await _pumpTimeline(tester, container: container, viewportHeight: 600);
+        await _settleTimeline(tester);
+        _expectRowBottomPinnedToViewport(tester, 20);
+
+        _appendMessage(container, _message(21));
+        await tester.pump();
+        await tester.pump();
+
+        _expectRowBottomPinnedToViewport(tester, 21);
+      },
+    );
+
+    testWidgets('pins incoming message after live-edge viewport shrinks', (
+      tester,
+    ) async {
+      final api = _FakeMessageApiService(_messages(1, 20));
+      final container = await _container(api);
+      addTearDown(container.dispose);
+
+      await _pumpTimeline(tester, container: container, viewportHeight: 600);
+      await _settleTimeline(tester);
+      _expectRowBottomPinnedToViewport(tester, 20);
+
+      await _pumpTimeline(tester, container: container, viewportHeight: 360);
+      await tester.pump();
+      _appendMessage(container, _message(21));
+      await tester.pump();
+      await tester.pump();
+
+      _expectRowBottomPinnedToViewport(tester, 21);
+    });
+
+    testWidgets(
       're-pins latest message when it mutates while viewport is near live edge',
       (tester) async {
         final api = _FakeMessageApiService(_messages(1, 20));
@@ -317,6 +498,7 @@ Future<void> _pumpTimeline(
   WidgetTester tester, {
   required ProviderContainer container,
   required double viewportHeight,
+  LaunchRequest launchRequest = const LaunchRequest.latest(),
 }) async {
   await tester.pumpWidget(
     UncontrolledProviderScope(
@@ -332,7 +514,7 @@ Future<void> _pumpTimeline(
               height: viewportHeight,
               child: ConversationTimelineView(
                 chatId: _identity.chatId,
-                launchRequest: const LaunchRequest.latest(),
+                launchRequest: launchRequest,
               ),
             ),
           ),
@@ -345,6 +527,10 @@ Future<void> _pumpTimeline(
 Future<void> _settleTimeline(WidgetTester tester) async {
   await tester.pump();
   await tester.pump();
+}
+
+Future<void> _flushHighlightClearTimer(WidgetTester tester) async {
+  await tester.pump(const Duration(seconds: 4));
 }
 
 void _updateMessage(ProviderContainer container, MessageItemDto dto) {
