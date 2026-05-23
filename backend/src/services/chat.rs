@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use tracing::warn;
 
 use crate::schema::group_membership;
+use crate::services::unread::UnreadService;
 
 pub const MAX_UNREAD_COUNT: i64 = 1000;
 const UNREAD_COUNT_CHUNK_SIZE: usize = 50;
@@ -20,12 +21,6 @@ pub fn indefinite_mute_until() -> DateTime<Utc> {
 struct UnreadCountRow {
     #[diesel(sql_type = diesel::sql_types::Integer)]
     uid: i32,
-    #[diesel(sql_type = diesel::sql_types::BigInt)]
-    unread_count: i64,
-}
-
-#[derive(QueryableByName)]
-struct ChatUnreadCountRow {
     #[diesel(sql_type = diesel::sql_types::BigInt)]
     unread_count: i64,
 }
@@ -202,33 +197,6 @@ pub fn get_unread_summary_counts(
     }
 }
 
-pub fn get_chat_unread_count(
-    conn: &mut PgConnection,
-    chat_id: i64,
-    last_read_message_id: Option<i64>,
-) -> Result<i64, diesel::result::Error> {
-    let query = sql_query(
-        "SELECT COUNT(unread_messages.marker)::bigint AS unread_count
-         FROM (
-             SELECT 1 AS marker
-             FROM messages
-             WHERE chat_id = $1
-               AND reply_root_id IS NULL
-               AND deleted_at IS NULL
-               AND is_published = TRUE
-               AND id > COALESCE($2, 0)
-             LIMIT $3
-         ) AS unread_messages",
-    )
-    .bind::<diesel::sql_types::BigInt, _>(chat_id)
-    .bind::<diesel::sql_types::Nullable<diesel::sql_types::BigInt>, _>(last_read_message_id)
-    .bind::<diesel::sql_types::BigInt, _>(MAX_UNREAD_COUNT);
-
-    query
-        .get_result::<ChatUnreadCountRow>(conn)
-        .map(|row| row.unread_count.min(MAX_UNREAD_COUNT))
-}
-
 pub fn get_chat_last_read_message_id(
     conn: &mut PgConnection,
     chat_id: i64,
@@ -267,6 +235,7 @@ pub fn mark_chat_as_read(
 
 pub fn mark_chat_as_read_state(
     conn: &mut PgConnection,
+    unread_service: &UnreadService,
     chat_id: i64,
     uid: i32,
     message_id: i64,
@@ -274,7 +243,7 @@ pub fn mark_chat_as_read_state(
     mark_chat_as_read(conn, chat_id, uid, message_id)?;
 
     let last_read_message_id = get_chat_last_read_message_id(conn, chat_id, uid)?;
-    let unread_count = get_chat_unread_count(conn, chat_id, last_read_message_id)?;
+    let unread_count = unread_service.count_chat_unread(conn, chat_id, last_read_message_id)?;
 
     Ok(ChatReadState {
         last_read_message_id,

@@ -653,12 +653,17 @@ pub fn enrich_thread_list(
     }
     let unread_rows: Vec<UnreadRow> = sql_query(
         "SELECT ts.thread_root_id,
-                LEAST(COUNT(*)::bigint, $4) AS unread_count
+                COUNT(unread_messages.marker)::bigint AS unread_count
          FROM thread_subscriptions ts
-         JOIN messages m ON m.reply_root_id = ts.thread_root_id
-                        AND m.deleted_at IS NULL
-                        AND m.is_published = TRUE
-                        AND m.id > COALESCE(ts.last_read_message_id, 0)
+         LEFT JOIN LATERAL (
+             SELECT 1 AS marker
+             FROM messages m
+             WHERE m.reply_root_id = ts.thread_root_id
+               AND m.deleted_at IS NULL
+               AND m.is_published = TRUE
+               AND m.id > COALESCE(ts.last_read_message_id, 0)
+             LIMIT $4
+         ) AS unread_messages ON TRUE
          WHERE ts.uid = $1
            AND ts.archived = $2
            AND ts.thread_root_id = ANY($3)

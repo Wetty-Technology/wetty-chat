@@ -87,6 +87,7 @@ pub(crate) struct AppState {
     authz_service: Arc<services::authz::AuthorizationService>,
     ws_registry: Arc<services::ws_registry::ConnectionRegistry>,
     push_service: Arc<services::push::PushService>,
+    unread_service: Arc<services::unread::UnreadService>,
     client_tracking: Arc<services::client_tracking::ClientTrackingService>,
     background_service: Arc<services::background::BackgroundService>,
     message_search: Option<Arc<services::message_search::MessageSearchService>>,
@@ -146,6 +147,7 @@ async fn main() {
     let ws_registry = Arc::new(services::ws_registry::ConnectionRegistry::new(
         metrics.clone(),
     ));
+    let unread_service = Arc::new(services::unread::UnreadService::new());
 
     let aws_config = aws_config::load_defaults(aws_config::BehaviorVersion::latest()).await;
     let mut s3_config_builder = aws_sdk_s3::config::Builder::from(&aws_config);
@@ -209,6 +211,7 @@ async fn main() {
             ws_registry.clone(),
             metrics.clone(),
         ),
+        unread_service: unread_service.clone(),
         client_tracking: services::client_tracking::ClientTrackingService::start(
             pool.clone(),
             metrics.clone(),
@@ -218,6 +221,7 @@ async fn main() {
             ws_registry.clone(),
             metrics.clone(),
             message_search.clone(),
+            unread_service.clone(),
         ),
         message_search,
         s3_client,

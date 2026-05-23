@@ -14,6 +14,7 @@ use crate::dto::ws::{BulkDeletedPayload, ServerWsMessage};
 use crate::metrics::Metrics;
 use crate::schema::{attachments, group_membership, messages};
 use crate::services::message_search::MessageSearchService;
+use crate::services::unread::UnreadService;
 use crate::services::ws_registry::ConnectionRegistry;
 
 const CHANNEL_BUFFER: usize = 64;
@@ -64,13 +65,14 @@ impl BackgroundService {
         ws_registry: Arc<ConnectionRegistry>,
         metrics: Arc<Metrics>,
         message_search: Option<Arc<MessageSearchService>>,
+        unread_service: Arc<UnreadService>,
     ) -> Arc<Self> {
         let (tx, rx) = mpsc::channel(CHANNEL_BUFFER);
 
         let service = Arc::new(Self { job_tx: tx });
 
         tokio::spawn(async move {
-            supervise_worker(rx, db, ws_registry, metrics, message_search).await;
+            supervise_worker(rx, db, ws_registry, metrics, message_search, unread_service).await;
         });
 
         service
@@ -95,6 +97,7 @@ async fn supervise_worker(
     ws_registry: Arc<ConnectionRegistry>,
     metrics: Arc<Metrics>,
     message_search: Option<Arc<MessageSearchService>>,
+    unread_service: Arc<UnreadService>,
 ) {
     loop {
         let worker_result = std::panic::AssertUnwindSafe(run_worker(
@@ -103,6 +106,7 @@ async fn supervise_worker(
             &ws_registry,
             &metrics,
             &message_search,
+            &unread_service,
         ))
         .catch_unwind()
         .await;
@@ -132,6 +136,7 @@ async fn run_worker(
     ws_registry: &Arc<ConnectionRegistry>,
     metrics: &Arc<Metrics>,
     message_search: &Option<Arc<MessageSearchService>>,
+    unread_service: &Arc<UnreadService>,
 ) {
     while let Some(job) = rx.recv().await {
         let job_kind = job.kind();
@@ -149,6 +154,7 @@ async fn run_worker(
                 db,
                 ws_registry,
                 message_search,
+                unread_service,
             ),
         };
 
@@ -177,6 +183,7 @@ fn process_bulk_delete(
     db: &Pool<ConnectionManager<PgConnection>>,
     ws_registry: &Arc<ConnectionRegistry>,
     message_search: &Option<Arc<MessageSearchService>>,
+    unread_service: &Arc<UnreadService>,
 ) -> Result<(), String> {
     use crate::schema::attachments::dsl as a_dsl;
     use crate::schema::group_membership::dsl as gm_dsl;
@@ -264,6 +271,8 @@ fn process_bulk_delete(
 
     // 3. Recalculate last_message_id and thread_meta once after all batches
     if total_deleted > 0 {
+        unread_service.invalidate_chat(chat_id);
+
         crate::handlers::chats::recalculate_group_last_message(conn, chat_id)
             .map_err(|e| format!("recalculate last message: {e:?}"))?;
 

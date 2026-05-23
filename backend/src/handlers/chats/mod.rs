@@ -124,11 +124,25 @@ pub(crate) struct PendingSideEffects {
     pub(crate) ws_msg: std::sync::Arc<ServerWsMessage>,
     pub(crate) broadcast_uids: Vec<i32>,
     pub(crate) push_job: Option<PushJob>,
+    pub(crate) unread_event: Option<TopLevelUnreadCacheEvent>,
+}
+
+pub(crate) struct TopLevelUnreadCacheEvent {
+    pub(crate) chat_id: i64,
+    pub(crate) message_id: i64,
+    pub(crate) countable: bool,
 }
 
 impl PendingSideEffects {
     /// Fire WS broadcast and push notification. Call after transaction commit.
     pub fn fire(self, state: &AppState) {
+        if let Some(event) = self.unread_event {
+            state.unread_service.observe_top_level_message(
+                event.chat_id,
+                event.message_id,
+                event.countable,
+            );
+        }
         state
             .ws_registry
             .broadcast_to_uids(&self.broadcast_uids, self.ws_msg);
@@ -513,6 +527,14 @@ pub(crate) fn build_message_side_effects(
         ws_msg,
         broadcast_uids: member_uids,
         push_job,
+        unread_event: response
+            .reply_root_id
+            .is_none()
+            .then_some(TopLevelUnreadCacheEvent {
+                chat_id,
+                message_id: response.id,
+                countable: true,
+            }),
     })
 }
 
@@ -612,6 +634,13 @@ pub(crate) async fn send_prepared_message(
                 ws_msg: std::sync::Arc::new(ServerWsMessage::Message(response.clone())),
                 broadcast_uids: Vec::new(),
                 push_job: None,
+                unread_event: prepared.reply_root_id.is_none().then_some(
+                    TopLevelUnreadCacheEvent {
+                        chat_id: prepared.chat_id,
+                        message_id: response.id,
+                        countable: false,
+                    },
+                ),
             },
         )
     };
@@ -1234,6 +1263,7 @@ pub struct MarkAsReadBody {
 )]
 async fn mark_as_read(
     CurrentUid(uid): CurrentUid,
+    State(state): State<AppState>,
     Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
     mut conn: DbConn,
     Json(body): Json<MarkAsReadBody>,
@@ -1242,8 +1272,13 @@ async fn mark_as_read(
 
     check_membership(conn, chat_id, uid)?;
 
-    let read_state =
-        crate::services::chat::mark_chat_as_read_state(conn, chat_id, uid, body.message_id)?;
+    let read_state = crate::services::chat::mark_chat_as_read_state(
+        conn,
+        state.unread_service.as_ref(),
+        chat_id,
+        uid,
+        body.message_id,
+    )?;
 
     Ok(Json(MarkChatReadStateResponse {
         last_read_message_id: read_state.last_read_message_id,
@@ -1279,6 +1314,7 @@ pub struct MarkAsUnreadBody {
 )]
 async fn mark_as_unread(
     CurrentUid(uid): CurrentUid,
+    State(state): State<AppState>,
     Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
     mut conn: DbConn,
     body: Option<Json<MarkAsUnreadBody>>,
@@ -1298,7 +1334,9 @@ async fn mark_as_unread(
         .execute(conn)?;
 
         let unread_count =
-            crate::services::chat::get_chat_unread_count(conn, chat_id, Some(message_id))?;
+            state
+                .unread_service
+                .count_chat_unread(conn, chat_id, Some(message_id))?;
         (Some(message_id), unread_count)
     } else {
         use crate::schema::messages::dsl;
@@ -1358,6 +1396,7 @@ async fn mark_as_unread(
 )]
 async fn get_chat_unread_count(
     CurrentUid(uid): CurrentUid,
+    State(state): State<AppState>,
     Path(ChatIdPath { chat_id }): Path<ChatIdPath>,
     mut conn: DbConn,
 ) -> Result<Json<MarkChatReadStateResponse>, AppError> {
@@ -1372,7 +1411,9 @@ async fn get_chat_unread_count(
         .first(conn)?;
 
     let unread_count =
-        crate::services::chat::get_chat_unread_count(conn, chat_id, last_read_message_id)?;
+        state
+            .unread_service
+            .count_chat_unread(conn, chat_id, last_read_message_id)?;
 
     Ok(Json(MarkChatReadStateResponse {
         last_read_message_id,

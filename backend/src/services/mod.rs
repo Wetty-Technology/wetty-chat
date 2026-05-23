@@ -10,5 +10,6 @@ pub mod message_search;
 pub mod push;
 pub mod service_tokens;
 pub mod threads;
+pub mod unread;
 pub mod user;
 pub mod ws_registry;

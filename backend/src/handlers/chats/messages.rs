@@ -974,6 +974,13 @@ async fn delete_message(
         search_service.delete_message_best_effort(message_id);
     }
 
+    // Update unread count if the message is not in a thread
+    if deleted_message.reply_root_id.is_none() {
+        state
+            .unread_service
+            .observe_top_level_message_countability(chat_id, message_id, false);
+    }
+
     let response = attach_metadata(conn, vec![deleted_message], &state, uid)
         .await
         .into_iter()
