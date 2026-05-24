@@ -31,6 +31,8 @@ import { formatUnreadBadge } from '@/utils/unreadBadge';
 import {
   selectAllChats,
   selectArchivedChats,
+  selectArchivedChatsWithUnreadCount,
+  selectChatsWithUnreadCount,
   selectTotalArchivedUnreadChatCount,
   selectTotalUnreadChatCount,
   setChatArchived,
@@ -41,7 +43,9 @@ import {
 } from '@/store/chatsSlice';
 import {
   selectActiveThreads,
+  selectArchivedThreadsWithUnreadCount,
   selectArchivedThreads,
+  selectThreadsWithUnreadCount,
   selectTotalArchivedUnreadThreadCount,
   selectTotalUnreadThreadCount,
   setThreadSubscriptionStatus,
@@ -166,6 +170,10 @@ export function ChatList({
   const archivedUnreadChats = useSelector(selectTotalArchivedUnreadChatCount);
   const unreadThreads = useSelector(selectTotalUnreadThreadCount);
   const archivedUnreadThreads = useSelector(selectTotalArchivedUnreadThreadCount);
+  const chatsWithUnread = useSelector(selectChatsWithUnreadCount);
+  const archivedChatsWithUnread = useSelector(selectArchivedChatsWithUnreadCount);
+  const threadsWithUnread = useSelector(selectThreadsWithUnreadCount);
+  const archivedThreadsWithUnread = useSelector(selectArchivedThreadsWithUnreadCount);
   const showAllTab = useSelector(selectShowAllTab);
   const messageChats = useSelector((state: RootState) => state.messages.chats);
   const [loading, setLoading] = useState(true);
@@ -633,10 +641,11 @@ export function ChatList({
         value={effectiveTab}
         onChange={setActiveTab}
         allUnreadCount={
-          (archivedMode ? archivedUnreadChats : unreadChats) + (archivedMode ? archivedUnreadThreads : unreadThreads)
+          (archivedMode ? archivedChatsWithUnread : chatsWithUnread) +
+          (archivedMode ? archivedThreadsWithUnread : threadsWithUnread)
         }
-        groupsUnreadCount={archivedMode ? archivedUnreadChats : unreadChats}
-        threadsUnreadCount={archivedMode ? archivedUnreadThreads : unreadThreads}
+        groupsUnreadCount={archivedMode ? archivedChatsWithUnread : chatsWithUnread}
+        threadsUnreadCount={archivedMode ? archivedThreadsWithUnread : threadsWithUnread}
         showAllTab={showAllTab}
       />
       {renderContent()}
