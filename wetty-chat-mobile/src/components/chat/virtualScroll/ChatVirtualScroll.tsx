@@ -91,6 +91,9 @@ function formatAnchorForLog(anchor: ChatVirtualScrollProps['initialAnchor']) {
   if (anchor.type === 'bottom') {
     return { type: 'bottom', token: anchor.token };
   }
+  if (anchor.type === 'top') {
+    return { type: 'top', token: anchor.token };
+  }
 
   return { type: 'message', messageId: anchor.messageId, token: anchor.token };
 }
@@ -1876,6 +1879,8 @@ export function ChatVirtualScroll({
           'backward',
           'bootstrap',
         );
+      } else if (anchor.type === 'top') {
+        queueRangeBatch(0, Math.min(rowKeys.length - 1, BOOTSTRAP_BOTTOM_SEED - 1), 'forward', 'bootstrap');
       } else {
         const anchorIndex = resolveMessageTarget(anchor.messageId)?.index ?? rowKeys.length - 1;
         queueRangeBatch(
@@ -1888,13 +1893,16 @@ export function ChatVirtualScroll({
       return;
     }
 
-    if (anchor.type === 'bottom') {
+    if (anchor.type === 'bottom' || anchor.type === 'top') {
       const measuredHeight = heightBetween(mounted.start, mounted.end + 1);
       const currentTopSpacer = offsetOf(mounted.start);
       const currentMountedBottom = currentTopSpacer + measuredHeight;
       const viewportTop = containerRef.current?.scrollTop ?? 0;
       const viewportBottom = viewportTop + (containerRef.current?.clientHeight ?? 0);
-      if (measuredHeight < containerHeight * BOOTSTRAP_HEIGHT_MULTIPLIER && mounted.start > 0) {
+
+      const hasMoreToLoad = anchor.type === 'bottom' ? mounted.start > 0 : mounted.end < rowKeys.length - 1;
+
+      if (measuredHeight < containerHeight * BOOTSTRAP_HEIGHT_MULTIPLIER && hasMoreToLoad) {
         logVirtualScroll('bootstrap-viewport-coverage', {
           anchor: formatAnchorForLog(anchor),
           mounted,
@@ -1907,7 +1915,16 @@ export function ChatVirtualScroll({
           intersectsViewport: currentMountedBottom > viewportTop && currentTopSpacer < viewportBottom,
           reason: 'insufficient-measured-height',
         });
-        queueRangeBatch(Math.max(0, mounted.start - STAGING_BATCH_SIZE), mounted.start - 1, 'backward', 'bootstrap');
+        if (anchor.type === 'bottom') {
+          queueRangeBatch(Math.max(0, mounted.start - STAGING_BATCH_SIZE), mounted.start - 1, 'backward', 'bootstrap');
+        } else {
+          queueRangeBatch(
+            mounted.end + 1,
+            Math.min(rowKeys.length - 1, mounted.end + STAGING_BATCH_SIZE),
+            'forward',
+            'bootstrap',
+          );
+        }
         return;
       }
 
@@ -1920,9 +1937,12 @@ export function ChatVirtualScroll({
         mountedBottom: currentMountedBottom,
         viewportTop,
         viewportBottom,
-        action: 'scrollToBottom',
+        action: anchor.type === 'bottom' ? 'scrollToBottom' : 'keep-at-top',
       });
-      layoutIntentRef.current = { scrollToBottom: { behavior: 'auto' } };
+      if (anchor.type === 'bottom') {
+        layoutIntentRef.current = { scrollToBottom: { behavior: 'auto' } };
+      }
+      // top: container is already at scrollTop = 0 from the reset effect
       updateMountedRange(capRange(mounted, rowKeys.length - 1));
       setPhaseState('READY');
       triggerRender();

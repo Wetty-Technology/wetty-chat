@@ -225,6 +225,7 @@ function hasLoadedThreadChatMeta(cachedMeta?: { name?: string | null; myRole?: G
 
 function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   const storeChatId = threadId ? `${chatId}_thread_${threadId}` : chatId;
+  const defaultAnchorType = threadId ? ('top' as const) : ('bottom' as const);
   const history = useHistory();
   const location = useLocation();
   const initialResumeMessageIdRef = useRef<string | null>(parseResumeHash(location.hash));
@@ -322,7 +323,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   const [loadingNewer, setLoadingNewer] = useState(false);
   const loadingMoreRef = useRef(false);
   const loadingNewerRef = useRef(false);
-  const [initialAnchor, setInitialAnchor] = useState<VirtualScrollAnchor>({ type: 'bottom', token: 0 });
+  const [initialAnchor, setInitialAnchor] = useState<VirtualScrollAnchor>({ type: defaultAnchorType, token: 0 });
   const [pendingResumeMessageId, setPendingResumeMessageId] = useState<string | null>(initialResumeMessageId);
   const [lastFullyVisibleMessageId, setLastFullyVisibleMessageId] = useState<string | null>(null);
   const [firstVisibleMessageId, setFirstVisibleMessageId] = useState<string | null>(null);
@@ -488,7 +489,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
       .catch(() => {});
   }, [chatId, threadId, pinsLoaded, dispatch]);
 
-  const [atBottom, setAtBottom] = useState(() => threadId || initialResumeMessageId == null);
+  const [atBottom, setAtBottom] = useState(() => !threadId && initialResumeMessageId == null);
   const [replyingTo, setReplyingTo] = useState<MessageResponse | null>(null);
   const [profileSender, setProfileSender] = useState<User | null>(null);
   const [reactionDetail, setReactionDetail] = useState<{ messageId: string; emoji?: string } | null>(null);
@@ -898,7 +899,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
 
           if (shouldResetAnchor) {
             setInitialAnchor((currentAnchor) => {
-              const nextAnchor = { type: 'bottom' as const, token: currentAnchor.token + 1 };
+              const nextAnchor = { type: defaultAnchorType, token: currentAnchor.token + 1 };
               if (import.meta.env.DEV) {
                 console.log('[ChatThread] initialAnchor-reset', {
                   reason: forceReopen ? 'fetchLatestWindow-forceReopen' : 'fetchLatestWindow-dataChanged',
@@ -925,7 +926,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
           });
           dispatch(resetChat({ chatId: storeChatId, messages: [], nextCursor: null, prevCursor: null }));
           setInitialAnchor((currentAnchor) => {
-            const nextAnchor = { type: 'bottom' as const, token: currentAnchor.token + 1 };
+            const nextAnchor = { type: defaultAnchorType, token: currentAnchor.token + 1 };
             if (import.meta.env.DEV) {
               console.log('[ChatThread] initialAnchor-reset', {
                 reason: 'fetchLatestWindow-error',
@@ -940,7 +941,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
           showToast(err.message || t`Failed to load messages`);
         });
     },
-    [chatId, dispatch, showToast, storeChatId, threadId],
+    [chatId, defaultAnchorType, dispatch, showToast, storeChatId, threadId],
   );
 
   // Initial load — open at an explicitly requested resume point when navigated from chat list
