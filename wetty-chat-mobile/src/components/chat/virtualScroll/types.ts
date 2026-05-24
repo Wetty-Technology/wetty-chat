@@ -68,7 +68,8 @@ export interface VirtualScrollHandle {
 
 export type VirtualScrollAnchor =
   | { type: 'bottom'; token: number }
-  | { type: 'message'; messageId: string; token: number };
+  | { type: 'message'; messageId: string; token: number }
+  | { type: 'top'; token: number };
 
 export interface LoadController {
   hasMore: boolean;
