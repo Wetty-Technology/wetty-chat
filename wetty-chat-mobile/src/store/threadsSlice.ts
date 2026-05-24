@@ -1,5 +1,5 @@
 import type { PayloadAction } from '@reduxjs/toolkit';
-import { createSlice } from '@reduxjs/toolkit';
+import { createSelector, createSlice } from '@reduxjs/toolkit';
 import type { RootState } from './index';
 import type { MessagePreview } from '@/api/messages';
 import type { StoredThreadListItem, ThreadListItem } from '@/api/threads';
@@ -173,16 +173,26 @@ export const {
 } = threadsSlice.actions;
 
 export const selectThreads = (state: RootState) => state.threads.items;
-export const selectActiveThreads = (state: RootState) => state.threads.items.filter((thread) => !thread.archived);
-export const selectArchivedThreads = (state: RootState) => state.threads.items.filter((thread) => thread.archived);
+export const selectActiveThreads = createSelector([selectThreads], (threads) => threads.filter((t) => !t.archived));
+export const selectArchivedThreads = createSelector([selectThreads], (threads) => threads.filter((t) => t.archived));
 export const selectThreadsLoaded = (state: RootState, archived = false) =>
   state.threads.buckets[bucketKey(archived)].isLoaded;
 export const selectThreadsNextCursor = (state: RootState, archived = false) =>
   state.threads.buckets[bucketKey(archived)].nextCursor;
-export const selectTotalUnreadThreadCount = (state: RootState) =>
-  state.threads.items.filter((thread) => !thread.archived).reduce((sum, thread) => sum + (thread.unreadCount ?? 0), 0);
-export const selectTotalArchivedUnreadThreadCount = (state: RootState) =>
-  state.threads.items.filter((thread) => thread.archived).reduce((sum, thread) => sum + (thread.unreadCount ?? 0), 0);
+export const selectTotalUnreadThreadCount = createSelector([selectThreads], (threads) =>
+  threads.filter((t) => !t.archived).reduce((sum, t) => sum + (t.unreadCount ?? 0), 0),
+);
+export const selectTotalArchivedUnreadThreadCount = createSelector([selectThreads], (threads) =>
+  threads.filter((t) => t.archived).reduce((sum, t) => sum + (t.unreadCount ?? 0), 0),
+);
+export const selectThreadsWithUnreadCount = createSelector(
+  [selectThreads],
+  (threads) => threads.filter((t) => !t.archived && (t.unreadCount ?? 0) > 0).length,
+);
+export const selectArchivedThreadsWithUnreadCount = createSelector(
+  [selectThreads],
+  (threads) => threads.filter((t) => t.archived && (t.unreadCount ?? 0) > 0).length,
+);
 export const selectThreadSubscriptionStatus = (state: RootState, threadRootId: string) =>
   state.threads.subscriptionByThreadId[threadRootId] ?? null;
 export const selectThreadArchivedStatus = (state: RootState, threadRootId: string) =>

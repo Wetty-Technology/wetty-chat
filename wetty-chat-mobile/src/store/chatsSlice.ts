@@ -337,6 +337,24 @@ export function selectIsChatArchived(state: RootState, chatId: string): boolean 
 
 const selectChatsById = (state: RootState) => state.chats.byId;
 
+function reduceChatEntries(
+  byId: Record<string, ChatStateEntry>,
+  archived: boolean,
+  transform: (meta: ChatListMeta, entry: ChatStateEntry) => number,
+): number {
+  let total = 0;
+  for (const entry of Object.values(byId)) {
+    const meta = getEffectiveListMeta(entry);
+    if (!meta.inList || meta.archived !== archived) continue;
+    if (!archived) {
+      const mutedUntil = resolveMutedUntil(entry?.listSnapshot, entry?.liveProjection);
+      if (mutedUntil && new Date(mutedUntil) > new Date()) continue;
+    }
+    total += transform(meta, entry);
+  }
+  return total;
+}
+
 function mapChatEntry(id: string, entry: ChatStateEntry): ChatListEntry {
   const listMeta = getEffectiveListMeta(entry);
   return {
@@ -376,28 +394,20 @@ export const selectArchivedChats = createSelector([selectChatsById], (byId): Cha
     .sort(sortChats);
 });
 
-export const selectTotalUnreadChatCount = createSelector([selectChatsById], (byId): number => {
-  let total = 0;
-  for (const entry of Object.values(byId)) {
-    const meta = getEffectiveListMeta(entry);
-    if (meta.inList && !meta.archived) {
-      const mutedUntil = resolveMutedUntil(entry?.listSnapshot, entry?.liveProjection);
-      if (mutedUntil && new Date(mutedUntil) > new Date()) continue;
-      total += meta.unreadCount ?? 0;
-    }
-  }
-  return total;
-});
+export const selectTotalUnreadChatCount = createSelector([selectChatsById], (byId): number =>
+  reduceChatEntries(byId, false, (meta) => meta.unreadCount ?? 0),
+);
 
-export const selectTotalArchivedUnreadChatCount = createSelector([selectChatsById], (byId): number => {
-  let total = 0;
-  for (const entry of Object.values(byId)) {
-    const meta = getEffectiveListMeta(entry);
-    if (meta.inList && meta.archived) {
-      total += meta.unreadCount ?? 0;
-    }
-  }
-  return total;
-});
+export const selectTotalArchivedUnreadChatCount = createSelector([selectChatsById], (byId): number =>
+  reduceChatEntries(byId, true, (meta) => meta.unreadCount ?? 0),
+);
+
+export const selectChatsWithUnreadCount = createSelector([selectChatsById], (byId): number =>
+  reduceChatEntries(byId, false, (meta) => ((meta.unreadCount ?? 0) > 0 ? 1 : 0)),
+);
+
+export const selectArchivedChatsWithUnreadCount = createSelector([selectChatsById], (byId): number =>
+  reduceChatEntries(byId, true, (meta) => ((meta.unreadCount ?? 0) > 0 ? 1 : 0)),
+);
 
 export default chatsSlice.reducer;
