@@ -95,7 +95,7 @@ class ComposerContentRow extends StatelessWidget {
                       onChanged: onDraftChanged,
                       onEditingComplete: () => unawaited(onSend()),
                       onTap: onTextFieldTap,
-                      textInputAction: TextInputAction.send,
+                      textInputAction: TextInputAction.newline,
                       placeholder: l10n.message,
                       maxLines: 5,
                       minLines: 1,
