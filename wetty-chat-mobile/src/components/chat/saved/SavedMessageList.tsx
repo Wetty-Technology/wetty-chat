@@ -235,6 +235,7 @@ export function SavedMessageList({ chatId, onOpenMessage }: SavedMessageListProp
   });
   const [unsavingIds, setUnsavingIds] = useState<Set<string>>(() => new Set());
   const requestSequenceRef = useRef(0);
+  const unsavingIdsRef = useRef<Set<string>>(new Set());
   const listKey = chatId ? `chat:${chatId}` : GLOBAL_SAVED_MESSAGES_KEY;
   const requestKey = `${listKey}:${reloadToken}`;
   const isCurrentRequest = state.requestKey === requestKey;
@@ -265,7 +266,9 @@ export function SavedMessageList({ chatId, onOpenMessage }: SavedMessageListProp
           loadingMore: false,
           error: null,
         });
-        setUnsavingIds(new Set());
+        const emptyUnsavingIds = new Set<string>();
+        unsavingIdsRef.current = emptyUnsavingIds;
+        setUnsavingIds(emptyUnsavingIds);
       })
       .catch(() => {
         if (requestSequenceRef.current !== sequence) {
@@ -330,7 +333,14 @@ export function SavedMessageList({ chatId, onOpenMessage }: SavedMessageListProp
 
   const handleUnsave = useCallback(
     (saved: SavedMessageResponse) => {
-      setUnsavingIds((current) => new Set(current).add(saved.id));
+      if (unsavingIdsRef.current.has(saved.id)) {
+        return;
+      }
+
+      const nextUnsavingIds = new Set(unsavingIdsRef.current);
+      nextUnsavingIds.add(saved.id);
+      unsavingIdsRef.current = nextUnsavingIds;
+      setUnsavingIds(nextUnsavingIds);
 
       deleteSavedMessage(saved.id)
         .then(() => {
@@ -343,11 +353,10 @@ export function SavedMessageList({ chatId, onOpenMessage }: SavedMessageListProp
           presentToast({ message: t`Failed to unsave message`, duration: 3000, position: 'bottom' });
         })
         .finally(() => {
-          setUnsavingIds((current) => {
-            const next = new Set(current);
-            next.delete(saved.id);
-            return next;
-          });
+          const next = new Set(unsavingIdsRef.current);
+          next.delete(saved.id);
+          unsavingIdsRef.current = next;
+          setUnsavingIds(next);
         });
     },
     [presentToast],

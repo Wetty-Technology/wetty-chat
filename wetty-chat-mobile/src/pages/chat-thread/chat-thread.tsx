@@ -1681,7 +1681,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
     const audioMessage = isAudioMessage(msg);
     const stickerMessage = msg.messageType === 'sticker';
     const isOwn = msg.sender.uid === currentUserId;
-    const canSaveMessage = !msg.isDeleted && msg.messageType !== 'system' && msg.id !== msg.clientGeneratedId;
+    const canSaveMessage = !msg.isDeleted && msg.messageType !== 'system' && !msg.id.startsWith('cg_');
     const actions: MessageOverlayAction[] = [];
 
     if (!audioMessage && !stickerMessage) {
