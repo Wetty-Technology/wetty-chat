@@ -12,10 +12,11 @@ import { CreateChatPage } from '@/pages/create-chat';
 import InvitePreviewPage from '@/pages/invite-preview';
 import JoinChatPage from '@/pages/join-chat';
 import { ChatThreadPage } from '@/pages/chat-thread/chat-thread';
-import { GroupInfoPage, GroupSettingsPage } from '@/pages/chat-thread/group-info';
+import { GroupInfoPage, GroupSavedMessagesPage, GroupSettingsPage } from '@/pages/chat-thread/group-info';
 import { ChatMembersPage } from '@/pages/chat-thread/chat-members';
 import { ChatInvitesPage } from '@/pages/chat-thread/manage-invites';
 import SettingsPage from '@/pages/settings';
+import SavedMessagesPage from '@/pages/saved-messages';
 import GeneralSettingsPage from '@/pages/settings/general';
 import LanguagePage from '@/pages/settings/language';
 import StickerSettingsPage from '@/pages/settings/stickers';
@@ -72,6 +73,7 @@ const MobileLayout: React.FC = () => {
         <Route path="/chats/join/:inviteCode" exact component={InvitePreviewPage} />
         <Route path="/chats/chat/:id" exact component={ChatThreadPage} />
         <Route path="/chats/chat/:id/thread/:threadId" exact component={ChatThreadPage} />
+        <Route path="/chats/chat/:id/group-info/saved-messages" exact component={GroupSavedMessagesPage} />
         <Route path="/chats/chat/:id/group-info/settings" exact component={GroupSettingsPage} />
         <Route path="/chats/chat/:id/group-info" exact component={GroupInfoPage} />
         <Route path="/chats/chat/:id/invites" exact component={ChatInvitesPage} />
@@ -80,6 +82,7 @@ const MobileLayout: React.FC = () => {
         <Route path="/demo" exact component={ComponentDemoPage} />
         <Route path="/settings/general" exact component={GeneralSettingsPage} />
         <Route path="/settings/language" exact component={LanguagePage} />
+        <Route path="/settings/saved-messages" exact component={SavedMessagesPage} />
         <Route path="/settings/stickers/:packId" exact component={StickerPackDetailPage} />
         <Route path="/settings/stickers" exact component={StickerSettingsPage} />
         <Route path="/settings" exact component={SettingsPage} />

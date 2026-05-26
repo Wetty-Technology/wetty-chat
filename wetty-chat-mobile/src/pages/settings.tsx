@@ -27,13 +27,14 @@ import { SettingsProfileHero } from '@/components/settings/SettingsProfileHero';
 
 import { type PushNotificationErrorCode, usePushNotifications } from '@/hooks/usePushNotifications';
 import { t } from '@lingui/core/macro';
-import { codeWorking, cog, happyOutline, logIn, logOut, notifications } from 'ionicons/icons';
+import { bookmarkOutline, codeWorking, cog, happyOutline, logIn, logOut, notifications } from 'ionicons/icons';
 import { BackButton } from '@/components/BackButton';
 import type { BackAction } from '@/types/back-action';
 
 interface SettingsCoreProps {
   backAction?: BackAction;
   onOpenGeneral?: () => void;
+  onOpenSavedMessages?: () => void;
   onOpenStickers?: () => void;
 }
 
@@ -66,7 +67,7 @@ function getPushErrorMessage(code: PushNotificationErrorCode) {
   }
 }
 
-export function SettingsCore({ backAction, onOpenGeneral, onOpenStickers }: SettingsCoreProps) {
+export function SettingsCore({ backAction, onOpenGeneral, onOpenSavedMessages, onOpenStickers }: SettingsCoreProps) {
   const {
     uid: currentUid,
     username,
@@ -104,6 +105,14 @@ export function SettingsCore({ backAction, onOpenGeneral, onOpenStickers }: Sett
       return;
     }
     history.push('/settings/stickers');
+  };
+
+  const handleOpenSavedMessages = () => {
+    if (onOpenSavedMessages) {
+      onOpenSavedMessages();
+      return;
+    }
+    history.push('/settings/saved-messages');
   };
 
   const handleSubscribeToPush = async () => {
@@ -148,6 +157,12 @@ export function SettingsCore({ backAction, onOpenGeneral, onOpenStickers }: Sett
             <IonIcon aria-hidden="true" icon={cog} slot="start" color="medium" />
             <IonLabel>
               <Trans>General</Trans>
+            </IonLabel>
+          </IonItem>
+          <IonItem button detail={true} onClick={handleOpenSavedMessages}>
+            <IonIcon aria-hidden="true" icon={bookmarkOutline} slot="start" color="medium" />
+            <IonLabel>
+              <Trans>Saved Messages</Trans>
             </IonLabel>
           </IonItem>
           <IonItem button detail={true} onClick={handleOpenStickers}>

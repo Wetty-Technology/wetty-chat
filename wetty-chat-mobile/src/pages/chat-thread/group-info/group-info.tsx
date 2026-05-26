@@ -14,7 +14,7 @@ import {
   IonToolbar,
   useIonToast,
 } from '@ionic/react';
-import { exitOutline, linkOutline, searchOutline, settingsOutline } from 'ionicons/icons';
+import { bookmarkOutline, exitOutline, linkOutline, searchOutline, settingsOutline } from 'ionicons/icons';
 import { useHistory, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { t } from '@lingui/core/macro';
@@ -51,6 +51,7 @@ interface GroupInfoContentProps {
   archived: boolean;
   myRole: GroupRole | null;
   leavingGroup: boolean;
+  onOpenSavedMessages: () => void;
   onOpenSearch: () => void;
   onOpenSettings: () => void;
   onLeaveGroup: () => void;
@@ -65,6 +66,7 @@ function GroupInfoContent({
   archived,
   myRole,
   leavingGroup,
+  onOpenSavedMessages,
   onOpenSearch,
   onOpenSettings,
   onLeaveGroup,
@@ -87,6 +89,10 @@ function GroupInfoContent({
             <Trans>Search</Trans>
           </GroupSettingsActionButton>
         </FeatureGate>
+
+        <GroupSettingsActionButton icon={bookmarkOutline} onClick={onOpenSavedMessages}>
+          <Trans>Saved</Trans>
+        </GroupSettingsActionButton>
 
         <ChatMuteSettingItem chatId={chatId} mutedUntil={mutedUntil} archived={archived} />
 
@@ -241,6 +247,7 @@ function GroupInfoSession({ chatId, backAction }: { chatId: string; backAction?:
             archived={archived}
             myRole={formState.myRole}
             leavingGroup={leavingGroup}
+            onOpenSavedMessages={() => history.push(`/chats/chat/${chatId}/group-info/saved-messages`)}
             onOpenSearch={() => setMode('search')}
             onOpenSettings={() => history.push(`/chats/chat/${chatId}/group-info/settings`)}
             onLeaveGroup={handleLeaveGroup}

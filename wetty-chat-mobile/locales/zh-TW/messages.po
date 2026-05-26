@@ -16,6 +16,12 @@ msgstr ""
 msgid "[Deleted]"
 msgstr "[已刪除]"
 
+msgid "{count} attachments"
+msgstr "{count} 個附件"
+
+msgid "1 attachment"
+msgstr "1 個附件"
+
 msgid "1 day"
 msgstr "1 天"
 
@@ -136,6 +142,9 @@ msgstr "更換"
 
 msgid "Change group photo"
 msgstr "更換群組頭像"
+
+msgid "Chat"
+msgstr "聊天"
 
 msgid "Chat {chatId}"
 msgstr "聊天 {chatId}"
@@ -411,6 +420,9 @@ msgstr "載入更多失敗"
 msgid "Failed to load newer messages"
 msgstr "載入新訊息失敗"
 
+msgid "Failed to load saved messages"
+msgstr "載入收藏訊息失敗"
+
 msgid "Failed to load sticker pack"
 msgstr "載入表情包失敗"
 
@@ -447,6 +459,9 @@ msgstr "撤銷邀請失敗"
 msgid "Failed to save group info"
 msgstr "儲存群組資訊失敗"
 
+msgid "Failed to save message"
+msgstr "收藏訊息失敗"
+
 msgid "Failed to search messages"
 msgstr "搜尋訊息失敗"
 
@@ -470,6 +485,9 @@ msgstr "取消靜音失敗"
 
 msgid "Failed to unpin message"
 msgstr "取消釘選訊息失敗"
+
+msgid "Failed to unsave message"
+msgstr "取消收藏訊息失敗"
 
 msgid "Failed to unsubscribe"
 msgstr "取消訂閱失敗"
@@ -653,6 +671,9 @@ msgstr "訊息不能為空"
 msgid "Message not found"
 msgstr "找不到訊息"
 
+msgid "Message saved"
+msgstr "訊息已收藏"
+
 msgid "Messages Font Size"
 msgstr "訊息字體大小"
 
@@ -737,6 +758,9 @@ msgstr "暫無訊息"
 msgid "No pinned messages"
 msgstr "沒有已釘選的訊息"
 
+msgid "No saved messages yet"
+msgstr "尚無收藏訊息"
+
 msgid "No service worker registered"
 msgstr "未註冊 Service Worker"
 
@@ -773,6 +797,9 @@ msgstr "只有所選群組的成員才能使用此邀請連結加入。"
 msgid "Only the selected user can redeem this invite link to join."
 msgstr "只有所選使用者才能兌換此邀請連結並加入。"
 
+msgid "Open"
+msgstr "開啟"
+
 msgid "Open chat"
 msgstr "開啟聊天"
 
@@ -790,6 +817,12 @@ msgstr "開啟討論串"
 
 msgid "Optional"
 msgstr "選填"
+
+msgid "Original"
+msgstr "原始"
+
+msgid "Original message is no longer available"
+msgstr "原始訊息已無法使用"
 
 msgid "Owned"
 msgstr "我的"
@@ -956,8 +989,17 @@ msgstr "撤銷"
 msgid "Revoke invite"
 msgstr "撤銷邀請"
 
+msgid "Save"
+msgstr "收藏"
+
 msgid "Save Settings"
 msgstr "儲存設定"
+
+msgid "Saved"
+msgstr "收藏"
+
+msgid "Saved Messages"
+msgstr "收藏訊息"
 
 msgid "Saving..."
 msgstr "儲存中..."
@@ -1107,6 +1149,9 @@ msgstr "縮圖 {0}"
 msgid "Today"
 msgstr "今天"
 
+msgid "Try Again"
+msgstr "再試一次"
+
 msgid "Turn Off Push Notifications"
 msgstr "關閉推播通知"
 
@@ -1126,6 +1171,9 @@ msgstr "取消封存聊天？"
 msgid "Unarchive thread?"
 msgstr "取消封存話題？"
 
+msgid "Unknown"
+msgstr "未知"
+
 msgid "Unmuting will unarchive this chat. Continue?"
 msgstr "取消靜音將同時取消封存此聊天。要繼續嗎？"
 
@@ -1137,6 +1185,12 @@ msgstr "取消釘選訊息"
 
 msgid "Unread"
 msgstr "標記未讀"
+
+msgid "Unsave"
+msgstr "取消收藏"
+
+msgid "Unsaving..."
+msgstr "正在取消收藏..."
 
 msgid "Unsubscribe"
 msgstr "取消訂閱"
@@ -1168,7 +1222,7 @@ msgstr "上傳中..."
 
 #. placeholder {0}: invite.targetUid
 #. placeholder {0}: member.uid
-#. placeholder {0}: selectedTargetMember.uid
+#. placeholder {0}: saved.sender.uid
 msgid "User {0}"
 msgstr "使用者 {0}"
 

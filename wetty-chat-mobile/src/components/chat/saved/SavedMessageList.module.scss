@@ -1,0 +1,186 @@
+.layout {
+  min-height: 100%;
+  padding: 12px 0 24px;
+}
+
+.state {
+  align-items: center;
+  color: var(--ion-color-medium);
+  display: flex;
+  justify-content: center;
+  min-height: 128px;
+  padding: 24px;
+  text-align: center;
+}
+
+.errorState {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.list {
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 0;
+  margin-top: 0;
+}
+
+.card {
+  background: var(--ion-item-background, #fff);
+  border-radius: 12px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+  padding: 14px;
+}
+
+.cardDisabled {
+  opacity: 0.72;
+}
+
+.cardHeader {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+}
+
+.headerText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.senderRow {
+  align-items: baseline;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.senderName {
+  color: var(--ion-text-color);
+  font-size: 0.98rem;
+  font-weight: 700;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.savedAt {
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+}
+
+.chatRow,
+.summaryRow,
+.unavailableNote {
+  align-items: center;
+  color: var(--ion-color-medium);
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+
+.chatRow {
+  font-size: 0.83rem;
+  line-height: 1.25;
+}
+
+.chatRow span,
+.summaryRow span,
+.unavailableNote span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.messageText {
+  color: var(--ion-text-color);
+  font-size: 0.95rem;
+  line-height: 1.42;
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.summaryRow {
+  font-size: 0.84rem;
+}
+
+.metaGrid {
+  border-top: 1px solid var(--ion-color-step-150, #e5e5ea);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding-top: 10px;
+}
+
+.metaItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.metaLabel {
+  color: var(--ion-color-medium);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.metaValue {
+  color: var(--ion-text-color);
+  font-size: 0.82rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.unavailableNote {
+  background: var(--ion-color-step-100, #f2f2f7);
+  border-radius: 10px;
+  font-size: 0.84rem;
+  padding: 8px 10px;
+}
+
+.actions {
+  align-items: center;
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.actions ion-button {
+  margin: 0;
+  text-transform: none;
+}
+
+.loadMoreWrap {
+  padding: 4px 16px 16px;
+}
+
+@media (max-width: 360px) {
+  .metaGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

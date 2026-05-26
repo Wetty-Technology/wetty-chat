@@ -20,6 +20,7 @@ import {
 import { useHistory, useLocation, useParams } from 'react-router-dom';
 import {
   arrowUndo,
+  bookmarkOutline,
   chatbubbles,
   chevronDown,
   copyOutline,
@@ -137,6 +138,7 @@ import {
   addRecentReaction,
 } from '@/store/settingsSlice';
 import { MAX_REACTIONS_PER_USER_PER_MESSAGE } from '@/constants/emojiAndStickers';
+import { saveMessage } from '@/api/savedMessages';
 
 function generateClientId(): string {
   return `cg_${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -1679,6 +1681,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
     const audioMessage = isAudioMessage(msg);
     const stickerMessage = msg.messageType === 'sticker';
     const isOwn = msg.sender.uid === currentUserId;
+    const canSaveMessage = !msg.isDeleted && msg.messageType !== 'system' && msg.id !== msg.clientGeneratedId;
     const actions: MessageOverlayAction[] = [];
 
     if (!audioMessage && !stickerMessage) {
@@ -1723,6 +1726,23 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
         navigator.clipboard.writeText(buildPermalinkUrl(chatId, msg.id));
       },
     });
+
+    if (canSaveMessage) {
+      actions.push({
+        key: 'save',
+        label: t`Save`,
+        icon: bookmarkOutline,
+        handler: () => {
+          saveMessage(msg.id)
+            .then(() => {
+              showToast(t`Message saved`, 2000);
+            })
+            .catch(() => {
+              showToast(t`Failed to save message`);
+            });
+        },
+      });
+    }
 
     actions.push({
       key: 'reply',
@@ -1824,7 +1844,9 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
       });
     }
     if (stickerMessage) {
-      return actions.filter((a) => a.key === 'reply' || a.key === 'delete' || a.key === 'copy-link');
+      return actions.filter(
+        (a) => a.key === 'reply' || a.key === 'delete' || a.key === 'copy-link' || a.key === 'save',
+      );
     }
     return actions;
   }, [

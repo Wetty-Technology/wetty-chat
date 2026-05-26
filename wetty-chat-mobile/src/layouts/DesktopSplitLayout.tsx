@@ -8,13 +8,14 @@ import { UserAvatar } from '@/components/UserAvatar';
 import { ChatList } from '@/components/chat/lists/ChatList';
 import type { ChatListTab } from '@/components/chat/lists/ChatListSegment';
 import ChatThreadCore from '@/pages/chat-thread/chat-thread';
-import GroupInfoCore, { GroupSettingsCore } from '@/pages/chat-thread/group-info';
+import GroupInfoCore, { GroupSavedMessagesCore, GroupSettingsCore } from '@/pages/chat-thread/group-info';
 import ChatMembersCore from '@/pages/chat-thread/chat-members';
 import ChatInvitesCore from '@/pages/chat-thread/manage-invites';
 import CreateChatCore from '@/pages/create-chat';
 import { InvitePreviewCore } from '@/pages/invite-preview';
 import { JoinChatCore } from '@/pages/join-chat';
 import { SettingsCore } from '@/pages/settings';
+import { SavedMessagesCore } from '@/pages/saved-messages';
 import { GeneralSettingsCore } from '@/pages/settings/general';
 import { LanguagePageCore } from '@/pages/settings/language';
 import { StickerSettingsCore } from '@/pages/settings/stickers';
@@ -33,6 +34,7 @@ interface DesktopRouteMatches {
   archivedMatch: { tab?: string } | null;
   threadMatch: { id: string; threadId: string } | null;
   groupInfoMatch: { id: string } | null;
+  groupInfoSavedMessagesMatch: { id: string } | null;
   groupInfoSettingsMatch: { id: string } | null;
   membersMatch: { id: string } | null;
   invitesMatch: { id: string } | null;
@@ -41,6 +43,7 @@ interface DesktopRouteMatches {
   isJoinChat: boolean;
   globalSettings: boolean;
   generalSettings: boolean;
+  savedMessagesSettings: boolean;
   languageSettings: boolean;
   stickerSettings: boolean;
   stickerPackSettings: { packId: string } | null;
@@ -57,6 +60,10 @@ function getDesktopRouteMatches(pathname: string): DesktopRouteMatches {
   });
   const groupInfoRaw = matchPath<{ id: string }>(pathname, {
     path: '/chats/chat/:id/group-info',
+    exact: true,
+  });
+  const groupInfoSavedMessagesRaw = matchPath<{ id: string }>(pathname, {
+    path: '/chats/chat/:id/group-info/saved-messages',
     exact: true,
   });
   const groupInfoSettingsRaw = matchPath<{ id: string }>(pathname, {
@@ -95,6 +102,10 @@ function getDesktopRouteMatches(pathname: string): DesktopRouteMatches {
     path: '/settings/general',
     exact: true,
   });
+  const savedMessagesSettings = !!matchPath(pathname, {
+    path: '/settings/saved-messages',
+    exact: true,
+  });
   const stickerPackRaw = matchPath<{ packId: string }>(pathname, {
     path: '/settings/stickers/:packId',
     exact: true,
@@ -106,12 +117,14 @@ function getDesktopRouteMatches(pathname: string): DesktopRouteMatches {
       exact: true,
     }) ||
     generalSettings ||
+    savedMessagesSettings ||
     languageSettings ||
     stickerSettings;
 
   return {
     activeChatId:
       threadRaw?.params.id ??
+      groupInfoSavedMessagesRaw?.params.id ??
       groupInfoSettingsRaw?.params.id ??
       groupInfoRaw?.params.id ??
       membersRaw?.params.id ??
@@ -121,6 +134,7 @@ function getDesktopRouteMatches(pathname: string): DesktopRouteMatches {
     archivedMatch: archivedRaw?.params ?? null,
     threadMatch: threadRaw?.params ?? null,
     groupInfoMatch: groupInfoRaw?.params ?? null,
+    groupInfoSavedMessagesMatch: groupInfoSavedMessagesRaw?.params ?? null,
     groupInfoSettingsMatch: groupInfoSettingsRaw?.params ?? null,
     membersMatch: membersRaw?.params ?? null,
     invitesMatch: invitesRaw?.params ?? null,
@@ -129,6 +143,7 @@ function getDesktopRouteMatches(pathname: string): DesktopRouteMatches {
     isJoinChat: !!joinRaw,
     globalSettings,
     generalSettings,
+    savedMessagesSettings,
     languageSettings,
     stickerSettings,
     stickerPackSettings: stickerPackRaw?.params ?? null,
@@ -206,6 +221,7 @@ export function DesktopSplitLayout() {
     archivedMatch,
     threadMatch,
     groupInfoMatch,
+    groupInfoSavedMessagesMatch,
     groupInfoSettingsMatch,
     membersMatch,
     invitesMatch,
@@ -223,10 +239,13 @@ export function DesktopSplitLayout() {
   const [archivedSidebarTab, setArchivedSidebarTab] = useState<ChatListTab | null>(initialArchivedTab);
   const archivedMode = archivedSidebarTab != null;
   const archivedTab = archivedSidebarTab ?? 'all';
-  const groupInfoModalChatId = groupInfoSettingsMatch?.id ?? groupInfoMatch?.id ?? null;
-  const groupInfoModalRoutePath = groupInfoSettingsMatch
-    ? '/chats/chat/:id/group-info/settings'
-    : '/chats/chat/:id/group-info';
+  const groupInfoModalChatId =
+    groupInfoSavedMessagesMatch?.id ?? groupInfoSettingsMatch?.id ?? groupInfoMatch?.id ?? null;
+  const groupInfoModalRoutePath = groupInfoSavedMessagesMatch
+    ? '/chats/chat/:id/group-info/saved-messages'
+    : groupInfoSettingsMatch
+      ? '/chats/chat/:id/group-info/settings'
+      : '/chats/chat/:id/group-info';
 
   useEffect(() => {
     if (archivedMatch) {
@@ -262,8 +281,12 @@ export function DesktopSplitLayout() {
       return;
     }
 
+    if (!getDesktopRouteMatches(location.pathname).globalSettings) {
+      return;
+    }
+
     history.replace(backgroundPath);
-  }, [backgroundPath, history]);
+  }, [backgroundPath, history, location.pathname]);
 
   const openLanguageSettings = useCallback(() => {
     history.push({
@@ -275,6 +298,13 @@ export function DesktopSplitLayout() {
   const openGeneralSettings = useCallback(() => {
     history.push({
       pathname: '/settings/general',
+      state: { backgroundPath },
+    });
+  }, [backgroundPath, history]);
+
+  const openSavedMessages = useCallback(() => {
+    history.push({
+      pathname: '/settings/saved-messages',
       state: { backgroundPath },
     });
   }, [backgroundPath, history]);
@@ -373,7 +403,15 @@ export function DesktopSplitLayout() {
         {/* Group info modal */}
         <ChatModal chatId={groupInfoModalChatId} routePath={groupInfoModalRoutePath}>
           {(chatId, backAction) =>
-            groupInfoSettingsMatch ? (
+            groupInfoSavedMessagesMatch ? (
+              <GroupSavedMessagesCore
+                chatId={chatId}
+                backAction={{
+                  type: 'callback',
+                  onBack: () => history.push(`/chats/chat/${chatId}/group-info`),
+                }}
+              />
+            ) : groupInfoSettingsMatch ? (
               <GroupSettingsCore
                 chatId={chatId}
                 backAction={{
@@ -445,6 +483,17 @@ export function DesktopSplitLayout() {
               }}
               onOpenPack={openStickerPackSettings}
             />
+          ) : currentRoute.savedMessagesSettings ? (
+            <SavedMessagesCore
+              backAction={{
+                type: 'callback',
+                onBack: () =>
+                  history.push({
+                    pathname: '/settings',
+                    state: { backgroundPath },
+                  }),
+              }}
+            />
           ) : currentRoute.generalSettings ? (
             <GeneralSettingsCore
               backAction={{
@@ -461,6 +510,7 @@ export function DesktopSplitLayout() {
             <SettingsCore
               backAction={{ type: 'close', onClose: closeGlobalSettings }}
               onOpenGeneral={openGeneralSettings}
+              onOpenSavedMessages={openSavedMessages}
               onOpenStickers={openStickerSettings}
             />
           )}
