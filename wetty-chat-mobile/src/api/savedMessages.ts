@@ -77,7 +77,7 @@ export function saveMessage(messageId: string): Promise<AxiosResponse<SavedMessa
 }
 
 export function deleteSavedMessage(savedMessageId: string): Promise<AxiosResponse<void>> {
-  return apiClient.delete(`/saved-messages/${savedMessageId}`);
+  return apiClient.delete(`/saved-messages/by-id/${savedMessageId}`);
 }
 
 export function deleteSavedMessageByOriginal(messageId: string): Promise<AxiosResponse<void>> {

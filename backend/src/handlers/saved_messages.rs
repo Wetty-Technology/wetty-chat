@@ -114,7 +114,7 @@ async fn delete_saved_message_by_original(
 
 #[utoipa::path(
     delete,
-    path = "/{saved_message_id}",
+    path = "/by-id/{saved_message_id}",
     tag = "saved_messages",
     params(
         ("saved_message_id" = String, Path, description = "Saved message row ID"),
@@ -142,4 +142,12 @@ pub fn router() -> OpenApiRouter<AppState> {
         .routes(utoipa_axum::routes!(put_saved_message))
         .routes(utoipa_axum::routes!(delete_saved_message_by_original))
         .routes(utoipa_axum::routes!(delete_saved_message_by_id))
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn router_constructs_without_route_conflicts() {
+        let _router = super::router();
+    }
 }
