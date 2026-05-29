@@ -333,4 +333,38 @@ describe('computeMultiImageLayout', () => {
     expect(height).toBe(400);
     expect(rects[0].height).toBe(400);
   });
+
+  it('stacks ultra-wide images with adaptive height preserving aspect ratio', () => {
+    // 7136×795 images: ar ≈ 9. Stacked (H-cut) gives near-zero distortion.
+    const ar = 7136 / 795;
+    const images: ImageInput[] = [{ aspectRatio: ar }, { aspectRatio: ar }];
+    const maxHeight = 400;
+    const { rects, height } = computeMultiImageLayout(images, opts(400, maxHeight));
+    expect(rects).toHaveLength(2);
+    // H-cut: stacked, full width
+    expect(rects[0].x).toBeCloseTo(0, 0);
+    expect(rects[1].x).toBeCloseTo(0, 0);
+    expect(rects[0].width).toBeGreaterThan(350);
+    // Height adapts: well below maxHeight (natural ≈ 91px, not 400px)
+    expect(height).toBeLessThan(maxHeight * 0.3);
+    // Each cell preserves the image's aspect ratio
+    const cellAR = rects[0].width / rects[0].height;
+    expect(cellAR).toBeCloseTo(ar, 0);
+  });
+
+  it('isolates extreme-AR image in its own row when placed first', () => {
+    // [extreme, normal, normal] — extreme should get full-width row at top
+    const images: ImageInput[] = [
+      { aspectRatio: 8.97 },
+      { aspectRatio: 1.5 },
+      { aspectRatio: 1.5 },
+    ];
+    const { rects } = computeMultiImageLayout(images, opts(400, 400));
+    expect(rects).toHaveLength(3);
+    // Extreme image should be in its own row (full width)
+    expect(rects[0].width).toBeGreaterThan(350);
+    // Normal images should be side-by-side below
+    expect(rects[1].y).toBeGreaterThan(rects[0].y + rects[0].height - 1);
+    expect(rects[2].y).toBeGreaterThan(rects[0].y + rects[0].height - 1);
+  });
 });

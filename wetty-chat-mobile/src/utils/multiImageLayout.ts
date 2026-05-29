@@ -53,6 +53,10 @@ interface NodeEval {
   minW: number;
   minH: number;
   valid: boolean;
+  /** Total horizontal gap space consumed by H-cuts in this subtree. */
+  hGapTotal: number;
+  /** Whether this subtree contains any image with AR > EXTREME_AR_THRESHOLD. */
+  hasExtreme: boolean;
 }
 
 const INVALID_NODE: NodeEval = {
@@ -63,6 +67,8 @@ const INVALID_NODE: NodeEval = {
   minW: 0,
   minH: 0,
   valid: false,
+  hGapTotal: 0,
+  hasExtreme: false,
 };
 
 /** Never allocate less than 5% of available space to either side of a cut. */
@@ -74,6 +80,12 @@ const MIN_ASPECT_RATIO = 0.01;
 
 /** Re-evaluate constraints only when actual height differs from maxHeight by more than this. */
 const HEIGHT_REEVAL_THRESHOLD = 0.5;
+
+/** Images above this AR are "extreme" — prefer them in their own row/column. */
+const EXTREME_AR_THRESHOLD = 3;
+
+/** Distortion penalty for V-cuts containing ultra-wide images (they prefer H-cut rows). */
+const EXTREME_WIDE_VCUT_PENALTY = 0.5;
 
 // ---------------------------------------------------------------------------
 // Tree enumeration
@@ -116,15 +128,16 @@ function computeCutParams(
   containerH: number,
   gap: number,
 ): { rOpt: number; muNode: number; nodeMinW: number; nodeMinH: number; valid: boolean } {
-  const aL = Math.exp(leftEval.mu);
-  const aR = Math.exp(rightEval.mu);
   const wTotal = leftEval.weight + rightEval.weight;
   const muNode = (leftEval.weight * leftEval.mu + rightEval.weight * rightEval.mu) / wTotal;
 
+  // Use arEff (effective aspect ratio) for optimal cut ratio, not exp(mu)
+  // (geometric mean). arEff correctly reflects how the subtree maps to space:
+  // V-cut: width splits proportional to arEff; H-cut: height splits proportional to 1/arEff.
   const rOptRaw =
     direction === 'v'
-      ? (leftEval.weight * aL) / (leftEval.weight * aL + rightEval.weight * aR)
-      : leftEval.weight / aL / (leftEval.weight / aL + rightEval.weight / aR);
+      ? leftEval.arEff / (leftEval.arEff + rightEval.arEff)
+      : (1 / leftEval.arEff) / (1 / leftEval.arEff + 1 / rightEval.arEff);
 
   const usable = direction === 'v' ? containerW - gap : containerH - gap;
   const sizeField = direction === 'v' ? 'minW' : 'minH';
@@ -155,14 +168,20 @@ function evaluateNode(
 ): boolean {
   if (node.type === 'leaf' && node.index !== undefined) {
     const ar = Math.max(MIN_ASPECT_RATIO, images[node.index].aspectRatio);
+    // Relax min dimensions for extreme aspect ratios: ultra-wide images
+    // naturally have shorter cells, ultra-tall naturally have narrower cells.
+    const effectiveMinH = Math.min(minH, w / ar);
+    const effectiveMinW = Math.min(minW, h * ar);
     const leafEval: NodeEval = {
       mu: Math.log(ar),
       weight: 1,
       arEff: ar,
       rOpt: 1,
-      minW,
-      minH,
-      valid: w >= minW && h >= minH,
+      minW: effectiveMinW,
+      minH: effectiveMinH,
+      valid: w >= effectiveMinW && h >= effectiveMinH,
+      hGapTotal: 0,
+      hasExtreme: ar > EXTREME_AR_THRESHOLD,
     };
     out.set(node.id, leafEval);
     return leafEval.valid;
@@ -195,11 +214,17 @@ function evaluateNode(
   out.set(node.id, {
     mu: muNode,
     weight: leftEval.weight + rightEval.weight,
-    arEff: Math.exp(muNode),
+    arEff: node.type === 'v'
+      ? leftEval.arEff + rightEval.arEff
+      : leftEval.arEff * rightEval.arEff / (leftEval.arEff + rightEval.arEff),
     rOpt,
     minW: nodeMinW,
     minH: nodeMinH,
     valid: true,
+    hGapTotal: node.type === 'h'
+      ? leftEval.hGapTotal + gap + rightEval.hGapTotal
+      : Math.max(leftEval.hGapTotal, rightEval.hGapTotal),
+    hasExtreme: leftEval.hasExtreme || rightEval.hasExtreme,
   });
   return true;
 }
@@ -217,29 +242,33 @@ function computeDistortion(
   gap: number,
 ): number {
   if (node.type === 'leaf' && node.index !== undefined) {
-    const ar = Math.max(0.01, images[node.index].aspectRatio);
+    const ar = Math.max(MIN_ASPECT_RATIO, images[node.index].aspectRatio);
     const actualAR = w / h;
     const lnRatio = Math.log(actualAR / ar);
     return lnRatio * lnRatio;
   }
+  const leftEval = nodeMap.get(node.left!.id)!;
+  const rightEval = nodeMap.get(node.right!.id)!;
+  const cutRatio = nodeMap.get(node.id)!.rOpt;
 
-  const nodeEval = nodeMap.get(node.id)!;
-  const cutRatio = nodeEval.rOpt;
+  // Penalize V-cuts that contain ultra-wide images: they should get a full-width
+  // row (H-cut), not share width with other images. H-cuts are fine for ultra-wide
+  // images because they get the full container width.
+  const hasWideExtreme = leftEval.hasExtreme || rightEval.hasExtreme;
+  const penalty = (node.type === 'v' && hasWideExtreme) ? EXTREME_WIDE_VCUT_PENALTY : 0;
 
   if (node.type === 'v') {
     const lw = (w - gap) * cutRatio;
     const rw = w - gap - lw;
-    return (
+    return penalty +
       computeDistortion(node.left!, nodeMap, images, lw, h, gap) +
-      computeDistortion(node.right!, nodeMap, images, rw, h, gap)
-    );
+      computeDistortion(node.right!, nodeMap, images, rw, h, gap);
   } else {
     const th = (h - gap) * cutRatio;
     const bh = h - gap - th;
-    return (
+    return penalty +
       computeDistortion(node.left!, nodeMap, images, w, th, gap) +
-      computeDistortion(node.right!, nodeMap, images, w, bh, gap)
-    );
+      computeDistortion(node.right!, nodeMap, images, w, bh, gap);
   }
 }
 
@@ -333,26 +362,32 @@ export function computeMultiImageLayout(
     if (!evaluateNode(tree, images, cw, maxHeight, gap, minW, minH, nodeMap)) continue;
 
     // arEff is intrinsic to the tree structure and image aspect ratios.
-    const arEff = nodeMap.get(tree.id)!.arEff;
-    const naturalHeight = cw / arEff;
+    // hGapTotal accounts for gaps consumed by H-cuts in the tree.
+    const rootEval = nodeMap.get(tree.id)!;
+    const naturalHeight = cw / rootEval.arEff + rootEval.hGapTotal;
     const actualHeight = Math.min(naturalHeight, maxHeight);
 
-    // If shorter than maxHeight, re-evaluate at actual height so that
+    // If shorter than maxHeight, try to re-evaluate at actual height so that
     // constraint clamping (minH) reflects the real container dimensions.
+    // If constraints reject the shorter height (e.g. two ultra-wide images
+    // stacked would be shorter than 2×minHeight), fall back to maxHeight.
     let finalMap = nodeMap;
+    let evalHeight = maxHeight;
     if (actualHeight < maxHeight - HEIGHT_REEVAL_THRESHOLD) {
       const reevalMap = new Map<string, NodeEval>();
-      if (!evaluateNode(tree, images, cw, actualHeight, gap, minW, minH, reevalMap)) continue;
-      finalMap = reevalMap;
+      if (evaluateNode(tree, images, cw, actualHeight, gap, minW, minH, reevalMap)) {
+        finalMap = reevalMap;
+        evalHeight = actualHeight;
+      }
     }
 
-    const dist = computeDistortion(tree, finalMap, images, cw, actualHeight, gap);
+    const dist = computeDistortion(tree, finalMap, images, cw, evalHeight, gap);
 
     if (dist < bestDist) {
       bestDist = dist;
       bestTree = tree;
       bestMap = finalMap;
-      bestHeight = actualHeight;
+      bestHeight = evalHeight;
     }
   }
 

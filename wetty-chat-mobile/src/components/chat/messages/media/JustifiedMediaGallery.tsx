@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import type { Attachment } from '@/api/messages';
 import { SingleMediaAttachment } from './SingleMediaAttachment';
-import { getSingleMediaBounds, MEDIA_CONSTANTS, MAX_ATTACHMENT_PREVIEWS } from '@/constants/media';
+import { getSingleMediaBounds, MEDIA_CONSTANTS, MAX_ATTACHMENT_PREVIEWS, MIN_PREVIEW_AR, MAX_PREVIEW_AR, FALLBACK_DIMENSION, LAYOUT_MIN_CELL } from '@/constants/media';
 import { computeMultiImageLayout } from '@/utils/multiImageLayout';
 import styles from './JustifiedMediaGallery.module.scss';
 import type { ReactNode, CSSProperties } from 'react';
@@ -13,11 +13,6 @@ interface JustifiedMediaGalleryProps {
   renderElement: (id: string, style?: CSSProperties) => ReactNode;
 }
 
-/** Clamp preview aspect ratios to prevent degenerate layouts from bad metadata. */
-const MIN_PREVIEW_AR = 0.15;
-const MAX_PREVIEW_AR = 3.0;
-const FALLBACK_DIMENSION = 100;
-const LAYOUT_MIN_CELL = 60;
 
 export const JustifiedMediaGallery: React.FC<JustifiedMediaGalleryProps> = ({
   attachments,
@@ -72,8 +67,7 @@ export const JustifiedMediaGallery: React.FC<JustifiedMediaGalleryProps> = ({
     <div
       className={styles.galleryContainer}
       style={{
-        width: '100%',
-        minWidth: MAX_WIDTH,
+        width: `${MAX_WIDTH}px`,
         maxWidth: '100%',
         maxHeight: `${MAX_HEIGHT}px`,
         aspectRatio: `${MAX_WIDTH} / ${layoutHeight}`,
@@ -102,7 +96,7 @@ export const JustifiedMediaGallery: React.FC<JustifiedMediaGalleryProps> = ({
               height: `${heightPct}%`,
               overflow: 'hidden',
               cursor: interactive ? 'pointer' : 'default',
-              backgroundColor: '#f4f4f5',
+              backgroundColor: 'var(--bubble-bg)',
             }}
             onClick={(e) => {
               if (!interactive) return;
