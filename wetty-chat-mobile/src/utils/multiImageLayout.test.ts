@@ -354,11 +354,7 @@ describe('computeMultiImageLayout', () => {
 
   it('isolates extreme-AR image in its own row when placed first', () => {
     // [extreme, normal, normal] — extreme should get full-width row at top
-    const images: ImageInput[] = [
-      { aspectRatio: 8.97 },
-      { aspectRatio: 1.5 },
-      { aspectRatio: 1.5 },
-    ];
+    const images: ImageInput[] = [{ aspectRatio: 8.97 }, { aspectRatio: 1.5 }, { aspectRatio: 1.5 }];
     const { rects } = computeMultiImageLayout(images, opts(400, 400));
     expect(rects).toHaveLength(3);
     // Extreme image should be in its own row (full width)

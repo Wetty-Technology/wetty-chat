@@ -1,7 +1,14 @@
 import React, { useMemo } from 'react';
 import type { Attachment } from '@/api/messages';
 import { SingleMediaAttachment } from './SingleMediaAttachment';
-import { getSingleMediaBounds, MEDIA_CONSTANTS, MAX_ATTACHMENT_PREVIEWS, MIN_PREVIEW_AR, MAX_PREVIEW_AR, FALLBACK_DIMENSION, LAYOUT_MIN_CELL } from '@/constants/media';
+import {
+  getSingleMediaBounds,
+  MEDIA_CONSTANTS,
+  MAX_ATTACHMENT_PREVIEWS,
+  MIN_PREVIEW_AR,
+  MAX_PREVIEW_AR,
+  FALLBACK_DIMENSION,
+} from '@/constants/media';
 import { computeMultiImageLayout } from '@/utils/multiImageLayout';
 import styles from './JustifiedMediaGallery.module.scss';
 import type { ReactNode, CSSProperties } from 'react';
@@ -13,14 +20,13 @@ interface JustifiedMediaGalleryProps {
   renderElement: (id: string, style?: CSSProperties) => ReactNode;
 }
 
-
 export const JustifiedMediaGallery: React.FC<JustifiedMediaGalleryProps> = ({
   attachments,
   interactive,
   onView,
   renderElement,
 }) => {
-  const { MAX_WIDTH, MAX_HEIGHT } = useMemo(() => getSingleMediaBounds(), []);
+  const { MAX_WIDTH, MAX_HEIGHT, MIN_WIDTH, MIN_HEIGHT } = useMemo(() => getSingleMediaBounds(), []);
 
   const { items, layout, layoutHeight, extraCount } = useMemo(() => {
     if (!attachments || attachments.length <= 1) {
@@ -39,8 +45,8 @@ export const JustifiedMediaGallery: React.FC<JustifiedMediaGalleryProps> = ({
       containerWidth: MAX_WIDTH,
       maxHeight: MAX_HEIGHT,
       gap: MEDIA_CONSTANTS.GAP,
-      minWidth: LAYOUT_MIN_CELL,
-      minHeight: LAYOUT_MIN_CELL,
+      minWidth: MIN_WIDTH,
+      minHeight: MIN_HEIGHT,
     });
 
     const extra = attachments.length > MAX_ATTACHMENT_PREVIEWS ? attachments.length - MAX_ATTACHMENT_PREVIEWS + 1 : 0;
@@ -96,7 +102,7 @@ export const JustifiedMediaGallery: React.FC<JustifiedMediaGalleryProps> = ({
               height: `${heightPct}%`,
               overflow: 'hidden',
               cursor: interactive ? 'pointer' : 'default',
-              backgroundColor: 'var(--bubble-bg)',
+              backgroundColor: 'transparent',
             }}
             onClick={(e) => {
               if (!interactive) return;

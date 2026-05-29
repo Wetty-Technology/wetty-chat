@@ -137,7 +137,7 @@ function computeCutParams(
   const rOptRaw =
     direction === 'v'
       ? leftEval.arEff / (leftEval.arEff + rightEval.arEff)
-      : (1 / leftEval.arEff) / (1 / leftEval.arEff + 1 / rightEval.arEff);
+      : 1 / leftEval.arEff / (1 / leftEval.arEff + 1 / rightEval.arEff);
 
   const usable = direction === 'v' ? containerW - gap : containerH - gap;
   const sizeField = direction === 'v' ? 'minW' : 'minH';
@@ -214,16 +214,18 @@ function evaluateNode(
   out.set(node.id, {
     mu: muNode,
     weight: leftEval.weight + rightEval.weight,
-    arEff: node.type === 'v'
-      ? leftEval.arEff + rightEval.arEff
-      : leftEval.arEff * rightEval.arEff / (leftEval.arEff + rightEval.arEff),
+    arEff:
+      node.type === 'v'
+        ? leftEval.arEff + rightEval.arEff
+        : (leftEval.arEff * rightEval.arEff) / (leftEval.arEff + rightEval.arEff),
     rOpt,
     minW: nodeMinW,
     minH: nodeMinH,
     valid: true,
-    hGapTotal: node.type === 'h'
-      ? leftEval.hGapTotal + gap + rightEval.hGapTotal
-      : Math.max(leftEval.hGapTotal, rightEval.hGapTotal),
+    hGapTotal:
+      node.type === 'h'
+        ? leftEval.hGapTotal + gap + rightEval.hGapTotal
+        : Math.max(leftEval.hGapTotal, rightEval.hGapTotal),
     hasExtreme: leftEval.hasExtreme || rightEval.hasExtreme,
   });
   return true;
@@ -255,20 +257,24 @@ function computeDistortion(
   // row (H-cut), not share width with other images. H-cuts are fine for ultra-wide
   // images because they get the full container width.
   const hasWideExtreme = leftEval.hasExtreme || rightEval.hasExtreme;
-  const penalty = (node.type === 'v' && hasWideExtreme) ? EXTREME_WIDE_VCUT_PENALTY : 0;
+  const penalty = node.type === 'v' && hasWideExtreme ? EXTREME_WIDE_VCUT_PENALTY : 0;
 
   if (node.type === 'v') {
     const lw = (w - gap) * cutRatio;
     const rw = w - gap - lw;
-    return penalty +
+    return (
+      penalty +
       computeDistortion(node.left!, nodeMap, images, lw, h, gap) +
-      computeDistortion(node.right!, nodeMap, images, rw, h, gap);
+      computeDistortion(node.right!, nodeMap, images, rw, h, gap)
+    );
   } else {
     const th = (h - gap) * cutRatio;
     const bh = h - gap - th;
-    return penalty +
+    return (
+      penalty +
       computeDistortion(node.left!, nodeMap, images, w, th, gap) +
-      computeDistortion(node.right!, nodeMap, images, w, bh, gap);
+      computeDistortion(node.right!, nodeMap, images, w, bh, gap)
+    );
   }
 }
 
