@@ -126,6 +126,18 @@ export function toMessagePreview(message: MessageResponse): MessagePreview {
   };
 }
 
+/** Resolve a mention UID to a User object for profile display. */
+export function mentionToUser(mentions: MentionInfo[] | undefined, uid: number): User {
+  const mention = mentions?.find((m) => m.uid === uid);
+  return {
+    uid,
+    name: mention?.username ?? null,
+    avatarUrl: mention?.avatarUrl,
+    gender: mention?.gender ?? 0,
+    userGroup: mention?.userGroup,
+  };
+}
+
 export interface ListMessagesResponse {
   messages: MessageResponse[];
   nextCursor: string | null;

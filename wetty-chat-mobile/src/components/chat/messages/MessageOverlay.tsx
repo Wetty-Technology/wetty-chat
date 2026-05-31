@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { IonIcon, useIonToast } from '@ionic/react';
 import { addOutline } from 'ionicons/icons';
 import EmojiPicker, { EmojiStyle, Theme, type EmojiClickData } from 'emoji-picker-react';
-import type { Attachment } from '@/api/messages';
+import type { Attachment, MentionInfo } from '@/api/messages';
 import type { PreviewMessage } from '@/utils/messagePreview';
 import { ChatBubbleBase } from './ChatBubbleBase';
 import { StickerBubble } from './StickerBubble';
@@ -42,6 +42,9 @@ interface MessageOverlayBaseProps {
     currentMessageReactions?: string[];
   };
   onClose: () => void;
+  mentions?: MentionInfo[];
+  currentUserUid?: number | null;
+  onMentionClick?: (uid: number) => void;
 }
 
 interface StickerOverlayProps extends MessageOverlayBaseProps {
@@ -75,6 +78,9 @@ export function MessageOverlay(props: MessageOverlayProps) {
     actions,
     reactions,
     onClose,
+    mentions,
+    currentUserUid,
+    onMentionClick,
   } = props;
   const isSticker = props.messageType === 'sticker';
   const contentRef = useRef<HTMLDivElement>(null);
@@ -336,10 +342,12 @@ export function MessageOverlay(props: MessageOverlayProps) {
         layout="bubble-only"
         interactionMode="read-only"
         bubbleProps={bubbleCloneProps}
+        mentions={mentions}
+        currentUserUid={currentUserUid}
+        onMentionClick={onMentionClick}
       />
     );
   }
-
   const overlay = (
     <div className={styles.overlay} onClick={handleOverlayClick}>
       <div
