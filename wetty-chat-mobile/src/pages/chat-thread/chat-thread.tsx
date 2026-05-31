@@ -42,6 +42,7 @@ import {
   getMessage,
   getMessages,
   markMessagesAsRead,
+  mentionToUser,
   type MessageResponse,
   putReaction,
   type User,
@@ -2103,6 +2104,9 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
                 deferredOverlayRef.current = null;
                 setOverlayMessage(null);
               },
+              mentions: msg.mentions ?? undefined,
+              currentUserUid: currentUserId,
+              onMentionClick: (uid: number) => setProfileSender(mentionToUser(msg.mentions, uid)),
             } as const;
 
             if (msg.messageType === 'sticker') {

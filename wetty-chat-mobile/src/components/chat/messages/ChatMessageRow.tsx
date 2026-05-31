@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { t } from '@lingui/core/macro';
-import { type MessageResponse, type User } from '@/api/messages';
+import { type MessageResponse, mentionToUser, type User } from '@/api/messages';
 import { InviteMessageModal } from '@/components/invites/InviteMessageModal';
 import { ChatBubble } from './ChatBubble';
 import { type BubblePropsOverride } from './ChatBubbleBase';
@@ -125,16 +125,7 @@ export function ChatMessageRow({
       onReactionToggle={(emoji, currentlyReacted) => onReactionToggle(msg, emoji, currentlyReacted)}
       mentions={msg.mentions}
       currentUserUid={typeof currentUserId === 'number' ? currentUserId : null}
-      onMentionClick={(uid) => {
-        const mention = msg.mentions?.find((m) => m.uid === uid);
-        onAvatarClick({
-          uid,
-          name: mention?.username ?? null,
-          avatarUrl: mention?.avatarUrl,
-          gender: mention?.gender ?? 0,
-          userGroup: mention?.userGroup,
-        });
-      }}
+      onMentionClick={(uid) => onAvatarClick(mentionToUser(msg.mentions, uid))}
     />
   );
 }
