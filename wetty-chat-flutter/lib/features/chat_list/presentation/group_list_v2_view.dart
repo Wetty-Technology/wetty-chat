@@ -27,6 +27,14 @@ class GroupListV2View extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final provider = groupListV2ViewModelProvider(scope);
     final asyncState = ref.watch(provider);
+    final listState = ref.watch(
+      groupListV2StoreProvider.select(
+        (state) => switch (scope) {
+          ChatListV2Scope.active => state.active,
+          ChatListV2Scope.archived => state.archived,
+        },
+      ),
+    );
     final hasArchivedGroups = ref.watch(
       groupListV2StoreProvider.select((state) => state.hasArchivedGroups),
     );
@@ -41,16 +49,17 @@ class GroupListV2View extends ConsumerWidget {
         child: Center(child: Text(error.toString())),
       ),
       data: (viewState) {
+        final groups = listState.groups;
         final showArchiveFolder =
             scope == ChatListV2Scope.active && hasArchivedGroups;
 
-        if (viewState.errorMessage != null && viewState.groups.isEmpty) {
+        if (viewState.errorMessage != null && groups.isEmpty) {
           return SliverFillRemaining(
             hasScrollBody: false,
             child: Center(child: Text(viewState.errorMessage!)),
           );
         }
-        if (viewState.groups.isEmpty && !showArchiveFolder) {
+        if (groups.isEmpty && !showArchiveFolder) {
           return SliverFillRemaining(
             hasScrollBody: false,
             child: Center(child: Text(l10n.noGroupsYet)),
@@ -60,14 +69,14 @@ class GroupListV2View extends ConsumerWidget {
         return SliverMainAxisGroup(
           slivers: [
             SliverList.builder(
-              itemCount: viewState.groups.length + (showArchiveFolder ? 1 : 0),
+              itemCount: groups.length + (showArchiveFolder ? 1 : 0),
               itemBuilder: (context, index) {
                 if (showArchiveFolder && index == 0) {
                   return const _ArchivedGroupsFolderRow();
                 }
 
                 final groupIndex = showArchiveFolder ? index - 1 : index;
-                final chat = viewState.groups[groupIndex];
+                final chat = groups[groupIndex];
                 return GroupListV2Row(
                   chat: chat,
                   scope: scope,
