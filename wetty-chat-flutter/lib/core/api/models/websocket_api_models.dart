@@ -1,6 +1,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import '../converters/flexible_int_converter.dart';
+import '../converters/nullable_date_time_converter.dart';
 import 'messages_api_models.dart';
 import 'pins_api_models.dart';
 
@@ -85,6 +86,8 @@ sealed class ApiWsEvent {
         return ThreadUpdatedWsEvent.fromJson(json);
       case 'threadMembershipChanged':
         return ThreadMembershipChangedWsEvent.fromJson(json);
+      case 'chatArchiveStateChanged':
+        return ChatArchiveStateChangedWsEvent.fromJson(json);
       case 'pinAdded':
         return PinAddedWsEvent.fromJson(json);
       case 'pinRemoved':
@@ -259,6 +262,45 @@ class ThreadMembershipChangedWsEvent extends ApiWsEvent {
       _$ThreadMembershipChangedWsEventFromJson(json);
 
   Map<String, dynamic> toJson() => _$ThreadMembershipChangedWsEventToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
+class ChatArchiveStateChangedPayloadDto {
+  const ChatArchiveStateChangedPayloadDto({
+    required this.chatId,
+    this.archived = false,
+    this.mutedUntil,
+  });
+
+  @FlexibleIntConverter()
+  final int chatId;
+  @JsonKey(defaultValue: false)
+  final bool archived;
+  @NullableDateTimeConverter()
+  final DateTime? mutedUntil;
+
+  factory ChatArchiveStateChangedPayloadDto.fromJson(
+    Map<String, dynamic> json,
+  ) => _$ChatArchiveStateChangedPayloadDtoFromJson(json);
+
+  Map<String, dynamic> toJson() =>
+      _$ChatArchiveStateChangedPayloadDtoToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
+class ChatArchiveStateChangedWsEvent extends ApiWsEvent {
+  const ChatArchiveStateChangedWsEvent({
+    this.type = 'chatArchiveStateChanged',
+    required this.payload,
+  });
+
+  final String type;
+  final ChatArchiveStateChangedPayloadDto payload;
+
+  factory ChatArchiveStateChangedWsEvent.fromJson(Map<String, dynamic> json) =>
+      _$ChatArchiveStateChangedWsEventFromJson(json);
+
+  Map<String, dynamic> toJson() => _$ChatArchiveStateChangedWsEventToJson(this);
 }
 
 class PinAddedWsEvent extends ApiWsEvent {

@@ -7,6 +7,7 @@ import '../../features/conversation/shared/application/thread_detail_membership_
 import '../../features/chat_list/application/group_list_v2_store.dart';
 import '../../features/chat_list/application/thread_list_v2_store.dart';
 import '../../features/conversation/pins/application/pinned_messages_provider.dart';
+import '../../features/groups/metadata/application/group_metadata_view_model.dart';
 import '../../features/shared/application/chat_inbox_reconciler.dart';
 import '../../features/stickers/data/sticker_pack_order_store.dart';
 import '../api/models/websocket_api_models.dart';
@@ -100,6 +101,12 @@ final wsEventRouterProvider = Provider<void>((ref) {
         );
         reconcileThreadsIfNeeded(true);
         return;
+      case ChatArchiveStateChangedWsEvent(:final payload):
+        ref.invalidate(
+          groupMetadataViewModelProvider(payload.chatId.toString()),
+        );
+        reconcileGroupsIfNeeded(true);
+        return;
       case ReactionUpdatedWsEvent():
       case PinAddedWsEvent():
       case PinRemovedWsEvent():
@@ -150,6 +157,7 @@ final wsEventRouterProvider = Provider<void>((ref) {
       case ReactionUpdatedWsEvent():
       case ThreadUpdatedWsEvent():
       case ThreadMembershipChangedWsEvent():
+      case ChatArchiveStateChangedWsEvent():
       case PongWsEvent():
         return;
     }

@@ -195,6 +195,38 @@ Map<String, dynamic> _$ThreadMembershipChangedWsEventToJson(
   'payload': instance.payload.toJson(),
 };
 
+ChatArchiveStateChangedPayloadDto _$ChatArchiveStateChangedPayloadDtoFromJson(
+  Map<String, dynamic> json,
+) => ChatArchiveStateChangedPayloadDto(
+  chatId: const FlexibleIntConverter().fromJson(json['chatId']),
+  archived: json['archived'] as bool? ?? false,
+  mutedUntil: const NullableDateTimeConverter().fromJson(json['mutedUntil']),
+);
+
+Map<String, dynamic> _$ChatArchiveStateChangedPayloadDtoToJson(
+  ChatArchiveStateChangedPayloadDto instance,
+) => <String, dynamic>{
+  'chatId': const FlexibleIntConverter().toJson(instance.chatId),
+  'archived': instance.archived,
+  'mutedUntil': const NullableDateTimeConverter().toJson(instance.mutedUntil),
+};
+
+ChatArchiveStateChangedWsEvent _$ChatArchiveStateChangedWsEventFromJson(
+  Map<String, dynamic> json,
+) => ChatArchiveStateChangedWsEvent(
+  type: json['type'] as String? ?? 'chatArchiveStateChanged',
+  payload: ChatArchiveStateChangedPayloadDto.fromJson(
+    json['payload'] as Map<String, dynamic>,
+  ),
+);
+
+Map<String, dynamic> _$ChatArchiveStateChangedWsEventToJson(
+  ChatArchiveStateChangedWsEvent instance,
+) => <String, dynamic>{
+  'type': instance.type,
+  'payload': instance.payload.toJson(),
+};
+
 StickerPackOrderItemDto _$StickerPackOrderItemDtoFromJson(
   Map<String, dynamic> json,
 ) => StickerPackOrderItemDto(

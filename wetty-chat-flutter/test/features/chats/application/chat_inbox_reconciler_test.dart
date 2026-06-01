@@ -39,6 +39,7 @@ void main() {
             ],
           ),
         ],
+        archivedChatResponses: [const ListChatsResponseDto(chats: [])],
       );
       final threadService = _FakeThreadApiService(
         unreadCount: 2,
@@ -82,7 +83,7 @@ void main() {
       expect(badge.chatUnreadTotal, 4);
       expect(badge.threadUnreadTotal, 2);
       expect(badge.combinedUnreadTotal, 6);
-      expect(chatService.fetchChatsCalls, 2);
+      expect(chatService.fetchChatsCalls, 3);
       expect(threadService.fetchThreadsCalls, 3);
       expect(chatService.fetchUnreadCountCalls, greaterThanOrEqualTo(1));
       expect(threadService.fetchUnreadCountCalls, greaterThanOrEqualTo(1));
@@ -107,6 +108,7 @@ void main() {
               ],
             ),
           ],
+          archivedChatResponses: [const ListChatsResponseDto(chats: [])],
         );
         final threadService = _FakeThreadApiService(
           unreadCount: 2,
@@ -136,7 +138,7 @@ void main() {
           isEmpty,
         );
         expect(container.read(unreadBadgeProvider).chatUnreadTotal, 4);
-        expect(chatService.fetchChatsCalls, 2);
+        expect(chatService.fetchChatsCalls, 3);
         expect(threadService.fetchThreadsCalls, 0);
         expect(chatService.fetchUnreadCountCalls, greaterThanOrEqualTo(1));
       },
@@ -159,6 +161,7 @@ void main() {
             ],
           ),
         ],
+        archivedChatResponses: [const ListChatsResponseDto(chats: [])],
       );
       final threadService = _FakeThreadApiService(
         unreadCount: 2,
@@ -195,6 +198,7 @@ void main() {
       final chatService = _FakeChatApiService(
         unreadCount: 0,
         chatResponses: [const ListChatsResponseDto(chats: [])],
+        archivedChatResponses: [const ListChatsResponseDto(chats: [])],
       );
       final threadService = _FakeThreadApiService(
         unreadCount: 2,
@@ -225,6 +229,64 @@ void main() {
       expect(store.archived.threads.single.threadRootId, 300);
       expect(threadService.fetchArchivedThreadsCalls, 2);
     });
+
+    test('reconcileGroups refreshes active and archived groups', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final chatService = _FakeChatApiService(
+        unreadCount: 3,
+        chatResponses: [
+          ListChatsResponseDto(
+            chats: [
+              ChatListItemDto(
+                id: 10,
+                name: 'General',
+                unreadCount: 3,
+                lastMessageAt: DateTime.parse('2026-04-12T12:00:00Z'),
+                lastMessage: _preview(id: 101, text: 'active'),
+              ),
+            ],
+          ),
+        ],
+        archivedChatResponses: [
+          ListChatsResponseDto(
+            chats: [
+              ChatListItemDto(
+                id: 20,
+                name: 'Archived',
+                archived: true,
+                unreadCount: 0,
+                lastMessageAt: DateTime.parse('2026-04-11T12:00:00Z'),
+                lastMessage: _preview(id: 201, text: 'archived'),
+              ),
+            ],
+          ),
+        ],
+      );
+      final threadService = _FakeThreadApiService(
+        unreadCount: 0,
+        threadResponses: [const ListThreadsResponseDto()],
+      );
+      final container = ProviderContainer(
+        overrides: [
+          authSessionProvider.overrideWith(_AuthenticatedSessionNotifier.new),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          chatApiServiceProvider.overrideWithValue(chatService),
+          threadApiServiceProvider.overrideWithValue(threadService),
+          apnsChannelProvider.overrideWithValue(_FakeApnsChannel()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(chatInboxReconcilerProvider).reconcileGroups();
+
+      final store = container.read(groupListV2StoreProvider);
+      expect(store.active.groups.single.id, '10');
+      expect(store.archived.groups.single.id, '20');
+      expect(store.archived.groups.single.archived, isTrue);
+      expect(store.hasArchivedGroups, isTrue);
+      expect(chatService.fetchArchivedChatsCalls, 2);
+    });
   });
 }
 
@@ -254,12 +316,19 @@ class _AuthenticatedSessionNotifier extends AuthSessionNotifier {
 }
 
 class _FakeChatApiService extends ChatApiService {
-  _FakeChatApiService({required this.unreadCount, required this.chatResponses})
-    : super(Dio());
+  _FakeChatApiService({
+    required this.unreadCount,
+    required this.chatResponses,
+    List<ListChatsResponseDto>? archivedChatResponses,
+  }) : archivedChatResponses =
+           archivedChatResponses ?? [const ListChatsResponseDto()],
+       super(Dio());
 
   final int unreadCount;
   final List<ListChatsResponseDto> chatResponses;
+  final List<ListChatsResponseDto> archivedChatResponses;
   int fetchChatsCalls = 0;
+  int fetchArchivedChatsCalls = 0;
   int fetchUnreadCountCalls = 0;
 
   @override
@@ -268,10 +337,18 @@ class _FakeChatApiService extends ChatApiService {
     String? after,
     bool? archived,
   }) async {
-    final index = fetchChatsCalls < chatResponses.length
-        ? fetchChatsCalls
-        : chatResponses.length - 1;
     fetchChatsCalls += 1;
+    if (archived == true) {
+      final index = fetchArchivedChatsCalls < archivedChatResponses.length
+          ? fetchArchivedChatsCalls
+          : archivedChatResponses.length - 1;
+      fetchArchivedChatsCalls += 1;
+      return archivedChatResponses[index];
+    }
+    final activeFetches = fetchChatsCalls - fetchArchivedChatsCalls - 1;
+    final index = activeFetches < chatResponses.length
+        ? activeFetches
+        : chatResponses.length - 1;
     return chatResponses[index];
   }
 

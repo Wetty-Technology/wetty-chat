@@ -43,14 +43,21 @@ class ChatInboxReconciler {
   }
 
   Future<void> _refreshGroups() async {
-    final current = _ref.read(activeGroupListV2ViewModelProvider).value;
+    await Future.wait([
+      _refreshGroupScope(ChatListV2Scope.active),
+      _refreshGroupScope(ChatListV2Scope.archived),
+    ]);
+  }
+
+  Future<void> _refreshGroupScope(ChatListV2Scope scope) async {
+    final provider = groupListV2ViewModelProvider(scope);
+    final current = _ref.read(provider).value;
     if (current == null) {
-      await _ref.read(activeGroupListV2ViewModelProvider.future);
+      await _ref.read(provider.future);
       return;
     }
-    await _ref
-        .read(activeGroupListV2ViewModelProvider.notifier)
-        .refreshGroups();
+
+    await _ref.read(provider.notifier).refreshGroups();
   }
 
   Future<void> _refreshThreads() async {

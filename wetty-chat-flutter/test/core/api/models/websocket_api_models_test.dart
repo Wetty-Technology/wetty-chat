@@ -81,5 +81,21 @@ void main() {
       expect(event!.payload.chatId, 10);
       expect(event.payload.threadRootId, 200);
     });
+
+    test('ApiWsEvent parses chatArchiveStateChanged payloads', () {
+      final event =
+          ApiWsEvent.fromJson(<String, Object?>{
+                'type': 'chatArchiveStateChanged',
+                'payload': <String, Object?>{
+                  'chatId': '10',
+                  'archived': true,
+                  'mutedUntil': '9999-12-31T00:00:00Z',
+                },
+              })
+              as ChatArchiveStateChangedWsEvent?;
+
+      expect(event, isNotNull);
+      expect(event!.payload.chatId, 10);
+    });
   });
 }
