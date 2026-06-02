@@ -426,6 +426,9 @@ msgstr "Failed to load newer messages"
 msgid "Failed to load saved messages"
 msgstr "Failed to load saved messages"
 
+msgid "Failed to load sticker"
+msgstr "Failed to load sticker"
+
 msgid "Failed to load sticker pack"
 msgstr "Failed to load sticker pack"
 
@@ -506,6 +509,9 @@ msgstr "Failed to update role"
 
 msgid "Failed to upload avatar"
 msgstr "Failed to upload avatar"
+
+msgid "Favorite"
+msgstr "Favorite"
 
 msgid "Favorite Sticker"
 msgstr "Favorite Sticker"
@@ -1154,6 +1160,9 @@ msgstr "This invite may have expired or been revoked."
 msgid "This is how your messages will look in chat."
 msgstr "This is how your messages will look in chat."
 
+msgid "This sticker is not part of any pack"
+msgstr "This sticker is not part of any pack"
+
 msgid "This thread will move back to Threads. Continue?"
 msgstr "This thread will move back to Threads. Continue?"
 
@@ -1194,6 +1203,9 @@ msgstr "Unarchive chat?"
 
 msgid "Unarchive thread?"
 msgstr "Unarchive thread?"
+
+msgid "Unfavorite"
+msgstr "Unfavorite"
 
 msgid "Unknown"
 msgstr "Unknown"

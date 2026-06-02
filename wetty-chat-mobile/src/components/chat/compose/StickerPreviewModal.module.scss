@@ -171,23 +171,53 @@
   height: 72px; // enough room for the floating button + safe area
 }
 
+.orphanedMessage {
+  text-align: center;
+  opacity: 0.5;
+  padding: 0 16px 16px;
+}
+
 .floatingAction {
   position: absolute;
   bottom: calc(16px + var(--ion-safe-area-bottom, 0px));
   left: 16px;
   right: 16px;
   display: flex;
+  gap: 8px;
+  z-index: 1;
+}
+
+.floatingActionBtn {
+  flex: 1;
+  display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 14px 20px;
+  padding: 14px 12px;
   border-radius: 14px;
   border: none;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  z-index: 1;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
+
+.favoriteBtn {
+  background: var(--ion-color-light);
+  color: var(--ion-color-primary);
+
+  &:hover {
+    background: var(--ion-color-light-shade);
+  }
+}
+
+.unfavoriteBtn {
+  background: var(--ion-color-light);
+  color: var(--ion-color-danger);
+
+  &:hover {
+    background: var(--ion-color-light-shade);
+  }
 }
 
 .subscribeBtn {

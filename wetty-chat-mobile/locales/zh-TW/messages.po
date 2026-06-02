@@ -426,6 +426,9 @@ msgstr "載入新訊息失敗"
 msgid "Failed to load saved messages"
 msgstr "載入收藏訊息失敗"
 
+msgid "Failed to load sticker"
+msgstr "載入貼紙失敗"
+
 msgid "Failed to load sticker pack"
 msgstr "載入表情包失敗"
 
@@ -506,6 +509,9 @@ msgstr "更新角色失敗"
 
 msgid "Failed to upload avatar"
 msgstr "上傳頭像失敗"
+
+msgid "Favorite"
+msgstr "收藏"
 
 msgid "Favorite Sticker"
 msgstr "收藏貼紙"
@@ -1154,6 +1160,9 @@ msgstr "此邀請可能已過期或被撤銷。"
 msgid "This is how your messages will look in chat."
 msgstr "這是你的訊息在聊天中的顯示效果。"
 
+msgid "This sticker is not part of any pack"
+msgstr "此貼紙不屬於任何貼紙包"
+
 msgid "This thread will move back to Threads. Continue?"
 msgstr "此話題將移回話題列表。要繼續嗎？"
 
@@ -1194,6 +1203,9 @@ msgstr "取消封存聊天？"
 
 msgid "Unarchive thread?"
 msgstr "取消封存話題？"
+
+msgid "Unfavorite"
+msgstr "取消收藏"
 
 msgid "Unknown"
 msgstr "未知"

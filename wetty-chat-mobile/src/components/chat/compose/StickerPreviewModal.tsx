@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { IonContent, IonIcon, IonModal } from '@ionic/react';
-import { close, addCircleOutline, removeCircleOutline, settingsOutline } from 'ionicons/icons';
+import { close, addCircleOutline, removeCircleOutline, settingsOutline, heart, heartDislike } from 'ionicons/icons';
 import { useHistory, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState } from '@/store';
@@ -12,6 +12,8 @@ import {
   getStickerPack,
   subscribeStickerPack,
   unsubscribeStickerPack,
+  favoriteSticker,
+  unfavoriteSticker,
   type StickerDetailResponse,
   type StickerPackDetailResponse,
 } from '@/api/stickers';
@@ -51,8 +53,11 @@ function StickerPreviewModalContent({ stickerId, isDesktop, onDismiss }: Sticker
   const [packDetail, setPackDetail] = useState<{ id: string; data: StickerPackDetailResponse } | null>(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [selectedStickerId, setSelectedStickerId] = useState<string | null>(null);
+  const [favoriteOverrides, setFavoriteOverrides] = useState<Record<string, boolean>>({});
+  const [loadError, setLoadError] = useState(false);
+  const [detailLoaded, setDetailLoaded] = useState(false);
 
-  const loading = detail?.id !== stickerId || !packDetail;
+  const loading = !loadError && !detailLoaded;
   const stickerData = detail?.id === stickerId ? detail.data : null;
   const pack = packDetail?.data ?? null;
 
@@ -60,6 +65,7 @@ function StickerPreviewModalContent({ stickerId, isDesktop, onDismiss }: Sticker
     ? (pack?.stickers.find((sticker) => sticker.id === selectedStickerId) ?? stickerData)
     : stickerData;
   const heroUrl = heroSticker?.media.url ?? null;
+  const heroIsFavorited = heroSticker ? (favoriteOverrides[heroSticker.id] ?? heroSticker.isFavorited) : false;
 
   useEffect(() => {
     let cancelled = false;
@@ -68,20 +74,24 @@ function StickerPreviewModalContent({ stickerId, isDesktop, onDismiss }: Sticker
       .then((res) => {
         if (cancelled) return;
         setDetail({ id: stickerId, data: res.data });
-
         const firstPack = res.data.packs[0];
-        if (!firstPack) return;
+        if (!firstPack) {
+          setDetailLoaded(true);
+          return;
+        }
 
         setIsSubscribed(firstPack.isSubscribed);
 
         return getStickerPack(firstPack.id).then((packRes) => {
           if (cancelled) return;
           setPackDetail({ id: firstPack.id, data: packRes.data });
+          setDetailLoaded(true);
         });
       })
       .catch((err) => {
         if (cancelled) return;
         console.error('Failed to load sticker detail', err);
+        setLoadError(true);
       });
 
     return () => {
@@ -106,11 +116,35 @@ function StickerPreviewModalContent({ stickerId, isDesktop, onDismiss }: Sticker
     }
   }
 
+  async function handleFavoriteToggle() {
+    if (!heroSticker) return;
+    const id = heroSticker.id;
+    const prev = heroIsFavorited;
+    setFavoriteOverrides((m) => ({ ...m, [id]: !prev }));
+    try {
+      if (prev) {
+        await unfavoriteSticker(id);
+      } else {
+        await favoriteSticker(id);
+      }
+    } catch {
+      setFavoriteOverrides((m) => ({ ...m, [id]: prev }));
+    }
+  }
+
   const packName = pack?.name ?? stickerData?.packs[0]?.name ?? '';
   const stickerCount = pack?.stickers.length ?? stickerData?.packs[0]?.stickerCount ?? 0;
   const stickers = pack?.stickers ?? [];
 
   function renderContent() {
+    if (loadError) {
+      return (
+        <div className={styles.heroSection}>
+          <p style={{ opacity: 0.5 }}>{t`Failed to load sticker`}</p>
+        </div>
+      );
+    }
+
     if (loading) {
       return (
         <div className={styles.heroSection}>
@@ -126,69 +160,96 @@ function StickerPreviewModalContent({ stickerId, isDesktop, onDismiss }: Sticker
           {heroSticker && <span className={styles.heroEmoji}>{heroSticker.emoji}</span>}
         </div>
 
-        <div className={styles.packHeader}>
-          <span className={styles.packName}>{packName}</span>
-          <span className={styles.packCount}>
-            {stickerCount} <Trans>stickers</Trans>
-          </span>
-        </div>
+        {pack ? (
+          <>
+            <div className={styles.packHeader}>
+              <span className={styles.packName}>{packName}</span>
+              <span className={styles.packCount}>
+                {stickerCount} <Trans>stickers</Trans>
+              </span>
+            </div>
 
-        <div className={styles.grid}>
-          {stickers.map((sticker) => (
-            <button
-              key={sticker.id}
-              type="button"
-              className={`${styles.gridCell} ${(selectedStickerId ?? stickerId) === sticker.id ? styles.gridCellActive : ''}`}
-              onClick={() => setSelectedStickerId(sticker.id)}
-              aria-label={sticker.name || sticker.emoji}
-            >
-              <StickerImage src={sticker.media.url} alt="" className={styles.gridMedia} />
-            </button>
-          ))}
-        </div>
-        <div className={styles.gridBottomSpacer} />
+            <div className={styles.grid}>
+              {stickers.map((sticker) => (
+                <button
+                  key={sticker.id}
+                  type="button"
+                  className={`${styles.gridCell} ${(selectedStickerId ?? stickerId) === sticker.id ? styles.gridCellActive : ''}`}
+                  onClick={() => setSelectedStickerId(sticker.id)}
+                  aria-label={sticker.name || sticker.emoji}
+                >
+                  <StickerImage src={sticker.media.url} alt="" className={styles.gridMedia} />
+                </button>
+              ))}
+            </div>
+            <div className={styles.gridBottomSpacer} />
+          </>
+        ) : (
+          <p className={styles.orphanedMessage}>
+            <Trans>This sticker is not part of any pack</Trans>
+          </p>
+        )}
       </>
     );
   }
 
-  function renderActionButton() {
-    if (loading || !pack) return null;
+  function renderActionButtons() {
+    if (loading) return null;
 
-    if (pack.ownerUid === currentUserId) {
-      return (
-        <button
-          type="button"
-          className={`${styles.floatingAction} ${styles.subscribeBtn}`}
-          onClick={() => {
-            onDismiss();
-
-            const chatMatch = location.pathname.match(/^\/chats\/chat\/([^/]+)/);
-            if (!isDesktop && chatMatch) {
-              const chatId = chatMatch[1];
-              history.push(`/chats/chat/${chatId}/stickers/${pack.id}`);
-            } else {
-              history.push({
-                pathname: `/settings/stickers/${pack.id}`,
-                state: { backgroundPath: location.pathname, fromChat: true },
-              });
-            }
-          }}
-        >
-          <IonIcon icon={settingsOutline} />
-          <Trans>Manage</Trans>
-        </button>
-      );
-    }
-
-    return (
+    const favoriteBtn = (
       <button
         type="button"
-        className={`${styles.floatingAction} ${isSubscribed ? styles.unsubscribeBtn : styles.subscribeBtn}`}
-        onClick={handleSubscriptionToggle}
+        className={`${styles.floatingActionBtn} ${heroIsFavorited ? styles.unfavoriteBtn : styles.favoriteBtn}`}
+        onClick={handleFavoriteToggle}
       >
-        <IonIcon icon={isSubscribed ? removeCircleOutline : addCircleOutline} />
-        {isSubscribed ? <Trans>Unsubscribe</Trans> : <Trans>Subscribe</Trans>}
+        <IonIcon icon={heroIsFavorited ? heartDislike : heart} />
+        {heroIsFavorited ? <Trans>Unfavorite</Trans> : <Trans>Favorite</Trans>}
       </button>
+    );
+
+    if (!pack) {
+      return <div className={styles.floatingAction}>{favoriteBtn}</div>;
+    }
+
+    const isOwner = pack.ownerUid === currentUserId;
+
+    return (
+      <div className={styles.floatingAction}>
+        {favoriteBtn}
+
+        {isOwner ? (
+          <button
+            type="button"
+            className={`${styles.floatingActionBtn} ${styles.subscribeBtn}`}
+            onClick={() => {
+              onDismiss();
+
+              const chatMatch = location.pathname.match(/^\/chats\/chat\/([^/]+)/);
+              if (!isDesktop && chatMatch) {
+                const chatId = chatMatch[1];
+                history.push(`/chats/chat/${chatId}/stickers/${pack.id}`);
+              } else {
+                history.push({
+                  pathname: `/settings/stickers/${pack.id}`,
+                  state: { backgroundPath: location.pathname, fromChat: true },
+                });
+              }
+            }}
+          >
+            <IonIcon icon={settingsOutline} />
+            <Trans>Manage</Trans>
+          </button>
+        ) : (
+          <button
+            type="button"
+            className={`${styles.floatingActionBtn} ${isSubscribed ? styles.unsubscribeBtn : styles.subscribeBtn}`}
+            onClick={handleSubscriptionToggle}
+          >
+            <IonIcon icon={isSubscribed ? removeCircleOutline : addCircleOutline} />
+            {isSubscribed ? <Trans>Unsubscribe</Trans> : <Trans>Subscribe</Trans>}
+          </button>
+        )}
+      </div>
     );
   }
 
@@ -201,7 +262,7 @@ function StickerPreviewModalContent({ stickerId, isDesktop, onDismiss }: Sticker
           </button>
           {renderContent()}
         </IonContent>
-        {renderActionButton()}
+        {renderActionButtons()}
       </IonModal>
     );
   }
@@ -217,7 +278,7 @@ function StickerPreviewModalContent({ stickerId, isDesktop, onDismiss }: Sticker
           <span className={styles.sheetTitle}>{packName}</span>
         </div>
         <div className={styles.sheetBody}>{renderContent()}</div>
-        {renderActionButton()}
+        {renderActionButtons()}
       </div>
     </>
   );
