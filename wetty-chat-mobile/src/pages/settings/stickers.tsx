@@ -41,7 +41,9 @@ import type { AppDispatch } from '@/store/index';
 import {
   selectStickerAutoSortEnabled,
   selectStickerPackOrder,
+  selectFavoritesAutoSortEnabled,
   setAutoSortEnabled,
+  setAutoSortFavoritesEnabled,
   sortStickerPacksByPreference,
   syncStickerPackOrder,
   upsertStickerPackOrderItem,
@@ -63,6 +65,7 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
   const [itemHeight, setItemHeight] = useState(0);
   const listRef = useRef<HTMLIonReorderGroupElement>(null);
   const autoSort = useSelector(selectStickerAutoSortEnabled);
+  const autoSortFavorites = useSelector(selectFavoritesAutoSortEnabled);
   const packOrder = useSelector(selectStickerPackOrder);
   const pinnedReactions = useSelector(selectPinnedReactions);
   const ownedPackIds = useMemo(() => new Set(ownedPacks.map((pack) => pack.id)), [ownedPacks]);
@@ -236,6 +239,18 @@ export function StickerSettingsCore({ backAction, onOpenPack }: StickerSettingsC
               checked={autoSort}
               onIonChange={(e) => {
                 dispatch(setAutoSortEnabled(e.detail.checked));
+              }}
+            />
+          </IonItem>
+          <IonItem lines="full">
+            <IonLabel>
+              <Trans>Auto-sort favorite stickers</Trans>
+            </IonLabel>
+            <IonToggle
+              slot="end"
+              checked={autoSortFavorites}
+              onIonChange={(e) => {
+                dispatch(setAutoSortFavoritesEnabled(e.detail.checked));
               }}
             />
           </IonItem>

@@ -113,6 +113,9 @@ msgstr "Attachment preview tray"
 msgid "Auto"
 msgstr "Auto"
 
+msgid "Auto-sort favorite stickers"
+msgstr "Auto-sort favorite stickers"
+
 msgid "Auto-sort sticker packs"
 msgstr "Auto-sort sticker packs"
 

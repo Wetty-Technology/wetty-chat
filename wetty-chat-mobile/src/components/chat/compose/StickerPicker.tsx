@@ -26,9 +26,13 @@ import type { AppDispatch } from '@/store/index';
 import {
   selectStickerAutoSortEnabled,
   selectStickerPackOrder,
+  selectFavoritesAutoSortEnabled,
+  selectFavoritesOrder,
   sortStickerPacksByPreference,
+  sortFavoriteStickersByPreference,
   syncStickerPackOrder,
   upsertStickerPackOrderItem,
+  upsertFavoriteStickerOrderItem,
 } from '@/store/stickerPreferencesSlice';
 
 interface StickerPickerProps {
@@ -61,6 +65,8 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
   const [presentToast] = useIonToast();
   const autoSort = useSelector(selectStickerAutoSortEnabled);
   const packOrder = useSelector(selectStickerPackOrder);
+  const autoSortFavorites = useSelector(selectFavoritesAutoSortEnabled);
+  const favoriteOrder = useSelector(selectFavoritesOrder);
 
   const loadPackDetail = useCallback(async (packId: string) => {
     setLoadingPackIds((prev) => ({ ...prev, [packId]: true }));
@@ -116,18 +122,32 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
       isLoading: !!loadingPackIds[pack.id],
     }));
 
+    const sortedFavorites = autoSortFavorites
+      ? sortFavoriteStickersByPreference(favoriteStickers, favoriteOrder)
+      : favoriteStickers;
+
     return [
       {
         id: 'favorites',
         name: t`Favorites`,
         previewUrl: null,
         owned: false,
-        stickers: favoriteStickers,
+        stickers: sortedFavorites,
         isLoading: isLibraryLoading,
       },
       ...sortStickerPacksByPreference(packEntries, packOrder),
     ];
-  }, [favoriteStickers, isLibraryLoading, loadingPackIds, ownedPacks, packDetails, subscribedPacks, packOrder]);
+  }, [
+    favoriteStickers,
+    isLibraryLoading,
+    loadingPackIds,
+    ownedPacks,
+    packDetails,
+    subscribedPacks,
+    packOrder,
+    autoSortFavorites,
+    favoriteOrder,
+  ]);
 
   useEffect(() => {
     if (!packs.some((pack) => pack.id === selectedPackId)) {
@@ -161,16 +181,19 @@ export function StickerPicker({ isOpen, onStickerSelect, overlayActiveRef }: Sti
             dispatch(upsertStickerPackOrderItem(updatedItem));
             void dispatch(syncStickerPackOrder([{ ...updatedItem, isAutoSort: true }]));
           }
+
+          if (autoSortFavorites && activePack && activePack.id === 'favorites') {
+            dispatch(upsertFavoriteStickerOrderItem({ stickerId: sticker.id, lastUsedOn: Date.now() }));
+          }
         } catch (err) {
-          console.error('Failed to auto-sort sticker pack order window event:', err);
+          console.error('Failed to auto-sort sticker preferences:', err);
         }
       };
       void run();
       onStickerSelect(sticker);
     },
-    [activePack, autoSort, dispatch, onStickerSelect, packs],
+    [activePack, autoSort, autoSortFavorites, dispatch, onStickerSelect, packs],
   );
-
   const { addStickerFile, setAddStickerFile, fileInputRef, handleFileChange, handleAddSticker } = useAddSticker({
     packId: activePack.owned && activePack.id !== 'favorites' ? activePack.id : undefined,
     onSuccess: (newSticker) => {

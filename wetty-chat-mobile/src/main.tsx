@@ -39,16 +39,24 @@ installBootstrapRecoveryHandlers();
 
 async function bootstrap() {
   // Load persisted state from IndexedDB
-  const [savedSettings, savedStickerPackOrder, savedAutoSort] = await Promise.all([
-    kvGet<Partial<SettingsState>>('settings'),
-    kvGet<unknown>('stickerPackOrder'),
-    kvGet<unknown>('autoSortStickerPacks'),
-    initializeClientId(),
-    syncJwtTokenToIdb(),
-  ]);
+  const [savedSettings, savedStickerPackOrder, savedAutoSort, savedFavoriteOrder, savedAutoSortFavorites] =
+    await Promise.all([
+      kvGet<Partial<SettingsState>>('settings'),
+      kvGet<unknown>('stickerPackOrder'),
+      kvGet<unknown>('autoSortStickerPacks'),
+      kvGet<unknown>('favoriteStickerOrder'),
+      kvGet<unknown>('autoSortFavoriteStickers'),
+      initializeClientId(),
+      syncJwtTokenToIdb(),
+    ]);
 
   const settings = hydrateSettings(savedSettings);
-  const hydratedStickerPreferences = hydrateStickerPreferences(savedStickerPackOrder, savedAutoSort);
+  const hydratedStickerPreferences = hydrateStickerPreferences(
+    savedStickerPackOrder,
+    savedAutoSort,
+    savedFavoriteOrder,
+    savedAutoSortFavorites,
+  );
 
   if (hydratedStickerPreferences.clearPackOrder) {
     await kvDelete('stickerPackOrder');
@@ -62,6 +70,17 @@ async function bootstrap() {
     await kvSet('autoSortStickerPacks', hydratedStickerPreferences.state.autoSortEnabled);
   }
 
+  if (hydratedStickerPreferences.clearFavoriteOrder) {
+    await kvDelete('favoriteStickerOrder');
+  } else if (hydratedStickerPreferences.persistFavoriteOrder) {
+    await kvSet('favoriteStickerOrder', hydratedStickerPreferences.state.favoriteStickerOrder);
+  }
+
+  if (hydratedStickerPreferences.clearAutoSortFavorites) {
+    await kvDelete('autoSortFavoriteStickers');
+  } else if (hydratedStickerPreferences.persistAutoSortFavorites) {
+    await kvSet('autoSortFavoriteStickers', hydratedStickerPreferences.state.autoSortFavoritesEnabled);
+  }
   await activateDetectedLocale(settings.locale);
 
   const store = createStore(settings, hydratedStickerPreferences.state);

@@ -113,6 +113,9 @@ msgstr "附件预览栏"
 msgid "Auto"
 msgstr "自动"
 
+msgid "Auto-sort favorite stickers"
+msgstr "按最近使用自动排序收藏贴纸"
+
 msgid "Auto-sort sticker packs"
 msgstr "按最近使用自动排序贴纸包"
 

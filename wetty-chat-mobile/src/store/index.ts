@@ -7,8 +7,10 @@ import stickerPreferencesReducer, {
   removeStickerPackOrderItem,
   replaceStickerPackOrderFromWs,
   setAutoSortEnabled,
+  setAutoSortFavoritesEnabled,
   syncStickerPackOrder,
   upsertStickerPackOrderItem,
+  upsertFavoriteStickerOrderItem,
   type StickerPreferencesState,
 } from './stickerPreferencesSlice';
 import threadsReducer, {
@@ -215,12 +217,19 @@ listenerMiddleware.startListening({
     removeStickerPackOrderItem,
     replaceStickerPackOrderFromWs,
     setAutoSortEnabled,
+    setAutoSortFavoritesEnabled,
     upsertStickerPackOrderItem,
+    upsertFavoriteStickerOrderItem,
   ),
   effect: async (_action, api) => {
     const state = api.getState() as RootState;
-    const { packOrder, autoSortEnabled } = state.stickerPreferences;
-    await Promise.all([kvSet('stickerPackOrder', packOrder), kvSet('autoSortStickerPacks', autoSortEnabled)]);
+    const { packOrder, autoSortEnabled, favoriteStickerOrder, autoSortFavoritesEnabled } = state.stickerPreferences;
+    await Promise.all([
+      kvSet('stickerPackOrder', packOrder),
+      kvSet('autoSortStickerPacks', autoSortEnabled),
+      kvSet('favoriteStickerOrder', favoriteStickerOrder),
+      kvSet('autoSortFavoriteStickers', autoSortFavoritesEnabled),
+    ]);
   },
 });
 
