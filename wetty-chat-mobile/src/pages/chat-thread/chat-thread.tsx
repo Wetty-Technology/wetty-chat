@@ -19,6 +19,7 @@ import {
 } from '@ionic/react';
 import { useHistory, useLocation, useParams } from 'react-router-dom';
 import {
+  arrowRedoOutline,
   arrowUndo,
   bookmarkOutline,
   chatbubbles,
@@ -140,6 +141,7 @@ import {
 } from '@/store/settingsSlice';
 import { MAX_REACTIONS_PER_USER_PER_MESSAGE } from '@/constants/emojiAndStickers';
 import { saveMessage } from '@/api/savedMessages';
+import { ForwardMessageModal } from '@/components/chat/messages/ForwardMessageModal';
 import { useFeatureGate } from '@/hooks/useFeatureGate';
 
 function generateClientId(): string {
@@ -237,6 +239,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   const isDesktop = useIsDesktop();
   const hasPointerDevice = useMouseDetected();
   const savedMessagesEnabled = useFeatureGate('savedMessages');
+  const forwardingEnabled = useFeatureGate('messageForward');
   const cachedMeta = useSelector((state: RootState) => selectChatMeta(state, chatId));
   const { role: myRole } = useChatRole(chatId);
   const isAdmin = myRole === 'admin';
@@ -490,6 +493,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   const [reactionDetail, setReactionDetail] = useState<{ messageId: string; emoji?: string } | null>(null);
   const [stickerPreviewId, setStickerPreviewId] = useState<string | null>(null);
   const [editingSession, setEditingSession] = useState<EditSession | null>(null);
+  const [forwardingMessage, setForwardingMessage] = useState<MessageResponse | null>(null);
   const [composeFocused, setComposeFocused] = useState(false);
   const [baselineViewportHeight, setBaselineViewportHeight] = useState<number>(
     () => window.visualViewport?.height ?? window.innerHeight,
@@ -1761,6 +1765,16 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
         setReplyingTo(msg);
       },
     });
+    if (forwardingEnabled) {
+      actions.push({
+        key: 'forward',
+        label: t`Forward`,
+        icon: arrowRedoOutline,
+        handler: () => {
+          setForwardingMessage(msg);
+        },
+      });
+    }
     if (!threadId && !msg.threadInfo) {
       actions.push({
         key: 'thread',
@@ -1771,7 +1785,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
         },
       });
     }
-    if (isOwn && !audioMessage && !stickerMessage) {
+    if (isOwn && !audioMessage && !stickerMessage && !msg.forwardedFrom) {
       actions.push({
         key: 'edit',
         label: t`Edit`,
@@ -1871,6 +1885,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
     presentAlert,
     startEditingMessage,
     savedMessagesEnabled,
+    forwardingEnabled,
   ]);
 
   const renderRow = useCallback(
@@ -2129,6 +2144,14 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
             );
           })()}
       </div>
+      {forwardingMessage && chatId && (
+        <ForwardMessageModal
+          isOpen={true}
+          onClose={() => setForwardingMessage(null)}
+          message={forwardingMessage}
+          sourceChatId={chatId}
+        />
+      )}
     </ChatContext.Provider>
   );
 }

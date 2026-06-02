@@ -102,6 +102,12 @@ export interface MessageResponse {
   attachments?: Attachment[];
   reactions?: ReactionSummary[];
   mentions?: MentionInfo[];
+  forwardedFrom?: {
+    sender: User;
+    originalChatId: string;
+    originalMessageId: string;
+    originalReplyTo?: ReplyToMessage;
+  } | null;
 }
 
 export function toMessagePreview(message: MessageResponse): MessagePreview {
@@ -206,6 +212,14 @@ export function sendThreadMessage(
   body: CreateMessageBody,
 ): Promise<AxiosResponse<MessageResponse>> {
   return apiClient.post(`/chats/${chatId}/threads/${threadId}/messages`, body);
+}
+
+export function forwardMessage(
+  targetChatId: string | number,
+  messageId: string,
+  body: { sourceChatId: string | number; clientGeneratedId: string },
+): Promise<AxiosResponse<MessageResponse>> {
+  return apiClient.post(`/chats/${targetChatId}/messages/${messageId}/forward`, body);
 }
 
 export interface UpdateMessageBody {
