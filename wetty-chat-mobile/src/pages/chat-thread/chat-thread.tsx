@@ -28,7 +28,7 @@ import {
   informationCircleOutline,
   notificationsOffOutline,
   linkOutline,
-  starOutline,
+  heartOutline,
   notifications,
   people,
   pin as pinIcon,
@@ -1743,7 +1743,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
       actions.push({
         key: 'favorite',
         label: t`Favorite Sticker`,
-        icon: starOutline,
+        icon: heartOutline,
         handler: () => {
           favoriteSticker(msg.sticker!.id)
             .then(() => {
