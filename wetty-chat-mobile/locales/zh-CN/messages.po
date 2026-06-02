@@ -366,6 +366,9 @@ msgstr "添加成员失败"
 msgid "Failed to add sticker"
 msgstr "添加表情失败"
 
+msgid "Failed to add sticker to favorites"
+msgstr "添加贴纸到收藏失败"
+
 msgid "Failed to copy invite code"
 msgstr "复制邀请码失败"
 
@@ -453,6 +456,9 @@ msgstr "移除成员失败"
 msgid "Failed to remove sticker"
 msgstr "移除贴纸失败"
 
+msgid "Failed to rename pack"
+msgstr "重命名贴纸包失败"
+
 msgid "Failed to revoke invite"
 msgstr "撤销邀请失败"
 
@@ -500,6 +506,9 @@ msgstr "更新角色失败"
 
 msgid "Failed to upload avatar"
 msgstr "上传头像失败"
+
+msgid "Favorite Sticker"
+msgstr "收藏贴纸"
 
 msgid "Favorites"
 msgstr "收藏"
@@ -830,6 +839,9 @@ msgstr "贴纸包"
 msgid "Pack name"
 msgstr "贴纸包名称"
 
+msgid "Pack renamed"
+msgstr "贴纸包已重命名"
+
 msgid "Packs below this line are not auto-sorted"
 msgstr "此行以下的贴纸包不会自动排序"
 
@@ -961,6 +973,12 @@ msgstr "要将这个表情包从你的收藏中移除吗？"
 msgid "Remove this sticker from the pack?"
 msgstr "要从表情包中移除此表情吗？"
 
+msgid "Rename pack"
+msgstr "重命名贴纸包"
+
+msgid "Rename Pack"
+msgstr "重命名贴纸包"
+
 msgid "replies"
 msgstr "条回复"
 
@@ -990,16 +1008,7 @@ msgid "Revoke invite"
 msgstr "撤销邀请"
 
 msgid "Save"
-msgstr "收藏"
-
-msgid "Favorite Sticker"
-msgstr "收藏贴纸"
-
-msgid "Failed to add sticker to favorites"
-msgstr "添加贴纸到收藏失败"
-
-msgid "Sticker added to favorites"
-msgstr "贴纸已添加到收藏"
+msgstr "保存"
 
 msgid "Save Settings"
 msgstr "保存设置"
@@ -1096,6 +1105,9 @@ msgstr "贴纸"
 
 msgid "Sticker added"
 msgstr "贴纸已添加"
+
+msgid "Sticker added to favorites"
+msgstr "贴纸已添加到收藏"
 
 msgid "Sticker packs"
 msgstr "贴纸包"

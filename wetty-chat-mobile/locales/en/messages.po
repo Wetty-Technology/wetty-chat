@@ -366,6 +366,9 @@ msgstr "Failed to add member"
 msgid "Failed to add sticker"
 msgstr "Failed to add sticker"
 
+msgid "Failed to add sticker to favorites"
+msgstr "Failed to add sticker to favorites"
+
 msgid "Failed to copy invite code"
 msgstr "Failed to copy invite code"
 
@@ -453,6 +456,9 @@ msgstr "Failed to remove member"
 msgid "Failed to remove sticker"
 msgstr "Failed to remove sticker"
 
+msgid "Failed to rename pack"
+msgstr "Failed to rename pack"
+
 msgid "Failed to revoke invite"
 msgstr "Failed to revoke invite"
 
@@ -500,6 +506,9 @@ msgstr "Failed to update role"
 
 msgid "Failed to upload avatar"
 msgstr "Failed to upload avatar"
+
+msgid "Favorite Sticker"
+msgstr "Favorite Sticker"
 
 msgid "Favorites"
 msgstr "Favorites"
@@ -830,6 +839,9 @@ msgstr "Pack"
 msgid "Pack name"
 msgstr "Pack name"
 
+msgid "Pack renamed"
+msgstr "Pack renamed"
+
 msgid "Packs below this line are not auto-sorted"
 msgstr "Packs below this line are not auto-sorted"
 
@@ -961,6 +973,12 @@ msgstr "Remove this pack from your collection?"
 msgid "Remove this sticker from the pack?"
 msgstr "Remove this sticker from the pack?"
 
+msgid "Rename pack"
+msgstr "Rename pack"
+
+msgid "Rename Pack"
+msgstr "Rename Pack"
+
 msgid "replies"
 msgstr "replies"
 
@@ -991,15 +1009,6 @@ msgstr "Revoke invite"
 
 msgid "Save"
 msgstr "Save"
-
-msgid "Favorite Sticker"
-msgstr "Favorite Sticker"
-
-msgid "Failed to add sticker to favorites"
-msgstr "Failed to add sticker to favorites"
-
-msgid "Sticker added to favorites"
-msgstr "Sticker added to favorites"
 
 msgid "Save Settings"
 msgstr "Save Settings"
@@ -1096,6 +1105,9 @@ msgstr "Sticker"
 
 msgid "Sticker added"
 msgstr "Sticker added"
+
+msgid "Sticker added to favorites"
+msgstr "Sticker added to favorites"
 
 msgid "Sticker packs"
 msgstr "Sticker packs"

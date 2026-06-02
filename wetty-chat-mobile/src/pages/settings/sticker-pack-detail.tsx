@@ -12,12 +12,11 @@ import {
   useIonAlert,
   useIonToast,
 } from '@ionic/react';
-import { trashOutline } from 'ionicons/icons';
-import { useParams } from 'react-router-dom';
+import { trashOutline, pencilOutline } from 'ionicons/icons';
+import { useParams, useHistory } from 'react-router-dom';
 import { t } from '@lingui/core/macro';
 import { StickerImage } from '@/components/shared/StickerImage';
 import { Trans } from '@lingui/react/macro';
-import { useHistory } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { BackButton } from '@/components/BackButton';
 import { AddStickerModal } from '@/components/chat/compose/AddStickerModal';
@@ -26,6 +25,7 @@ import {
   deleteStickerPack,
   getStickerPack,
   removeStickerFromPack,
+  updateStickerPack,
   type StickerPackDetailResponse,
   type StickerSummary,
   unsubscribeStickerPack,
@@ -189,6 +189,38 @@ export function StickerPackDetailCore({ packId, backAction }: StickerPackDetailC
     });
   };
 
+  const handleRenamePack = () => {
+    presentAlert({
+      header: t`Rename Pack`,
+      inputs: [
+        {
+          name: 'name',
+          type: 'text',
+          placeholder: t`Pack name`,
+          value: pack?.name,
+        },
+      ],
+      buttons: [
+        { text: t`Cancel`, role: 'cancel' },
+        {
+          text: t`Save`,
+          handler: async (data: { name: string }) => {
+            const newName = data.name.trim();
+            if (!newName || newName === pack?.name) return false;
+            try {
+              const res = await updateStickerPack(packId, { name: newName });
+              setPack((prev) => (prev ? { ...prev, name: res.data.name } : prev));
+              presentToast({ message: t`Pack renamed`, duration: 2000, position: 'bottom' });
+            } catch (error) {
+              console.error('Failed to rename sticker pack', error);
+              presentToast({ message: t`Failed to rename pack`, duration: 2000, position: 'bottom' });
+            }
+          },
+        },
+      ],
+    });
+  };
+
   return (
     <IonPage>
       <IonHeader>
@@ -203,6 +235,9 @@ export function StickerPackDetailCore({ packId, backAction }: StickerPackDetailC
           <IonTitle>{pack.name}</IonTitle>
           {owned && (
             <IonButtons slot="end">
+              <IonButton onClick={handleRenamePack} aria-label={t`Rename pack`}>
+                <IonIcon slot="icon-only" icon={pencilOutline} />
+              </IonButton>
               <IonButton color="danger" onClick={handleDeletePack} aria-label={t`Delete pack`}>
                 <IonIcon slot="icon-only" icon={trashOutline} />
               </IonButton>
