@@ -18,8 +18,9 @@ import {
 import { chatbubbleOutline } from 'ionicons/icons';
 import { Trans } from '@lingui/react/macro';
 import { t } from '@lingui/core/macro';
-import { listGroups, type GroupSelectorItem } from '@/api/group';
+import { getChats, type ChatListEntry } from '@/api/chats';
 import { UserAvatar } from '@/components/UserAvatar';
+import { OverlayAvatar } from '@/components/OverlayAvatar';
 import { getChatDisplayName } from '@/utils/chatDisplay';
 import { forwardMessage, type MessageResponse } from '@/api/messages';
 import { getThreads, type ThreadListItem } from '@/api/threads';
@@ -34,13 +35,13 @@ interface ForwardMessageModalProps {
 }
 
 type UnifiedItem =
-  | { type: 'group'; item: GroupSelectorItem; sortTime: number }
+  | { type: 'group'; item: ChatListEntry; sortTime: number }
   | { type: 'thread'; item: ThreadListItem; sortTime: number };
 
 export function ForwardMessageModal({ isOpen, onClose, message, sourceChatId }: ForwardMessageModalProps) {
   const [presentToast] = useIonToast();
   const [forwarding, setForwarding] = useState(false);
-  const [groups, setGroups] = useState<GroupSelectorItem[]>([]);
+  const [chats, setChats] = useState<ChatListEntry[]>([]);
   const [threads, setThreads] = useState<ThreadListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
@@ -53,10 +54,10 @@ export function ForwardMessageModal({ isOpen, onClose, message, sourceChatId }: 
     [presentToast],
   );
 
-  // Fetch joined chats and subscribed threads when modal opens.
+  // Fetch non-archived chats and subscribed threads when modal opens.
   useEffect(() => {
     if (!isOpen) {
-      setGroups([]);
+      setChats([]);
       setThreads([]);
       setSearchText('');
       return;
@@ -65,10 +66,10 @@ export function ForwardMessageModal({ isOpen, onClose, message, sourceChatId }: 
     let cancelled = false;
     setLoading(true);
 
-    Promise.all([listGroups({ scope: 'joined', limit: 100 }), getThreads({ limit: 50, archived: false })])
-      .then(([groupRes, threadRes]) => {
+    Promise.all([getChats({ archived: false }), getThreads({ limit: 50, archived: false })])
+      .then(([chatRes, threadRes]) => {
         if (!cancelled) {
-          setGroups(groupRes.data.groups);
+          setChats(chatRes.data.chats);
           setThreads(threadRes.data.threads);
         }
       })
@@ -90,11 +91,11 @@ export function ForwardMessageModal({ isOpen, onClose, message, sourceChatId }: 
   const mergedItems = useMemo((): UnifiedItem[] => {
     const items: UnifiedItem[] = [];
 
-    for (const group of groups) {
+    for (const chat of chats) {
       items.push({
         type: 'group',
-        item: group,
-        sortTime: 0, // Groups don't have lastMessageAt in this context
+        item: chat,
+        sortTime: chat.lastMessageAt ? new Date(chat.lastMessageAt).getTime() : 0,
       });
     }
 
@@ -106,16 +107,11 @@ export function ForwardMessageModal({ isOpen, onClose, message, sourceChatId }: 
       });
     }
 
-    // Sort threads by most recent activity, groups stay at top
-    items.sort((a, b) => {
-      if (a.type === 'group' && b.type === 'group') return 0;
-      if (a.type === 'group') return -1;
-      if (b.type === 'group') return 1;
-      return b.sortTime - a.sortTime;
-    });
+    // Sort all items by most recent activity.
+    items.sort((a, b) => b.sortTime - a.sortTime);
 
     return items;
-  }, [groups, threads]);
+  }, [chats, threads]);
 
   // Filter by search text.
   const filteredItems = useMemo(() => {
@@ -124,7 +120,7 @@ export function ForwardMessageModal({ isOpen, onClose, message, sourceChatId }: 
 
     return mergedItems.filter((item) => {
       if (item.type === 'group') {
-        return item.item.name.toLowerCase().includes(q) || (item.item.description ?? '').toLowerCase().includes(q);
+        return (item.item.name ?? '').toLowerCase().includes(q);
       }
       return (
         item.item.chatName.toLowerCase().includes(q) ||
@@ -195,20 +191,14 @@ export function ForwardMessageModal({ isOpen, onClose, message, sourceChatId }: 
           <IonList>
             {filteredItems.map((unified) => {
               if (unified.type === 'group') {
-                const group = unified.item;
+                const chat = unified.item;
                 return (
-                  <IonItem
-                    key={`group-${group.id}`}
-                    button
-                    disabled={forwarding}
-                    onClick={() => handleSelect(group.id)}
-                  >
+                  <IonItem key={`group-${chat.id}`} button disabled={forwarding} onClick={() => handleSelect(chat.id)}>
                     <span slot="start">
-                      <UserAvatar name={getChatDisplayName(group.id, group.name)} avatarUrl={group.avatar} size={40} />
+                      <UserAvatar name={getChatDisplayName(chat.id, chat.name)} avatarUrl={chat.avatar} size={40} />
                     </span>
                     <IonLabel>
-                      <h3>{getChatDisplayName(group.id, group.name)}</h3>
-                      {group.description && <p>{group.description}</p>}
+                      <h3>{getChatDisplayName(chat.id, chat.name)}</h3>
                     </IonLabel>
                   </IonItem>
                 );
@@ -223,9 +213,11 @@ export function ForwardMessageModal({ isOpen, onClose, message, sourceChatId }: 
                   onClick={() => handleSelect(thread.chatId, thread.threadRootMessage.id)}
                 >
                   <span slot="start">
-                    <UserAvatar
-                      name={getChatDisplayName(thread.chatId, thread.chatName)}
-                      avatarUrl={thread.chatAvatar}
+                    <OverlayAvatar
+                      primaryName={thread.chatName}
+                      primaryAvatarUrl={thread.chatAvatar}
+                      secondaryName={thread.threadRootMessage.sender.name ?? null}
+                      secondaryAvatarUrl={thread.threadRootMessage.sender.avatarUrl ?? null}
                       size={40}
                     />
                   </span>
