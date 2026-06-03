@@ -6,7 +6,6 @@ use axum::{
 };
 use chrono::Utc;
 use diesel::prelude::*;
-use diesel::PgConnection;
 use std::time::Instant;
 use utoipa_axum::router::OpenApiRouter;
 
@@ -29,8 +28,8 @@ use crate::{
 };
 
 use super::{
-    attach_metadata, extract_mention_uids, load_sticker_accessible_ids, send_prepared_message,
-    ChatIdPath, CreateMessageBody, PreparedMessageSend,
+    attach_metadata, extract_mention_uids, send_prepared_message, ChatIdPath, CreateMessageBody,
+    PreparedMessageSend,
 };
 
 #[derive(serde::Deserialize, utoipa::ToSchema)]
@@ -122,8 +121,6 @@ fn search_limit(limit: Option<i64>) -> usize {
 const MAX_ATTACHMENTS_PER_MESSAGE: usize = 20;
 
 fn validate_message_payload(
-    conn: &mut PgConnection,
-    uid: i32,
     body: &CreateMessageBody,
     attachment_ids: &[i64],
 ) -> Result<(), AppError> {
@@ -134,8 +131,7 @@ fn validate_message_payload(
     }
 
     if matches!(body.message_type, MessageType::Sticker) {
-        let sticker_id = body
-            .sticker_id
+        body.sticker_id
             .ok_or(AppError::BadRequest("Sticker ID is required"))?;
 
         if !attachment_ids.is_empty() {
@@ -149,11 +145,6 @@ fn validate_message_payload(
             .is_some_and(|message| !message.trim().is_empty())
         {
             return Err(AppError::BadRequest("Sticker messages cannot include text"));
-        }
-
-        let accessible = load_sticker_accessible_ids(conn, uid, &[sticker_id])?;
-        if !accessible.contains(&sticker_id) {
-            return Err(AppError::Forbidden("Sticker is not available to this user"));
         }
     } else if body.sticker_id.is_some() {
         return Err(AppError::BadRequest(
@@ -533,7 +524,7 @@ async fn post_message(
         .iter()
         .filter_map(|s| s.parse().ok())
         .collect();
-    validate_message_payload(conn, uid, &body, &attachment_ids)?;
+    validate_message_payload(&body, &attachment_ids)?;
 
     // Keep message creation and read-position advancement atomic.
     diesel::sql_query("BEGIN").execute(conn)?;
@@ -642,7 +633,7 @@ pub(super) async fn post_thread_message(
         .iter()
         .filter_map(|s| s.parse().ok())
         .collect();
-    validate_message_payload(conn, uid, &body, &attachment_ids)?;
+    validate_message_payload(&body, &attachment_ids)?;
 
     // Begin transaction: message insert + thread_meta + subscriptions are atomic.
     // send_prepared_message is async so we use raw BEGIN/COMMIT.

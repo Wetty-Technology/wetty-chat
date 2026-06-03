@@ -39,8 +39,7 @@ use crate::{
     models::{Attachment, Media, Message, MessageType, NewMessage, Sticker, TranscodeStatus},
     schema::{
         attachments, group_membership, groups, media, message_reactions,
-        messages as messages_schema, sticker_pack_stickers, sticker_packs, stickers,
-        user_favorite_stickers, user_sticker_pack_subscriptions,
+        messages as messages_schema, stickers, user_favorite_stickers,
     },
 };
 use crate::{AppState, MAX_CHATS_LIMIT};
@@ -210,34 +209,6 @@ fn load_reply_messages(
         .select(Message::as_select())
         .load::<Message>(conn)
         .map(|rows| rows.into_iter().map(|msg| (msg.id, msg)).collect())
-}
-
-fn load_sticker_accessible_ids(
-    conn: &mut PgConnection,
-    uid: i32,
-    sticker_ids: &[i64],
-) -> QueryResult<std::collections::HashSet<i64>> {
-    if sticker_ids.is_empty() {
-        return Ok(std::collections::HashSet::new());
-    }
-
-    stickers::table
-        .inner_join(sticker_pack_stickers::table)
-        .left_join(
-            user_sticker_pack_subscriptions::table.on(user_sticker_pack_subscriptions::pack_id
-                .eq(sticker_pack_stickers::pack_id)
-                .and(user_sticker_pack_subscriptions::uid.eq(uid))),
-        )
-        .left_join(sticker_packs::table.on(sticker_packs::id.eq(sticker_pack_stickers::pack_id)))
-        .filter(stickers::id.eq_any(sticker_ids))
-        .filter(
-            user_sticker_pack_subscriptions::uid
-                .is_not_null()
-                .or(sticker_packs::owner_uid.eq(uid)),
-        )
-        .select(stickers::id)
-        .load::<i64>(conn)
-        .map(|rows| rows.into_iter().collect())
 }
 
 fn load_sticker_rows(
