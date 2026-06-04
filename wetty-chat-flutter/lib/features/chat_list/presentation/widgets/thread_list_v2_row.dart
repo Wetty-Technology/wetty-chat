@@ -3,12 +3,12 @@ import 'package:chahua/features/chat_list/application/chat_list_v2_scope.dart';
 import 'package:chahua/features/chat_list/application/thread_list_v2_view_model.dart';
 import 'package:chahua/features/chat_list/model/thread_list_item.dart';
 import 'package:chahua/features/chat_list/presentation/chat_workspace_layout_scope.dart';
+import 'package:chahua/features/chat_list/presentation/widgets/chat_list_detail_navigation.dart';
 import 'package:chahua/features/chat_list/presentation/widgets/swipe_to_action_row.dart';
 import 'package:chahua/features/chat_list/presentation/widgets/thread_list_row.dart';
 import 'package:chahua/l10n/app_localizations.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 class ThreadListV2Row extends StatelessWidget {
   const ThreadListV2Row({
@@ -49,8 +49,10 @@ class ThreadListV2Row extends StatelessWidget {
           thread: thread,
           isActive: isActive,
           onTap: () {
-            context.go(
-              AppRoutes.threadDetail(
+            openChatListDetail(
+              context: context,
+              scope: scope,
+              route: AppRoutes.threadDetail(
                 thread.chatId,
                 thread.threadRootId.toString(),
               ),
