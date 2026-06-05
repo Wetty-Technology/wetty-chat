@@ -17,3 +17,9 @@
 /reference
 .geminiignore
 .playwright-mcp
+
+
+# local env files
+*.log
+*.err
+.repo-ssh
