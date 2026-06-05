@@ -60,6 +60,48 @@ void main() {
 
     pendingProfile.complete(null);
   });
+
+  test('rapid text sends create distinct optimistic messages', () async {
+    final api = _FakeMessageApiService(completeSends: false);
+    final container = _container(
+      api: api,
+      profile: Future<CurrentUserProfile?>.value(
+        const CurrentUserProfile(
+          uid: 42,
+          username: 'Alice',
+          avatarUrl: null,
+          gender: 0,
+        ),
+      ),
+    );
+    addTearDown(container.dispose);
+    await container.read(currentUserProfileProvider.future);
+
+    final notifier = container.read(
+      conversationComposerViewModelProvider(_identity).notifier,
+    );
+    await Future.wait([
+      notifier.send(text: 'First'),
+      notifier.send(text: 'Second'),
+    ]);
+
+    final scope = container.read(
+      conversationTimelineMessageStoreProvider,
+    )[_identity]!;
+    final optimisticMessages = scope.optimisticMessages;
+    expect(optimisticMessages, hasLength(2));
+    expect(optimisticMessages.map(_messageText), ['First', 'Second']);
+    expect(
+      optimisticMessages.map((message) => message.clientGeneratedId).toSet(),
+      hasLength(2),
+    );
+    expect(
+      api.requests.map((request) => request.clientGeneratedId).toSet(),
+      hasLength(2),
+    );
+
+    api.completeAll();
+  });
 }
 
 const _identity = (chatId: 42, threadRootId: null);
@@ -92,6 +134,13 @@ ConversationMessageV2 _singleOptimisticMessage(ProviderContainer container) {
   return scope.optimisticMessages.single;
 }
 
+String _messageText(ConversationMessageV2 message) {
+  return switch (message.content) {
+    TextMessageContent(:final text) => text,
+    _ => throw StateError('Expected text message in test'),
+  };
+}
+
 class _AuthenticatedSessionNotifier extends AuthSessionNotifier {
   @override
   AuthSessionState build() {
@@ -105,7 +154,11 @@ class _AuthenticatedSessionNotifier extends AuthSessionNotifier {
 }
 
 class _FakeMessageApiService extends MessageApiServiceV2 {
-  _FakeMessageApiService() : super(Dio(), 42);
+  _FakeMessageApiService({this.completeSends = true}) : super(Dio(), 42);
+
+  final bool completeSends;
+  final requests = <_SendRequest>[];
+  final _pendingSends = <Completer<MessageItemDto>>[];
 
   @override
   Future<MessageItemDto> sendConversationMessage(
@@ -117,7 +170,12 @@ class _FakeMessageApiService extends MessageApiServiceV2 {
     required String clientGeneratedId,
     String? stickerId,
   }) async {
-    return MessageItemDto(
+    requests.add((
+      text: text,
+      messageType: messageType,
+      clientGeneratedId: clientGeneratedId,
+    ));
+    final response = MessageItemDto(
       id: 100,
       message: text,
       messageType: messageType,
@@ -125,8 +183,36 @@ class _FakeMessageApiService extends MessageApiServiceV2 {
       chatId: identity.chatId,
       clientGeneratedId: clientGeneratedId,
     );
+    if (completeSends) {
+      return response;
+    }
+    final completer = Completer<MessageItemDto>();
+    _pendingSends.add(completer);
+    return completer.future;
+  }
+
+  void completeAll() {
+    for (final completer in _pendingSends) {
+      if (!completer.isCompleted) {
+        completer.complete(
+          MessageItemDto(
+            id: 100,
+            message: '',
+            sender: const UserDto(uid: 42, name: 'Alice'),
+            chatId: 42,
+            clientGeneratedId: '',
+          ),
+        );
+      }
+    }
   }
 }
+
+typedef _SendRequest = ({
+  String text,
+  String messageType,
+  String clientGeneratedId,
+});
 
 class _FakeAudioRecorderService implements AudioRecorderService {
   @override

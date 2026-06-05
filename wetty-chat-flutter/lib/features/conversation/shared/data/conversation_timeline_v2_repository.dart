@@ -241,7 +241,7 @@ class ConversationTimelineV2Repository {
 
     ref
         .read(conversationTimelineMessageStoreProvider.notifier)
-        .insertLatest(identity, latestSegment);
+        .insertLatestSegment(identity, latestSegment);
 
     if (!hasMoreOlder) {
       ref

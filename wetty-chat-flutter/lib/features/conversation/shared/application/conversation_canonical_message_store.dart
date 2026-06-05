@@ -155,7 +155,8 @@ class ConversationTimelineMessageStore
     );
   }
 
-  void insertLatest(
+  /// Inserts a new segment at the end as the latest segment.
+  void insertLatestSegment(
     ConversationIdentity identity,
     ConversationTimelineCanonicalSegment segment,
   ) {
@@ -175,6 +176,10 @@ class ConversationTimelineMessageStore
       identity,
       (existingScope ?? const ConversationTimelineCanonicalScope()).copyWith(
         segments: segments,
+        optimisticMessages: _withoutConfirmedOptimisticMessages(
+          existingScope?.optimisticMessages ?? const <ConversationMessageV2>[],
+          segment,
+        ),
         hasReachedLatest: true,
       ),
     );
@@ -440,6 +445,27 @@ class ConversationTimelineMessageStore
 
     updated.insert(0, incoming);
     return updated.toList(growable: false);
+  }
+
+  List<ConversationMessageV2> _withoutConfirmedOptimisticMessages(
+    List<ConversationMessageV2> optimisticMessages,
+    ConversationTimelineCanonicalSegment confirmedSegment,
+  ) {
+    if (optimisticMessages.isEmpty) {
+      return optimisticMessages;
+    }
+    final confirmedClientIds = confirmedSegment.orderedMessages
+        .map((message) => message.clientGeneratedId)
+        .where((clientGeneratedId) => clientGeneratedId.isNotEmpty)
+        .toSet();
+    if (confirmedClientIds.isEmpty) {
+      return optimisticMessages;
+    }
+    return optimisticMessages
+        .where(
+          (message) => !confirmedClientIds.contains(message.clientGeneratedId),
+        )
+        .toList(growable: false);
   }
 
   List<ConversationTimelineCanonicalSegment> _normalizeBeforeAnchorSegments(
