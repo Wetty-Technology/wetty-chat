@@ -373,10 +373,11 @@ async fn post_send_invite_message(
     .await?;
     let message = match send_result {
         SendMessageOutcome::Created(send_result) => {
+            let send_result = *send_result;
             send_result.side_effects.fire(&state);
             send_result.response
         }
-        SendMessageOutcome::Duplicate(response) => response,
+        SendMessageOutcome::Duplicate(response) => *response,
     };
 
     Ok((
@@ -728,6 +729,7 @@ async fn post_redeem_invite(
         )
         .await
     {
+        let send_result = *send_result;
         send_result.side_effects.fire(&state);
     }
 

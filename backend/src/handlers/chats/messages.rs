@@ -571,6 +571,7 @@ async fn post_message(
 
     let response = match send_result {
         SendMessageOutcome::Created(send_result) => {
+            let send_result = *send_result;
             send_result.side_effects.fire(&state);
             if let Some(search_service) = state.message_search.clone() {
                 search_service.upsert_message_best_effort(send_result.inserted_message);
@@ -580,7 +581,7 @@ async fn post_message(
             }
             send_result.response
         }
-        SendMessageOutcome::Duplicate(response) => response,
+        SendMessageOutcome::Duplicate(response) => *response,
     };
 
     Ok((StatusCode::CREATED, Json(response)))
@@ -668,7 +669,7 @@ pub(super) async fn post_thread_message(
         )
         .await?;
         let send_result = match send_result {
-            SendMessageOutcome::Created(send_result) => send_result,
+            SendMessageOutcome::Created(send_result) => *send_result,
             SendMessageOutcome::Duplicate(response) => {
                 return Ok(SendMessageOutcome::Duplicate(response));
             }
@@ -718,7 +719,7 @@ pub(super) async fn post_thread_message(
                 .execute(conn)?;
         }
 
-        Ok(SendMessageOutcome::Created(send_result))
+        Ok(SendMessageOutcome::Created(Box::new(send_result)))
     }
     .await;
 
@@ -734,9 +735,9 @@ pub(super) async fn post_thread_message(
     };
 
     let send_result = match send_result {
-        SendMessageOutcome::Created(send_result) => send_result,
+        SendMessageOutcome::Created(send_result) => *send_result,
         SendMessageOutcome::Duplicate(response) => {
-            return Ok((StatusCode::CREATED, Json(response)));
+            return Ok((StatusCode::CREATED, Json(*response)));
         }
     };
 

@@ -16,7 +16,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('optimistic text send uses current user profile sender', () async {
-    final api = _FakeMessageApiService();
+    final api = _FakeMessageApiService(completeSends: false);
     final container = _container(
       api: api,
       profile: Future<CurrentUserProfile?>.value(
@@ -40,10 +40,11 @@ void main() {
     expect(message.sender.name, 'Alice');
     expect(message.sender.avatarUrl, 'https://example.com/alice.png');
     expect(message.sender.gender, 1);
+    api.completeAll();
   });
 
   test('optimistic text send falls back while profile is loading', () async {
-    final api = _FakeMessageApiService();
+    final api = _FakeMessageApiService(completeSends: false);
     final pendingProfile = Completer<CurrentUserProfile?>();
     final container = _container(api: api, profile: pendingProfile.future);
     addTearDown(container.dispose);
@@ -59,6 +60,7 @@ void main() {
     expect(message.sender.gender, 0);
 
     pendingProfile.complete(null);
+    api.completeAll();
   });
 
   test('rapid text sends create distinct optimistic messages', () async {
@@ -95,9 +97,16 @@ void main() {
       optimisticMessages.map((message) => message.clientGeneratedId).toSet(),
       hasLength(2),
     );
+    expect(api.requests.map((request) => request.clientGeneratedId), [
+      optimisticMessages.first.clientGeneratedId,
+    ]);
+
+    api.completeNext();
+    await _flushMicrotasks();
+
     expect(
-      api.requests.map((request) => request.clientGeneratedId).toSet(),
-      hasLength(2),
+      api.requests.map((request) => request.clientGeneratedId),
+      optimisticMessages.map((message) => message.clientGeneratedId),
     );
 
     api.completeAll();
@@ -141,6 +150,11 @@ String _messageText(ConversationMessageV2 message) {
   };
 }
 
+Future<void> _flushMicrotasks() async {
+  await Future<void>.delayed(Duration.zero);
+  await Future<void>.delayed(Duration.zero);
+}
+
 class _AuthenticatedSessionNotifier extends AuthSessionNotifier {
   @override
   AuthSessionState build() {
@@ -159,6 +173,7 @@ class _FakeMessageApiService extends MessageApiServiceV2 {
   final bool completeSends;
   final requests = <_SendRequest>[];
   final _pendingSends = <Completer<MessageItemDto>>[];
+  var _nextResponseId = 100;
 
   @override
   Future<MessageItemDto> sendConversationMessage(
@@ -175,12 +190,10 @@ class _FakeMessageApiService extends MessageApiServiceV2 {
       messageType: messageType,
       clientGeneratedId: clientGeneratedId,
     ));
-    final response = MessageItemDto(
-      id: 100,
-      message: text,
+    final response = _responseFor(
+      id: _nextResponseId++,
+      text: text,
       messageType: messageType,
-      sender: const UserDto(uid: 42, name: 'Alice'),
-      chatId: identity.chatId,
       clientGeneratedId: clientGeneratedId,
     );
     if (completeSends) {
@@ -192,19 +205,39 @@ class _FakeMessageApiService extends MessageApiServiceV2 {
   }
 
   void completeAll() {
-    for (final completer in _pendingSends) {
-      if (!completer.isCompleted) {
-        completer.complete(
-          MessageItemDto(
-            id: 100,
-            message: '',
-            sender: const UserDto(uid: 42, name: 'Alice'),
-            chatId: 42,
-            clientGeneratedId: '',
+    while (_pendingSends.isNotEmpty) {
+      completeNext();
+    }
+  }
+
+  void completeNext() {
+    final request = requests[requests.length - _pendingSends.length];
+    _pendingSends
+        .removeAt(0)
+        .complete(
+          _responseFor(
+            id: _nextResponseId++,
+            text: request.text,
+            messageType: request.messageType,
+            clientGeneratedId: request.clientGeneratedId,
           ),
         );
-      }
-    }
+  }
+
+  MessageItemDto _responseFor({
+    required int id,
+    required String text,
+    required String messageType,
+    required String clientGeneratedId,
+  }) {
+    return MessageItemDto(
+      id: id,
+      message: text,
+      messageType: messageType,
+      sender: const UserDto(uid: 42, name: 'Alice'),
+      chatId: 42,
+      clientGeneratedId: clientGeneratedId,
+    );
   }
 }
 

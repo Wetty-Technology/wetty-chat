@@ -121,8 +121,8 @@ pub(crate) struct SendMessageResult {
 }
 
 pub(crate) enum SendMessageOutcome {
-    Created(SendMessageResult),
-    Duplicate(MessageResponse),
+    Created(Box<SendMessageResult>),
+    Duplicate(Box<MessageResponse>),
 }
 
 #[must_use = "side effects must be fired via .fire()"]
@@ -586,7 +586,7 @@ pub(crate) async fn send_prepared_message(
             .into_iter()
             .next()
             .ok_or(AppError::Internal("Failed to build message response"))?;
-        return Ok(SendMessageOutcome::Duplicate(response));
+        return Ok(SendMessageOutcome::Duplicate(Box::new(response)));
     };
     state.metrics.record_message(prepared.chat_id);
 
@@ -642,12 +642,12 @@ pub(crate) async fn send_prepared_message(
         )
     };
 
-    Ok(SendMessageOutcome::Created(SendMessageResult {
+    Ok(SendMessageOutcome::Created(Box::new(SendMessageResult {
         inserted_message: inserted_msg,
         response,
         member_uids,
         side_effects,
-    }))
+    })))
 }
 
 fn load_message_attachment_ids(conn: &mut PgConnection, message_id: i64) -> QueryResult<Vec<i64>> {
@@ -671,7 +671,7 @@ fn validate_idempotent_message_payload(
     existing_attachment_ids.sort_unstable();
 
     let attachment_ids_match = if matches!(existing.message_type, MessageType::Audio) {
-        existing.has_attachments == !prepared.attachment_ids.is_empty()
+        existing.has_attachments != prepared.attachment_ids.is_empty()
     } else {
         existing_attachment_ids == prepared_attachment_ids
     };

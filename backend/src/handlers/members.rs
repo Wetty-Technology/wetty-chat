@@ -294,6 +294,7 @@ async fn post_add_member(
         )
         .await
     {
+        let send_result = *send_result;
         send_result.side_effects.fire(&state);
     }
 
@@ -423,6 +424,7 @@ async fn delete_remove_member(
         )
         .await
     {
+        let send_result = *send_result;
         send_result.side_effects.fire(&state);
     }
 

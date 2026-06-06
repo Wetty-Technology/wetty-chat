@@ -229,6 +229,7 @@ async fn create_pin(
         )
         .await
     {
+        let send_result = *send_result;
         send_result.side_effects.fire(&state);
     }
 
@@ -305,6 +306,7 @@ async fn delete_pin(
         )
         .await
     {
+        let send_result = *send_result;
         send_result.side_effects.fire(&state);
     }
 
