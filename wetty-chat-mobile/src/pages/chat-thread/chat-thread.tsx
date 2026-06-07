@@ -1,7 +1,5 @@
 import { MAX_PINNED_REACTIONS } from '@/constants/emojiAndStickers';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { isPageHidden } from '@/utils/dom';
-import { usePageVisible } from '@/hooks/usePageVisible';
 import { useFloatingDateVisibility } from '@/hooks/useFloatingDate';
 import {
   IonButton,
@@ -39,7 +37,6 @@ import {
 } from 'ionicons/icons';
 import { useDispatch, useSelector } from 'react-redux';
 import {
-  type Attachment,
   deleteMessage,
   deleteReaction,
   getMessage,
@@ -92,7 +89,6 @@ import { useChatRows } from '@/components/chat/virtualScroll/useChatRows';
 import {
   type ComposeSendPayload,
   type MessageComposeBarHandle,
-  type ComposeUploadedAttachment,
   type ComposeUploadInput,
   type EditingMessage,
   MessageComposeBar,
@@ -103,7 +99,7 @@ import { UserProfileModal } from '@/components/chat/profiles/UserProfileModal';
 import { MessageOverlay, type MessageOverlayAction } from '@/components/chat/messages/MessageOverlay';
 import { ReactionDetailsModal } from '@/components/chat/reactions/ReactionDetailsModal';
 import { StickerPreviewModal } from '@/components/chat/compose/StickerPreviewModal';
-import { getGroupInfo, type GroupRole } from '@/api/group';
+import { getGroupInfo } from '@/api/group';
 import { BackButton } from '@/components/BackButton';
 import type { BackAction } from '@/types/back-action';
 import { requestUploadUrl, uploadFileToS3 } from '@/api/upload';
@@ -115,7 +111,6 @@ import { useChatRole } from '@/components/chat/permissions/useChatRole';
 import { ChatMessageRow } from '@/components/chat/messages/ChatMessageRow';
 import { parseResumeHash } from '@/types/chatThreadNavigation';
 import { getUploadMimeType } from '@/utils/heicMedia';
-import { READ_REQUEST_COOLDOWN_MS } from '@/constants/chatTiming';
 import {
   archiveThread,
   getThreadReadState,
@@ -146,69 +141,18 @@ import { MAX_REACTIONS_PER_USER_PER_MESSAGE } from '@/constants/emojiAndStickers
 import { favoriteSticker } from '@/api/stickers';
 import { saveMessage } from '@/api/savedMessages';
 import { useFeatureGate } from '@/hooks/useFeatureGate';
-
-function generateClientId(): string {
-  return `cg_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-}
-
-function parseComparableMessageId(messageId: string): bigint | null {
-  if (!/^\d+$/.test(messageId)) return null;
-  return BigInt(messageId);
-}
-
-function isMessageAtOrAfter(messageId: string | null, targetMessageId: string): boolean {
-  if (!messageId) return false;
-  const comparableId = parseComparableMessageId(messageId);
-  const targetComparableId = parseComparableMessageId(targetMessageId);
-  if (comparableId == null || targetComparableId == null) return false;
-  return comparableId >= targetComparableId;
-}
-
-function areAttachmentIdsEqual(left: string[], right: string[]): boolean {
-  return left.length === right.length && left.every((value, index) => value === right[index]);
-}
-
-function areMessageListsEquivalent(left: MessageResponse[], right: MessageResponse[]): boolean {
-  return (
-    left.length === right.length &&
-    left.every((message, index) => {
-      const candidate = right[index];
-      return candidate != null && message.id === candidate.id;
-    })
-  );
-}
-
-function isAudioMessage(message: MessageResponse): boolean {
-  return message.messageType === 'audio';
-}
-
-function buildOptimisticUploadedAttachments(uploadedAttachments: ComposeUploadedAttachment[]): {
-  attachments: Attachment[];
-  revoke: () => void;
-} {
-  const previewUrls: string[] = [];
-  const attachments = uploadedAttachments.map((attachment) => {
-    const previewUrl = URL.createObjectURL(attachment.file);
-    previewUrls.push(previewUrl);
-
-    return {
-      id: attachment.attachmentId,
-      url: previewUrl,
-      kind: attachment.mimeType,
-      size: attachment.size,
-      fileName: attachment.file.name,
-      width: attachment.width ?? null,
-      height: attachment.height ?? null,
-    };
-  });
-
-  return {
-    attachments,
-    revoke: () => {
-      previewUrls.forEach((previewUrl) => URL.revokeObjectURL(previewUrl));
-    },
-  };
-}
+import {
+  areAttachmentIdsEqual,
+  areMessageListsEquivalent,
+  buildOptimisticUploadedAttachments,
+  generateClientId,
+  hasLoadedThreadChatMeta,
+  isAudioMessage,
+  isMessageAtOrAfter,
+  parseComparableMessageId,
+} from './chatThreadUtils';
+import { useChatKeyboardOverlay } from './hooks/useChatKeyboardOverlay';
+import { useChatReadReceipts } from './hooks/useChatReadReceipts';
 
 interface ChatThreadCoreProps {
   chatId: string;
@@ -218,10 +162,6 @@ interface ChatThreadCoreProps {
 
 interface EditSession extends EditingMessage {
   originalMessage: MessageResponse;
-}
-
-function hasLoadedThreadChatMeta(cachedMeta?: { name?: string | null; myRole?: GroupRole | null }) {
-  return cachedMeta?.name != null && cachedMeta.myRole !== undefined;
 }
 
 function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
@@ -505,29 +445,20 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
   const [reactionDetail, setReactionDetail] = useState<{ messageId: string; emoji?: string } | null>(null);
   const [stickerPreviewId, setStickerPreviewId] = useState<string | null>(null);
   const [editingSession, setEditingSession] = useState<EditSession | null>(null);
-  const [composeFocused, setComposeFocused] = useState(false);
-  const [baselineViewportHeight, setBaselineViewportHeight] = useState<number>(
-    () => window.visualViewport?.height ?? window.innerHeight,
-  );
-  const [viewportHeight, setViewportHeight] = useState<number>(
-    () => window.visualViewport?.height ?? window.innerHeight,
-  );
 
   const [presentToast] = useIonToast();
-  const [overlayMessage, setOverlayMessage] = useState<{
-    message: MessageResponse;
-    sourceRect: DOMRect;
-    interactionPos?: { x: number; y: number };
-  } | null>(null);
-
-  // When a long-press happens while the keyboard is open we defer showing the
-  // overlay until the keyboard has fully closed, while preserving the press-time
-  // rect so the menu stays anchored to the originally pressed message.
-  const deferredOverlayRef = useRef<{
-    message: MessageResponse;
-    sourceRect: DOMRect;
-    interactionPos?: { x: number; y: number };
-  } | null>(null);
+  const {
+    overlayMessage,
+    setOverlayMessage,
+    isKeyboardOpen,
+    pageKeyboardStyle,
+    handleComposeFocusChange,
+    handleMessageLongPress,
+    clearDeferredOverlay,
+  } = useChatKeyboardOverlay({
+    isDesktop,
+    blurComposeInput: () => composeBarRef.current?.blurInput(),
+  });
 
   useEffect(() => {
     if (!import.meta.env.DEV) return;
@@ -545,57 +476,6 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
       });
     };
   }, [chatId, storeChatId, threadId, location.state]);
-
-  useEffect(() => {
-    if (isDesktop) return;
-
-    const visualViewport = window.visualViewport;
-    const getViewportHeight = () => visualViewport?.height ?? window.innerHeight;
-    const updateViewportMetrics = () => {
-      const nextViewportHeight = getViewportHeight();
-      setViewportHeight(nextViewportHeight);
-      if (!composeFocused) {
-        setBaselineViewportHeight((prev) => Math.max(prev, nextViewportHeight));
-      }
-    };
-
-    const target = visualViewport ?? window;
-    target.addEventListener('resize', updateViewportMetrics);
-    // Also listen for scroll events on visualViewport (iOS fires these when keyboard pushes viewport)
-    if (visualViewport) {
-      visualViewport.addEventListener('scroll', updateViewportMetrics);
-    }
-
-    return () => {
-      target.removeEventListener('resize', updateViewportMetrics);
-      if (visualViewport) {
-        visualViewport.removeEventListener('scroll', updateViewportMetrics);
-      }
-    };
-  }, [composeFocused, isDesktop]);
-
-  const handleComposeFocusChange = useCallback((focused: boolean) => {
-    setComposeFocused(focused);
-  }, []);
-
-  // Threshold in CSS pixels: when the visible viewport is this much shorter than
-  // the keyboard-closed baseline we consider the on-screen keyboard to be open.
-  const KEYBOARD_OPEN_HEIGHT_DIFF = 120;
-  // When the gap shrinks below this value the keyboard animation is considered finished.
-  const KEYBOARD_CLOSED_HEIGHT_DIFF = 20;
-
-  const isKeyboardOpen =
-    !isDesktop && composeFocused && baselineViewportHeight - viewportHeight > KEYBOARD_OPEN_HEIGHT_DIFF;
-  const keyboardFullyClosed =
-    !isDesktop && !composeFocused && baselineViewportHeight - viewportHeight < KEYBOARD_CLOSED_HEIGHT_DIFF;
-
-  // When the keyboard finishes closing after a deferred long-press, show the overlay.
-  useEffect(() => {
-    if (!keyboardFullyClosed || !deferredOverlayRef.current) return;
-    const { message, sourceRect, interactionPos } = deferredOverlayRef.current;
-    deferredOverlayRef.current = null;
-    setOverlayMessage({ message, sourceRect, interactionPos });
-  }, [keyboardFullyClosed]);
 
   useEffect(() => {
     if (!import.meta.env.DEV) return;
@@ -664,181 +544,17 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
     [presentToast],
   );
 
-  const lastReportedReadId = useRef<string | null>(null);
   const initialLoadCompletedRef = useRef(false);
-  const readRequestTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingReadTargetIdRef = useRef<string | null>(null);
-  const lastReadRequestAtRef = useRef(0);
-
-  useEffect(() => {
-    lastReportedReadId.current = null;
-    initialLoadCompletedRef.current = false;
-    pendingReadTargetIdRef.current = null;
-    lastReadRequestAtRef.current = 0;
-    if (readRequestTimerRef.current) {
-      clearTimeout(readRequestTimerRef.current);
-      readRequestTimerRef.current = null;
-    }
-  }, [storeChatId]);
-
-  const flushPendingReadTarget = useCallback(() => {
-    if (threadId || !chatId) return;
-    if (isPageHidden()) return;
-
-    const targetMessageId = pendingReadTargetIdRef.current;
-    if (!targetMessageId) return;
-
-    const targetComparableId = parseComparableMessageId(targetMessageId);
-    if (targetComparableId == null) {
-      pendingReadTargetIdRef.current = null;
-      return;
-    }
-
-    const currentReadComparableId = lastReadMessageId ? parseComparableMessageId(lastReadMessageId) : null;
-    if (currentReadComparableId != null && targetComparableId <= currentReadComparableId) {
-      pendingReadTargetIdRef.current = null;
-      return;
-    }
-
-    if (targetMessageId === lastReportedReadId.current) return;
-
-    pendingReadTargetIdRef.current = null;
-    readRequestTimerRef.current = null;
-    lastReportedReadId.current = targetMessageId;
-    lastReadRequestAtRef.current = Date.now();
-
-    markMessagesAsRead(chatId, targetMessageId)
-      .then((res) => {
-        dispatch(setChatLastReadMessageId({ chatId, lastReadMessageId: res.data.lastReadMessageId }));
-        dispatch(setChatUnreadCount({ chatId, unreadCount: res.data.unreadCount }));
-        void syncAppBadgeCount();
-      })
-      .catch((err) => {
-        console.error('Failed to mark as read', err);
-        lastReportedReadId.current = null;
-      });
-  }, [chatId, dispatch, lastReadMessageId, threadId]);
-
-  useEffect(() => {
-    if (threadId || !chatId) return;
-    if (initialResumeMessageId == null && lastReadMessageId == null && atBottom) return;
-
-    if (readRequestTimerRef.current) {
-      clearTimeout(readRequestTimerRef.current);
-      readRequestTimerRef.current = null;
-    }
-
-    pendingReadTargetIdRef.current = lastFullyVisibleMessageId;
-    if (!lastFullyVisibleMessageId) return;
-
-    const targetComparableId = parseComparableMessageId(lastFullyVisibleMessageId);
-    if (targetComparableId == null) {
-      pendingReadTargetIdRef.current = null;
-      return;
-    }
-
-    const currentReadComparableId = lastReadMessageId ? parseComparableMessageId(lastReadMessageId) : null;
-    if (currentReadComparableId != null && targetComparableId <= currentReadComparableId) {
-      pendingReadTargetIdRef.current = null;
-      return;
-    }
-
-    const elapsed = Date.now() - lastReadRequestAtRef.current;
-    if (elapsed >= READ_REQUEST_COOLDOWN_MS) {
-      flushPendingReadTarget();
-      return;
-    }
-
-    readRequestTimerRef.current = setTimeout(flushPendingReadTarget, READ_REQUEST_COOLDOWN_MS - elapsed);
-
-    return () => {
-      if (readRequestTimerRef.current) {
-        clearTimeout(readRequestTimerRef.current);
-        readRequestTimerRef.current = null;
-      }
-    };
-  }, [
-    atBottom,
+  useChatReadReceipts({
     chatId,
-    flushPendingReadTarget,
-    initialResumeMessageId,
-    lastFullyVisibleMessageId,
-    lastReadMessageId,
     threadId,
-  ]);
-
-  // Flush pending read targets when the user returns to the app.
-  usePageVisible(() => {
-    if (!chatId) return;
-    if (threadId) {
-      flushPendingThreadRead();
-    } else {
-      flushPendingReadTarget();
-    }
+    storeChatId,
+    initialResumeMessageId,
+    lastReadMessageId,
+    lastFullyVisibleMessageId,
+    atBottom,
+    dispatch,
   });
-
-  // Thread-specific mark-as-read: fires when viewing a thread and messages become visible.
-  // Unlike chat read tracking (which is purely scroll-based), this also fires on mount
-  // once the initial messages are rendered and the last visible message is known.
-  const threadReadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastThreadReadIdRef = useRef<string | null>(null);
-  const pendingThreadReadIdRef = useRef<string | null>(null);
-
-  const flushPendingThreadRead = useCallback(() => {
-    if (!threadId || !chatId) return;
-    const targetId = pendingThreadReadIdRef.current;
-    if (!targetId || isPageHidden()) return;
-    pendingThreadReadIdRef.current = null;
-    threadReadTimerRef.current = null;
-    lastThreadReadIdRef.current = targetId;
-    apiMarkThreadAsRead(threadId, targetId)
-      .then((res) => {
-        dispatch(
-          setThreadReadState({
-            threadRootId: threadId,
-            lastReadMessageId: res.data.lastReadMessageId,
-            unreadCount: res.data.unreadCount,
-          }),
-        );
-      })
-      .catch((err) => {
-        console.error('Failed to mark thread as read', err);
-        lastThreadReadIdRef.current = null;
-      });
-  }, [chatId, threadId, dispatch]);
-
-  useEffect(() => {
-    if (!threadId || !chatId) return;
-    if (!lastFullyVisibleMessageId) return;
-    if (lastFullyVisibleMessageId === lastThreadReadIdRef.current) return;
-
-    const targetComparableId = parseComparableMessageId(lastFullyVisibleMessageId);
-    if (targetComparableId == null) return;
-
-    if (threadReadTimerRef.current) {
-      clearTimeout(threadReadTimerRef.current);
-    }
-
-    pendingThreadReadIdRef.current = lastFullyVisibleMessageId;
-    threadReadTimerRef.current = setTimeout(flushPendingThreadRead, READ_REQUEST_COOLDOWN_MS);
-
-    return () => {
-      if (threadReadTimerRef.current) {
-        clearTimeout(threadReadTimerRef.current);
-        threadReadTimerRef.current = null;
-      }
-    };
-  }, [chatId, threadId, lastFullyVisibleMessageId, flushPendingThreadRead]);
-
-  // Reset thread read state when switching threads
-  useEffect(() => {
-    lastThreadReadIdRef.current = null;
-    pendingThreadReadIdRef.current = null;
-    if (threadReadTimerRef.current) {
-      clearTimeout(threadReadTimerRef.current);
-      threadReadTimerRef.current = null;
-    }
-  }, [storeChatId]);
 
   // Strip the #msg= hash after it has been captured into initialResumeMessageId
   // so it doesn't linger in the URL bar or get re-consumed on re-render.
@@ -953,7 +669,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
           showToast(err.message || t`Failed to load messages`);
         });
     },
-    [chatId, dispatch, initialResumeMessageId, showToast, storeChatId, threadId],
+    [chatId, dispatch, initialResumeMessageId, lastReadMessageId, showToast, storeChatId, threadId],
   );
 
   // Initial load — open at an explicitly requested resume point when navigated from chat list
@@ -1737,21 +1453,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
     ],
   );
 
-  const onClickChatItem = useCallback(
-    (msg: MessageResponse, sourceRect: DOMRect, interactionPos?: { x: number; y: number }) => {
-      if (isKeyboardOpen) {
-        // Defer: dismiss keyboard now, then show the overlay after close while
-        // preserving the original press-time source rect.
-        deferredOverlayRef.current = { message: msg, sourceRect, interactionPos };
-        composeBarRef.current?.blurInput();
-        return;
-      }
-
-      deferredOverlayRef.current = null;
-      setOverlayMessage({ message: msg, sourceRect, interactionPos });
-    },
-    [isKeyboardOpen],
-  );
+  const onClickChatItem = handleMessageLongPress;
 
   const overlayActions = useMemo((): MessageOverlayAction[] => {
     if (!overlayMessage) return [];
@@ -1985,14 +1687,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
     <ChatContext.Provider value={chatCtx}>
       <div
         className="ion-page chat-thread-page"
-        style={
-          isKeyboardOpen
-            ? {
-                height: `${viewportHeight}px`,
-                top: `${window.visualViewport?.offsetTop ?? 0}px`,
-              }
-            : undefined
-        }
+        style={pageKeyboardStyle}
       >
         <IonHeader>
           <IonToolbar>
@@ -2187,7 +1882,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
                 },
               },
               onClose: () => {
-                deferredOverlayRef.current = null;
+                clearDeferredOverlay();
                 setOverlayMessage(null);
               },
               mentions: msg.mentions ?? undefined,
