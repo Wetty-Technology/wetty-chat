@@ -17,6 +17,7 @@ import { JoinChatCore } from '@/pages/join-chat';
 import { SettingsCore } from '@/pages/settings';
 import { SavedMessagesCore } from '@/pages/saved-messages';
 import { GeneralSettingsCore } from '@/pages/settings/general';
+import { DeveloperSettingsCore } from '@/pages/settings/developer';
 import { LanguagePageCore } from '@/pages/settings/language';
 import { StickerSettingsCore } from '@/pages/settings/stickers';
 import { StickerPackDetailCore } from '@/pages/settings/sticker-pack-detail';
@@ -47,6 +48,7 @@ interface DesktopRouteMatches {
   generalSettings: boolean;
   savedMessagesSettings: boolean;
   languageSettings: boolean;
+  developerSettings: boolean;
   stickerSettings: boolean;
   stickerPackSettings: { packId: string } | null;
 }
@@ -108,6 +110,10 @@ function getDesktopRouteMatches(pathname: string): DesktopRouteMatches {
     path: '/settings/saved-messages',
     exact: true,
   });
+  const developerSettings = !!matchPath(pathname, {
+    path: '/settings/developer',
+    exact: true,
+  });
   const stickerPackRaw = matchPath<{ packId: string }>(pathname, {
     path: '/settings/stickers/:packId',
     exact: true,
@@ -121,6 +127,7 @@ function getDesktopRouteMatches(pathname: string): DesktopRouteMatches {
     generalSettings ||
     savedMessagesSettings ||
     languageSettings ||
+    developerSettings ||
     stickerSettings;
 
   return {
@@ -147,6 +154,7 @@ function getDesktopRouteMatches(pathname: string): DesktopRouteMatches {
     generalSettings,
     savedMessagesSettings,
     languageSettings,
+    developerSettings,
     stickerSettings,
     stickerPackSettings: stickerPackRaw?.params ?? null,
   };
@@ -197,6 +205,7 @@ export function DesktopSplitLayout() {
   const history = useHistory();
   const location = useLocation<DesktopRouteState | undefined>();
   const canCreateChat = useHasGlobalPermission('chat.create');
+  const canAccessDeveloperSettings = useHasGlobalPermission('developer.access');
   const savedMessagesEnabled = useFeatureGate('savedMessages');
   const currentUser = useSelector((state: RootState) => state.user);
   const skipNextGlobalSettingsDismiss = useRef(false);
@@ -236,6 +245,7 @@ export function DesktopSplitLayout() {
   const groupInfoSavedMessagesMatch = savedMessagesEnabled ? routeGroupInfoSavedMessagesMatch : null;
   const disabledGroupSavedMessagesChatId = savedMessagesEnabled ? null : routeGroupInfoSavedMessagesMatch?.id;
   const disabledSavedMessagesSettings = !savedMessagesEnabled && currentRoute.savedMessagesSettings;
+  const disabledDeveloperSettings = !canAccessDeveloperSettings && currentRoute.developerSettings;
   const globalSettingsOpen = currentRoute.globalSettings;
   const initialArchivedTab: ChatListTab | null =
     archivedMatch?.tab === 'threads' || archivedMatch?.tab === 'groups' || archivedMatch?.tab === 'all'
@@ -263,10 +273,24 @@ export function DesktopSplitLayout() {
       return;
     }
 
+    if (disabledDeveloperSettings) {
+      history.replace({
+        pathname: '/settings/general',
+        state: { backgroundPath },
+      });
+      return;
+    }
+
     if (disabledGroupSavedMessagesChatId) {
       history.replace(`/chats/chat/${disabledGroupSavedMessagesChatId}/group-info`);
     }
-  }, [backgroundPath, disabledGroupSavedMessagesChatId, disabledSavedMessagesSettings, history]);
+  }, [
+    backgroundPath,
+    disabledDeveloperSettings,
+    disabledGroupSavedMessagesChatId,
+    disabledSavedMessagesSettings,
+    history,
+  ]);
 
   useEffect(() => {
     if (archivedMatch) {
@@ -322,6 +346,16 @@ export function DesktopSplitLayout() {
       state: { backgroundPath },
     });
   }, [backgroundPath, history]);
+
+  const openDeveloperSettings = useCallback(() => {
+    if (!canAccessDeveloperSettings) {
+      return;
+    }
+    history.push({
+      pathname: '/settings/developer',
+      state: { backgroundPath },
+    });
+  }, [backgroundPath, canAccessDeveloperSettings, history]);
 
   const openSavedMessages = useCallback(() => {
     if (!savedMessagesEnabled) {
@@ -530,6 +564,18 @@ export function DesktopSplitLayout() {
                   }),
               }}
               onOpenLanguage={openLanguageSettings}
+              onOpenDeveloper={openDeveloperSettings}
+            />
+          ) : currentRoute.developerSettings ? (
+            <DeveloperSettingsCore
+              backAction={{
+                type: 'callback',
+                onBack: () =>
+                  history.push({
+                    pathname: '/settings/general',
+                    state: { backgroundPath },
+                  }),
+              }}
             />
           ) : (
             <SettingsCore

@@ -21,6 +21,10 @@ export interface User {
   permissions?: string[];
 }
 
+export interface DeveloperStatusResponse {
+  isDeveloper: boolean;
+}
+
 export interface MemberSummary {
   uid: number;
   username: string | null;
@@ -51,5 +55,15 @@ export const usersApi = {
 
   updateStickerPackOrder: async (order: UpdateStickerPackOrderItem[]): Promise<void> => {
     await apiClient.put('/users/me/stickerpack-order', { order });
+  },
+
+  getUserDeveloper: async (uid: number): Promise<DeveloperStatusResponse> => {
+    const response = await apiClient.get<DeveloperStatusResponse>(`/users/${uid}/developer`);
+    return response.data;
+  },
+
+  setUserDeveloper: async (uid: number, isDeveloper: boolean): Promise<DeveloperStatusResponse> => {
+    const response = await apiClient.put<DeveloperStatusResponse>(`/users/${uid}/developer`, { isDeveloper });
+    return response.data;
   },
 };

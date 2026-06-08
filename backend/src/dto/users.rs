@@ -38,6 +38,18 @@ pub struct MeResponse {
     pub permissions: Vec<String>,
 }
 
+#[derive(Debug, Clone, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DeveloperStatusResponse {
+    pub is_developer: bool,
+}
+
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SetDeveloperRequest {
+    pub is_developer: bool,
+}
+
 #[derive(Serialize, ToSchema)]
 pub struct AuthTokenResponse {
     pub token: String,

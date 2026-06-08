@@ -20,10 +20,12 @@ import { Provider } from 'react-redux';
 import { I18nProvider } from '@lingui/react';
 import { activateDetectedLocale, i18n } from '@/i18n';
 import { createStore, setStoreInstance } from '@/store/index';
+import { applyFeatureOverrides } from '@/features';
 import { initializeClientId } from '@/utils/clientId';
 import { syncJwtTokenToIdb } from '@/utils/jwtToken';
 import { kvDelete, kvGet, kvSet } from '@/utils/db';
 import { hydrateSettings, type SettingsState } from '@/store/settingsSlice';
+import { hydrateFeatureOverrides, selectFeatureOverrideEntryByUid } from '@/store/featureOverridesSlice';
 import { hydrateStickerPreferences } from '@/store/stickerPreferencesSlice';
 import { installBootstrapRecoveryHandlers } from '@/bootstrapRecovery';
 import App from './App';
@@ -39,9 +41,10 @@ installBootstrapRecoveryHandlers();
 
 async function bootstrap() {
   // Load persisted state from IndexedDB
-  const [savedSettings, savedStickerPackOrder, savedAutoSort, savedFavoriteOrder, savedAutoSortFavorites] =
+  const [savedSettings, savedFeatureOverrides, savedStickerPackOrder, savedAutoSort, savedFavoriteOrder, savedAutoSortFavorites] =
     await Promise.all([
       kvGet<Partial<SettingsState>>('settings'),
+      kvGet<unknown>('featureOverrides'),
       kvGet<unknown>('stickerPackOrder'),
       kvGet<unknown>('autoSortStickerPacks'),
       kvGet<unknown>('favoriteStickerOrder'),
@@ -51,6 +54,7 @@ async function bootstrap() {
     ]);
 
   const settings = hydrateSettings(savedSettings);
+  const featureOverrides = hydrateFeatureOverrides(savedFeatureOverrides);
   const hydratedStickerPreferences = hydrateStickerPreferences(
     savedStickerPackOrder,
     savedAutoSort,
@@ -83,8 +87,20 @@ async function bootstrap() {
   }
   await activateDetectedLocale(settings.locale);
 
-  const store = createStore(settings, hydratedStickerPreferences.state);
+  const store = createStore(settings, hydratedStickerPreferences.state, featureOverrides);
   setStoreInstance(store);
+
+  const syncRuntimeFeatureOverrides = () => {
+    const state = store.getState();
+    const uid = state.user.uid;
+    const permissions = state.user.permissions;
+    const hasDeveloperPermission = permissions.includes('developer.access') || permissions.includes('permission.all');
+    const entry = selectFeatureOverrideEntryByUid(state, uid);
+    const active = uid != null && hasDeveloperPermission && entry.enabled;
+    applyFeatureOverrides(active, active ? entry.overrides : {});
+  };
+  syncRuntimeFeatureOverrides();
+  store.subscribe(syncRuntimeFeatureOverrides);
 
   createRoot(document.getElementById('root')!).render(
     <Provider store={store}>

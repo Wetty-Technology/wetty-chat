@@ -2,6 +2,7 @@ import { combineReducers, configureStore, createListenerMiddleware } from '@redu
 import connectionReducer from './connectionSlice';
 import messagesReducer from './messages/slice';
 import settingsReducer, { type SettingsState } from './settingsSlice';
+import featureOverridesReducer, { type FeatureOverridesState } from './featureOverridesSlice';
 import stickerPreferencesReducer, {
   hydrateStickerPreferencesFromKv,
   removeStickerPackOrderItem,
@@ -244,6 +245,7 @@ const rootReducer = combineReducers({
   connection: connectionReducer,
   messages: messagesReducer,
   settings: settingsReducer,
+  featureOverrides: featureOverridesReducer,
   stickerPreferences: stickerPreferencesReducer,
   chats: chatsReducer,
   threads: threadsReducer,
@@ -251,12 +253,17 @@ const rootReducer = combineReducers({
   user: userReducer,
 });
 
-export function createStore(initialSettings?: SettingsState, initialStickerPreferences?: StickerPreferencesState) {
+export function createStore(
+  initialSettings?: SettingsState,
+  initialStickerPreferences?: StickerPreferencesState,
+  initialFeatureOverrides?: FeatureOverridesState,
+) {
   const preloadedState =
-    initialSettings || initialStickerPreferences
+    initialSettings || initialStickerPreferences || initialFeatureOverrides
       ? {
           ...(initialSettings ? { settings: initialSettings } : {}),
           ...(initialStickerPreferences ? { stickerPreferences: initialStickerPreferences } : {}),
+          ...(initialFeatureOverrides ? { featureOverrides: initialFeatureOverrides } : {}),
         }
       : undefined;
 

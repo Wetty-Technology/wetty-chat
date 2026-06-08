@@ -18,6 +18,7 @@ pub enum Action {
     ChatCreate,
     MemberViewAll,
     InviteCreate,
+    DeveloperAccess,
     PermissionAll,
     ServiceTokenManage,
 }
@@ -28,6 +29,7 @@ impl Action {
             Self::ChatCreate => "chat.create",
             Self::MemberViewAll => "member.viewAll",
             Self::InviteCreate => "invite.create",
+            Self::DeveloperAccess => "developer.access",
             Self::PermissionAll => "permission.all",
             Self::ServiceTokenManage => "serviceToken.manage",
         }
@@ -113,6 +115,22 @@ impl AuthorizationService {
             .collect::<Vec<_>>();
         actions.sort();
         Ok(actions)
+    }
+
+    pub fn invalidate_user(&self, uid: i32) {
+        let keys: Vec<CacheKey> = self
+            .cache
+            .iter()
+            .filter_map(|entry| match entry.key().subject {
+                CacheSubject::User { uid: cached_uid, .. } if cached_uid == uid => {
+                    Some(*entry.key())
+                }
+                _ => None,
+            })
+            .collect();
+        for key in keys {
+            self.cache.remove(&key);
+        }
     }
 
     fn load_cached_user_actions(
@@ -347,7 +365,7 @@ impl Resource {
 
 #[cfg(test)]
 mod tests {
-    use super::{AuthorizationService, Resource};
+    use super::{Action, AuthorizationService, Resource};
 
     fn empty_service() -> AuthorizationService {
         AuthorizationService {
@@ -367,6 +385,23 @@ mod tests {
             .insert_cached_permissions_for_test((42, Some(7), Resource::Global), &["chat.create"]);
 
         service.prune_stale_entries();
+
+        assert_eq!(service.cache.len(), 1);
+    }
+
+    #[test]
+    fn developer_access_action_maps_to_expected_string() {
+        assert_eq!(Action::DeveloperAccess.as_str(), "developer.access");
+    }
+
+    #[test]
+    fn invalidate_user_removes_cached_user_entries() {
+        let service = empty_service();
+        service.insert_cached_permissions_for_test((42, Some(7), Resource::Global), &["chat.create"]);
+        service.insert_cached_permissions_for_test((42, Some(7), Resource::Chat(99)), &["invite.create"]);
+        service.insert_cached_permissions_for_test((7, Some(1), Resource::Global), &["chat.create"]);
+
+        service.invalidate_user(42);
 
         assert_eq!(service.cache.len(), 1);
     }

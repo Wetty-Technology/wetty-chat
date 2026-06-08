@@ -9,6 +9,8 @@ import { useSelector } from 'react-redux';
 import type { RootState } from '@/store';
 import { selectChatName } from '@/store/chatsSlice';
 import { getMembers, removeMember, updateMemberRole, type MemberResponse } from '@/api/group';
+import { usersApi } from '@/api/users';
+import { useHasGlobalPermission } from '@/hooks/useHasGlobalPermission';
 import styles from './UserProfileModal.module.scss';
 
 interface UserProfileModalProps {
@@ -58,6 +60,10 @@ export function UserProfileModal({
   const groupName = displaySender?.userGroup?.name?.trim() || null;
   const currentUserId = useSelector((state: RootState) => state.user.uid);
   const isOwn = displaySender?.uid === currentUserId;
+  const canManageDeveloper = useHasGlobalPermission('permission.all') && !isOwn;
+  const [isDeveloper, setIsDeveloper] = useState<boolean | null>(null);
+  const [developerStatusLoading, setDeveloperStatusLoading] = useState(false);
+  const [developerStatusError, setDeveloperStatusError] = useState<string | null>(null);
 
   const measure = useCallback(() => {
     const node = contentRef.current;
@@ -145,6 +151,40 @@ export function UserProfileModal({
       loadMemberInfo();
     }
   }, [sender, chatId, canManage, memberProp, loadMemberInfo]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!displaySender || !canManageDeveloper) {
+      setIsDeveloper(null);
+      setDeveloperStatusLoading(false);
+      setDeveloperStatusError(null);
+      return;
+    }
+
+    setDeveloperStatusLoading(true);
+    setDeveloperStatusError(null);
+    usersApi
+      .getUserDeveloper(displaySender.uid)
+      .then((response) => {
+        if (!cancelled) {
+          setIsDeveloper(response.isDeveloper);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setDeveloperStatusError(t`Failed to load developer status`);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setDeveloperStatusLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canManageDeveloper, displaySender]);
 
   const doOnActionComplete = useCallback(() => {
     try {
@@ -234,6 +274,25 @@ export function UserProfileModal({
       ],
     );
   }, [chatId, displaySender, chatNameFromStore, handleConfirmAction]);
+
+  const handleSetDeveloper = useCallback(
+    (enabled: boolean) => {
+      if (!displaySender) return;
+      const displayName = displaySender.name ?? `User ${displaySender.uid}`;
+      handleConfirmAction(
+        enabled ? t`Grant Developer Access` : t`Remove Developer Access`,
+        enabled ? t`Grant developer access to ${displayName}?` : t`Remove developer access from ${displayName}?`,
+        enabled ? t`Developer access granted` : t`Developer access removed`,
+        enabled ? t`Grant` : t`Remove`,
+        async () => {
+          const response = await usersApi.setUserDeveloper(displaySender.uid, enabled);
+          setIsDeveloper(response.isDeveloper);
+        },
+        !enabled,
+      );
+    },
+    [displaySender, handleConfirmAction],
+  );
 
   return (
     <IonModal isOpen={sender != null} onDidPresent={handleDidPresent} onDidDismiss={onDismiss} {...mobileModalProps}>
@@ -338,6 +397,23 @@ export function UserProfileModal({
                 ) : null}
               </div>
             )}
+            {canManageDeveloper ? (
+              <div className={styles.buttonRow}>
+                {developerStatusLoading ? (
+                  <div style={{ color: 'var(--ion-text-color)' }}>{t`Loading...`}</div>
+                ) : developerStatusError ? (
+                  <div style={{ color: 'var(--ion-color-danger)' }}>{developerStatusError}</div>
+                ) : isDeveloper === true ? (
+                  <IonButton color="danger" fill="solid" onClick={() => handleSetDeveloper(false)} className={styles.singleButton}>
+                    {t`Remove Developer Access`}
+                  </IonButton>
+                ) : (
+                  <IonButton color="primary" fill="solid" onClick={() => handleSetDeveloper(true)} className={styles.singleButton}>
+                    {t`Grant Developer Access`}
+                  </IonButton>
+                )}
+              </div>
+            ) : null}
           </div>
         )}
       </IonContent>

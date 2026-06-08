@@ -18,6 +18,7 @@ import { ChatInvitesPage } from '@/pages/chat-thread/manage-invites';
 import SettingsPage from '@/pages/settings';
 import SavedMessagesPage from '@/pages/saved-messages';
 import GeneralSettingsPage from '@/pages/settings/general';
+import DeveloperSettingsPage from '@/pages/settings/developer';
 import LanguagePage from '@/pages/settings/language';
 import StickerSettingsPage from '@/pages/settings/stickers';
 import StickerPackDetailPage from '@/pages/settings/sticker-pack-detail';
@@ -31,6 +32,7 @@ import { selectTotalUnreadChatCount } from '@/store/chatsSlice';
 import { selectTotalUnreadThreadCount } from '@/store/threadsSlice';
 import styles from './MobileLayout.module.scss';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PermissionGate } from '@/components/permissions/PermissionGate';
 
 const TAB_ROOT_PATHS = ['/', '/chats', '/settings', '/demo'];
 
@@ -94,6 +96,15 @@ const MobileLayout: React.FC = () => {
         <Route path="/chats/chat/:id/stickers/:packId" exact component={StickerPackDetailPage} />
         <Route path="/demo" exact component={ComponentDemoPage} />
         <Route path="/settings/general" exact component={GeneralSettingsPage} />
+        <Route
+          path="/settings/developer"
+          exact
+          render={() => (
+            <PermissionGate allow="developer.access" fallback={<Redirect to="/settings/general" />}>
+              <DeveloperSettingsPage />
+            </PermissionGate>
+          )}
+        />
         <Route path="/settings/language" exact component={LanguagePage} />
         {whenFeature('savedMessages', <Route path="/settings/saved-messages" exact component={SavedMessagesPage} />)}
         <Route path="/settings/stickers/:packId" exact component={StickerPackDetailPage} />

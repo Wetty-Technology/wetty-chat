@@ -20,6 +20,7 @@ import { Trans } from '@lingui/react/macro';
 import { i18n } from '@/i18n';
 import { BackButton } from '@/components/BackButton';
 import { ChatBubble } from '@/components/chat/messages/ChatBubble';
+import { useHasGlobalPermission } from '@/hooks/useHasGlobalPermission';
 import {
   chatFontSizeOptions,
   selectLocale,
@@ -34,6 +35,7 @@ import styles from './GeneralSettings.module.scss';
 interface GeneralSettingsCoreProps {
   backAction?: BackAction;
   onOpenLanguage?: () => void;
+  onOpenDeveloper?: () => void;
 }
 
 const localeLabels: Record<string, string> = {
@@ -42,12 +44,13 @@ const localeLabels: Record<string, string> = {
   'zh-TW': '繁體中文',
 };
 
-export function GeneralSettingsCore({ backAction, onOpenLanguage }: GeneralSettingsCoreProps) {
+export function GeneralSettingsCore({ backAction, onOpenLanguage, onOpenDeveloper }: GeneralSettingsCoreProps) {
   const dispatch = useDispatch();
   const history = useHistory();
   const locale = useSelector(selectLocale);
   const messageFontSize = useSelector(selectMessageFontSize);
   const showAllTab = useSelector(selectShowAllTab);
+  const canOpenDeveloperSettings = useHasGlobalPermission('developer.access');
   const sliderValue = chatFontSizeOptions.indexOf(messageFontSize);
 
   const handleOpenLanguage = () => {
@@ -56,6 +59,14 @@ export function GeneralSettingsCore({ backAction, onOpenLanguage }: GeneralSetti
       return;
     }
     history.push('/settings/language');
+  };
+
+  const handleOpenDeveloper = () => {
+    if (onOpenDeveloper) {
+      onOpenDeveloper();
+      return;
+    }
+    history.push('/settings/developer');
   };
 
   return (
@@ -85,6 +96,13 @@ export function GeneralSettingsCore({ backAction, onOpenLanguage }: GeneralSetti
               <Trans>Show "All" Tab in Chats</Trans>
             </IonToggle>
           </IonItem>
+          {canOpenDeveloperSettings ? (
+            <IonItem button detail={true} onClick={handleOpenDeveloper}>
+              <IonLabel>
+                <Trans>Developer Settings</Trans>
+              </IonLabel>
+            </IonItem>
+          ) : null}
         </IonList>
 
         <IonListHeader>

@@ -38,10 +38,40 @@ export const FEATURES = {
 } as const;
 
 export type Feature = keyof typeof FEATURES;
+type FeatureOverrideMap = Partial<Record<Feature, boolean>>;
+
+let runtimeOverrideState: {
+  active: boolean;
+  overrides: FeatureOverrideMap;
+} = {
+  active: false,
+  overrides: {},
+};
+
+export function applyFeatureOverrides(active: boolean, overrides: FeatureOverrideMap): void {
+  const sanitizedOverrides: FeatureOverrideMap = {};
+  for (const feature of Object.keys(FEATURES) as Feature[]) {
+    const value = overrides[feature];
+    if (typeof value === 'boolean') {
+      sanitizedOverrides[feature] = value;
+    }
+  }
+  runtimeOverrideState = {
+    active,
+    overrides: sanitizedOverrides,
+  };
+}
 
 export function isFeatureEnabled(feature: Feature): boolean {
   if (__FEATURE_GATES_ENABLED__) {
     return true;
+  }
+
+  if (runtimeOverrideState.active) {
+    const runtimeOverride = runtimeOverrideState.overrides[feature];
+    if (typeof runtimeOverride === 'boolean') {
+      return runtimeOverride;
+    }
   }
 
   return FEATURES[feature].enabled;

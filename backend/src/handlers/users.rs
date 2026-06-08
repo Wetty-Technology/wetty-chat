@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Query, State},
+    extract::{Path, Query, State},
     http::HeaderMap,
     Json,
 };
@@ -9,13 +9,17 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::dto::users::{
-    AuthTokenResponse, MeResponse, MemberSummary, SearchUsersResponse, StickerPackOrderItem,
+    AuthTokenResponse, DeveloperStatusResponse, MeResponse, MemberSummary, SearchUsersResponse,
+    SetDeveloperRequest, StickerPackOrderItem,
 };
 use crate::dto::ws::{ServerWsMessage, StickerPackOrderUpdatePayload};
 use crate::errors::AppError;
 use crate::extractors::DbConn;
-use crate::models::{NewUserExtra, UserExtra};
-use crate::schema::{group_membership, sticker_packs, user_extra, user_sticker_pack_subscriptions};
+use crate::models::{NewPolicyAssignment, NewUserExtra, PolicySubjectType, UserExtra};
+use crate::schema::discuz::discuz::common_member;
+use crate::schema::{
+    group_membership, policy_assignments, sticker_packs, user_extra, user_sticker_pack_subscriptions,
+};
 use crate::services::authz::{Action as AuthzAction, Resource as AuthzResource};
 use crate::services::user::{
     lookup_user_avatars, lookup_user_profiles, search_user_uids_by_prefix,
@@ -30,6 +34,7 @@ use std::sync::Arc;
 
 const DEFAULT_USER_SEARCH_LIMIT: i64 = 20;
 const MAX_USER_SEARCH_LIMIT: i64 = 50;
+const DEVELOPER_POLICY_ID: i64 = 2;
 
 #[derive(serde::Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -274,6 +279,42 @@ fn load_excluded_member_uids(
         .collect())
 }
 
+fn ensure_user_exists(conn: &mut PgConnection, uid: i32) -> Result<(), AppError> {
+    use crate::schema::discuz::discuz::common_member::dsl as cm_dsl;
+
+    let exists = common_member::table
+        .filter(cm_dsl::uid.eq(uid))
+        .select(cm_dsl::uid)
+        .first::<i32>(conn)
+        .optional()?
+        .is_some();
+
+    if exists {
+        Ok(())
+    } else {
+        Err(AppError::NotFound("User not found"))
+    }
+}
+
+fn is_user_developer(conn: &mut PgConnection, uid: i32) -> Result<bool, AppError> {
+    use crate::schema::policy_assignments::dsl as pa_dsl;
+
+    let count = policy_assignments::table
+        .filter(
+            pa_dsl::subject_type
+                .eq(PolicySubjectType::User)
+                .and(pa_dsl::subject_id.eq(i64::from(uid)))
+                .and(pa_dsl::policy_id.eq(DEVELOPER_POLICY_ID)),
+        )
+        .count()
+        .get_result::<i64>(conn)?;
+    Ok(count > 0)
+}
+
+fn should_update_developer_assignment(currently_developer: bool, requested_developer: bool) -> bool {
+    currently_developer != requested_developer
+}
+
 /// GET /users/me — Get the current logged in user's information
 #[utoipa::path(
     get,
@@ -324,6 +365,108 @@ async fn get_me(
         gender: profile.map(|profile| profile.gender).unwrap_or(0),
         sticker_pack_order,
         permissions,
+    }))
+}
+
+#[utoipa::path(
+    get,
+    path = "/{uid}/developer",
+    tag = "users",
+    params(
+        ("uid" = i32, Path, description = "Target user ID")
+    ),
+    responses(
+        (status = 200, description = "Developer status", body = DeveloperStatusResponse)
+    ),
+    security(("uid_header" = []), ("bearer_jwt" = []))
+)]
+async fn get_user_developer(
+    CurrentUid(requester_uid): CurrentUid,
+    Path(target_uid): Path<i32>,
+    State(state): State<AppState>,
+    mut conn: DbConn,
+) -> Result<Json<DeveloperStatusResponse>, AppError> {
+    let conn = &mut *conn;
+    state.authz_service.require_permission(
+        conn,
+        requester_uid,
+        AuthzAction::PermissionAll,
+        AuthzResource::Global,
+    )?;
+    ensure_user_exists(conn, target_uid)?;
+
+    Ok(Json(DeveloperStatusResponse {
+        is_developer: is_user_developer(conn, target_uid)?,
+    }))
+}
+
+#[utoipa::path(
+    put,
+    path = "/{uid}/developer",
+    tag = "users",
+    params(
+        ("uid" = i32, Path, description = "Target user ID")
+    ),
+    request_body = SetDeveloperRequest,
+    responses(
+        (status = 200, description = "Developer status updated", body = DeveloperStatusResponse)
+    ),
+    security(("uid_header" = []), ("bearer_jwt" = []))
+)]
+async fn put_user_developer(
+    CurrentUid(requester_uid): CurrentUid,
+    Path(target_uid): Path<i32>,
+    State(state): State<AppState>,
+    mut conn: DbConn,
+    Json(req): Json<SetDeveloperRequest>,
+) -> Result<Json<DeveloperStatusResponse>, AppError> {
+    let conn = &mut *conn;
+    state.authz_service.require_permission(
+        conn,
+        requester_uid,
+        AuthzAction::PermissionAll,
+        AuthzResource::Global,
+    )?;
+    ensure_user_exists(conn, target_uid)?;
+
+    let currently_developer = is_user_developer(conn, target_uid)?;
+    if req.is_developer && should_update_developer_assignment(currently_developer, req.is_developer) {
+        let id = crate::utils::ids::next_id(state.id_gen.as_ref())
+            .await
+            .map_err(|e| {
+                tracing::error!("next_id for developer assignment: {:?}", e);
+                AppError::Internal("ID generation failed")
+            })?;
+        let now = chrono::Utc::now();
+        diesel::insert_into(policy_assignments::table)
+            .values(NewPolicyAssignment {
+                id,
+                subject_type: PolicySubjectType::User,
+                subject_id: i64::from(target_uid),
+                policy_id: DEVELOPER_POLICY_ID,
+                created_at: now,
+                updated_at: now,
+            })
+            .execute(conn)?;
+        state.authz_service.invalidate_user(target_uid);
+    } else if !req.is_developer
+        && should_update_developer_assignment(currently_developer, req.is_developer)
+    {
+        use crate::schema::policy_assignments::dsl as pa_dsl;
+        diesel::delete(
+            policy_assignments::table.filter(
+                pa_dsl::subject_type
+                    .eq(PolicySubjectType::User)
+                    .and(pa_dsl::subject_id.eq(i64::from(target_uid)))
+                    .and(pa_dsl::policy_id.eq(DEVELOPER_POLICY_ID)),
+            ),
+        )
+        .execute(conn)?;
+        state.authz_service.invalidate_user(target_uid);
+    }
+
+    Ok(Json(DeveloperStatusResponse {
+        is_developer: req.is_developer,
     }))
 }
 
@@ -429,6 +572,7 @@ async fn get_auth_token(
 pub fn router() -> OpenApiRouter<crate::AppState> {
     OpenApiRouter::new()
         .routes(routes!(get_me))
+        .routes(routes!(get_user_developer, put_user_developer))
         .routes(routes!(get_user_search))
         .routes(routes!(get_auth_token))
         .routes(routes!(put_stickerpack_order))
@@ -463,8 +607,12 @@ fn load_accessible_sticker_pack_ids(
 
 #[cfg(test)]
 mod tests {
-    use super::{normalize_user_search_limit, split_excluded_member_summaries, MemberSummary};
+    use super::{
+        normalize_user_search_limit, should_update_developer_assignment,
+        split_excluded_member_summaries, MemberSummary,
+    };
     use std::collections::HashSet;
+    use std::path::PathBuf;
 
     fn make_summary(uid: i32) -> MemberSummary {
         MemberSummary {
@@ -506,5 +654,25 @@ mod tests {
                 .collect::<Vec<_>>(),
             vec![2, 3]
         );
+    }
+
+    #[test]
+    fn developer_assignment_update_is_idempotent() {
+        assert!(!should_update_developer_assignment(false, false));
+        assert!(!should_update_developer_assignment(true, true));
+        assert!(should_update_developer_assignment(false, true));
+        assert!(should_update_developer_assignment(true, false));
+    }
+
+    #[test]
+    fn migration_seeds_developer_access_policy() {
+        let migration_up = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("migrations")
+            .join("2026-06-08-043855-0000_add_developer_policy")
+            .join("up.sql");
+        let sql = std::fs::read_to_string(migration_up).expect("must read developer migration up.sql");
+
+        assert!(sql.contains("'developer.access'"));
+        assert!(sql.contains("INSERT INTO policies"));
     }
 }
