@@ -94,7 +94,6 @@ final wsEventRouterProvider = Provider<void>((ref) {
         reconcileThreadsIfNeeded(shouldReconcile);
         return;
       case ThreadMembershipChangedWsEvent(:final payload):
-        debugPrint('ThreadMembershipChangedWsEvent');
         invalidateThreadDetailMembership(
           chatId: payload.chatId,
           threadRootId: payload.threadRootId,

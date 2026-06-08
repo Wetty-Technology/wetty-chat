@@ -9,6 +9,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+/// Adapts chat route children between compact stack navigation and split panes.
+///
+/// See `docs/chat_workspace_navigation.md` for the route and layout flow.
 class ChatWorkspaceShell extends ConsumerWidget {
   const ChatWorkspaceShell({
     super.key,
