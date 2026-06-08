@@ -1341,16 +1341,27 @@ export function ChatVirtualScroll({
       return;
     }
 
+    const edgeLoadsAllowed =
+      phaseRef.current === 'READY' &&
+      bottomSettleRafRef.current == null &&
+      bottomSettleFramesRemainingRef.current === 0;
+
     if (atTopEdge) {
-      if (loadOlder.hasMore && !loadOlder.loading && topLoadArmedRef.current) {
+      if (edgeLoadsAllowed && loadOlder.hasMore && !loadOlder.loading && topLoadArmedRef.current) {
         topLoadArmedRef.current = false;
         logVirtualScroll('load-older-trigger', { reason: 'idle-top-edge' });
         loadOlder.onLoad();
+      } else if (!edgeLoadsAllowed && loadOlder.hasMore && !loadOlder.loading) {
+        logVirtualScroll('load-older-suppressed', {
+          reason: 'not-ready',
+          phase: phaseRef.current,
+          bottomSettleFramesRemaining: bottomSettleFramesRemainingRef.current,
+        });
       }
     }
 
     if (atBottomEdge && loadNewer) {
-      if (loadNewer.hasMore && !loadNewer.loading && bottomLoadArmedRef.current) {
+      if (edgeLoadsAllowed && loadNewer.hasMore && !loadNewer.loading && bottomLoadArmedRef.current) {
         bottomLoadArmedRef.current = false;
         logVirtualScroll('load-newer-trigger', {
           reason: 'idle-bottom-edge',
@@ -2429,6 +2440,19 @@ export function ChatVirtualScroll({
   }
 
   const mounted = mountedRef.current;
+  const renderRowContent = (row: ChatRow) => (
+    <div
+      className={[
+        styles.rowContent,
+        row.key === highlightedRowKey ? styles.rowContentHighlighted : null,
+        row.key === hiddenDateRowKey ? styles.dateRowContentHidden : null,
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      {renderRow(row)}
+    </div>
+  );
 
   const mountedRows: ReactNode[] = [];
   if (mounted) {
@@ -2438,17 +2462,7 @@ export function ChatVirtualScroll({
 
       mountedRows.push(
         <MeasuredRow key={row.key} rowKey={row.key} onMeasure={handleMountedMeasure} registerRow={registerRow}>
-          <div
-            className={[
-              styles.rowContent,
-              row.key === highlightedRowKey ? styles.rowContentHighlighted : null,
-              row.key === hiddenDateRowKey ? styles.dateRowContentHidden : null,
-            ]
-              .filter(Boolean)
-              .join(' ')}
-          >
-            {renderRow(row)}
-          </div>
+          {renderRowContent(row)}
         </MeasuredRow>,
       );
     }
@@ -2464,7 +2478,7 @@ export function ChatVirtualScroll({
 
       stagingRows.push(
         <MeasuredRow key={`staging-${key}`} rowKey={key} hidden onMeasure={handleStagingMeasure}>
-          {renderRow(row)}
+          {renderRowContent(row)}
         </MeasuredRow>,
       );
     }
