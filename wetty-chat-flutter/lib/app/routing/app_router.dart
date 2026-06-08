@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:chahua/app/presentation/home_root_view.dart';
 import 'package:chahua/app/routing/route_names.dart';
+import 'package:chahua/core/feature_gates/feature_gates.dart';
 import 'package:chahua/core/session/dev_session_store.dart';
 import 'package:chahua/features/auth/presentation/auth_bootstrap_view.dart';
 import 'package:chahua/features/auth/presentation/auth_login_view.dart';
@@ -25,6 +26,7 @@ import 'package:chahua/features/settings/presentation/general/cache_settings_vie
 import 'package:chahua/features/settings/presentation/general/general_settings_view.dart';
 import 'package:chahua/features/settings/presentation/general/language_settings_view.dart';
 import 'package:chahua/features/settings/presentation/notifications/notification_settings_view.dart';
+import 'package:chahua/features/saved_messages/presentation/saved_messages_page.dart';
 import 'package:chahua/features/settings/presentation/settings_modal_page.dart';
 import 'package:chahua/features/settings/presentation/settings_page.dart';
 import 'package:chahua/features/stickers/presentation/sticker_pack_detail_page.dart';
@@ -207,6 +209,29 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                                   return CupertinoPage(
                                     key: state.pageKey,
                                     child: MessageSearchPage(chatId: chatId),
+                                  );
+                                },
+                              ),
+                              GoRoute(
+                                parentNavigatorKey: _rootNavigatorKey,
+                                path: 'saved-messages',
+                                redirect: (_, state) =>
+                                    ref.read(
+                                      featureGateProvider(
+                                        AppFeatureGate.savedMessages,
+                                      ),
+                                    )
+                                    ? null
+                                    : AppRoutes.chatSettings(
+                                        state.pathParameters['chatId']!,
+                                      ),
+                                pageBuilder: (context, state) {
+                                  final chatId = int.parse(
+                                    state.pathParameters['chatId']!,
+                                  );
+                                  return CupertinoPage(
+                                    key: state.pageKey,
+                                    child: SavedMessagesPage(chatId: chatId),
                                   );
                                 },
                               ),
@@ -399,6 +424,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     pageBuilder: (context, state) => CupertinoPage(
                       key: state.pageKey,
                       child: const NotificationSettingsPage(),
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'saved-messages',
+                    redirect: (_, state) =>
+                        ref.read(
+                          featureGateProvider(AppFeatureGate.savedMessages),
+                        )
+                        ? null
+                        : AppRoutes.settings,
+                    pageBuilder: (context, state) => CupertinoPage(
+                      key: state.pageKey,
+                      child: const SavedMessagesPage(),
                     ),
                   ),
                   GoRoute(

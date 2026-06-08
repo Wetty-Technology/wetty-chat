@@ -138,6 +138,64 @@ class AppLocalizationsZh extends AppLocalizations {
   String get messageSearchFromFilter => '来自某人';
 
   @override
+  String get savedMessagesTitle => '已保存消息';
+
+  @override
+  String get savedMessagesAction => '已保存';
+
+  @override
+  String get saveMessageAction => '保存';
+
+  @override
+  String get savedMessageSavedToast => '消息已保存';
+
+  @override
+  String get savedMessageSaveFailed => '保存消息失败';
+
+  @override
+  String get savedMessagesLoadFailed => '加载已保存消息失败';
+
+  @override
+  String get savedMessagesEmpty => '暂无已保存消息';
+
+  @override
+  String get savedMessagesLoadMore => '加载更多';
+
+  @override
+  String savedMessageSavedOn(String date) {
+    return '保存于 $date';
+  }
+
+  @override
+  String get savedMessageOpenOriginal => '打开原消息';
+
+  @override
+  String get savedMessageOriginalUnavailable => '原消息不可用';
+
+  @override
+  String get savedMessageUnsave => '取消保存';
+
+  @override
+  String get savedMessageUnsaveTitle => '取消保存这条消息？';
+
+  @override
+  String get savedMessageUnsaveBody => '这会将它从你的已保存消息中移除。';
+
+  @override
+  String get savedMessageUnsaveFailed => '取消保存消息失败';
+
+  @override
+  String savedMessageAttachmentCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个附件',
+      one: '1 个附件',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get reactionPickerNoRecents => '暂无最近使用的表情';
 
   @override
@@ -642,6 +700,64 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get messageSearchFromFilter => '來自某人';
+
+  @override
+  String get savedMessagesTitle => '已儲存訊息';
+
+  @override
+  String get savedMessagesAction => '已儲存';
+
+  @override
+  String get saveMessageAction => '儲存';
+
+  @override
+  String get savedMessageSavedToast => '訊息已儲存';
+
+  @override
+  String get savedMessageSaveFailed => '儲存訊息失敗';
+
+  @override
+  String get savedMessagesLoadFailed => '載入已儲存訊息失敗';
+
+  @override
+  String get savedMessagesEmpty => '尚無已儲存訊息';
+
+  @override
+  String get savedMessagesLoadMore => '載入更多';
+
+  @override
+  String savedMessageSavedOn(String date) {
+    return '儲存於 $date';
+  }
+
+  @override
+  String get savedMessageOpenOriginal => '開啟原訊息';
+
+  @override
+  String get savedMessageOriginalUnavailable => '原訊息無法使用';
+
+  @override
+  String get savedMessageUnsave => '取消儲存';
+
+  @override
+  String get savedMessageUnsaveTitle => '取消儲存這則訊息？';
+
+  @override
+  String get savedMessageUnsaveBody => '這會將它從你的已儲存訊息中移除。';
+
+  @override
+  String get savedMessageUnsaveFailed => '取消儲存訊息失敗';
+
+  @override
+  String savedMessageAttachmentCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 個附件',
+      one: '1 個附件',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get reactionPickerNoRecents => '暫無最近使用的表情';

@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../saved_messages/presentation/saved_messages_page.dart';
 import '../../shared/presentation/cupertino_modal_close_button.dart';
 import '../../stickers/presentation/sticker_pack_detail_page.dart';
 import '../../stickers/presentation/sticker_pack_list_page.dart';
@@ -106,6 +107,8 @@ class _SettingsModalNavigator extends StatelessWidget {
                   _push(context, const DevSessionSettingsPage()),
               onOpenNotifications: () =>
                   _push(context, const NotificationSettingsPage()),
+              onOpenSavedMessages: () =>
+                  _push(context, const SavedMessagesPage()),
             );
           },
         );

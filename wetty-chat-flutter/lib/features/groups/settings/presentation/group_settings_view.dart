@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/routing/route_names.dart';
 import '../../../../app/theme/style_config.dart';
+import '../../../../core/feature_gates/feature_gates.dart';
 import '../../../../core/session/dev_session_store.dart';
 import '../../../chat_list/application/group_list_v2_store.dart';
 import '../../members/data/group_member_repository.dart';
@@ -237,6 +238,9 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
     final isMuted =
         metadata.mutedUntil != null &&
         metadata.mutedUntil!.isAfter(DateTime.now());
+    final savedMessagesEnabled = ref.watch(
+      featureGateProvider(AppFeatureGate.savedMessages),
+    );
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -247,6 +251,16 @@ class _GroupSettingsPageState extends ConsumerState<GroupSettingsPage> {
           label: AppLocalizations.of(context)!.messageSearchAction,
           onTap: () => context.push(AppRoutes.chatMessageSearch(widget.chatId)),
         ),
+        if (savedMessagesEnabled) ...[
+          const SizedBox(width: 12),
+          _buildActionButton(
+            context,
+            icon: CupertinoIcons.bookmark,
+            label: AppLocalizations.of(context)!.savedMessagesAction,
+            onTap: () =>
+                context.push(AppRoutes.chatSavedMessages(widget.chatId)),
+          ),
+        ],
         const SizedBox(width: 12),
         _buildActionButton(
           context,

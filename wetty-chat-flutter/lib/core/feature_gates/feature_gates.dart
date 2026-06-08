@@ -7,6 +7,12 @@ enum AppFeatureGate {
   messageSearchInlineTags(
     defaultEnabled: kDebugMode,
     description: 'Shows UI-only inline tags in message search.',
+  ),
+
+  /// Enables saving messages and browsing saved-message lists.
+  savedMessages(
+    defaultEnabled: true,
+    description: 'Allows saving messages and viewing saved messages.',
   );
 
   const AppFeatureGate({

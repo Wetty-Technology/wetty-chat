@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 
 import 'package:chahua/app/theme/style_config.dart';
+import 'package:chahua/core/api/services/saved_messages_api_service.dart';
+import 'package:chahua/core/feature_gates/feature_gates.dart';
 import 'package:chahua/core/session/dev_session_store.dart';
 import 'package:chahua/features/shared/application/app_refresh_coordinator.dart';
 import 'package:chahua/features/conversation/compose/presentation/conversation_composer_view_model.dart';
@@ -235,6 +237,27 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
     }
   }
 
+  Future<void> _saveMessage(ConversationMessageV2 message) async {
+    final l10n = AppLocalizations.of(context)!;
+    final messageId = message.serverMessageId;
+    if (messageId == null) {
+      return;
+    }
+
+    try {
+      await ref.read(savedMessagesApiServiceProvider).saveMessage(messageId);
+      if (!mounted) {
+        return;
+      }
+      _showStatusToast(l10n.savedMessageSavedToast);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      _showStatusToast(l10n.savedMessageSaveFailed);
+    }
+  }
+
   Future<void> _unpinMessage(
     PinnedMessage pin, {
     bool optimistic = false,
@@ -357,11 +380,35 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
     );
   }
 
+  void _showStatusToast(String message) {
+    final overlay = Navigator.of(context).overlay;
+    if (overlay == null) {
+      return;
+    }
+
+    late OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (_) => Positioned(
+        left: 24,
+        right: 24,
+        bottom: 92,
+        child: _ConversationStatusToast(
+          message: message,
+          onDismiss: () => entry.remove(),
+        ),
+      ),
+    );
+    overlay.insert(entry);
+  }
+
   List<MessageOverlayActionV2> _overlayActions(ConversationMessageV2 message) {
     final l10n = AppLocalizations.of(context)!;
     final currentUserId = ref.read(authSessionProvider).currentUserId;
     final isOwn = message.sender.uid == currentUserId;
     final canManagePins = _canManagePins;
+    final savedMessagesEnabled = ref.watch(
+      featureGateProvider(AppFeatureGate.savedMessages),
+    );
     final pinnedPin = _pinForMessage(message);
     final copyText = switch (message.content) {
       TextMessageContent(:final text) when text.trim().isNotEmpty => text,
@@ -386,6 +433,15 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
           onPressed: () {
             _dismissMessageOverlay();
             unawaited(Clipboard.setData(ClipboardData(text: copyText)));
+          },
+        ),
+      if (savedMessagesEnabled && _canSaveMessage(message))
+        MessageOverlayActionV2(
+          label: l10n.saveMessageAction,
+          icon: CupertinoIcons.bookmark,
+          onPressed: () {
+            _dismissMessageOverlay();
+            unawaited(_saveMessage(message));
           },
         ),
       if (_canStartThreadFrom(message))
@@ -444,6 +500,13 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
         message.serverMessageId != null &&
         !message.isDeleted &&
         message.content is! SystemMessageContent;
+  }
+
+  bool _canSaveMessage(ConversationMessageV2 message) {
+    return message.serverMessageId != null &&
+        !message.isDeleted &&
+        message.content is! SystemMessageContent &&
+        message.content is! StickerMessageContent;
   }
 
   bool get _canManagePins {
@@ -609,6 +672,54 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
                 },
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ConversationStatusToast extends StatefulWidget {
+  const _ConversationStatusToast({
+    required this.message,
+    required this.onDismiss,
+  });
+
+  final String message;
+  final VoidCallback onDismiss;
+
+  @override
+  State<_ConversationStatusToast> createState() =>
+      _ConversationStatusToastState();
+}
+
+class _ConversationStatusToastState extends State<_ConversationStatusToast> {
+  Timer? _dismissTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _dismissTimer = Timer(const Duration(seconds: 2), widget.onDismiss);
+  }
+
+  @override
+  void dispose() {
+    _dismissTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemGrey.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Text(
+          widget.message,
+          textAlign: TextAlign.center,
+          style: appBodyTextStyle(context, color: CupertinoColors.white),
         ),
       ),
     );

@@ -15,6 +15,7 @@ class SettingsPage extends StatelessWidget {
       onOpenAppearance: () => context.push(AppRoutes.appearance),
       onOpenDevSession: () => context.push(AppRoutes.devSession),
       onOpenNotifications: () => context.push(AppRoutes.notifications),
+      onOpenSavedMessages: () => context.push(AppRoutes.savedMessages),
     );
   }
 }

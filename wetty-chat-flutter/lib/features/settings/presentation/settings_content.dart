@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/style_config.dart';
+import '../../../core/feature_gates/feature_gates.dart';
 import '../../../core/session/dev_session_store.dart';
 import '../../../l10n/app_localizations.dart';
 import 'settings_components.dart';
@@ -15,6 +16,7 @@ class SettingsContent extends ConsumerWidget {
     required this.onOpenAppearance,
     required this.onOpenDevSession,
     required this.onOpenNotifications,
+    required this.onOpenSavedMessages,
     this.leading,
     this.automaticallyImplyLeading = true,
   });
@@ -24,12 +26,14 @@ class SettingsContent extends ConsumerWidget {
   final VoidCallback onOpenAppearance;
   final VoidCallback onOpenDevSession;
   final VoidCallback onOpenNotifications;
+  final VoidCallback onOpenSavedMessages;
   final Widget? leading;
   final bool automaticallyImplyLeading;
 
   List<SettingsSectionData> _sections(
     BuildContext context,
     AuthSessionState session,
+    bool savedMessagesEnabled,
   ) {
     final l10n = AppLocalizations.of(context)!;
     final sessionLabel = switch (session.mode) {
@@ -64,6 +68,15 @@ class SettingsContent extends ConsumerWidget {
             titleFontWeight: AppFontWeights.medium,
             onTap: onOpenStickerPacks,
           ),
+          if (savedMessagesEnabled)
+            SettingsItemData(
+              title: l10n.savedMessagesTitle,
+              icon: CupertinoIcons.bookmark,
+              iconColor: const Color(0xFF007AFF),
+              titleFontSize: AppFontSizes.body,
+              titleFontWeight: AppFontWeights.medium,
+              onTap: onOpenSavedMessages,
+            ),
         ],
       ),
       SettingsSectionData(
@@ -99,7 +112,10 @@ class SettingsContent extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final session = ref.watch(authSessionProvider);
-    final sections = _sections(context, session);
+    final savedMessagesEnabled = ref.watch(
+      featureGateProvider(AppFeatureGate.savedMessages),
+    );
+    final sections = _sections(context, session, savedMessagesEnabled);
     return CupertinoPageScaffold(
       backgroundColor: CupertinoColors.systemGroupedBackground,
       navigationBar: CupertinoNavigationBar(

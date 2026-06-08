@@ -357,6 +357,102 @@ abstract class AppLocalizations {
   /// **'From someone'**
   String get messageSearchFromFilter;
 
+  /// Title and settings entry for saved messages
+  ///
+  /// In en, this message translates to:
+  /// **'Saved Messages'**
+  String get savedMessagesTitle;
+
+  /// Group info action label for chat-scoped saved messages
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get savedMessagesAction;
+
+  /// Message action label for saving a message
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get saveMessageAction;
+
+  /// Toast shown after saving a message
+  ///
+  /// In en, this message translates to:
+  /// **'Message saved'**
+  String get savedMessageSavedToast;
+
+  /// Toast shown when saving a message fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to save message'**
+  String get savedMessageSaveFailed;
+
+  /// Error state when saved messages cannot load
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load saved messages'**
+  String get savedMessagesLoadFailed;
+
+  /// Empty state for the saved messages list
+  ///
+  /// In en, this message translates to:
+  /// **'No saved messages'**
+  String get savedMessagesEmpty;
+
+  /// Button label for loading more saved messages
+  ///
+  /// In en, this message translates to:
+  /// **'Load More'**
+  String get savedMessagesLoadMore;
+
+  /// Metadata label showing when a message was saved
+  ///
+  /// In en, this message translates to:
+  /// **'Saved on {date}'**
+  String savedMessageSavedOn(String date);
+
+  /// Button label to jump to the original saved message
+  ///
+  /// In en, this message translates to:
+  /// **'Open Original'**
+  String get savedMessageOpenOriginal;
+
+  /// Label shown when a saved message cannot be opened in context
+  ///
+  /// In en, this message translates to:
+  /// **'Original unavailable'**
+  String get savedMessageOriginalUnavailable;
+
+  /// Action label for removing a saved message
+  ///
+  /// In en, this message translates to:
+  /// **'Unsave'**
+  String get savedMessageUnsave;
+
+  /// Confirmation dialog title before removing a saved message
+  ///
+  /// In en, this message translates to:
+  /// **'Unsave message?'**
+  String get savedMessageUnsaveTitle;
+
+  /// Confirmation dialog body before removing a saved message
+  ///
+  /// In en, this message translates to:
+  /// **'This removes it from your saved messages.'**
+  String get savedMessageUnsaveBody;
+
+  /// Toast shown when removing a saved message fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to unsave message'**
+  String get savedMessageUnsaveFailed;
+
+  /// Summary for attachments on a saved message
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 attachment} other{{count} attachments}}'**
+  String savedMessageAttachmentCount(int count);
+
   /// Empty state shown when the reaction emoji picker has no recently used emoji
   ///
   /// In en, this message translates to:

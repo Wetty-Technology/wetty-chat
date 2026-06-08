@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:chahua/core/preferences/app_preferences.dart';
 
+import 'package:chahua/core/feature_gates/feature_gates.dart';
 import 'package:chahua/core/providers/shared_preferences_provider.dart';
 import 'package:chahua/core/settings/app_settings_store.dart';
 import 'package:chahua/features/settings/presentation/appearance/appearance_settings_view.dart';
@@ -80,6 +81,93 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('Storage Used'), findsOneWidget);
+  });
+
+  testWidgets('settings page opens saved messages', (tester) async {
+    final preferences = AppPreferences.withData(const <String, Object>{});
+    final container = ProviderContainer(
+      overrides: [sharedPreferencesProvider.overrideWithValue(preferences)],
+    );
+    addTearDown(container.dispose);
+
+    final router = GoRouter(
+      initialLocation: '/settings',
+      routes: [
+        GoRoute(
+          path: '/settings',
+          builder: (context, state) => const SettingsPage(),
+          routes: [
+            GoRoute(
+              path: 'saved-messages',
+              builder: (context, state) => const CupertinoPageScaffold(
+                child: Center(child: Text('Saved messages route')),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: CupertinoApp.router(
+          routerConfig: router,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    await tester.tap(find.text('Saved Messages'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Saved messages route'), findsOneWidget);
+  });
+
+  testWidgets('settings page hides saved messages when gate is disabled', (
+    tester,
+  ) async {
+    final preferences = AppPreferences.withData(const <String, Object>{});
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(preferences),
+        featureGateConfigProvider.overrideWithValue(
+          const FeatureGateConfig(
+            overrides: {AppFeatureGate.savedMessages: false},
+          ),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final router = GoRouter(
+      initialLocation: '/settings',
+      routes: [
+        GoRoute(
+          path: '/settings',
+          builder: (context, state) => const SettingsPage(),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: CupertinoApp.router(
+          routerConfig: router,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Saved Messages'), findsNothing);
   });
 
   testWidgets('settings modal opens subpages in its local navigator', (

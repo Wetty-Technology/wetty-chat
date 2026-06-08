@@ -16,6 +16,20 @@ void main() {
       expect(enabled, kDebugMode);
     });
 
+    test('saved messages are default enabled', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      expect(
+        AppFeatureGate.values.map((gate) => gate.name),
+        contains('savedMessages'),
+      );
+      expect(
+        container.read(featureGateProvider(AppFeatureGate.savedMessages)),
+        isTrue,
+      );
+    });
+
     test('can disable a debug-default gate with an explicit override', () {
       final container = ProviderContainer(
         overrides: [

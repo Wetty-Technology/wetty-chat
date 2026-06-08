@@ -130,6 +130,60 @@
   "messageSearchFromFilter": "From someone",
   "@messageSearchFromFilter": { "description": "Label for adding a sender filter in message search" },
 
+  "savedMessagesTitle": "Saved Messages",
+  "@savedMessagesTitle": { "description": "Title and settings entry for saved messages" },
+
+  "savedMessagesAction": "Saved",
+  "@savedMessagesAction": { "description": "Group info action label for chat-scoped saved messages" },
+
+  "saveMessageAction": "Save",
+  "@saveMessageAction": { "description": "Message action label for saving a message" },
+
+  "savedMessageSavedToast": "Message saved",
+  "@savedMessageSavedToast": { "description": "Toast shown after saving a message" },
+
+  "savedMessageSaveFailed": "Failed to save message",
+  "@savedMessageSaveFailed": { "description": "Toast shown when saving a message fails" },
+
+  "savedMessagesLoadFailed": "Failed to load saved messages",
+  "@savedMessagesLoadFailed": { "description": "Error state when saved messages cannot load" },
+
+  "savedMessagesEmpty": "No saved messages",
+  "@savedMessagesEmpty": { "description": "Empty state for the saved messages list" },
+
+  "savedMessagesLoadMore": "Load More",
+  "@savedMessagesLoadMore": { "description": "Button label for loading more saved messages" },
+
+  "savedMessageSavedOn": "Saved on {date}",
+  "@savedMessageSavedOn": {
+    "description": "Metadata label showing when a message was saved",
+    "placeholders": { "date": { "type": "String" } }
+  },
+
+  "savedMessageOpenOriginal": "Open Original",
+  "@savedMessageOpenOriginal": { "description": "Button label to jump to the original saved message" },
+
+  "savedMessageOriginalUnavailable": "Original unavailable",
+  "@savedMessageOriginalUnavailable": { "description": "Label shown when a saved message cannot be opened in context" },
+
+  "savedMessageUnsave": "Unsave",
+  "@savedMessageUnsave": { "description": "Action label for removing a saved message" },
+
+  "savedMessageUnsaveTitle": "Unsave message?",
+  "@savedMessageUnsaveTitle": { "description": "Confirmation dialog title before removing a saved message" },
+
+  "savedMessageUnsaveBody": "This removes it from your saved messages.",
+  "@savedMessageUnsaveBody": { "description": "Confirmation dialog body before removing a saved message" },
+
+  "savedMessageUnsaveFailed": "Failed to unsave message",
+  "@savedMessageUnsaveFailed": { "description": "Toast shown when removing a saved message fails" },
+
+  "savedMessageAttachmentCount": "{count, plural, =1{1 attachment} other{{count} attachments}}",
+  "@savedMessageAttachmentCount": {
+    "description": "Summary for attachments on a saved message",
+    "placeholders": { "count": { "type": "int" } }
+  },
+
   "reactionPickerNoRecents": "No Recents",
   "@reactionPickerNoRecents": { "description": "Empty state shown when the reaction emoji picker has no recently used emoji" },
 

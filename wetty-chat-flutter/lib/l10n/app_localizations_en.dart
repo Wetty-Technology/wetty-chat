@@ -138,6 +138,65 @@ class AppLocalizationsEn extends AppLocalizations {
   String get messageSearchFromFilter => 'From someone';
 
   @override
+  String get savedMessagesTitle => 'Saved Messages';
+
+  @override
+  String get savedMessagesAction => 'Saved';
+
+  @override
+  String get saveMessageAction => 'Save';
+
+  @override
+  String get savedMessageSavedToast => 'Message saved';
+
+  @override
+  String get savedMessageSaveFailed => 'Failed to save message';
+
+  @override
+  String get savedMessagesLoadFailed => 'Failed to load saved messages';
+
+  @override
+  String get savedMessagesEmpty => 'No saved messages';
+
+  @override
+  String get savedMessagesLoadMore => 'Load More';
+
+  @override
+  String savedMessageSavedOn(String date) {
+    return 'Saved on $date';
+  }
+
+  @override
+  String get savedMessageOpenOriginal => 'Open Original';
+
+  @override
+  String get savedMessageOriginalUnavailable => 'Original unavailable';
+
+  @override
+  String get savedMessageUnsave => 'Unsave';
+
+  @override
+  String get savedMessageUnsaveTitle => 'Unsave message?';
+
+  @override
+  String get savedMessageUnsaveBody =>
+      'This removes it from your saved messages.';
+
+  @override
+  String get savedMessageUnsaveFailed => 'Failed to unsave message';
+
+  @override
+  String savedMessageAttachmentCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count attachments',
+      one: '1 attachment',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get reactionPickerNoRecents => 'No Recents';
 
   @override
