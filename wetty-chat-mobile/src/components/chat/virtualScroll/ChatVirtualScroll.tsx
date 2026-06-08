@@ -2481,6 +2481,10 @@ export function ChatVirtualScroll({
   const bottomEdgeLabel = loadNewer?.loading ? t`Loading…` : t`Newer messages`;
   const contentPaddingTop = showTopEdgeHint ? EDGE_HINT_HEIGHT : 0;
   const contentPaddingBottom = bottomPadding + (showBottomEdgeHint ? EDGE_HINT_HEIGHT : 0);
+  const reservedFlowMinHeight =
+    showLoadingScrim && rowKeys.length > 0
+      ? Math.max(containerHeight + 1, headerHeight + totalHeight() + contentPaddingTop + contentPaddingBottom)
+      : undefined;
 
   // Recalculate atBottom when the page becomes visible again, since the scroll
   // position may have been affected while the tab was in the background.
@@ -2498,7 +2502,7 @@ export function ChatVirtualScroll({
       {topOverlay}
       <div
         className={styles.flowContent}
-        style={{ paddingTop: contentPaddingTop, paddingBottom: contentPaddingBottom }}
+        style={{ paddingTop: contentPaddingTop, paddingBottom: contentPaddingBottom, minHeight: reservedFlowMinHeight }}
       >
         {header && <div ref={headerRef}>{header}</div>}
         {showTopEdgeHint && (

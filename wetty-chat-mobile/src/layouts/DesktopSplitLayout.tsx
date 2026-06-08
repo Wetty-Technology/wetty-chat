@@ -28,8 +28,11 @@ import { useHasGlobalPermission } from '@/hooks/useHasGlobalPermission';
 import { useFeatureGate } from '@/hooks/useFeatureGate';
 import type { RootState } from '@/store';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { createCachedThreadPane, updateCachedThreadPanes } from './desktopThreadPaneCache';
 
 type DesktopRouteState = ChatThreadRouteState;
+
+const MAX_CACHED_THREAD_PANES = 5;
 
 interface DesktopRouteMatches {
   activeChatId: string | undefined;
@@ -232,11 +235,21 @@ export function DesktopSplitLayout() {
     isNewChat,
     isJoinChat,
   } = baseRoute;
+  const activeThreadPane = threadMatch ? createCachedThreadPane(threadMatch.id, threadMatch.threadId) : null;
+  const [cachedThreadPanesState, setCachedThreadPanes] = useState(() =>
+    activeThreadPane ? [activeThreadPane] : [],
+  );
+  const cachedThreadPanes = updateCachedThreadPanes(
+    cachedThreadPanesState,
+    activeThreadPane,
+    MAX_CACHED_THREAD_PANES,
+  );
   useDocumentTitle(activeChatId, threadMatch?.threadId);
   const groupInfoSavedMessagesMatch = savedMessagesEnabled ? routeGroupInfoSavedMessagesMatch : null;
   const disabledGroupSavedMessagesChatId = savedMessagesEnabled ? null : routeGroupInfoSavedMessagesMatch?.id;
   const disabledSavedMessagesSettings = !savedMessagesEnabled && currentRoute.savedMessagesSettings;
   const globalSettingsOpen = currentRoute.globalSettings;
+
   const initialArchivedTab: ChatListTab | null =
     archivedMatch?.tab === 'threads' || archivedMatch?.tab === 'groups' || archivedMatch?.tab === 'all'
       ? archivedMatch.tab
@@ -353,26 +366,15 @@ export function DesktopSplitLayout() {
 
   const handleThreadSelect = useCallback(
     (chatId: string, threadRootId: string) => {
+      setCachedThreadPanes((current) =>
+        updateCachedThreadPanes(current, createCachedThreadPane(chatId, threadRootId), MAX_CACHED_THREAD_PANES),
+      );
       history.replace(`/chats/chat/${chatId}/thread/${threadRootId}`);
     },
     [history],
   );
 
-  let subPageOverlay: ReactNode = null;
-
-  if (threadMatch) {
-    const { id, threadId } = threadMatch;
-    subPageOverlay = (
-      <ChatThreadCore
-        chatId={id}
-        threadId={threadId}
-        backAction={{
-          type: 'callback',
-          onBack: () => history.replace(`/chats/chat/${id}`),
-        }}
-      />
-    );
-  }
+  const hasActiveThreadPane = activeThreadPane != null;
 
   return (
     <div className={styles.desktopSplitLayout}>
@@ -416,13 +418,39 @@ export function DesktopSplitLayout() {
       <div className={styles.desktopSplitRight}>
         {/* Base layer: always render ChatThreadCore when a chat is selected */}
         {activeChatId && !isNewChat && !joinPreviewMatch && (
-          <div style={{ display: subPageOverlay ? 'none' : undefined }} className={styles.desktopSplitPane}>
-            <ChatThreadCore chatId={activeChatId} />
+          <div
+            aria-hidden={hasActiveThreadPane}
+            className={`${styles.desktopSplitPane} ${
+              hasActiveThreadPane ? styles.desktopSplitPaneHidden : styles.desktopSplitPaneActive
+            }`}
+          >
+            <ChatThreadCore key={activeChatId} chatId={activeChatId} />
           </div>
         )}
 
-        {/* Overlay layer: sub-page (thread) */}
-        {subPageOverlay && <div className={styles.desktopSplitPane}>{subPageOverlay}</div>}
+        {/* Overlay layer: keep recent thread panes mounted to preserve their virtual scroll state. */}
+        {cachedThreadPanes.map((pane) => {
+          const isActive = activeThreadPane?.key === pane.key;
+          return (
+            <div
+              key={pane.key}
+              aria-hidden={!isActive}
+              className={`${styles.desktopSplitPane} ${
+                isActive ? styles.desktopSplitPaneActive : styles.desktopSplitPaneHidden
+              }`}
+            >
+              <ChatThreadCore
+                key={pane.key}
+                chatId={pane.chatId}
+                threadId={pane.threadId}
+                backAction={{
+                  type: 'callback',
+                  onBack: () => history.replace(`/chats/chat/${pane.chatId}`),
+                }}
+              />
+            </div>
+          );
+        })}
 
         {/* Group info modal */}
         <ChatModal chatId={groupInfoModalChatId} routePath={groupInfoModalRoutePath}>

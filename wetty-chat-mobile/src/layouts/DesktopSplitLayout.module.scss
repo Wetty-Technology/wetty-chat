@@ -22,6 +22,20 @@
 .desktop-split-pane {
   position: absolute;
   inset: 0;
+  overflow: hidden;
+  contain: layout paint;
+}
+
+.desktop-split-pane-active {
+  visibility: visible;
+  pointer-events: auto;
+  z-index: 1;
+}
+
+.desktop-split-pane-hidden {
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .desktop-split-placeholder {
