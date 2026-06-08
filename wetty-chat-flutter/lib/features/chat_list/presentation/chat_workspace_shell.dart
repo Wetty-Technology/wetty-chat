@@ -32,7 +32,15 @@ class ChatWorkspaceShell extends ConsumerWidget {
         if (constraints.maxWidth < desktopBreakpoint) {
           return ChatWorkspaceLayoutScope(isSplit: false, child: child);
         }
+        // In split layout, the left list scope can differ from the detail
+        // route. For example, opening Archived keeps /chat/:id on the right
+        // while switching the left pane to archived conversations.
         final rememberedScope = ref.watch(chatWorkspaceListScopeProvider);
+        // Normal split archived navigation updates rememberedScope without
+        // visiting /chats/archived. _isArchivedRoot is true when the
+        // current route is /chats/archived or /threads/archived, such as after
+        // a direct restore, compact-to-split resize, or a direct push/go to one
+        // of those archived routes.
         final listScope = _isArchivedRoot(location)
             ? ChatListV2Scope.archived
             : rememberedScope;
