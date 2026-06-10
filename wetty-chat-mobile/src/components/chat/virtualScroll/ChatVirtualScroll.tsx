@@ -2474,6 +2474,9 @@ export function ChatVirtualScroll({
   const topSpacer = mounted ? topSpacerHeight() : phase === 'RECENTERING' ? totalHeight() : 0;
   const bottomSpacer = mounted ? bottomSpacerHeight() : 0;
   const showLoadingScrim = phase === 'WAITING_VIEWPORT' || phase === 'BOOTSTRAP' || phase === 'RECENTERING';
+  const containerClassName = [styles.container, showLoadingScrim ? styles.containerNonReady : null]
+    .filter(Boolean)
+    .join(' ');
   const showEmptyState = rowKeys.length === 0 && !isLoading && !showLoadingScrim;
   const showTopEdgeHint = loadOlder.hasMore || loadOlder.loading;
   const showBottomEdgeHint = !!loadNewer && (loadNewer.hasMore || loadNewer.loading);
@@ -2488,7 +2491,7 @@ export function ChatVirtualScroll({
   return (
     <div
       ref={containerRef}
-      className={styles.container}
+      className={containerClassName}
       onScroll={handleScroll}
       onWheel={markIntent}
       onTouchStart={markIntent}

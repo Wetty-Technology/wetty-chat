@@ -70,15 +70,18 @@ import {
   insertAfterAnchor,
   insertAround,
   insertBeforeAnchor,
+  mergeLatestPreserveView,
   refreshLatest,
   resetChat,
   setTimelineMode,
 } from '@/store/messages/slice';
 import {
+  selectAllTimelineMessages,
   selectChatGeneration,
   selectActiveTimelineMessages,
   selectCanLoadNewer,
   selectCanLoadOlder,
+  selectHasLoadedTimeline,
   selectNewerAnchor,
   selectOlderAnchor,
   selectPendingLiveCount,
@@ -176,6 +179,11 @@ function areMessageListsEquivalent(left: MessageResponse[], right: MessageRespon
       return candidate != null && message.id === candidate.id;
     })
   );
+}
+
+function hasLoadedMessage(messages: MessageResponse[], messageId: string | null | undefined): messageId is string {
+  if (!messageId) return false;
+  return messages.some((message) => message.id === messageId);
 }
 
 function isAudioMessage(message: MessageResponse): boolean {
@@ -893,11 +901,13 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
           const currentMessages = selectActiveTimelineMessages(currentState, storeChatId);
           const currentNextCursor = selectOlderAnchor(currentState, storeChatId);
           const currentPrevCursor = selectNewerAnchor(currentState, storeChatId);
+          const hasCachedTimeline = selectHasLoadedTimeline(currentState, storeChatId);
           const shouldResetAnchor =
             forceReopen ||
-            !areMessageListsEquivalent(currentMessages, list) ||
-            nextCursor !== currentNextCursor ||
-            prevCursor !== currentPrevCursor;
+            (!hasCachedTimeline &&
+              (!areMessageListsEquivalent(currentMessages, list) ||
+                nextCursor !== currentNextCursor ||
+                prevCursor !== currentPrevCursor));
           if (import.meta.env.DEV) {
             console.log('[ChatThread] fetchLatestWindow:resolved', {
               chatId,
@@ -923,15 +933,26 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
             firstFetchedId: list[0]?.id ?? null,
             lastFetchedId: list[list.length - 1]?.id ?? null,
           });
-          dispatch(
-            refreshLatest({
-              chatId: storeChatId,
-              messages: list,
-              nextCursor,
-              prevCursor,
-            }),
-          );
-          dispatch(setTimelineMode({ chatId: storeChatId, mode: { type: 'latest' } }));
+          if (forceReopen) {
+            dispatch(
+              refreshLatest({
+                chatId: storeChatId,
+                messages: list,
+                nextCursor,
+                prevCursor,
+              }),
+            );
+            dispatch(setTimelineMode({ chatId: storeChatId, mode: { type: 'latest' } }));
+          } else {
+            dispatch(
+              mergeLatestPreserveView({
+                chatId: storeChatId,
+                messages: list,
+                nextCursor,
+                prevCursor,
+              }),
+            );
+          }
 
           if (shouldResetAnchor) {
             const resumeId: string | null | undefined =
@@ -950,12 +971,15 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
             storeChatId,
             error: err.message,
           });
-          dispatch(resetChat({ chatId: storeChatId, messages: [], nextCursor: null, prevCursor: null }));
-          resetAnchor(initialResumeMessageId);
+          const hasCachedTimeline = selectHasLoadedTimeline(store.getState(), storeChatId);
+          if (!hasCachedTimeline) {
+            dispatch(resetChat({ chatId: storeChatId, messages: [], nextCursor: null, prevCursor: null }));
+            resetAnchor(initialResumeMessageId);
+          }
           showToast(err.message || t`Failed to load messages`);
         });
     },
-    [chatId, dispatch, initialResumeMessageId, showToast, storeChatId, threadId],
+    [chatId, dispatch, initialResumeMessageId, lastReadMessageId, showToast, storeChatId, threadId],
   );
 
   // Initial load — open at an explicitly requested resume point when navigated from chat list
@@ -989,6 +1013,29 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
         });
     } else if (!initialLoadCompletedRef.current) {
       initialLoadCompletedRef.current = true;
+      const currentState = store.getState();
+      const hasCachedTimeline = selectHasLoadedTimeline(currentState, storeChatId);
+      if (hasCachedTimeline) {
+        if (threadId) {
+          getThreadReadState(threadId)
+            .then((res) => {
+              const cachedMessages = selectAllTimelineMessages(store.getState(), storeChatId);
+              const lastReadMessageId = res.data.lastReadMessageId;
+              threadLastReadMessageIdRef.current = lastReadMessageId;
+              if (hasLoadedMessage(cachedMessages, lastReadMessageId)) {
+                setInitialAnchor((currentAnchor) => ({
+                  type: 'message',
+                  messageId: lastReadMessageId,
+                  token: currentAnchor.token + 1,
+                }));
+              }
+            })
+            .catch((err) => {
+              console.debug('[ChatThread] getThreadReadState failed for cached thread', err);
+            });
+        }
+        return;
+      }
       if (threadId) {
         getThreadReadState(threadId)
           .then((res) => {
