@@ -35,7 +35,7 @@ import { ChatAttachmentSection } from '@/components/chat/attachments/ChatAttachm
 import { ChatMessageSearchPanel } from '@/components/chat/search/ChatMessageSearchPanel';
 import { useGroupInfoMetadata } from './useGroupInfoMetadata';
 import { FeatureGate } from '@/components/FeatureGate';
-import { buildMessageSearchTarget } from '@/utils/messageSearch';
+import { buildChatMessageNavigationTarget } from '@/utils/chatNavigationTarget';
 
 interface GroupInfoCoreProps {
   chatId?: string;
@@ -150,7 +150,13 @@ function GroupInfoSession({ chatId, backAction }: { chatId: string; backAction?:
 
   const handleOpenSearchResult = useCallback(
     (message: MessageResponse) => {
-      history.replace(buildMessageSearchTarget(chatId, message));
+      history.replace(
+        buildChatMessageNavigationTarget({
+          chatId,
+          messageId: message.id,
+          threadRootId: message.replyRootId,
+        }),
+      );
     },
     [chatId, history],
   );

@@ -6,7 +6,7 @@ import type { SavedMessageResponse } from '@/api/savedMessages';
 import { BackButton } from '@/components/BackButton';
 import { SavedMessageList } from '@/components/chat/saved/SavedMessageList';
 import type { BackAction } from '@/types/back-action';
-import { buildSavedMessageTarget } from '@/utils/savedMessages';
+import { buildChatMessageNavigationTarget } from '@/utils/chatNavigationTarget';
 
 interface GroupSavedMessagesCoreProps {
   chatId?: string;
@@ -23,7 +23,13 @@ export function GroupSavedMessagesCore({ chatId: propChatId, backAction }: Group
       if (!saved.canLocateContext) {
         return;
       }
-      history.replace(buildSavedMessageTarget(saved));
+      history.replace(
+        buildChatMessageNavigationTarget({
+          chatId: saved.originalChatId,
+          messageId: saved.originalMessageId,
+          threadRootId: saved.originalThreadRootId,
+        }),
+      );
     },
     [history],
   );

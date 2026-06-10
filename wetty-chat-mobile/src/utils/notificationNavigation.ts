@@ -1,3 +1,5 @@
+import { buildChatMessageNavigationUrl } from '@/utils/chatNavigationTarget';
+
 export const NOTIFICATION_BOOTSTRAP_PATH = '/push-open';
 const DEFAULT_NOTIFICATION_TARGET = '/chats';
 const INTERNAL_TARGET_PATTERN = /^\/(?:chats|settings|demo)(?:\/|$)/;
@@ -39,7 +41,7 @@ export function buildNotificationChatTarget(chatId: string | null | undefined): 
     return null;
   }
 
-  return `/chats/chat/${encodeURIComponent(trimmed)}`;
+  return buildChatMessageNavigationUrl({ chatId: trimmed });
 }
 
 export function buildNotificationThreadTarget(
@@ -56,7 +58,7 @@ export function buildNotificationThreadTarget(
     return null;
   }
 
-  return `/chats/chat/${encodeURIComponent(trimmedChat)}/thread/${encodeURIComponent(trimmedThread)}`;
+  return buildChatMessageNavigationUrl({ chatId: trimmedChat, threadRootId: trimmedThread });
 }
 
 export function resolveNotificationTarget({

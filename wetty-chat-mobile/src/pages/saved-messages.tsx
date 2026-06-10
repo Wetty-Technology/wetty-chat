@@ -6,7 +6,7 @@ import type { SavedMessageResponse } from '@/api/savedMessages';
 import { BackButton } from '@/components/BackButton';
 import { SavedMessageList } from '@/components/chat/saved/SavedMessageList';
 import type { BackAction } from '@/types/back-action';
-import { buildSavedMessageTarget } from '@/utils/savedMessages';
+import { buildChatMessageNavigationTarget } from '@/utils/chatNavigationTarget';
 
 interface SavedMessagesCoreProps {
   backAction?: BackAction;
@@ -20,7 +20,13 @@ export function SavedMessagesCore({ backAction }: SavedMessagesCoreProps) {
       if (!saved.canLocateContext) {
         return;
       }
-      history.push(buildSavedMessageTarget(saved));
+      history.push(
+        buildChatMessageNavigationTarget({
+          chatId: saved.originalChatId,
+          messageId: saved.originalMessageId,
+          threadRootId: saved.originalThreadRootId,
+        }),
+      );
     },
     [history],
   );

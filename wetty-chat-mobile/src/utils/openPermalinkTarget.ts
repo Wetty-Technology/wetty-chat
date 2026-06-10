@@ -1,4 +1,5 @@
 import { getMessage } from '@/api/messages';
+import { buildChatMessageNavigationUrl } from '@/utils/chatNavigationTarget';
 import { navigateToNotificationTarget } from '@/utils/notificationTargetNavigator';
 
 interface OpenPermalinkTargetParams {
@@ -17,10 +18,11 @@ export async function openPermalinkTarget({
   const res = await getMessage(chatId, messageId);
   const msg = res.data;
   const threadRootId = msg.replyRootId;
-  const basePath = threadRootId
-    ? `/chats/chat/${encodeURIComponent(chatId)}/thread/${threadRootId}`
-    : `/chats/chat/${encodeURIComponent(chatId)}`;
-  const target = `${basePath}#msg=${messageId}`;
+  const target = buildChatMessageNavigationUrl({
+    chatId,
+    messageId,
+    threadRootId: threadRootId || null,
+  });
 
   console.debug('[permalink] navigating to resolved target', {
     chatId,
