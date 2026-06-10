@@ -942,7 +942,8 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
           }
 
           if (shouldResetAnchor) {
-            const resumeId: string | null | undefined = initialResumeMessageId ?? (threadId ? undefined : lastReadMessageId);
+            const resumeId: string | null | undefined =
+              initialResumeMessageId ?? (threadId ? undefined : lastReadMessageId);
             resetAnchor(resumeId);
           } else if (import.meta.env.DEV) {
             console.log('[ChatThread] initialAnchor-preserved', {
