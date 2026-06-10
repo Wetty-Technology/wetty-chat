@@ -76,7 +76,6 @@ import {
   setTimelineMode,
 } from '@/store/messages/slice';
 import {
-  selectAllTimelineMessages,
   selectChatGeneration,
   selectActiveTimelineMessages,
   selectCanLoadNewer,
@@ -179,11 +178,6 @@ function areMessageListsEquivalent(left: MessageResponse[], right: MessageRespon
       return candidate != null && message.id === candidate.id;
     })
   );
-}
-
-function hasLoadedMessage(messages: MessageResponse[], messageId: string | null | undefined): messageId is string {
-  if (!messageId) return false;
-  return messages.some((message) => message.id === messageId);
 }
 
 function isAudioMessage(message: MessageResponse): boolean {
@@ -335,8 +329,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
     if (initialResumeMessageId) {
       return { type: 'message', messageId: initialResumeMessageId, token: 0 };
     }
-    // For threads without a resume message, default to top (first visit).
-    return { type: threadId ? 'top' : 'bottom', token: 0 } as VirtualScrollAnchor;
+    return { type: 'bottom', token: 0 };
   });
   const [pendingResumeMessageId, setPendingResumeMessageId] = useState<string | null>(initialResumeMessageId);
   const [lastFullyVisibleMessageId, setLastFullyVisibleMessageId] = useState<string | null>(null);
@@ -871,11 +864,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
         });
       }
       const resetAnchor = (resumeMessageId: string | null | undefined) => {
-        const effectiveAnchorType: VirtualScrollAnchor['type'] = threadId
-          ? resumeMessageId
-            ? 'message'
-            : 'top'
-          : 'bottom';
+        const effectiveAnchorType: VirtualScrollAnchor['type'] = resumeMessageId ? 'message' : 'bottom';
 
         setInitialAnchor((currentAnchor) => {
           let nextAnchor: VirtualScrollAnchor;
@@ -953,8 +942,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
           }
 
           if (shouldResetAnchor) {
-            const resumeId: string | null | undefined =
-              initialResumeMessageId ?? (threadId ? threadLastReadMessageIdRef.current : lastReadMessageId);
+            const resumeId: string | null | undefined = initialResumeMessageId ?? (threadId ? undefined : lastReadMessageId);
             resetAnchor(resumeId);
           } else if (import.meta.env.DEV) {
             console.log('[ChatThread] initialAnchor-preserved', {
@@ -1017,16 +1005,7 @@ function ChatThreadCore({ chatId, threadId, backAction }: ChatThreadCoreProps) {
         if (threadId) {
           getThreadReadState(threadId)
             .then((res) => {
-              const cachedMessages = selectAllTimelineMessages(store.getState(), storeChatId);
-              const lastReadMessageId = res.data.lastReadMessageId;
-              threadLastReadMessageIdRef.current = lastReadMessageId;
-              if (hasLoadedMessage(cachedMessages, lastReadMessageId)) {
-                setInitialAnchor((currentAnchor) => ({
-                  type: 'message',
-                  messageId: lastReadMessageId,
-                  token: currentAnchor.token + 1,
-                }));
-              }
+              threadLastReadMessageIdRef.current = res.data.lastReadMessageId;
             })
             .catch((err) => {
               console.debug('[ChatThread] getThreadReadState failed for cached thread', err);

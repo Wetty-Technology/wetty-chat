@@ -933,6 +933,13 @@ export function ChatVirtualScroll({
           offsetTop: anchorBeforeBatch.offsetTop,
         };
       }
+      if (
+        phaseRef.current === 'BOOTSTRAP' &&
+        batch.reason === 'bootstrap' &&
+        initialAnchorRef.current.type === 'bottom'
+      ) {
+        layoutIntentRef.current = { scrollToBottom: { behavior: 'auto' } };
+      }
 
       logVirtualScroll('batch-commit', {
         reason: batch.reason,

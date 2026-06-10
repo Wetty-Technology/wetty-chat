@@ -276,10 +276,12 @@ describe('ChatVirtualScroll realtime appends', () => {
     expect(scrollContainer.className).toContain(styles.containerNonReady);
 
     currentViewportHeight = VIEWPORT_HEIGHT + 1;
-    await flushLayout();
+    await flushLayout(2);
+    expect(scrollContainer.scrollTop).toBe(currentRowCount * ROW_HEIGHT - currentViewportHeight);
     currentViewportHeight = VIEWPORT_HEIGHT;
     await flushLayout(8);
 
     expect(scrollContainer.className).not.toContain(styles.containerNonReady);
+    expect(scrollContainer.scrollTop).toBe(currentRowCount * ROW_HEIGHT - currentViewportHeight);
   });
 });
