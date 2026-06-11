@@ -29,7 +29,8 @@ import userReducer, { fetchCurrentUser } from './userSlice';
 import { toMessagePreview, type MessagePreview, type MessageResponse } from '@/api/messages';
 import { messageAdded, messageConfirmed, messagePatched, messagesBulkDeleted } from './messageEvents';
 import { findLatestEligibleRootMessage, isOptimisticMessageId } from './messageProjection';
-import { selectHasLoadedTimeline } from './messages/selectors';
+import { selectActiveTimelineMessages, selectHasLoadedTimeline } from './messages/selectors';
+import { collectTimelineSnapshot, logTimelineDiagnostic } from './messages/timelineDiagnostics';
 import { kvSet } from '@/utils/db';
 import { isAnyOf } from '@reduxjs/toolkit';
 
@@ -50,6 +51,24 @@ listenerMiddleware.startListening({
   actionCreator: messageAdded,
   effect: async (action, api) => {
     const state = api.getState() as RootState;
+    if (action.payload.origin === 'ws') {
+      const { storeChatId, message } = action.payload;
+      const activeMessages = selectActiveTimelineMessages(state, storeChatId);
+      const pendingLiveMessageIds = state.messages.views[storeChatId]?.pendingLiveMessageIds ?? [];
+      const isVisible = activeMessages.some((current) => current.id === message.id);
+      const isPendingLive = pendingLiveMessageIds.includes(message.id);
+      logTimelineDiagnostic('ws-message-routing', {
+        chatId: action.payload.chatId,
+        storeChatId,
+        scope: action.payload.scope,
+        messageId: message.id,
+        replyRootId: message.replyRootId,
+        isVisible,
+        isPendingLive,
+        route: isVisible ? 'visible' : isPendingLive ? 'pending-live' : 'not-visible-not-pending',
+        snapshot: collectTimelineSnapshot(state, storeChatId),
+      });
+    }
     api.dispatch(
       projectChatMessageAdded({
         chatId: action.payload.chatId,

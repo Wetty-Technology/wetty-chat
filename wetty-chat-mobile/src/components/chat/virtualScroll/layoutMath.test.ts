@@ -1,0 +1,40 @@
+import { describe, expect, it } from 'vitest';
+import {
+  capRange,
+  classifyKeyMutation,
+  detectAlternatingJitter,
+  normalizeRange,
+  unionRanges,
+  visiblePrefixHeight,
+} from './layoutMath';
+
+describe('virtual scroll layout math', () => {
+  it('classifies message-key mutations while ignoring date rows', () => {
+    expect(classifyKeyMutation(['date:a', 'msg:1', 'msg:2'], ['date:a', 'msg:1', 'msg:2'])).toBe('none');
+    expect(classifyKeyMutation(['msg:3', 'msg:4'], ['msg:1', 'msg:2', 'msg:3', 'msg:4'])).toBe('prepend');
+    expect(classifyKeyMutation(['msg:1', 'msg:2'], ['msg:1', 'msg:2', 'date:b', 'msg:3'])).toBe('append');
+    expect(classifyKeyMutation(['msg:1', 'msg:3'], ['msg:1', 'msg:2', 'msg:3'])).toBe('reset');
+  });
+
+  it('normalizes, unions, and caps mounted ranges', () => {
+    expect(normalizeRange(8, 2, 10)).toEqual({ start: 2, end: 8 });
+    expect(normalizeRange(8, 2, -1)).toBeNull();
+    expect(unionRanges({ start: 4, end: 8 }, { start: 1, end: 5 })).toEqual({ start: 1, end: 8 });
+    expect(capRange({ start: 0, end: 120 }, 150)).toEqual({ start: 12, end: 107 });
+  });
+
+  it('computes visible prefixes and alternating one-pixel jitter', () => {
+    expect(visiblePrefixHeight(100, 50, 125)).toBe(25);
+    expect(visiblePrefixHeight(100, 50, 200)).toBe(50);
+    expect(
+      detectAlternatingJitter([
+        { top: 10, at: 0 },
+        { top: 11, at: 10 },
+        { top: 10, at: 20 },
+        { top: 11, at: 30 },
+        { top: 10, at: 40 },
+        { top: 11, at: 50 },
+      ]),
+    ).toEqual({ values: [10, 11], durationMs: 50 });
+  });
+});

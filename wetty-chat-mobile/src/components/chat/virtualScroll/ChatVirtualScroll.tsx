@@ -2,19 +2,13 @@ import { type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRe
 import { t } from '@lingui/core/macro';
 import { useSelector } from 'react-redux';
 import { selectChatFontSizeStyle } from '@/store/settingsSlice';
-import {
-  parseChatBubbleContentToRichItems,
-  getMessageLayoutStats,
-  getChatBaseFont,
-  getChatBubbleMaxWidth,
-} from '@/utils/chatTextMeasure';
 import { HeightCache } from './heightCache';
 import { MeasuredRow } from './MeasuredRow';
 import { FenwickTree } from './fenwick';
 import { useStagingBatch } from './useStagingBatch';
+import { estimateRowHeight } from './rowHeightEstimator';
 import type {
   BatchDirection,
-  ChatRow,
   ChatVirtualScrollProps,
   LayoutIntent,
   MountedWindow,
@@ -42,36 +36,24 @@ import { useNativeScrollActivity } from '@/hooks/useNativeScrollActivity';
 import { usePageVisible } from '@/hooks/usePageVisible';
 import { isPageHidden } from '@/utils/dom';
 import {
+  capRange,
+  clamp,
+  classifyKeyMutation,
+  detectAlternatingJitter,
+  hasMeaningfulScrollDelta,
+  normalizeRange,
+  rangeSize,
+  rangesEqual,
+  roundScrollValue,
+  scrollDirection,
+  unionRanges,
+  visiblePrefixHeight,
+} from './layoutMath';
+import {
   USER_SCROLL_ACTIVITY_GRACE_MS,
   TOP_DATE_FLOATING_GAP_PX,
   TOP_DATE_OVERLAY_FALLBACK_HEIGHT,
 } from '@/constants/ui';
-
-function arraysEqual(a: string[], b: string[]): boolean {
-  return a.length === b.length && a.every((value, index) => value === b[index]);
-}
-
-function isPrefix(prefix: string[], full: string[]): boolean {
-  if (prefix.length > full.length) return false;
-  return prefix.every((value, index) => full[index] === value);
-}
-
-function isSuffix(suffix: string[], full: string[]): boolean {
-  if (suffix.length > full.length) return false;
-  const offset = full.length - suffix.length;
-  return suffix.every((value, index) => full[offset + index] === value);
-}
-
-function classifyKeyMutation(prev: string[], next: string[]): MutationType {
-  const prevMsgs = prev.filter((key) => key.startsWith('msg:'));
-  const nextMsgs = next.filter((key) => key.startsWith('msg:'));
-
-  if (arraysEqual(prevMsgs, nextMsgs)) return 'none';
-  if (prevMsgs.length === 0 || nextMsgs.length === 0 || nextMsgs.length < prevMsgs.length) return 'reset';
-  if (isSuffix(prevMsgs, nextMsgs)) return 'prepend';
-  if (isPrefix(prevMsgs, nextMsgs)) return 'append';
-  return 'reset';
-}
 
 const debugVirtualScroll = import.meta.env.DEV;
 const EDGE_HINT_HEIGHT = 36;
@@ -96,111 +78,6 @@ function formatAnchorForLog(anchor: ChatVirtualScrollProps['initialAnchor']) {
   }
 
   return { type: 'message', messageId: anchor.messageId, token: anchor.token };
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
-
-function roundScrollValue(value: number): number {
-  return Math.round(value);
-}
-
-function hasMeaningfulScrollDelta(current: number, next: number): boolean {
-  return Math.abs(next - current) >= 1;
-}
-
-function scrollDirection(from: number, to: number): 'up' | 'down' | 'none' {
-  if (to > from) return 'down';
-  if (to < from) return 'up';
-  return 'none';
-}
-
-function detectAlternatingJitter(samples: Array<{ top: number; at: number }>) {
-  if (samples.length < 6) return null;
-  const tops = samples.map((sample) => sample.top);
-  const unique = [...new Set(tops)];
-  if (unique.length !== 2) return null;
-
-  const [a, b] = unique;
-  if (Math.abs(a - b) > 1) return null;
-
-  for (let index = 2; index < tops.length; index += 1) {
-    if (tops[index] !== tops[index - 2]) return null;
-  }
-
-  return {
-    values: unique.sort((left, right) => left - right),
-    durationMs: samples[samples.length - 1].at - samples[0].at,
-  };
-}
-
-function normalizeRange(start: number, end: number, maxIndex: number): MountedWindow | null {
-  if (maxIndex < 0) return null;
-  const nextStart = clamp(Math.min(start, end), 0, maxIndex);
-  const nextEnd = clamp(Math.max(start, end), 0, maxIndex);
-  return nextStart <= nextEnd ? { start: nextStart, end: nextEnd } : null;
-}
-
-function rangesEqual(left: MountedWindow | null, right: MountedWindow | null): boolean {
-  if (!left && !right) return true;
-  if (!left || !right) return false;
-  return left.start === right.start && left.end === right.end;
-}
-
-function unionRanges(left: MountedWindow | null, right: MountedWindow | null): MountedWindow | null {
-  if (!left) return right;
-  if (!right) return left;
-  return { start: Math.min(left.start, right.start), end: Math.max(left.end, right.end) };
-}
-
-function capRange(range: MountedWindow, maxIndex: number): MountedWindow {
-  const size = range.end - range.start + 1;
-  if (size <= WINDOW_CAP || maxIndex < 0) return range;
-
-  const center = Math.floor((range.start + range.end) / 2);
-  const halfCap = Math.floor(WINDOW_CAP / 2);
-  const maxStart = Math.max(0, maxIndex - WINDOW_CAP + 1);
-  const start = clamp(center - halfCap, 0, maxStart);
-  return { start, end: Math.min(maxIndex, start + WINDOW_CAP - 1) };
-}
-
-function estimateRowHeight(row: ChatRow, chatFontSizeStyle: string): number {
-  if (row.type === 'date') return 32;
-
-  const { message } = row;
-  if (message.isDeleted) return 48;
-
-  let estimate = message.attachments?.length || message.sticker ? 220 : 76;
-
-  if (message.messageType === 'text' && !message.attachments?.length && !message.sticker && message.message) {
-    try {
-      const fontSizeNum = parseInt(chatFontSizeStyle) || 14;
-      const baseFont = getChatBaseFont(chatFontSizeStyle as string);
-      const items = parseChatBubbleContentToRichItems(message.message, message.mentions, baseFont);
-      const maxWidth = getChatBubbleMaxWidth();
-      const stats = getMessageLayoutStats(items, maxWidth);
-      const lineHeight = fontSizeNum * 1.4;
-      estimate = stats.lineCount * lineHeight + 60;
-    } catch {
-      /* ignore measure errors */
-    }
-  }
-
-  if (message.replyToMessage) {
-    estimate += 26;
-  }
-
-  return Math.min(estimate, 3000);
-}
-
-function visiblePrefixHeight(rowTop: number, rowHeight: number, viewportTop: number): number {
-  return clamp(viewportTop - rowTop, 0, Math.max(0, rowHeight));
-}
-
-function rangeSize(range: MountedWindow | null): number {
-  if (!range) return 0;
-  return range.end - range.start + 1;
 }
 
 export function ChatVirtualScroll({

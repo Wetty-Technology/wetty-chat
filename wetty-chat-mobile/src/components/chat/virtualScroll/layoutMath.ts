@@ -1,0 +1,104 @@
+import type { MountedWindow, MutationType } from './types';
+import { WINDOW_CAP } from './types';
+
+function arraysEqual(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((value, index) => value === b[index]);
+}
+
+function isPrefix(prefix: string[], full: string[]): boolean {
+  if (prefix.length > full.length) return false;
+  return prefix.every((value, index) => full[index] === value);
+}
+
+function isSuffix(suffix: string[], full: string[]): boolean {
+  if (suffix.length > full.length) return false;
+  const offset = full.length - suffix.length;
+  return suffix.every((value, index) => full[offset + index] === value);
+}
+
+export function classifyKeyMutation(prev: string[], next: string[]): MutationType {
+  const prevMsgs = prev.filter((key) => key.startsWith('msg:'));
+  const nextMsgs = next.filter((key) => key.startsWith('msg:'));
+
+  if (arraysEqual(prevMsgs, nextMsgs)) return 'none';
+  if (prevMsgs.length === 0 || nextMsgs.length === 0 || nextMsgs.length < prevMsgs.length) return 'reset';
+  if (isSuffix(prevMsgs, nextMsgs)) return 'prepend';
+  if (isPrefix(prevMsgs, nextMsgs)) return 'append';
+  return 'reset';
+}
+
+export function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+export function roundScrollValue(value: number): number {
+  return Math.round(value);
+}
+
+export function hasMeaningfulScrollDelta(current: number, next: number): boolean {
+  return Math.abs(next - current) >= 1;
+}
+
+export function scrollDirection(from: number, to: number): 'up' | 'down' | 'none' {
+  if (to > from) return 'down';
+  if (to < from) return 'up';
+  return 'none';
+}
+
+export function detectAlternatingJitter(samples: Array<{ top: number; at: number }>) {
+  if (samples.length < 6) return null;
+  const tops = samples.map((sample) => sample.top);
+  const unique = [...new Set(tops)];
+  if (unique.length !== 2) return null;
+
+  const [a, b] = unique;
+  if (Math.abs(a - b) > 1) return null;
+
+  for (let index = 2; index < tops.length; index += 1) {
+    if (tops[index] !== tops[index - 2]) return null;
+  }
+
+  return {
+    values: unique.sort((left, right) => left - right),
+    durationMs: samples[samples.length - 1].at - samples[0].at,
+  };
+}
+
+export function normalizeRange(start: number, end: number, maxIndex: number): MountedWindow | null {
+  if (maxIndex < 0) return null;
+  const nextStart = clamp(Math.min(start, end), 0, maxIndex);
+  const nextEnd = clamp(Math.max(start, end), 0, maxIndex);
+  return nextStart <= nextEnd ? { start: nextStart, end: nextEnd } : null;
+}
+
+export function rangesEqual(left: MountedWindow | null, right: MountedWindow | null): boolean {
+  if (!left && !right) return true;
+  if (!left || !right) return false;
+  return left.start === right.start && left.end === right.end;
+}
+
+export function unionRanges(left: MountedWindow | null, right: MountedWindow | null): MountedWindow | null {
+  if (!left) return right;
+  if (!right) return left;
+  return { start: Math.min(left.start, right.start), end: Math.max(left.end, right.end) };
+}
+
+export function capRange(range: MountedWindow, maxIndex: number): MountedWindow {
+  const size = range.end - range.start + 1;
+  if (size <= WINDOW_CAP || maxIndex < 0) return range;
+
+  const center = Math.floor((range.start + range.end) / 2);
+  const halfCap = Math.floor(WINDOW_CAP / 2);
+  const maxStart = Math.max(0, maxIndex - WINDOW_CAP + 1);
+  const start = clamp(center - halfCap, 0, maxStart);
+  return { start, end: Math.min(maxIndex, start + WINDOW_CAP - 1) };
+}
+
+export function visiblePrefixHeight(rowTop: number, rowHeight: number, viewportTop: number): number {
+  return clamp(viewportTop - rowTop, 0, Math.max(0, rowHeight));
+}
+
+export function rangeSize(range: MountedWindow | null): number {
+  if (!range) return 0;
+  return range.end - range.start + 1;
+}

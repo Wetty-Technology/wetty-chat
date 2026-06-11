@@ -1,0 +1,107 @@
+import { describe, expect, it } from 'vitest';
+import { getOverlayActionPolicy, type OverlayActionPolicyInput } from './overlayActionPolicy';
+
+const baseInput: OverlayActionPolicyInput = {
+  messageType: 'text',
+  text: 'hello',
+  hasAttachments: false,
+  isDeleted: false,
+  isOptimistic: false,
+  hasThreadInfo: false,
+  isOwn: false,
+  isAdmin: false,
+  isThreadView: false,
+  savedMessagesEnabled: true,
+  isPinned: false,
+  hasReactions: false,
+};
+
+function keys(input: Partial<OverlayActionPolicyInput> = {}) {
+  return getOverlayActionPolicy({ ...baseInput, ...input }).map((action) => action.key);
+}
+
+describe('overlay action policy', () => {
+  it('preserves default text message action order', () => {
+    expect(keys()).toEqual(['copy', 'copy-link', 'save', 'reply', 'thread']);
+  });
+
+  it('uses copy text variant when a text message also has attachments', () => {
+    expect(getOverlayActionPolicy({ ...baseInput, hasAttachments: true })[0]).toEqual({
+      key: 'copy',
+      copyVariant: 'text',
+    });
+  });
+
+  it('omits copy when a regular message has no text', () => {
+    expect(keys({ text: '', hasAttachments: true })).toEqual(['copy-link', 'save', 'reply', 'thread']);
+  });
+
+  it('adds edit and delete for own regular messages even when optimistic or deleted', () => {
+    expect(keys({ isOwn: true, isOptimistic: true })).toEqual([
+      'copy',
+      'copy-link',
+      'reply',
+      'thread',
+      'edit',
+      'delete',
+    ]);
+    expect(keys({ isOwn: true, isDeleted: true, text: null })).toEqual([
+      'copy-link',
+      'reply',
+      'thread',
+      'edit',
+      'delete',
+    ]);
+  });
+
+  it('adds delete and pin state for admins in main chat', () => {
+    expect(keys({ isAdmin: true })).toEqual(['copy', 'copy-link', 'save', 'reply', 'thread', 'delete', 'pin']);
+    expect(getOverlayActionPolicy({ ...baseInput, isAdmin: true, isPinned: true }).at(-1)).toEqual({
+      key: 'pin',
+      pinState: 'pinned',
+    });
+  });
+
+  it('does not offer thread or pin actions inside thread view', () => {
+    expect(keys({ isThreadView: true, isAdmin: true })).toEqual(['copy', 'copy-link', 'save', 'reply', 'delete']);
+  });
+
+  it('does not offer start thread when the message already has thread info', () => {
+    expect(keys({ hasThreadInfo: true })).toEqual(['copy', 'copy-link', 'save', 'reply']);
+  });
+
+  it('preserves current optimistic and deleted save/pin restrictions', () => {
+    expect(keys({ isOptimistic: true })).toEqual(['copy', 'copy-link', 'reply', 'thread']);
+    expect(keys({ isDeleted: true, text: null, isAdmin: true })).toEqual(['copy-link', 'reply', 'thread', 'delete']);
+  });
+
+  it('keeps sticker actions filtered to reply delete copy link and favorite', () => {
+    expect(
+      keys({
+        messageType: 'sticker',
+        isAdmin: true,
+        hasReactions: true,
+      }),
+    ).toEqual(['copy-link', 'favorite', 'reply', 'delete']);
+  });
+
+  it('uses audio action rules without copy or edit', () => {
+    expect(keys({ messageType: 'audio', isOwn: true, isAdmin: true })).toEqual([
+      'copy-link',
+      'save',
+      'reply',
+      'thread',
+      'delete',
+      'pin',
+    ]);
+  });
+
+  it('adds reaction details only when reactions are present for non-sticker messages', () => {
+    expect(keys({ hasReactions: true })).toEqual(['copy', 'copy-link', 'save', 'reply', 'thread', 'reaction-details']);
+  });
+
+  it('disables save when the feature is off or the message is system', () => {
+    expect(keys({ savedMessagesEnabled: false })).toEqual(['copy', 'copy-link', 'reply', 'thread']);
+    expect(keys({ messageType: 'system' })).toEqual(['copy', 'copy-link', 'reply', 'thread']);
+  });
+});

@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties, type HTMLAttributes, type ReactNode, type Ref } from 'react';
+import { useMemo, useState, type CSSProperties, type HTMLAttributes, type Ref } from 'react';
 import { IonIcon } from '@ionic/react';
 import {
   arrowUndo,
@@ -19,11 +19,8 @@ import { formatMessagePreview, type PreviewMessage, getNotificationPreviewLabels
 import { selectChatFontSizeStyle, selectEffectiveLocale } from '@/store/settingsSlice';
 import { UserAvatar } from '@/components/UserAvatar';
 import { useMouseDetected } from '@/hooks/platformHooks';
-import { parseInviteCodeFromUrl } from '@/utils/inviteUrl';
-import { decodePermalink } from '@/utils/permalinkUrl';
 import { VoiceMessageBubble } from './VoiceMessageBubble';
-import { InviteLinkInline } from './InviteLinkInline';
-import { PermalinkInline } from './PermalinkInline';
+import { renderMessageContent } from './messageContent';
 import { ReactionPill } from './ReactionPill';
 import { SingleMediaAttachment } from './media/SingleMediaAttachment';
 import { JustifiedMediaGallery } from './media/JustifiedMediaGallery';
@@ -33,29 +30,9 @@ import { isHeicLikeMedia } from '@/utils/heicMedia';
 import {
   parseChatBubbleContentToRichItems,
   getMessageLayoutStats,
-  URL_REGEX,
-  TRAILING_PUNCT,
   getChatBaseFont,
   getChatBubbleMaxWidth,
-  MENTION_TEST,
-  MENTION_REGEX,
 } from '@/utils/chatTextMeasure';
-
-const PERMALINK_PATH_RE = /^\/m\/([A-Za-z0-9_-]+)$/;
-
-function parsePermalinkFromUrl(url: string): { chatId: string; messageId: string; encoded: string } | null {
-  try {
-    const parsed = new URL(url);
-    if (parsed.origin !== document.location.origin) return null;
-    const match = PERMALINK_PATH_RE.exec(parsed.pathname);
-    if (!match) return null;
-    const encoded = match[1];
-    const { chatId, messageId } = decodePermalink(encoded);
-    return { chatId, messageId, encoded };
-  } catch {
-    return null;
-  }
-}
 
 function formatTime(iso: string): string {
   const d = new Date(iso);
@@ -75,104 +52,6 @@ function isImageAttachment(attachment: Attachment) {
 
 function isVideoAttachment(attachment: Attachment) {
   return attachment.kind.startsWith('video/');
-}
-
-function renderMessageWithLinks(message: string): ReactNode[] {
-  const parts = message.split(URL_REGEX);
-  if (parts.length === 1) return [message];
-
-  return parts.map((part, i) => {
-    if (i % 2 === 1) {
-      const trimmed = part.replace(TRAILING_PUNCT, '');
-      const suffix = part.slice(trimmed.length);
-      const inviteCode = parseInviteCodeFromUrl(trimmed);
-      const permalink = !inviteCode ? parsePermalinkFromUrl(trimmed) : null;
-      return (
-        <span key={i}>
-          {inviteCode ? (
-            <InviteLinkInline code={inviteCode} url={trimmed} />
-          ) : permalink ? (
-            <PermalinkInline
-              targetChatId={permalink.chatId}
-              targetMessageId={permalink.messageId}
-              encoded={permalink.encoded}
-              url={trimmed}
-            />
-          ) : (
-            <a
-              href={trimmed}
-              className={styles.messageLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {trimmed}
-            </a>
-          )}
-          {suffix}
-        </span>
-      );
-    }
-
-    return part;
-  });
-}
-
-function renderMessageContent(
-  message: string,
-  mentions: MentionInfo[] | undefined,
-  currentUserUid: number | null | undefined,
-  onMentionClick: ((uid: number) => void) | undefined,
-): ReactNode[] {
-  if (!MENTION_TEST.test(message)) {
-    return renderMessageWithLinks(message);
-  }
-
-  const mentionMap = new Map<number, string>();
-  if (mentions) {
-    for (const m of mentions) {
-      if (m.username) mentionMap.set(m.uid, m.username);
-    }
-  }
-
-  const regex = new RegExp(MENTION_REGEX);
-  const result: ReactNode[] = [];
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = regex.exec(message)) !== null) {
-    if (match.index > lastIndex) {
-      result.push(...renderMessageWithLinks(message.slice(lastIndex, match.index)));
-    }
-
-    const uid = parseInt(match[1], 10);
-    const username = mentionMap.get(uid);
-    const isSelf = currentUserUid != null && uid === currentUserUid;
-    const clickable = onMentionClick != null;
-    result.push(
-      <span
-        key={`mention-${uid}-${match.index}`}
-        className={`${styles.mention}${isSelf ? ` ${styles.mentionSelf}` : ''}${clickable ? ` ${styles.mentionClickable}` : ''}`}
-        onClick={
-          clickable
-            ? (e) => {
-                e.stopPropagation();
-                onMentionClick(uid);
-              }
-            : undefined
-        }
-      >
-        @{username ?? `User ${uid}`}
-      </span>,
-    );
-    lastIndex = match.index + match[0].length;
-  }
-
-  if (lastIndex < message.length) {
-    result.push(...renderMessageWithLinks(message.slice(lastIndex)));
-  }
-
-  return result;
 }
 
 function getImageLayoutStyle(
