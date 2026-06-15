@@ -33,11 +33,11 @@ This pass keeps behavior intentionally conservative while cutting the largest pa
 
 | Area                 | Before                                   | After                                                                                              |
 | -------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Conversation page     | `conversation.tsx`, 552 LOC             | `conversation.tsx`, 552 LOC, delegates behavior to focused hooks/components.                        |
-| Timeline/read state  | Inline in `conversation.tsx`              | `useConversationTimeline`, `useChatReadTracking`.                                                    |
-| Sending/upload       | Inline in `conversation.tsx`              | `useChatMessageSender`.                                                                            |
+| Conversation page    | `conversation.tsx`, 552 LOC              | `conversation.tsx`, 552 LOC, delegates behavior to focused hooks/components.                       |
+| Timeline/read state  | Inline in `conversation.tsx`             | `useConversationTimeline`, `useChatReadTracking`.                                                  |
+| Sending/upload       | Inline in `conversation.tsx`             | `useChatMessageSender`.                                                                            |
 | Overlay/reactions    | Inline action and reaction handlers      | `overlayActionPolicy`, `useMessageOverlayActions`, `useMessageReactions`.                          |
-| Header/footer/modals | Inline JSX in page                       | `ConversationHeader`, `ConversationFooter`, `ConversationOverlayHost`.                                   |
+| Header/footer/modals | Inline JSX in page                       | `ConversationHeader`, `ConversationFooter`, `ConversationOverlayHost`.                             |
 | Virtual scroll       | Math and estimation helpers in component | `layoutMath`, `rowHeightEstimator`; public `ChatVirtualScroll` API unchanged.                      |
 | Bubble text content  | Link/mention renderer in base bubble     | `messageContent` renderer; `ChatBubbleBase` remains responsible for bubble layout/media/reactions. |
 
@@ -100,9 +100,9 @@ flowchart TD
 
 The page currently owns these responsibilities:
 
-| Concern              | Current owner                              | Notes                                                                            |
-| -------------------- | ------------------------------------------ | -------------------------------------------------------------------------------- |
-| Route identity       | `ConversationPage`, `ConversationPane`         | Reads `chatId`, optional `threadId`, resume hash, history.                       |
+| Concern              | Current owner                               | Notes                                                                            |
+| -------------------- | ------------------------------------------- | -------------------------------------------------------------------------------- |
+| Route identity       | `ConversationPage`, `ConversationPane`      | Reads `chatId`, optional `threadId`, resume hash, history.                       |
 | Store identity       | `conversation.tsx`                          | Builds `storeChatId` for main chat vs thread.                                    |
 | Chat metadata        | `conversation.tsx`                          | Fetches group info, mute state, role state.                                      |
 | Timeline loading     | `conversation.tsx`                          | Fetches latest, around, older, newer windows and dispatches timeline reducers.   |
