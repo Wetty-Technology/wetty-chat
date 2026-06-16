@@ -7,8 +7,9 @@ import { useHistory, useLocation, matchPath } from 'react-router-dom';
  * - In a thread → navigate to parent chat, positioned at the thread root message.
  * - In a chat   → navigate to the chat list (deselect).
  *
- * Defers when focus is inside a textarea/input or ion-modal,
- * so compose-bar reply/edit ESC and modal dismiss take priority.
+ * Defers when focus is inside a textarea/input or an Ionic overlay
+ * (ion-alert, ion-action-sheet, ion-modal, ion-toast),
+ * so compose-bar reply/edit ESC and overlay dismiss take priority.
  */
 export function useEscNavigation(): void {
   const history = useHistory();
@@ -20,7 +21,9 @@ export function useEscNavigation(): void {
 
       const active = document.activeElement;
       if (active instanceof HTMLTextAreaElement || active instanceof HTMLInputElement) return;
-      if (active?.closest('ion-modal')) return;
+      // Defer to Ionic overlays (alerts, action sheets, modals, toasts) — they handle ESC internally.
+      if (active?.closest('ion-alert, ion-action-sheet, ion-modal, ion-toast')) return;
+      if (document.querySelector('ion-alert, ion-action-sheet')) return;
 
       // Thread → parent chat with #msg= scroll target
       const threadMatch = matchPath<{ id: string; threadId: string }>(location.pathname, {
