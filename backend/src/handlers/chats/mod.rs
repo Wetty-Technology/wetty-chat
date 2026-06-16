@@ -17,9 +17,9 @@ use crate::{
         attachments::AttachmentResponse,
         chats::{ChatListItem, ListChatsResponse, MarkChatReadStateResponse, UnreadCountResponse},
         messages::{
-            MentionInfo, MessagePreview, MessagePreviewSticker, MessageResponse,
-            MessageStickerResponse, ReactionReactor, ReactionSummary, StickerMediaResponse,
-            ThreadInfo,
+            MentionInfo, MessagePreview, MessagePreviewAttachment, MessagePreviewSticker,
+            MessageResponse, MessageStickerResponse, ReactionReactor, ReactionSummary,
+            StickerMediaResponse, ThreadInfo,
         },
         users::User,
         ws::{ChatArchiveStateChangedPayload, ServerWsMessage},
@@ -311,6 +311,13 @@ fn message_response_preview(response: MessageResponse) -> MessagePreview {
             .attachments
             .first()
             .map(|attachment| attachment.kind.clone()),
+        attachments: response
+            .attachments
+            .iter()
+            .map(|a| MessagePreviewAttachment {
+                kind: a.kind.clone(),
+            })
+            .collect(),
         is_deleted,
         mentions: response.mentions,
     }
@@ -341,6 +348,21 @@ fn first_attachment_kind(
         .map(|attachment| attachment.kind.clone())
 }
 
+fn attachment_previews(
+    map: &std::collections::HashMap<i64, Vec<Attachment>>,
+    message_id: i64,
+) -> Vec<MessagePreviewAttachment> {
+    map.get(&message_id)
+        .map(|atts| {
+            atts.iter()
+                .map(|a| MessagePreviewAttachment {
+                    kind: a.kind.clone(),
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 #[cfg(test)]
 pub(crate) fn message_is_visible_in_thread_scope(message: &Message, thread_root_id: i64) -> bool {
     if !message.is_published {
@@ -362,6 +384,7 @@ pub(crate) fn redact_deleted_message_preview(preview: &mut MessagePreview) {
     preview.message = None;
     preview.sticker = None;
     preview.first_attachment_kind = None;
+    preview.attachments.clear();
     preview.mentions.clear();
 }
 
@@ -997,6 +1020,10 @@ pub async fn attach_metadata(
                         })
                     }),
                     first_attachment_kind: first_attachment_kind(
+                        &message_attachments_map,
+                        reply_msg.id,
+                    ),
+                    attachments: attachment_previews(
                         &message_attachments_map,
                         reply_msg.id,
                     ),
@@ -1725,8 +1752,8 @@ mod tests {
         attachment_preview_text, build_push_preview_bundle, extract_mention_uids,
         first_attachment_kind, message_is_visible_in_thread_scope, redact_deleted_message_preview,
         redact_deleted_message_response, render_mentions_as_text, sticker_preview_text,
-        MentionInfo, MessagePreview, MessageResponse, MessageStickerResponse, PreparedMessageSend,
-        ReactionSummary, StickerMediaResponse,
+        MentionInfo, MessagePreview, MessagePreviewAttachment, MessageResponse,
+        MessageStickerResponse, PreparedMessageSend, ReactionSummary, StickerMediaResponse,
     };
     use crate::{
         dto::{attachments::AttachmentResponse, users::User},
@@ -2068,6 +2095,9 @@ mod tests {
             message_type: MessageType::Audio,
             sticker: None,
             first_attachment_kind: Some("audio/webm".to_string()),
+            attachments: vec![MessagePreviewAttachment {
+                kind: "audio/webm".to_string(),
+            }],
             is_deleted: false,
             mentions: Vec::new(),
         };
@@ -2077,6 +2107,7 @@ mod tests {
         assert_eq!(value["messageType"], json!("audio"));
         assert_eq!(value["isDeleted"], json!(false));
         assert_eq!(value["firstAttachmentKind"], json!("audio/webm"));
+        assert_eq!(value["attachments"], json!([{"kind": "audio/webm"}]));
         assert!(value.get("message_type").is_none());
     }
 
@@ -2201,6 +2232,9 @@ mod tests {
                 emoji: "🙂".to_string(),
             }),
             first_attachment_kind: Some("image/png".to_string()),
+            attachments: vec![MessagePreviewAttachment {
+                kind: "image/png".to_string(),
+            }],
             is_deleted: true,
             mentions: vec![MentionInfo {
                 uid: 9,
@@ -2220,6 +2254,7 @@ mod tests {
         assert_eq!(preview.message, None);
         assert!(preview.sticker.is_none());
         assert!(preview.first_attachment_kind.is_none());
+        assert!(preview.attachments.is_empty());
         assert!(preview.mentions.is_empty());
     }
 }

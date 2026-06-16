@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 use crate::constants::MAX_UNREAD_COUNT;
 use crate::dto::{
-    messages::{MessagePreview, MessagePreviewSticker},
+    messages::{MessagePreview, MessagePreviewAttachment, MessagePreviewSticker},
     threads::{ListThreadsResponse, ThreadListItem},
     users::User,
     ws::{ServerWsMessage, ThreadMembershipChangedPayload, ThreadUpdatePayload},
@@ -600,11 +600,13 @@ pub fn get_unread_summary_counts(
 
 // --- Thread list enrichment types and logic ---
 
-fn first_attachment_kind_map(atts: Vec<Attachment>) -> HashMap<i64, String> {
-    let mut map: HashMap<i64, String> = HashMap::new();
+fn attachment_preview_map(atts: Vec<Attachment>) -> HashMap<i64, Vec<MessagePreviewAttachment>> {
+    let mut map: HashMap<i64, Vec<MessagePreviewAttachment>> = HashMap::new();
     for att in atts {
         if let Some(msg_id) = att.message_id {
-            map.entry(msg_id).or_insert(att.kind);
+            map.entry(msg_id)
+                .or_default()
+                .push(MessagePreviewAttachment { kind: att.kind });
         }
     }
     map
@@ -819,8 +821,11 @@ pub fn enrich_thread_list(
             attachment_msg_ids.push(msg.id);
         }
     }
-    let first_attachment_map: HashMap<i64, String> = if attachment_msg_ids.is_empty() {
-        HashMap::new()
+    let (first_attachment_map, attachment_preview_all_map): (
+        HashMap<i64, String>,
+        HashMap<i64, Vec<MessagePreviewAttachment>>,
+    ) = if attachment_msg_ids.is_empty() {
+        (HashMap::new(), HashMap::new())
     } else {
         let atts: Vec<Attachment> = attachments::table
             .filter(attachments::message_id.eq_any(&attachment_msg_ids))
@@ -833,7 +838,12 @@ pub fn enrich_thread_list(
             .select(Attachment::as_select())
             .load(conn)
             .unwrap_or_default();
-        first_attachment_kind_map(atts)
+        let preview_map = attachment_preview_map(atts);
+        let kind_map: HashMap<i64, String> = preview_map
+            .iter()
+            .filter_map(|(&msg_id, previews)| previews.first().map(|p| (msg_id, p.kind.clone())))
+            .collect();
+        (kind_map, preview_map)
     };
 
     // 7. Build latest reply map
@@ -859,6 +869,10 @@ pub fn enrich_thread_list(
                 } else {
                     None
                 },
+                attachments: attachment_preview_all_map
+                    .get(&lr.id)
+                    .cloned()
+                    .unwrap_or_default(),
                 is_deleted: false,
                 mentions: mention_uids_per_reply
                     .get(&lr.reply_root_id)
@@ -909,6 +923,14 @@ pub fn enrich_thread_list(
                     first_attachment_map.get(&root_msg.id).cloned()
                 } else {
                     None
+                },
+                attachments: if root_msg.deleted_at.is_none() && root_msg.has_attachments {
+                    attachment_preview_all_map
+                        .get(&root_msg.id)
+                        .cloned()
+                        .unwrap_or_default()
+                } else {
+                    vec![]
                 },
                 is_deleted: root_msg.deleted_at.is_some(),
                 mentions: mention_uids_per_root
@@ -989,7 +1011,8 @@ pub fn unarchive_thread(
 
 #[cfg(test)]
 mod tests {
-    use super::first_attachment_kind_map;
+    use super::attachment_preview_map;
+    use crate::dto::messages::MessagePreviewAttachment;
     use crate::models::Attachment;
     use chrono::Utc;
 
@@ -1010,15 +1033,40 @@ mod tests {
     }
 
     #[test]
-    fn first_attachment_kind_map_uses_first_row_per_message() {
-        let map = first_attachment_kind_map(vec![
+    fn attachment_preview_map_returns_all_attachments_per_message() {
+        let map = attachment_preview_map(vec![
             attachment(2, 10, "image/png", 1),
             attachment(1, 10, "video/mp4", 0),
             attachment(4, 20, "audio/webm", 1),
             attachment(3, 20, "image/jpeg", 0),
         ]);
 
-        assert_eq!(map.get(&10), Some(&"image/png".to_string()));
-        assert_eq!(map.get(&20), Some(&"audio/webm".to_string()));
+        let msg10 = map.get(&10).unwrap();
+        assert_eq!(msg10.len(), 2);
+        assert_eq!(
+            msg10,
+            &[
+                MessagePreviewAttachment {
+                    kind: "image/png".to_string()
+                },
+                MessagePreviewAttachment {
+                    kind: "video/mp4".to_string()
+                },
+            ]
+        );
+
+        let msg20 = map.get(&20).unwrap();
+        assert_eq!(msg20.len(), 2);
+        assert_eq!(
+            msg20,
+            &[
+                MessagePreviewAttachment {
+                    kind: "audio/webm".to_string()
+                },
+                MessagePreviewAttachment {
+                    kind: "image/jpeg".to_string()
+                },
+            ]
+        );
     }
 }

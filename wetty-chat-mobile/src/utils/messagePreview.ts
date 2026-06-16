@@ -1,3 +1,5 @@
+import type { AttachmentMimeCategory } from '@/types/attachmentKind';
+import { categorizeAttachmentKind } from '@/types/attachmentKind';
 export const MESSAGE_PREVIEW_MAX = 100;
 
 export interface PreviewAttachmentLike {
@@ -128,6 +130,18 @@ export function getNotificationPreviewLabels(locale?: string | null): Notificati
   return PREVIEW_LABELS_BY_LOCALE[resolvePreviewLocale(locale)];
 }
 
+function attachmentKindToLabel(kind: AttachmentMimeCategory, labels: PreviewLabels): string {
+  switch (kind) {
+    case 'image':
+      return labels.image;
+    case 'video':
+      return labels.video;
+    case 'audio':
+      return labels.voiceMessage;
+    case 'other':
+      return labels.attachment;
+  }
+}
 export function formatMessagePreview(preview: PreviewMessage, labels: PreviewLabels): string {
   const { message, messageType, sticker, attachments, firstAttachmentKind, isDeleted, mentions } =
     normalizePreviewMessage(preview);
@@ -148,41 +162,21 @@ export function formatMessagePreview(preview: PreviewMessage, labels: PreviewLab
     return labels.voiceMessage;
   }
 
-  if (message?.trim()) {
-    return renderMentionsAsText(message, mentions);
+  // Build one label per attachment
+  const attachmentLabels: string[] =
+    attachments?.map((a) => attachmentKindToLabel(categorizeAttachmentKind(a.kind), labels)) ?? [];
+
+  // Fallback when attachments array is absent but firstAttachmentKind is set
+  if (attachmentLabels.length === 0 && firstAttachmentKind) {
+    attachmentLabels.push(attachmentKindToLabel(categorizeAttachmentKind(firstAttachmentKind), labels));
   }
 
-  if (attachments?.some((attachment) => attachment.kind.startsWith('audio/'))) {
-    return labels.voiceMessage;
-  }
+  const prefix = attachmentLabels.join('');
+  const text = message?.trim() ? renderMentionsAsText(message, mentions) : '';
 
-  if (firstAttachmentKind?.startsWith('audio/')) {
-    return labels.voiceMessage;
-  }
-
-  if (attachments?.some((attachment) => attachment.kind.startsWith('image/'))) {
-    return labels.image;
-  }
-
-  if (firstAttachmentKind?.startsWith('image/')) {
-    return labels.image;
-  }
-
-  if (attachments?.some((attachment) => attachment.kind.startsWith('video/'))) {
-    return labels.video;
-  }
-
-  if (firstAttachmentKind?.startsWith('video/')) {
-    return labels.video;
-  }
-
-  if (attachments && attachments.length > 0) {
-    return labels.attachment;
-  }
-
-  if (firstAttachmentKind) {
-    return labels.attachment;
-  }
+  if (prefix && text) return `${prefix} ${text}`;
+  if (prefix) return prefix;
+  if (text) return text;
 
   return '';
 }
