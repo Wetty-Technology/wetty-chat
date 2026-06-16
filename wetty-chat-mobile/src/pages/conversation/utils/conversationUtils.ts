@@ -1,6 +1,7 @@
 import type { Attachment, MessageResponse } from '@/api/messages';
 import type { GroupRole } from '@/api/group';
 import type { ComposeUploadedAttachment } from '@/components/chat/compose/MessageComposeBar';
+import { createClientGeneratedId } from '@/utils/clientGeneratedId';
 
 function isSameDay(d1: Date, d2: Date): boolean {
   return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
@@ -25,7 +26,7 @@ export function formatDateSeparator(iso: string, locale: string, labels: { today
 }
 
 export function generateClientId(): string {
-  return `cg_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  return createClientGeneratedId('cg_');
 }
 
 export function parseComparableMessageId(messageId: string): bigint | null {

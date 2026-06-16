@@ -21,15 +21,12 @@ import { deleteInvite, getInvites, sendInviteMessage, type InviteInfoResponse, t
 import { usersApi, type MemberSummary } from '@/api/users';
 import { BackButton } from '@/components/BackButton';
 import { ShareInviteGroupSelectorModal } from '@/components/chat/settings/ShareInviteGroupSelectorModal';
-import {
-  canCopyInviteCode,
-  copyInviteCode,
-  createInviteMessageClientGeneratedId,
-} from '@/components/chat/settings/shareInviteHelpers';
+import { canCopyInviteCode, copyInviteCode } from '@/components/chat/settings/shareInviteHelpers';
 import { getChatDisplayName } from '@/utils/chatDisplay';
 import type { GroupSelectorItem } from '@/api/group';
 import { selectEffectiveLocale } from '@/store/settingsSlice';
 import type { RootState } from '@/store';
+import { createClientGeneratedId } from '@/utils/clientGeneratedId';
 import type { BackAction } from '@/types/back-action';
 import styles from './manage-invites.module.scss';
 
@@ -384,7 +381,7 @@ export default function ChatInvitesCore({ chatId: propChatId, backAction }: Chat
           sourceChatId: chatId,
           destinationChatId: group.id,
           inviteId: selectedInvite.id,
-          clientGeneratedId: createInviteMessageClientGeneratedId(),
+          clientGeneratedId: createClientGeneratedId('invite_'),
         });
 
         presentToast({

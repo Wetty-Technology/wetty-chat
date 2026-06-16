@@ -15,16 +15,9 @@ import {
   isSupportedMediaFile,
   isVideoFile,
 } from '@/utils/heicMedia';
+import { createClientGeneratedId } from '@/utils/clientGeneratedId';
 
 const isAbortError = (error: unknown) => error instanceof DOMException && error.name === 'AbortError';
-
-const createUploadId = () => {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-
-  return `upload_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-};
 
 const getNativeImageDimensions = (file: File): Promise<{ width?: number; height?: number }> =>
   new Promise((resolve) => {
@@ -262,7 +255,7 @@ export function useComposeAttachments({
       const queuedRecords: UploadRecord[] = allowedFiles.map((file, index) => ({
         file,
         state: {
-          localId: createUploadId(),
+          localId: createClientGeneratedId('upload_'),
           kind: isImageFile(file) ? 'image' : 'video',
           name: file.name,
           previewUrl: URL.createObjectURL(file),

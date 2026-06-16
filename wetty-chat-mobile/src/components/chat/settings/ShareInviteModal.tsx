@@ -32,7 +32,6 @@ import { ShareInviteMemberSelectorModal } from './ShareInviteMemberSelectorModal
 import {
   canCopyInviteCode,
   copyInviteCode,
-  createInviteMessageClientGeneratedId,
   getExpiresAt,
   getExpiryLabel,
   getExpiryOptions,
@@ -40,6 +39,7 @@ import {
   type InviteExpiryOption,
   type InviteMode,
 } from './shareInviteHelpers';
+import { createClientGeneratedId } from '@/utils/clientGeneratedId';
 import { useShareInviteModalState } from './useShareInviteModalState';
 import styles from './ShareInviteModal.module.scss';
 
@@ -378,7 +378,7 @@ function ShareInviteModalSession({ chatId, onDismiss }: Omit<ShareInviteModalPro
         destinationChatId: selectedDestinationGroup.id,
         inviteId: draftInvite?.id,
         expiresAt: getExpiresAt(expiryOption),
-        clientGeneratedId: createInviteMessageClientGeneratedId(),
+        clientGeneratedId: createClientGeneratedId('invite_'),
       });
 
       dispatch(

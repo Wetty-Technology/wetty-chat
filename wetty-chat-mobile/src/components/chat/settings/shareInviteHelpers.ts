@@ -47,10 +47,6 @@ export function getExpiryLabel(expiryOption: InviteExpiryOption): string {
   return getExpiryOptions().find((option) => option.value === expiryOption)?.label ?? t`Never`;
 }
 
-export function createInviteMessageClientGeneratedId(): string {
-  return `invite_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-}
-
 export function canCopyInviteCode(): boolean {
   return typeof navigator !== 'undefined' && typeof navigator.clipboard?.writeText === 'function';
 }
