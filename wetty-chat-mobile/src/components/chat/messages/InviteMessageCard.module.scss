@@ -2,7 +2,7 @@
   display: flex;
   align-items: flex-end;
   gap: 8px;
-  padding: 2px 8px;
+  padding: 2px 12px;
 }
 
 .rowSent {
@@ -19,16 +19,24 @@
 }
 
 .avatarSpacer {
-  width: 32px;
-  flex: 0 0 32px;
+  width: 36px;
+  flex: 0 0 36px;
 }
 
 .content {
   display: flex;
   flex-direction: column;
+  align-items: flex-end;
   gap: 4px;
   width: min(85%, 360px);
   min-width: 0;
+}
+
+.cardRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  width: 100%;
 }
 
 .senderName {
@@ -41,12 +49,8 @@
 .card {
   display: block;
   width: 100%;
-  padding: 0;
-  border: none;
   background: transparent;
-  text-align: left;
-  color: inherit;
-  width: 100%;
+  padding: 0;
 }
 
 .cardDisabled {
@@ -60,6 +64,7 @@
   border-radius: 14px;
   box-shadow: none;
   --box-shadow: none;
+  --background: var(--ion-background-color);
   border: 1px solid var(--ion-color-light-shade);
   box-sizing: border-box;
 }
@@ -145,7 +150,7 @@
 }
 
 .timestamp {
-  align-self: flex-end;
+  white-space: nowrap;
   padding: 0 8px;
   font-size: 0.75rem;
   color: var(--ion-color-medium);

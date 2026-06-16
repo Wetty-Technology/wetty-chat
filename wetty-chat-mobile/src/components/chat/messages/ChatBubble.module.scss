@@ -23,9 +23,12 @@
 }
 
 .chatRow {
+  --avatar-size: 36px;
+  --avatar-gap: 8px;
+
   display: flex;
   align-items: flex-end;
-  gap: 8px;
+  gap: var(--avatar-gap);
   padding: 4px 12px;
 
   &.sent {
@@ -37,7 +40,7 @@
 
     .messageColumn > *:last-child:not(.avatarBubbleRow) {
       margin-left: 0;
-      margin-right: calc(36px + 8px);
+      margin-right: calc(var(--avatar-size) + var(--avatar-gap));
     }
   }
 }
@@ -48,14 +51,14 @@
   width: 100%;
 
   > *:last-child:not(.avatarBubbleRow) {
-    margin-left: calc(36px + 8px);
+    margin-left: calc(var(--avatar-size) + var(--avatar-gap));
   }
 }
 
 .avatarBubbleRow {
   display: flex;
   align-items: flex-end;
-  gap: 8px;
+  gap: var(--avatar-gap);
 }
 
 .bubbleOnly {
@@ -68,8 +71,8 @@
 }
 
 .avatar {
-  width: 36px;
-  height: 36px;
+  width: var(--avatar-size);
+  height: var(--avatar-size);
   border-radius: 50%;
   flex-shrink: 0;
   display: flex;
@@ -360,7 +363,7 @@
 }
 
 .avatarSpacer {
-  width: 36px;
+  width: var(--avatar-size);
   flex-shrink: 0;
 }
 

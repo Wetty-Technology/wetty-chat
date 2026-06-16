@@ -105,7 +105,7 @@ export function InviteMessageCard({
       {!isSent ? (
         showAvatar ? (
           <button type="button" className={styles.avatarButton} onClick={onAvatarClick}>
-            <UserAvatar name={senderName} avatarUrl={sender.avatarUrl} size={32} />
+            <UserAvatar name={senderName} avatarUrl={sender.avatarUrl} size={36} />
           </button>
         ) : (
           <div className={styles.avatarSpacer} />
@@ -115,24 +115,26 @@ export function InviteMessageCard({
       <div className={styles.content}>
         {showName && !isSent && <div className={styles.senderName}>{senderName}</div>}
 
-        <button
-          type="button"
-          className={`${styles.card} ${isSent ? styles.cardSent : ''} ${!inviteAvailable ? styles.cardDisabled : ''}`}
-          onClick={inviteAvailable ? onOpen : undefined}
-          disabled={!inviteAvailable}
-        >
-          <IonCard className={styles.ionCard}>
-            <IonCardHeader className={styles.cardHeader}>
-              <IonCardSubtitle className={styles.cardSubtitle}>
-                <IonIcon icon={mailOutline} />
-                <Trans>Group invite</Trans>
-              </IonCardSubtitle>
-            </IonCardHeader>
-            <InviteCardBody viewState={bodyViewState} />
-          </IonCard>
-        </button>
+        <div className={styles.cardRow}>
+          <button
+            type="button"
+            className={`${styles.card} ${isSent ? styles.cardSent : ''} ${!inviteAvailable ? styles.cardDisabled : ''}`}
+            onClick={inviteAvailable ? onOpen : undefined}
+            disabled={!inviteAvailable}
+          >
+            <IonCard className={styles.ionCard}>
+              <IonCardHeader className={styles.cardHeader}>
+                <IonCardSubtitle className={styles.cardSubtitle}>
+                  <IonIcon icon={mailOutline} />
+                  <Trans>Group invite</Trans>
+                </IonCardSubtitle>
+              </IonCardHeader>
+              <InviteCardBody viewState={bodyViewState} />
+            </IonCard>
+          </button>
 
-        <div className={styles.timestamp}>{formatTime(timestamp)}</div>
+          <div className={styles.timestamp}>{formatTime(timestamp)}</div>
+        </div>
       </div>
     </div>
   );
