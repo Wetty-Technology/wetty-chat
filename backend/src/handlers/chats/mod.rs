@@ -210,7 +210,6 @@ fn load_reply_messages(
 
     messages_schema::table
         .filter(messages_schema::id.eq_any(reply_ids))
-        .filter(messages_schema::deleted_at.is_null())
         .filter(messages_schema::is_published.eq(true))
         .select(Message::as_select())
         .load::<Message>(conn)
