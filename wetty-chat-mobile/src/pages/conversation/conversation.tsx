@@ -27,6 +27,7 @@ import { type ChatMessageEditSession, useChatMessageSender } from './hooks/useCh
 import { useChatReadTracking } from './hooks/useChatReadTracking';
 import { useConversationTimeline } from './hooks/useConversationTimeline';
 import { useKeyboardViewport } from './hooks/useKeyboardViewport';
+import { formatUnreadBadge } from '@/utils/unreadBadge';
 import { useMessageOverlayActions } from './hooks/useMessageOverlayActions';
 import { useMessageReactions } from './hooks/useMessageReactions';
 import { useThreadSubscription } from './hooks/useThreadSubscription';
@@ -473,7 +474,7 @@ function ConversationPane({ chatId, threadId, backAction }: ConversationPaneProp
             className={`scroll-to-bottom-fab ${showScrollToBottomButton ? '' : 'scroll-to-bottom-fab--hidden'}`}
           >
             {pendingJumpCount > 0 && (
-              <span className="scroll-to-bottom-fab__badge">{pendingJumpCount > 99 ? '99+' : pendingJumpCount}</span>
+              <span className="scroll-to-bottom-fab__badge">{formatUnreadBadge(pendingJumpCount)}</span>
             )}
             <IonFabButton size="small" onClick={handleScrollToBottomClick}>
               <IonIcon icon={chevronDown} />
