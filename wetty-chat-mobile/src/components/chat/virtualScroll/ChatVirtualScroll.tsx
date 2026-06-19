@@ -453,7 +453,7 @@ export function ChatVirtualScroll({
         if (rowRect.height <= 0) continue;
 
         if (row.type === 'message') {
-          const fullyVisible = rowRect.top >= containerRect.top - 0.5 && rowRect.bottom <= containerRect.bottom + 0.5;
+          const fullyVisible = rowRect.bottom <= containerRect.bottom + 0.5;
           const partiallyVisible = rowRect.bottom > containerRect.top && rowRect.top < containerRect.bottom;
 
           if (partiallyVisible) {
