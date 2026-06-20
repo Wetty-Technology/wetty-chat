@@ -64,6 +64,15 @@ msgstr "Add Sticker"
 msgid "Add to Favorites"
 msgstr "Add to Favorites"
 
+msgid "Advanced Settings"
+msgstr "Advanced Settings"
+
+msgid "Advanced settings disabled"
+msgstr "Advanced settings disabled"
+
+msgid "Advanced settings enabled"
+msgstr "Advanced settings enabled"
+
 msgid "Alex"
 msgstr "Alex"
 
@@ -196,6 +205,15 @@ msgstr "Copy"
 
 msgid "Copy code"
 msgstr "Copy code"
+
+msgid "Copy JWT Token"
+msgstr "Copy JWT Token"
+
+msgid "Copy Link"
+msgstr "Copy Link"
+
+msgid "Copy text"
+msgstr "Copy text"
 
 msgid "Copy the link below, or choose a group to send it to right now."
 msgstr "Copy the link below, or choose a group to send it to right now."
@@ -371,6 +389,9 @@ msgstr "Failed to add sticker to favorites"
 
 msgid "Failed to copy invite code"
 msgstr "Failed to copy invite code"
+
+msgid "Failed to copy token"
+msgstr "Failed to copy token"
 
 msgid "Failed to create chat"
 msgstr "Failed to create chat"
@@ -607,6 +628,9 @@ msgstr "Join via Code"
 
 msgid "Joining…"
 msgstr "Joining…"
+
+msgid "JWT token copied"
+msgstr "JWT token copied"
 
 msgid "Keep messages"
 msgstr "Keep messages"

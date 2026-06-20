@@ -1,14 +1,13 @@
 import { IonText, useIonToast } from '@ionic/react';
 import { t } from '@lingui/core/macro';
 import { useEffect, useRef } from 'react';
-import { useDeviceToken } from '@/hooks/useDeviceToken';
+import { isAdvancedSettingsUnlocked, toggleAdvancedSettings } from '@/store/advancedSettingsStore';
 import styles from './AppVersionItem.module.scss';
 
 const TAP_RESET_TIMEOUT_MS = 2000;
 const REQUIRED_TAP_COUNT = 5;
 
 export function AppVersionItem() {
-  const jwtToken = useDeviceToken();
   const [presentToast] = useIonToast();
   const tapCountRef = useRef(0);
   const timeoutIdRef = useRef<number | null>(null);
@@ -44,9 +43,11 @@ export function AppVersionItem() {
     tapCountRef.current += 1;
 
     if (tapCountRef.current >= REQUIRED_TAP_COUNT) {
+      const wasUnlocked = isAdvancedSettingsUnlocked();
+      toggleAdvancedSettings();
       presentToast({
-        message: jwtToken || t`No JWT token available`,
-        duration: 4000,
+        message: wasUnlocked ? t`Advanced settings disabled` : t`Advanced settings enabled`,
+        duration: 2000,
         position: 'bottom',
       });
       resetTapSequence();

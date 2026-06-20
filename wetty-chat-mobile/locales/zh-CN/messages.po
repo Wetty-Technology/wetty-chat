@@ -64,6 +64,15 @@ msgstr "添加贴纸"
 msgid "Add to Favorites"
 msgstr "添加到收藏"
 
+msgid "Advanced Settings"
+msgstr "高级设置"
+
+msgid "Advanced settings disabled"
+msgstr "已关闭高级设置"
+
+msgid "Advanced settings enabled"
+msgstr "已启用高级设置"
+
 msgid "Alex"
 msgstr "风纪委员"
 
@@ -196,6 +205,15 @@ msgstr "复制"
 
 msgid "Copy code"
 msgstr "复制代码"
+
+msgid "Copy JWT Token"
+msgstr "复制 JWT Token"
+
+msgid "Copy Link"
+msgstr "复制链接"
+
+msgid "Copy text"
+msgstr "复制文本"
 
 msgid "Copy the link below, or choose a group to send it to right now."
 msgstr "复制下方链接，或立即选择一个群组发送。"
@@ -371,6 +389,9 @@ msgstr "添加贴纸到收藏失败"
 
 msgid "Failed to copy invite code"
 msgstr "复制邀请码失败"
+
+msgid "Failed to copy token"
+msgstr "复制失败"
 
 msgid "Failed to create chat"
 msgstr "创建聊天失败"
@@ -607,6 +628,9 @@ msgstr "通过邀请码加入"
 
 msgid "Joining…"
 msgstr "正在加入…"
+
+msgid "JWT token copied"
+msgstr "JWT Token 已复制"
 
 msgid "Keep messages"
 msgstr "保留消息"

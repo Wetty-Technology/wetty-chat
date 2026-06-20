@@ -13,6 +13,7 @@ import ChatMembersCore from '@/pages/conversation/chat-members';
 import ChatInvitesCore from '@/pages/conversation/manage-invites';
 import CreateChatCore from '@/pages/create-chat';
 import { InvitePreviewCore } from '@/pages/invite-preview';
+import { AdvancedSettingsCore } from '@/pages/settings/advanced';
 import { JoinChatCore } from '@/pages/join-chat';
 import { SettingsCore } from '@/pages/settings';
 import { SavedMessagesCore } from '@/pages/saved-messages';
@@ -49,6 +50,7 @@ interface DesktopRouteMatches {
   savedMessagesSettings: boolean;
   languageSettings: boolean;
   stickerSettings: boolean;
+  advancedSettings: boolean;
   stickerPackSettings: { packId: string } | null;
 }
 
@@ -109,6 +111,10 @@ function getDesktopRouteMatches(pathname: string): DesktopRouteMatches {
     path: '/settings/saved-messages',
     exact: true,
   });
+  const advancedSettings = !!matchPath(pathname, {
+    path: '/settings/advanced',
+    exact: true,
+  });
   const stickerPackRaw = matchPath<{ packId: string }>(pathname, {
     path: '/settings/stickers/:packId',
     exact: true,
@@ -122,6 +128,7 @@ function getDesktopRouteMatches(pathname: string): DesktopRouteMatches {
     generalSettings ||
     savedMessagesSettings ||
     languageSettings ||
+    advancedSettings ||
     stickerSettings;
 
   return {
@@ -146,6 +153,7 @@ function getDesktopRouteMatches(pathname: string): DesktopRouteMatches {
     isJoinChat: !!joinRaw,
     globalSettings,
     generalSettings,
+    advancedSettings,
     savedMessagesSettings,
     languageSettings,
     stickerSettings,
@@ -321,6 +329,13 @@ export function DesktopSplitLayout() {
   const openGeneralSettings = useCallback(() => {
     history.push({
       pathname: '/settings/general',
+      state: { backgroundPath },
+    });
+  }, [backgroundPath, history]);
+
+  const openAdvancedSettings = useCallback(() => {
+    history.push({
+      pathname: '/settings/advanced',
       state: { backgroundPath },
     });
   }, [backgroundPath, history]);
@@ -533,12 +548,24 @@ export function DesktopSplitLayout() {
               }}
               onOpenLanguage={openLanguageSettings}
             />
+          ) : currentRoute.advancedSettings ? (
+            <AdvancedSettingsCore
+              backAction={{
+                type: 'callback',
+                onBack: () =>
+                  history.push({
+                    pathname: '/settings',
+                    state: { backgroundPath },
+                  }),
+              }}
+            />
           ) : (
             <SettingsCore
               backAction={{ type: 'close', onClose: closeGlobalSettings }}
               onOpenGeneral={openGeneralSettings}
               onOpenSavedMessages={savedMessagesEnabled ? openSavedMessages : undefined}
               onOpenStickers={openStickerSettings}
+              onOpenAdvanced={openAdvancedSettings}
             />
           )}
         </IonModal>

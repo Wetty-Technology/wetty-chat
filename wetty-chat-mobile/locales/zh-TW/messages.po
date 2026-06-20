@@ -64,6 +64,15 @@ msgstr "新增表情"
 msgid "Add to Favorites"
 msgstr "加入收藏"
 
+msgid "Advanced Settings"
+msgstr "進階設定"
+
+msgid "Advanced settings disabled"
+msgstr "已關閉進階設定"
+
+msgid "Advanced settings enabled"
+msgstr "已啟用進階設定"
+
 msgid "Alex"
 msgstr "風紀委員"
 
@@ -196,6 +205,15 @@ msgstr "複製"
 
 msgid "Copy code"
 msgstr "複製代碼"
+
+msgid "Copy JWT Token"
+msgstr "複製 JWT Token"
+
+msgid "Copy Link"
+msgstr "複製連結"
+
+msgid "Copy text"
+msgstr "複製文本"
 
 msgid "Copy the link below, or choose a group to send it to right now."
 msgstr "複製下方連結，或立即選擇一個群組傳送。"
@@ -371,6 +389,9 @@ msgstr "添加貼紙到收藏失敗"
 
 msgid "Failed to copy invite code"
 msgstr "複製邀請碼失敗"
+
+msgid "Failed to copy token"
+msgstr "複製失敗"
 
 msgid "Failed to create chat"
 msgstr "建立聊天失敗"
@@ -607,6 +628,9 @@ msgstr "透過邀請碼加入"
 
 msgid "Joining…"
 msgstr "正在加入…"
+
+msgid "JWT token copied"
+msgstr "JWT Token 已複製"
 
 msgid "Keep messages"
 msgstr "保留訊息"
