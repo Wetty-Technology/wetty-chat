@@ -28,6 +28,9 @@ msgstr "1 day"
 msgid "1 hour"
 msgstr "1 hour"
 
+#~ msgid "100% (Default)"
+#~ msgstr "100% (Default)"
+
 msgid "24 hours"
 msgstr "24 hours"
 
@@ -241,6 +244,9 @@ msgstr "Creating…"
 
 msgid "Custom"
 msgstr "Custom"
+
+msgid "Default (100%)"
+msgstr "Default (100%)"
 
 msgid "Default (350ms)"
 msgstr "Default (350ms)"
@@ -719,6 +725,9 @@ msgstr "Membership"
 msgid "Mention suggestions"
 msgstr "Mention suggestions"
 
+msgid "Menu Background Opacity"
+msgstr "Menu Background Opacity"
+
 msgid "Message"
 msgstr "Message"
 
@@ -856,6 +865,12 @@ msgstr "Only members of a selected group can use this invite link to join."
 
 msgid "Only the selected user can redeem this invite link to join."
 msgstr "Only the selected user can redeem this invite link to join."
+
+msgid "Opacity"
+msgstr "Opacity"
+
+msgid "Opaque"
+msgstr "Opaque"
 
 msgid "Open chat"
 msgstr "Open chat"
@@ -1236,6 +1251,9 @@ msgstr "Thumbnail {0}"
 
 msgid "Today"
 msgstr "Today"
+
+msgid "Transparent"
+msgstr "Transparent"
 
 msgid "Try Again"
 msgstr "Try Again"

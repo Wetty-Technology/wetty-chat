@@ -14,6 +14,7 @@ import ChatInvitesCore from '@/pages/conversation/manage-invites';
 import CreateChatCore from '@/pages/create-chat';
 import { InvitePreviewCore } from '@/pages/invite-preview';
 import { AdvancedSettingsCore } from '@/pages/settings/advanced';
+import { MenuBgOpacityCore } from '@/pages/settings/menu-bg-opacity';
 import { LongPressDelayCore } from '@/pages/settings/long-press-delay';
 import { useAdvancedSettingsUnlocked } from '@/store/advancedSettingsStore';
 import { JoinChatCore } from '@/pages/join-chat';
@@ -54,6 +55,7 @@ interface DesktopRouteMatches {
   stickerSettings: boolean;
   advancedSettings: boolean;
   longPressDelay: boolean;
+  menuBgOpacity: boolean;
   stickerPackSettings: { packId: string } | null;
 }
 
@@ -122,6 +124,10 @@ function getDesktopRouteMatches(pathname: string): DesktopRouteMatches {
     path: '/settings/advanced/long-press-delay',
     exact: true,
   });
+  const menuBgOpacity = !!matchPath(pathname, {
+    path: '/settings/advanced/menu-bg-opacity',
+    exact: true,
+  });
   const stickerPackRaw = matchPath<{ packId: string }>(pathname, {
     path: '/settings/stickers/:packId',
     exact: true,
@@ -137,6 +143,7 @@ function getDesktopRouteMatches(pathname: string): DesktopRouteMatches {
     languageSettings ||
     advancedSettings ||
     longPressDelay ||
+    menuBgOpacity ||
     stickerSettings;
 
   return {
@@ -163,6 +170,7 @@ function getDesktopRouteMatches(pathname: string): DesktopRouteMatches {
     generalSettings,
     advancedSettings,
     longPressDelay,
+    menuBgOpacity,
     savedMessagesSettings,
     languageSettings,
     stickerSettings,
@@ -362,6 +370,13 @@ export function DesktopSplitLayout() {
   const openLongPressDelay = useCallback(() => {
     history.push({
       pathname: '/settings/advanced/long-press-delay',
+      state: { backgroundPath },
+    });
+  }, [backgroundPath, history]);
+
+  const openMenuBgOpacity = useCallback(() => {
+    history.push({
+      pathname: '/settings/advanced/menu-bg-opacity',
       state: { backgroundPath },
     });
   }, [backgroundPath, history]);
@@ -585,6 +600,17 @@ export function DesktopSplitLayout() {
                   }),
               }}
             />
+          ) : currentRoute.menuBgOpacity ? (
+            <MenuBgOpacityCore
+              backAction={{
+                type: 'callback',
+                onBack: () =>
+                  history.push({
+                    pathname: '/settings/advanced',
+                    state: { backgroundPath },
+                  }),
+              }}
+            />
           ) : currentRoute.advancedSettings ? (
             <AdvancedSettingsCore
               backAction={{
@@ -596,6 +622,7 @@ export function DesktopSplitLayout() {
                   }),
               }}
               onOpenLongPressDelay={openLongPressDelay}
+              onOpenMenuBgOpacity={openMenuBgOpacity}
             />
           ) : (
             <SettingsCore

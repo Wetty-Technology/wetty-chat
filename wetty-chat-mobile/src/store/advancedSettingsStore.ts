@@ -13,20 +13,25 @@ import { kvDelete, kvGet, kvSet } from '@/utils/db';
 
 interface AdvancedSettings {
   longPressDelayMs: number;
+  menuBgOpacity: number;
 }
 
 const ADVANCED_DEFAULTS: Readonly<AdvancedSettings> = {
   longPressDelayMs: 350,
+  menuBgOpacity: 100,
 } as const;
 
 // --- Constants (importable by UI) ---
 
-export interface LongPressPreset {
+export const DEFAULT_LONG_PRESS_DELAY_MS = ADVANCED_DEFAULTS.longPressDelayMs;
+export const MENU_BG_OPACITY_MIN = 0;
+export const MENU_BG_OPACITY_MAX = 100;
+export interface Preset {
   value: number;
   label: string;
 }
 
-export function getLongPressPresets(): LongPressPreset[] {
+export function getLongPressPresets(): Preset[] {
   return [
     { value: 150, label: t`Fast (150ms)` },
     { value: 350, label: t`Default (350ms)` },
@@ -40,6 +45,19 @@ export const LONG_PRESS_CUSTOM_MAX = 1500;
 
 export function isCustomLongPressValue(ms: number): boolean {
   return getLongPressPresets().every((p) => p.value !== ms);
+}
+
+export function getMenuBgOpacityPresets() {
+  return [
+    { value: 50, label: `50%` },
+    { value: 70, label: `70%` },
+    { value: 90, label: `90%` },
+    { value: 100, label: t`Default (100%)` },
+  ];
+}
+
+export function isCustomMenuBgOpacity(value: number): boolean {
+  return getMenuBgOpacityPresets().every((p) => p.value !== value);
 }
 
 // --- Pub/Sub ---
@@ -140,4 +158,19 @@ export function setLongPressDelayMs(ms: number): void {
 
 export function useLongPressDelayMs(): number {
   return useSyncExternalStore(subscribe, getLongPressDelaySnapshot, () => ADVANCED_DEFAULTS.longPressDelayMs);
+}
+
+// --- Menu Background Opacity ---
+
+function getMenuBgOpacitySnapshot(): number {
+  return settingsCache.menuBgOpacity;
+}
+
+export function setMenuBgOpacity(opacity: number): void {
+  const clamped = Math.max(MENU_BG_OPACITY_MIN, Math.min(MENU_BG_OPACITY_MAX, opacity));
+  setSetting('menuBgOpacity', clamped);
+}
+
+export function useMenuBgOpacity(): number {
+  return useSyncExternalStore(subscribe, getMenuBgOpacitySnapshot, () => ADVANCED_DEFAULTS.menuBgOpacity);
 }

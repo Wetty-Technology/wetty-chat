@@ -28,6 +28,9 @@ msgstr "1 天"
 msgid "1 hour"
 msgstr "1 小时"
 
+#~ msgid "100% (Default)"
+#~ msgstr "100%（默认）"
+
 msgid "24 hours"
 msgstr "24 小时"
 
@@ -241,6 +244,9 @@ msgstr "创建中…"
 
 msgid "Custom"
 msgstr "自定义"
+
+msgid "Default (100%)"
+msgstr "默认（100%）"
 
 msgid "Default (350ms)"
 msgstr "默认 (350ms)"
@@ -719,6 +725,9 @@ msgstr "成员资格"
 msgid "Mention suggestions"
 msgstr "提及建议"
 
+msgid "Menu Background Opacity"
+msgstr "菜单背景不透明度"
+
 msgid "Message"
 msgstr "消息"
 
@@ -856,6 +865,12 @@ msgstr "只有所选群组的成员才能使用此邀请链接加入。"
 
 msgid "Only the selected user can redeem this invite link to join."
 msgstr "只有所选用户才能兑换此邀请链接并加入。"
+
+msgid "Opacity"
+msgstr "不透明度"
+
+msgid "Opaque"
+msgstr "不透明"
 
 msgid "Open chat"
 msgstr "打开聊天"
@@ -1236,6 +1251,9 @@ msgstr "缩略图 {0}"
 
 msgid "Today"
 msgstr "今天"
+
+msgid "Transparent"
+msgstr "透明"
 
 msgid "Try Again"
 msgstr "重试"

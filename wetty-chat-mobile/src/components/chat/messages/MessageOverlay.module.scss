@@ -29,15 +29,23 @@
 }
 
 .content {
-  --menu-bg: color-mix(in srgb, var(--ion-text-color, #000) 10%, var(--ion-background-color, #fff));
-  --menu-hover-bg: color-mix(in srgb, var(--ion-text-color, #000) 15%, var(--ion-background-color, #fff));
+  /* Intentionally left empty – overridden below with --menu-bg-opacity */
 
   --action-row-height: 63px;
 
   position: absolute;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  --menu-bg: color-mix(
+    in srgb,
+    color-mix(in srgb, var(--ion-text-color, #000) 10%, var(--ion-background-color, #fff)) var(--menu-bg-opacity, 90%),
+    transparent
+  );
+  --menu-hover-bg: color-mix(
+    in srgb,
+    color-mix(in srgb, var(--ion-text-color, #000) 15%, var(--ion-background-color, #fff)) var(--menu-bg-opacity, 90%),
+    transparent
+  );
   gap: 8px;
   max-width: calc(100vw - 32px);
   pointer-events: none;
@@ -182,7 +190,11 @@
 }
 
 .opaqueMenu {
-  background: color-mix(in srgb, var(--ion-text-color, #000) 10%, var(--ion-background-color, #fff)) !important;
+  background: color-mix(
+    in srgb,
+    color-mix(in srgb, var(--ion-text-color, #000) 10%, var(--ion-background-color, #fff)) var(--menu-bg-opacity, 90%),
+    transparent
+  ) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }

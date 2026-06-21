@@ -23,6 +23,7 @@ import StickerSettingsPage from '@/pages/settings/stickers';
 import StickerPackDetailPage from '@/pages/settings/sticker-pack-detail';
 import AdvancedSettingsPage from '@/pages/settings/advanced';
 import LongPressDelayPage from '@/pages/settings/long-press-delay';
+import MenuBgOpacityPage from '@/pages/settings/menu-bg-opacity';
 import NotFoundPage from '@/pages/not-found';
 import ComponentDemoPage from '@/pages/component-demo';
 
@@ -104,6 +105,7 @@ const MobileLayout: React.FC = () => {
         <Route path="/settings/stickers" exact component={StickerSettingsPage} />
         <Route path="/settings/advanced" exact component={AdvancedSettingsPage} />
         <Route path="/settings/advanced/long-press-delay" exact component={LongPressDelayPage} />
+        <Route path="/settings/advanced/menu-bg-opacity" exact component={MenuBgOpacityPage} />
         <Route path="/settings" exact component={SettingsPage} />
         <Redirect exact from="/" to="/chats" />
         <Route component={NotFoundPage} />

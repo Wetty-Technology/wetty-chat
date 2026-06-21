@@ -19,22 +19,37 @@ import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import { clipboardOutline } from 'ionicons/icons';
 import { useDeviceToken } from '@/hooks/useDeviceToken';
-import { getLongPressPresets, useAdvancedSettingsUnlocked, useLongPressDelayMs } from '@/store/advancedSettingsStore';
+import {
+  getMenuBgOpacityPresets,
+  getLongPressPresets,
+  useAdvancedSettingsUnlocked,
+  useLongPressDelayMs,
+  useMenuBgOpacity,
+} from '@/store/advancedSettingsStore';
 import type { BackAction } from '@/types/back-action';
 import { BackButton } from '@/components/BackButton';
 
 interface AdvancedSettingsCoreProps {
   backAction?: BackAction;
   onOpenLongPressDelay?: () => void;
+  onOpenMenuBgOpacity?: () => void;
 }
 
-export function AdvancedSettingsCore({ backAction, onOpenLongPressDelay }: AdvancedSettingsCoreProps) {
+export function AdvancedSettingsCore({
+  backAction,
+  onOpenLongPressDelay,
+  onOpenMenuBgOpacity,
+}: AdvancedSettingsCoreProps) {
   const jwtToken = useDeviceToken();
   const longPressDelay = useLongPressDelayMs();
+  const menuBgOpacity = useMenuBgOpacity();
   const history = useHistory();
   const currentPresetLabel = useMemo(() => {
     return getLongPressPresets().find((p) => p.value === longPressDelay)?.label ?? `${longPressDelay}ms`;
   }, [longPressDelay]);
+  const currentOpacityLabel = useMemo(() => {
+    return getMenuBgOpacityPresets().find((p) => p.value === menuBgOpacity)?.label ?? `${menuBgOpacity}%`;
+  }, [menuBgOpacity]);
   const [presentToast] = useIonToast();
 
   const handleCopyToken = async () => {
@@ -90,6 +105,16 @@ export function AdvancedSettingsCore({ backAction, onOpenLongPressDelay }: Advan
             <IonLabel>
               <Trans>Long Press Delay</Trans>
               <p>{currentPresetLabel}</p>
+            </IonLabel>
+          </IonItem>
+          <IonItem
+            button
+            detail={true}
+            onClick={onOpenMenuBgOpacity ?? (() => history.push('/settings/advanced/menu-bg-opacity'))}
+          >
+            <IonLabel>
+              <Trans>Menu Background Opacity</Trans>
+              <p>{currentOpacityLabel}</p>
             </IonLabel>
           </IonItem>
         </IonList>
