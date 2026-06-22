@@ -87,6 +87,7 @@ function TestComponent({
   onReply,
   onStartThread,
   onEdit,
+  onForward,
   onOpenReactionDetails,
   onForward,
 }: {
@@ -98,6 +99,7 @@ function TestComponent({
   onReply: (message: MessageResponse) => void;
   onStartThread: (messageId: string) => void;
   onEdit: (message: MessageResponse) => void;
+  onForward: (message: MessageResponse) => void;
   onOpenReactionDetails: (messageId: string) => void;
   onForward: (message: MessageResponse) => void;
 }) {
@@ -114,6 +116,7 @@ function TestComponent({
     onReply,
     onStartThread,
     onEdit,
+    onForward,
     onOpenReactionDetails,
     onForward,
   });
@@ -130,6 +133,7 @@ describe('useMessageOverlayActions', () => {
   let onReply: MockFn<(message: MessageResponse) => void>;
   let onStartThread: MockFn<(messageId: string) => void>;
   let onEdit: MockFn<(message: MessageResponse) => void>;
+  let onForward: MockFn<(message: MessageResponse) => void>;
   let onOpenReactionDetails: MockFn<(messageId: string) => void>;
   let onForward: MockFn<(message: MessageResponse) => void>;
 
@@ -144,6 +148,7 @@ describe('useMessageOverlayActions', () => {
           onReply={onReply}
           onStartThread={onStartThread}
           onEdit={onEdit}
+          onForward={onForward}
           onOpenReactionDetails={onOpenReactionDetails}
           onForward={onForward}
           onRender={(nextState) => (state = nextState)}
@@ -162,6 +167,7 @@ describe('useMessageOverlayActions', () => {
     onReply = vi.fn() as typeof onReply;
     onStartThread = vi.fn() as typeof onStartThread;
     onEdit = vi.fn() as typeof onEdit;
+    onForward = vi.fn() as typeof onForward;
     onOpenReactionDetails = vi.fn() as typeof onOpenReactionDetails;
     onForward = vi.fn() as typeof onForward;
     vi.mocked(createPin).mockResolvedValue(response(pinFor(message())));
@@ -208,12 +214,14 @@ describe('useMessageOverlayActions', () => {
     state.actions.find((action) => action.key === 'reply')?.handler();
     state.actions.find((action) => action.key === 'thread')?.handler();
     state.actions.find((action) => action.key === 'edit')?.handler();
+    state.actions.find((action) => action.key === 'forward')?.handler();
     state.actions.find((action) => action.key === 'reaction-details')?.handler();
 
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith('hello');
     expect(onReply).toHaveBeenCalledWith(expect.objectContaining({ id: 'message-1' }));
     expect(onStartThread).toHaveBeenCalledWith('message-1');
     expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: 'message-1' }));
+    expect(onForward).toHaveBeenCalledWith(expect.objectContaining({ id: 'message-1' }));
     expect(onOpenReactionDetails).toHaveBeenCalledWith('message-1');
   });
 
