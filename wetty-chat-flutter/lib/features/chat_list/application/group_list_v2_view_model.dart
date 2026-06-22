@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:chahua/core/notifications/unread_badge_provider.dart';
 import 'package:chahua/features/shared/data/read_state_repository.dart';
 import '../model/chat_list_item.dart';
 import '../data/group_list_v2_repository.dart';
@@ -189,6 +190,7 @@ class GroupListV2ViewModel extends AsyncNotifier<GroupListV2ViewState> {
             messageId: lastMessageId,
             response: response,
           );
+      await ref.read(unreadBadgeProvider.notifier).refreshChatUnreadSummary();
       return;
     }
 
@@ -198,6 +200,7 @@ class GroupListV2ViewModel extends AsyncNotifier<GroupListV2ViewState> {
     ref
         .read(groupListV2StoreProvider.notifier)
         .applyServerReadState(chatId: chatId, response: response);
+    await ref.read(unreadBadgeProvider.notifier).refreshChatUnreadSummary();
   }
 
   Future<void> archiveGroup(ChatListItem group) async {

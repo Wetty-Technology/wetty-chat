@@ -427,7 +427,7 @@ class GroupListV2Store extends Notifier<GroupListV2StoreState> {
     );
     ref
         .read(unreadBadgeProvider.notifier)
-        .applyChatUnreadDelta(nextContribution - previousContribution);
+        .applyChatUnreadMessageDelta(nextContribution - previousContribution);
   }
 
   void _replaceState({

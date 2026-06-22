@@ -398,7 +398,10 @@ class _FakeThreadApiService extends ThreadApiService {
   @override
   Future<UnreadThreadCountResponseDto> fetchUnreadThreadCount() async {
     fetchUnreadCountCalls += 1;
-    return UnreadThreadCountResponseDto(unreadThreadCount: unreadCount);
+    return UnreadThreadCountResponseDto(
+      unreadThreadCount: unreadCount,
+      unreadMessageCount: unreadCount,
+    );
   }
 }
 

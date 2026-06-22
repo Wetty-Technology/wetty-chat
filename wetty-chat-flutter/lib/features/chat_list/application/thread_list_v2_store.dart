@@ -123,7 +123,7 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
       archived: location.archived,
       threads: _replaceThreadAt(listState.threads, location.index, updated),
     );
-    _applyThreadUnreadDelta(
+    _applyThreadUnreadMessageDelta(
       archived: location.archived,
       previous: previous,
       updated: updated,
@@ -180,7 +180,7 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
         updated,
       ),
     );
-    _applyThreadUnreadDelta(
+    _applyThreadUnreadMessageDelta(
       archived: location.archived,
       previous: previous,
       updated: updated,
@@ -351,7 +351,7 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
     return next;
   }
 
-  void _applyThreadUnreadDelta({
+  void _applyThreadUnreadMessageDelta({
     required bool archived,
     required ThreadListItem previous,
     required ThreadListItem updated,
@@ -366,9 +366,11 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
       _replaceState(
         unreadTotals: (
           activeThreadCount: totals.activeThreadCount,
-          archivedThreadCount: _clampUnread(totals.archivedThreadCount + delta),
+          archivedThreadCount: totals.archivedThreadCount,
           activeMessageCount: totals.activeMessageCount,
-          archivedMessageCount: totals.archivedMessageCount,
+          archivedMessageCount: _clampUnread(
+            totals.archivedMessageCount + delta,
+          ),
         ),
       );
       return;
@@ -376,13 +378,13 @@ class ThreadListV2Store extends Notifier<ThreadListV2StoreState> {
 
     _replaceState(
       unreadTotals: (
-        activeThreadCount: _clampUnread(totals.activeThreadCount + delta),
+        activeThreadCount: totals.activeThreadCount,
         archivedThreadCount: totals.archivedThreadCount,
-        activeMessageCount: totals.activeMessageCount,
+        activeMessageCount: _clampUnread(totals.activeMessageCount + delta),
         archivedMessageCount: totals.archivedMessageCount,
       ),
     );
-    ref.read(unreadBadgeProvider.notifier).applyThreadUnreadDelta(delta);
+    ref.read(unreadBadgeProvider.notifier).applyThreadUnreadMessageDelta(delta);
   }
 
   void _replaceListThreads({

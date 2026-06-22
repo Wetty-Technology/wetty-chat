@@ -34,7 +34,7 @@ class HomeShell extends ConsumerWidget {
       _HomeTabData(
         icon: CupertinoIcons.chat_bubble_2_fill,
         label: l10n.tabChats,
-        badgeCount: unreadState.combinedUnreadTotal,
+        badgeCount: unreadState.activeUnreadMessageCount,
       ),
       _HomeTabData(icon: CupertinoIcons.gear_alt_fill, label: l10n.tabSettings),
     ];

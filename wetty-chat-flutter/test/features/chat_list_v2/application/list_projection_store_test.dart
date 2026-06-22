@@ -118,7 +118,7 @@ void main() {
       container.read(threadListV2StoreProvider.notifier).replaceUnreadTotals((
         activeThreadCount: 4,
         archivedThreadCount: 0,
-        activeMessageCount: 0,
+        activeMessageCount: 4,
         archivedMessageCount: 0,
       ));
 
@@ -140,7 +140,8 @@ void main() {
       expect(shouldRefresh, isFalse);
       expect(thread.lastReply?.messageId, 202);
       expect(thread.unreadCount, 0);
-      expect(state.unreadTotals.activeThreadCount, 0);
+      expect(state.unreadTotals.activeThreadCount, 4);
+      expect(state.unreadTotals.activeMessageCount, 0);
       expect(container.read(unreadBadgeProvider).threadUnreadTotal, 0);
     });
 
@@ -153,7 +154,7 @@ void main() {
       container.read(threadListV2StoreProvider.notifier).replaceUnreadTotals((
         activeThreadCount: 1,
         archivedThreadCount: 0,
-        activeMessageCount: 0,
+        activeMessageCount: 1,
         archivedMessageCount: 0,
       ));
 
@@ -176,7 +177,8 @@ void main() {
       expect(thread.lastReply?.messageId, 203);
       expect(thread.replyCount, 3);
       expect(thread.unreadCount, 2);
-      expect(state.unreadTotals.activeThreadCount, 2);
+      expect(state.unreadTotals.activeThreadCount, 1);
+      expect(state.unreadTotals.activeMessageCount, 2);
       expect(container.read(unreadBadgeProvider).threadUnreadTotal, 1);
     });
 
@@ -204,10 +206,17 @@ void main() {
       container.read(threadListV2StoreProvider.notifier).replaceUnreadTotals((
         activeThreadCount: 4,
         archivedThreadCount: 0,
-        activeMessageCount: 0,
+        activeMessageCount: 4,
         archivedMessageCount: 0,
       ));
-      container.read(unreadBadgeProvider.notifier).replaceThreadUnreadTotal(4);
+      container
+          .read(unreadBadgeProvider.notifier)
+          .replaceThreadUnreadSummary(
+            const UnreadThreadCountResponseDto(
+              unreadThreadCount: 4,
+              unreadMessageCount: 4,
+            ),
+          );
 
       container
           .read(threadListV2StoreProvider.notifier)
@@ -218,7 +227,8 @@ void main() {
 
       final state = container.read(threadListV2StoreProvider);
       expect(state.active.threads.single.unreadCount, 1);
-      expect(state.unreadTotals.activeThreadCount, 1);
+      expect(state.unreadTotals.activeThreadCount, 4);
+      expect(state.unreadTotals.activeMessageCount, 1);
       expect(container.read(unreadBadgeProvider).threadUnreadTotal, 1);
     });
 
@@ -235,12 +245,19 @@ void main() {
         container.read(threadListV2StoreProvider.notifier).replaceUnreadTotals((
           activeThreadCount: 4,
           archivedThreadCount: 3,
-          activeMessageCount: 0,
-          archivedMessageCount: 0,
+          activeMessageCount: 4,
+          archivedMessageCount: 3,
         ));
         container
             .read(unreadBadgeProvider.notifier)
-            .replaceThreadUnreadTotal(4);
+            .replaceThreadUnreadSummary(
+              const UnreadThreadCountResponseDto(
+                unreadThreadCount: 4,
+                archivedUnreadThreadCount: 3,
+                unreadMessageCount: 4,
+                archivedUnreadMessageCount: 3,
+              ),
+            );
 
         container
             .read(threadListV2StoreProvider.notifier)
@@ -252,7 +269,8 @@ void main() {
         final state = container.read(threadListV2StoreProvider);
         expect(state.archived.threads.single.unreadCount, 1);
         expect(state.unreadTotals.activeThreadCount, 4);
-        expect(state.unreadTotals.archivedThreadCount, 1);
+        expect(state.unreadTotals.archivedThreadCount, 3);
+        expect(state.unreadTotals.archivedMessageCount, 1);
         expect(container.read(unreadBadgeProvider).threadUnreadTotal, 4);
       },
     );
@@ -322,7 +340,10 @@ class _FakeThreadApiService extends ThreadApiService {
 
   @override
   Future<UnreadThreadCountResponseDto> fetchUnreadThreadCount() async {
-    return UnreadThreadCountResponseDto(unreadThreadCount: unreadCount);
+    return UnreadThreadCountResponseDto(
+      unreadThreadCount: unreadCount,
+      unreadMessageCount: unreadCount,
+    );
   }
 }
 

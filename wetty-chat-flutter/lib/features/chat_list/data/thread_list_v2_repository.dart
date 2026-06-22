@@ -37,7 +37,7 @@ class ThreadListV2Repository {
     ));
     ref
         .read(unreadBadgeProvider.notifier)
-        .replaceThreadUnreadTotal(unreadResponse.unreadThreadCount);
+        .replaceThreadUnreadSummary(unreadResponse);
   }
 
   Future<void> probeArchivedThreads() async {

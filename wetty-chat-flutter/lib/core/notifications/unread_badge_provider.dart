@@ -48,8 +48,8 @@ class UnreadBadgeState {
 
   // TODO: Move existing callers to the explicit message/item count fields.
   int get chatUnreadTotal => chatUnreadMessageCount;
-  int get threadUnreadTotal => threadUnreadItemCount;
-  int get combinedUnreadTotal => chatUnreadTotal + threadUnreadTotal;
+  int get threadUnreadTotal => threadUnreadMessageCount;
+  int get combinedUnreadTotal => activeUnreadMessageCount;
 
   UnreadBadgeState copyWith({
     int? chatUnreadMessageCount,
@@ -186,7 +186,7 @@ class UnreadBadgeNotifier extends Notifier<UnreadBadgeState> {
     }
   }
 
-  Future<void> refreshChatUnreadTotal() async {
+  Future<void> refreshChatUnreadSummary() async {
     if (!ref.read(authSessionProvider).isAuthenticated) {
       return;
     }
@@ -209,14 +209,14 @@ class UnreadBadgeNotifier extends Notifier<UnreadBadgeState> {
       );
     } catch (error, stackTrace) {
       developer.log(
-        'Failed to refresh chat unread badge total: $error',
+        'Failed to refresh chat unread summary: $error',
         name: 'UnreadBadge',
         stackTrace: stackTrace,
       );
     }
   }
 
-  Future<void> refreshThreadUnreadTotal() async {
+  Future<void> refreshThreadUnreadSummary() async {
     if (!ref.read(authSessionProvider).isAuthenticated) {
       return;
     }
@@ -225,21 +225,10 @@ class UnreadBadgeNotifier extends Notifier<UnreadBadgeState> {
       if (_isDisposed) {
         return;
       }
-      _replaceState(
-        state.copyWith(
-          threadUnreadMessageCount: _clampUnread(result.unreadMessageCount),
-          archivedThreadUnreadMessageCount: _clampUnread(
-            result.archivedUnreadMessageCount,
-          ),
-          threadUnreadItemCount: _clampUnread(result.unreadThreadCount),
-          archivedThreadUnreadItemCount: _clampUnread(
-            result.archivedUnreadThreadCount,
-          ),
-        ),
-      );
+      replaceThreadUnreadSummary(result);
     } catch (error, stackTrace) {
       developer.log(
-        'Failed to refresh thread unread badge total: $error',
+        'Failed to refresh thread unread summary: $error',
         name: 'UnreadBadge',
         stackTrace: stackTrace,
       );
@@ -254,7 +243,7 @@ class UnreadBadgeNotifier extends Notifier<UnreadBadgeState> {
     _reconcileTimer = Timer(delay, () => unawaited(refresh()));
   }
 
-  void applyChatUnreadDelta(int delta) {
+  void applyChatUnreadMessageDelta(int delta) {
     if (delta == 0) {
       return;
     }
@@ -267,7 +256,7 @@ class UnreadBadgeNotifier extends Notifier<UnreadBadgeState> {
     );
   }
 
-  void applyThreadUnreadDelta(int delta) {
+  void applyThreadUnreadMessageDelta(int delta) {
     if (delta == 0) {
       return;
     }
@@ -276,16 +265,22 @@ class UnreadBadgeNotifier extends Notifier<UnreadBadgeState> {
         threadUnreadMessageCount: _clampUnread(
           state.threadUnreadMessageCount + delta,
         ),
-        threadUnreadItemCount: _clampUnread(
-          state.threadUnreadItemCount + delta,
-        ),
       ),
     );
   }
 
-  void replaceThreadUnreadTotal(int totalUnreadCount) {
+  void replaceThreadUnreadSummary(UnreadThreadCountResponseDto summary) {
     _replaceState(
-      state.copyWith(threadUnreadItemCount: _clampUnread(totalUnreadCount)),
+      state.copyWith(
+        threadUnreadMessageCount: _clampUnread(summary.unreadMessageCount),
+        archivedThreadUnreadMessageCount: _clampUnread(
+          summary.archivedUnreadMessageCount,
+        ),
+        threadUnreadItemCount: _clampUnread(summary.unreadThreadCount),
+        archivedThreadUnreadItemCount: _clampUnread(
+          summary.archivedUnreadThreadCount,
+        ),
+      ),
     );
   }
 

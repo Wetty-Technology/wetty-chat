@@ -30,7 +30,7 @@ class ChatInboxReconciler {
 
     await Future.wait([
       _refreshGroups(),
-      _ref.read(unreadBadgeProvider.notifier).refreshChatUnreadTotal(),
+      _ref.read(unreadBadgeProvider.notifier).refreshChatUnreadSummary(),
     ]);
   }
 
