@@ -47,7 +47,12 @@ export interface PendingBatch {
 export interface LayoutIntent {
   preserveHeightDelta?: number;
   scrollToBottom?: { behavior: ScrollBehavior };
-  scrollToMessageId?: { messageId: string; behavior: ScrollBehavior; align?: 'top' | 'bottom' };
+  scrollToMessageId?: {
+    messageId: string;
+    behavior: ScrollBehavior;
+    align?: 'top' | 'bottom' | 'custom';
+    offsetRatio?: number;
+  };
   scrollToKey?: { key: string; behavior: ScrollBehavior };
 }
 
@@ -63,12 +68,17 @@ export interface ScrollToBottomOptions {
 export interface VirtualScrollHandle {
   scrollToBottom: (options?: ScrollToBottomOptions) => void;
   scrollToItem: (key: string, behavior?: ScrollBehavior) => void;
-  scrollToMessageId: (messageId: string, behavior?: ScrollBehavior) => void;
+  scrollToMessageId: (
+    messageId: string,
+    behavior?: ScrollBehavior,
+    align?: 'top' | 'bottom' | 'custom',
+    offsetRatio?: number,
+  ) => void;
 }
 
 export type VirtualScrollAnchor =
   | { type: 'bottom'; token: number }
-  | { type: 'message'; messageId: string; token: number }
+  | { type: 'message'; messageId: string; token: number; align?: 'top' | 'bottom' | 'custom'; offsetRatio?: number }
   | { type: 'top'; token: number };
 
 export interface LoadController {
@@ -110,3 +120,5 @@ export const SCROLL_IDLE_MS = 200;
 export const AT_BOTTOM_THRESHOLD_PX = 30;
 export const EDGE_EPSILON_PX = 2;
 export const EDGE_REARM_PX = 24;
+
+export const DEFAULT_OFFSET_RATIO = 0.5;

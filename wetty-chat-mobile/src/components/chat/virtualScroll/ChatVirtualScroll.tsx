@@ -29,6 +29,7 @@ import {
   STAGING_BATCH_SIZE,
   WINDOW_CAP,
   WINDOW_OVERSCAN,
+  DEFAULT_OFFSET_RATIO,
 } from './types';
 import styles from './ChatVirtualScroll.module.scss';
 import { Trans } from '@lingui/react/macro';
@@ -159,7 +160,8 @@ export function ChatVirtualScroll({
   const initialAnchorConsumedRef = useRef(false);
   const pendingScrollBehaviorRef = useRef<ScrollBehavior>('auto');
   const pendingScrollToBottomRef = useRef(false);
-  const pendingScrollAlignRef = useRef<'top' | 'bottom'>('top');
+  const pendingScrollAlignRef = useRef<'top' | 'bottom' | 'custom'>('top');
+  const pendingScrollOffsetRatioRef = useRef<number>(DEFAULT_OFFSET_RATIO);
   const pendingScrollToBottomBehaviorRef = useRef<ScrollBehavior>('auto');
   const pendingScrollToBottomSourceRef = useRef<string | null>(null);
   const pendingPrependRestoreRef = useRef<{ key: string; offsetTop: number } | null>(null);
@@ -540,7 +542,12 @@ export function ChatVirtualScroll({
   }, []);
 
   const scrollToKeyInternal = useCallback(
-    (key: string, behavior: ScrollBehavior = 'auto', align: 'top' | 'bottom' = 'top') => {
+    (
+      key: string,
+      behavior: ScrollBehavior = 'auto',
+      align: 'top' | 'bottom' | 'custom' = 'top',
+      offsetRatio: number = DEFAULT_OFFSET_RATIO,
+    ) => {
       const container = containerRef.current;
       const row = rowRefsMap.current.get(key);
       if (!container || !row) {
@@ -555,7 +562,16 @@ export function ChatVirtualScroll({
       }
 
       const maxScroll = container.scrollHeight - container.clientHeight;
-      const rawTarget = align === 'bottom' ? row.offsetTop + row.offsetHeight - container.clientHeight : row.offsetTop;
+      let rawTarget: number;
+      if (align === 'bottom') {
+        rawTarget = row.offsetTop + row.offsetHeight - container.clientHeight;
+      } else if (align === 'custom') {
+        // Position row at offsetRatio (0=top, 0.5=center, 1=bottom) from top of viewport
+        const ratio = Math.max(0, Math.min(1, offsetRatio));
+        rawTarget = row.offsetTop - container.clientHeight * ratio;
+      } else {
+        rawTarget = row.offsetTop;
+      }
       const target = roundScrollValue(Math.max(0, Math.min(rawTarget, maxScroll)));
       if (behavior === 'auto' && !hasMeaningfulScrollDelta(container.scrollTop, target)) {
         return true;
@@ -1391,10 +1407,11 @@ export function ChatVirtualScroll({
           target.key,
           intent.scrollToMessageId.behavior,
           intent.scrollToMessageId.align ?? 'top',
+          intent.scrollToMessageId.offsetRatio,
         );
         if (scrolled && pendingScrollMessageIdRef.current === intent.scrollToMessageId.messageId) {
           pendingScrollMessageIdRef.current = null;
-          pendingScrollAlignRef.current = 'top';
+          pendingScrollAlignRef.current = intent.scrollToMessageId.align ?? 'top';
           if (
             initialAnchorRef.current.type === 'message' &&
             initialAnchorRef.current.messageId === intent.scrollToMessageId.messageId
@@ -1893,7 +1910,9 @@ export function ChatVirtualScroll({
       action: 'scrollToMessageId',
     });
     pendingScrollMessageIdRef.current = anchor.messageId;
-    pendingScrollAlignRef.current = 'bottom';
+    pendingScrollAlignRef.current = anchor.align ?? 'bottom';
+    pendingScrollOffsetRatioRef.current = anchor.offsetRatio ?? DEFAULT_OFFSET_RATIO;
+
     pendingScrollBehaviorRef.current = 'auto';
     updateMountedRange(capRange(mounted, rowKeys.length - 1));
     setPhaseState('READY');
@@ -1961,6 +1980,7 @@ export function ChatVirtualScroll({
             messageId: pendingScrollMessageIdRef.current,
             behavior: pendingScrollBehaviorRef.current,
             align: pendingScrollAlignRef.current,
+            offsetRatio: pendingScrollOffsetRatioRef.current,
           },
         };
       } else if (pendingScrollKeyRef.current) {
@@ -2037,6 +2057,7 @@ export function ChatVirtualScroll({
             messageId: pendingScrollMessageIdRef.current,
             behavior: pendingScrollBehaviorRef.current,
             align: pendingScrollAlignRef.current,
+            offsetRatio: pendingScrollOffsetRatioRef.current,
           },
         };
         triggerRender();
@@ -2173,7 +2194,12 @@ export function ChatVirtualScroll({
           enterRecentering(targetIndex);
         }
       },
-      scrollToMessageId: (messageId: string, behavior: ScrollBehavior = 'auto') => {
+      scrollToMessageId: (
+        messageId: string,
+        behavior: ScrollBehavior = 'auto',
+        align: 'top' | 'bottom' | 'custom' = 'top',
+        offsetRatio: number = DEFAULT_OFFSET_RATIO,
+      ) => {
         const target = resolveMessageTarget(messageId);
         if (!target) {
           logVirtualScroll('scroll-to-message-requested', {
@@ -2196,7 +2222,8 @@ export function ChatVirtualScroll({
         pendingScrollMessageIdRef.current = messageId;
         pendingScrollKeyRef.current = null;
         pendingScrollToBottomRef.current = false;
-        pendingScrollAlignRef.current = 'top';
+        pendingScrollAlignRef.current = align;
+        pendingScrollOffsetRatioRef.current = offsetRatio;
         pendingScrollToBottomBehaviorRef.current = 'auto';
         pendingScrollToBottomSourceRef.current = null;
         logVirtualScroll('scroll-to-message-requested', {
@@ -2212,7 +2239,7 @@ export function ChatVirtualScroll({
         });
 
         if (mounted && target.index >= mounted.start && target.index <= mounted.end) {
-          const scrolled = scrollToKeyInternal(target.key, resolvedBehavior);
+          const scrolled = scrollToKeyInternal(target.key, resolvedBehavior, align, offsetRatio);
           if (scrolled) {
             // Skip highlight when resuming the latest message — no jump is happening.
             if (target.index < rowKeys.length - 1) {

@@ -5,6 +5,7 @@ import { selectShowAllAvatars } from '@/store/settingsSlice';
 import { getMessages } from '@/api/messages';
 import { getThreadReadState } from '@/api/threads';
 import type { VirtualScrollAnchor, VirtualScrollHandle } from '@/components/chat/virtualScroll/types';
+import { DEFAULT_OFFSET_RATIO } from '@/components/chat/virtualScroll/types';
 import { useChatRows } from '@/components/chat/virtualScroll/useChatRows';
 import { useFloatingDateVisibility } from '@/hooks/useFloatingDate';
 import store from '@/store';
@@ -61,10 +62,33 @@ export function useConversationTimeline({
   const loadingNewerRef = useRef(false);
   const [initialAnchor, setInitialAnchor] = useState<VirtualScrollAnchor>(() => {
     if (initialResumeMessageId) {
-      return { type: 'message', messageId: initialResumeMessageId, token: 0 };
+      return { type: 'message', messageId: initialResumeMessageId, token: 0, align: 'top' };
+    }
+    if (!threadId && lastReadMessageId) {
+      return { type: 'message', messageId: lastReadMessageId, token: 0, align: 'top' };
     }
     return { type: threadId ? 'top' : 'bottom', token: 0 } as VirtualScrollAnchor;
   });
+
+  // Update initial anchor when lastReadMessageId loads asynchronously.
+  // This effect runs at most once (null → value), so cascading renders are not a concern.
+  useEffect(() => {
+    if (initialResumeMessageId) return;
+    if (threadId) return;
+    if (!lastReadMessageId) return;
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setInitialAnchor((current) => {
+      if (current.type !== 'bottom') return current;
+      return {
+        type: 'message',
+        messageId: lastReadMessageId,
+        token: current.token + 1,
+        align: 'top' as const,
+      };
+    });
+  }, [initialResumeMessageId, lastReadMessageId, threadId]);
+
   const [pendingResumeMessageId, setPendingResumeMessageId] = useState<string | null>(initialResumeMessageId);
   const [lastFullyVisibleMessageId, setLastFullyVisibleMessageId] = useState<string | null>(null);
   const [firstVisibleMessageId, setFirstVisibleMessageId] = useState<string | null>(null);
@@ -159,6 +183,9 @@ export function useConversationTimeline({
     [storeChatId],
   );
 
+  const getAnchorAlign = (anchor: VirtualScrollAnchor): 'top' | 'bottom' | 'custom' =>
+    anchor.type === 'message' ? (anchor.align ?? 'top') : 'top';
+
   useEffect(() => {
     previousFirstVisibleComparableIdRef.current = null;
     initialLoadCompletedRef.current = false;
@@ -185,11 +212,17 @@ export function useConversationTimeline({
           : 'bottom';
 
         setInitialAnchor((currentAnchor) => {
+          const align = getAnchorAlign(currentAnchor);
           if (effectiveAnchorType === 'message' && currentAnchor.type === 'message') {
-            return { type: 'message', messageId: currentAnchor.messageId, token: currentAnchor.token + 1 };
+            return {
+              type: 'message',
+              messageId: currentAnchor.messageId,
+              token: currentAnchor.token + 1,
+              align,
+            };
           }
           if (effectiveAnchorType === 'message' && resumeMessageId) {
-            return { type: 'message', messageId: resumeMessageId, token: currentAnchor.token + 1 };
+            return { type: 'message', messageId: resumeMessageId, token: currentAnchor.token + 1, align };
           }
           return { type: effectiveAnchorType, token: currentAnchor.token + 1 } as VirtualScrollAnchor;
         });
@@ -319,6 +352,7 @@ export function useConversationTimeline({
             type: 'message',
             messageId: pendingResumeMessageId,
             token: currentAnchor.token + 1,
+            align: 'top' as const,
           }));
           setPendingResumeMessageId(null);
         })
@@ -416,12 +450,17 @@ export function useConversationTimeline({
   }, [chatId, storeChatId, threadId, dispatch, showToast]);
 
   const jumpToMessage = useCallback(
-    (messageId: string, options?: { silent?: boolean }): Promise<boolean> => {
+    (
+      messageId: string,
+      options?: { silent?: boolean; align?: 'top' | 'bottom' | 'custom'; offsetRatio?: number },
+    ): Promise<boolean> => {
+      const align = options?.align ?? 'top';
+      const offsetRatio = options?.offsetRatio ?? DEFAULT_OFFSET_RATIO;
       const state = store.getState();
       const currentMessages = selectActiveTimelineMessages(state, storeChatId);
       const idx = currentMessages.findIndex((message) => message.id === messageId);
       if (idx !== -1) {
-        scrollApiRef.current?.scrollToMessageId(messageId, 'smooth');
+        scrollApiRef.current?.scrollToMessageId(messageId, 'smooth', align, offsetRatio);
         return Promise.resolve(true);
       }
 
@@ -462,6 +501,8 @@ export function useConversationTimeline({
             type: 'message',
             messageId,
             token: currentAnchor.token + 1,
+            align,
+            offsetRatio,
           }));
           return true;
         })
@@ -496,7 +537,7 @@ export function useConversationTimeline({
       lastReadMessageId != null && isMessageAtOrAfter(lastFullyVisibleMessageId, lastReadMessageId);
 
     if (hasUnreadReadBoundary && !alreadyAtReadBoundary) {
-      void jumpToMessage(lastReadMessageId, { silent: true }).then((found) => {
+      void jumpToMessage(lastReadMessageId, { silent: true, align: 'bottom' }).then((found) => {
         if (!found) {
           scrollToAbsoluteBottom();
         }
