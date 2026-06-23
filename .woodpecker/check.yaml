@@ -19,3 +19,5 @@ depends_on:
     optional: true
   - name: backend-check
     optional: true
+  - name: backend-base-image
+    optional: true

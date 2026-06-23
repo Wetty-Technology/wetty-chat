@@ -12,10 +12,10 @@ when:
       on_empty: false
 
 variables:
-  - image_prefix: &image_prefix ghcr.io/wetty-technology/wetty-chat-backend
-  - builder_repo: &builder_repo ghcr.io/wetty-technology/wetty-chat-backend-builder-base
+  - image_prefix: &image_prefix ghcr.io/chahua-im/chahua-backend
+  - builder_repo: &builder_repo ghcr.io/chahua-im/chahua-backend-builder-base
   - builder_tag: &builder_tag rust-1.95.0-trixie
-  - runtime_image: &runtime_image ghcr.io/wetty-technology/wetty-chat-backend-runtime-base:trixie
+  - runtime_image: &runtime_image ghcr.io/chahua-im/chahua-backend-runtime-base:trixie
 
 steps:
   - name: build and push
@@ -35,10 +35,11 @@ steps:
         BUILDER_BASE_REPOSITORY: *builder_repo
         BUILDER_BASE_TAG: *builder_tag
         RUNTIME_BASE_IMAGE: *runtime_image
-      cache_from:
-        - type=registry\,ref=ghcr.io/wetty-technology/wetty-chat-backend:buildcache
-      cache_to: type=registry\,ref=ghcr.io/wetty-technology/wetty-chat-backend:buildcache\,mode=max
       username:
         from_secret: ghcr_username
       password:
         from_secret: ghcr_token
+
+depends_on:
+  - name: backend-base-image
+    optional: true

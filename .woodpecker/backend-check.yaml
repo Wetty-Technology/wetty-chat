@@ -22,7 +22,7 @@ when:
 
 steps:
   - name: backend check
-    image: rust:1.95
+    image: ghcr.io/chahua-im/chahua-backend-builder-base:amd64-rust-1.95.0-trixie
     directory: backend
     commands:
       - curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C /usr/local/cargo/bin
@@ -32,3 +32,7 @@ steps:
       - cargo clippy --all-targets --all-features -- -D warnings
       - cargo check
       - cargo nextest run --profile ci
+
+depends_on:
+  - name: backend-base-image
+    optional: true
