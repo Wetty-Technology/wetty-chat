@@ -30,7 +30,17 @@ afterEach(() => {
     }
   });
   cacheStores.clear();
-  localStorage.clear();
-  sessionStorage.clear();
+  // happy-dom does not always expose `localStorage`/`sessionStorage` (e.g. when Node's
+  // experimental localStorage is unavailable). Guard so teardown never throws.
+  try {
+    localStorage.clear();
+  } catch {
+    /* localStorage unavailable in this env */
+  }
+  try {
+    sessionStorage.clear();
+  } catch {
+    /* sessionStorage unavailable in this env */
+  }
   vi.clearAllMocks();
 });

@@ -185,7 +185,7 @@ describe('useConversationTimeline', () => {
         },
       }),
     );
-    expect(state.timeline.initialAnchor).toEqual({ type: 'message', messageId: '20', token: 1 });
+    expect(state.timeline.initialAnchor).toEqual({ type: 'message', messageId: '20', token: 1, align: 'top' });
   });
 
   it('loads older messages from the current older anchor', async () => {
@@ -227,7 +227,7 @@ describe('useConversationTimeline', () => {
 
     await expect(state.timeline.jumpToMessage('10')).resolves.toBe(true);
 
-    expect(scrollToMessageId).toHaveBeenCalledWith('10', 'smooth');
+    expect(scrollToMessageId).toHaveBeenCalledWith('10', 'smooth', 'top', 0.5);
     expect(getMessages).not.toHaveBeenCalled();
   });
 });
