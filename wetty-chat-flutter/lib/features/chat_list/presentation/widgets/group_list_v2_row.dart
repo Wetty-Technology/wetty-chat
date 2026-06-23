@@ -45,7 +45,10 @@ class GroupListV2Row extends StatelessWidget {
         label: isUnread ? l10n.swipeActionMarkRead : l10n.swipeActionMarkUnread,
         onAction: () =>
             ref.read(provider.notifier).toggleGroupReadState(chatId: chat.id),
-        secondaryIcon: CupertinoIcons.archivebox,
+        secondaryIcon: switch (scope) {
+          ChatListV2Scope.active => CupertinoIcons.archivebox,
+          ChatListV2Scope.archived => CupertinoIcons.arrow_uturn_left,
+        },
         secondaryLabel: switch (scope) {
           ChatListV2Scope.active => l10n.swipeActionArchive,
           ChatListV2Scope.archived => l10n.swipeActionUnarchive,
@@ -53,6 +56,10 @@ class GroupListV2Row extends StatelessWidget {
         secondaryActionColor: switch (scope) {
           ChatListV2Scope.active => CupertinoColors.systemOrange,
           ChatListV2Scope.archived => CupertinoColors.systemGreen,
+        },
+        secondaryActionWidthSpace: switch (scope) {
+          ChatListV2Scope.active => null,
+          ChatListV2Scope.archived => 90,
         },
         secondaryOnAction: () => switch (scope) {
           ChatListV2Scope.active =>

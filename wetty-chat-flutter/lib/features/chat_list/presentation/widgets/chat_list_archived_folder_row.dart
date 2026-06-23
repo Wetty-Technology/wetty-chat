@@ -37,7 +37,7 @@ class ChatListArchivedFolderRow extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
-                    CupertinoIcons.archivebox,
+                    CupertinoIcons.folder,
                     color: CupertinoColors.systemGrey.resolveFrom(context),
                   ),
                 ),
@@ -78,28 +78,14 @@ class _ArchivedFolderText extends StatelessWidget {
   Widget build(BuildContext context) {
     final subtitle = this.subtitle;
     if (subtitle == null) {
-      return Text(
-        title,
-        style: appTextStyle(
-          context,
-          fontSize: AppFontSizes.body,
-          fontWeight: FontWeight.w600,
-        ),
-      );
+      return Text(title, style: appChatEntryTitleTextStyle(context));
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          title,
-          style: appTextStyle(
-            context,
-            fontSize: AppFontSizes.body,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        Text(title, style: appChatEntryTitleTextStyle(context)),
         const SizedBox(height: 2),
         Text(
           subtitle,
@@ -127,7 +113,7 @@ class _UnreadBadge extends StatelessWidget {
       margin: const EdgeInsets.only(left: 8),
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: CupertinoColors.systemRed,
+        color: CupertinoColors.systemGrey,
         borderRadius: BorderRadius.circular(10),
       ),
       constraints: const BoxConstraints(minWidth: 20),

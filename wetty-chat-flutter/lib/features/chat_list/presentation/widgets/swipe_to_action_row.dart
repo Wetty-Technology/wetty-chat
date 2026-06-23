@@ -15,11 +15,13 @@ class SwipeToActionRow extends StatelessWidget {
     required this.label,
     required this.onAction,
     this.actionColor,
+    this.actionWidthSpace,
     this.direction = SwipeToActionDirection.right,
     this.secondaryIcon,
     this.secondaryLabel,
     this.secondaryOnAction,
     this.secondaryActionColor,
+    this.secondaryActionWidthSpace,
     this.secondaryDirection,
   });
 
@@ -28,11 +30,13 @@ class SwipeToActionRow extends StatelessWidget {
   final String label;
   final FutureOr<void> Function() onAction;
   final Color? actionColor;
+  final double? actionWidthSpace;
   final SwipeToActionDirection direction;
   final IconData? secondaryIcon;
   final String? secondaryLabel;
   final FutureOr<void> Function()? secondaryOnAction;
   final Color? secondaryActionColor;
+  final double? secondaryActionWidthSpace;
   final SwipeToActionDirection? secondaryDirection;
 
   @override
@@ -42,6 +46,7 @@ class SwipeToActionRow extends StatelessWidget {
       label: label,
       onAction: onAction,
       color: actionColor ?? CupertinoColors.activeBlue,
+      widthSpace: actionWidthSpace,
     );
     final secondaryAction = switch ((
       secondaryIcon,
@@ -53,6 +58,7 @@ class SwipeToActionRow extends StatelessWidget {
         label: label,
         onAction: onAction,
         color: secondaryActionColor ?? CupertinoColors.activeBlue,
+        widthSpace: secondaryActionWidthSpace,
       ),
       _ => null,
     };
@@ -87,6 +93,7 @@ class SwipeToActionRow extends StatelessWidget {
     required String label,
     required FutureOr<void> Function() onAction,
     required Color color,
+    double? widthSpace,
   }) {
     return SwipeAction(
       performsFirstActionWithFullSwipe: true,
@@ -96,6 +103,7 @@ class SwipeToActionRow extends StatelessWidget {
         await onAction();
       },
       color: color,
+      widthSpace: widthSpace ?? 80,
       icon: Icon(icon, color: CupertinoColors.white),
       title: label,
       style: const TextStyle(color: CupertinoColors.white, fontSize: 12),

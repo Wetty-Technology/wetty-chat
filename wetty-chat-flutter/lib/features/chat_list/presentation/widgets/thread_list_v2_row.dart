@@ -30,7 +30,10 @@ class ThreadListV2Row extends StatelessWidget {
       builder: (context, ref, _) => SwipeToActionRow(
         key: ValueKey('thread-v2-${thread.chatId}-${thread.threadRootId}'),
         direction: SwipeToActionDirection.left,
-        icon: CupertinoIcons.archivebox,
+        icon: switch (scope) {
+          ChatListV2Scope.active => CupertinoIcons.archivebox,
+          ChatListV2Scope.archived => CupertinoIcons.arrow_uturn_left,
+        },
         label: switch (scope) {
           ChatListV2Scope.active => l10n.swipeActionArchive,
           ChatListV2Scope.archived => l10n.swipeActionUnarchive,
@@ -38,6 +41,10 @@ class ThreadListV2Row extends StatelessWidget {
         actionColor: switch (scope) {
           ChatListV2Scope.active => CupertinoColors.systemOrange,
           ChatListV2Scope.archived => CupertinoColors.systemGreen,
+        },
+        actionWidthSpace: switch (scope) {
+          ChatListV2Scope.active => null,
+          ChatListV2Scope.archived => 90,
         },
         onAction: () => switch (scope) {
           ChatListV2Scope.active =>
