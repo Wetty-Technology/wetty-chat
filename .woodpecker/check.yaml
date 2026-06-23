@@ -1,8 +1,12 @@
 when:
   - event: pull_request
-    branch: main
+    branch:
+      - main
+      - woodpecker
   - event: push
-    branch: main
+    branch:
+      - main
+      - woodpecker
 
 steps:
   - name: required checks

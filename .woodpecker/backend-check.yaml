@@ -1,6 +1,8 @@
 when:
   - event: pull_request
-    branch: main
+    branch:
+      - main
+      - woodpecker
     path:
       include:
         - backend/**
@@ -8,7 +10,9 @@ when:
         - .woodpecker/check.yaml
       on_empty: false
   - event: push
-    branch: main
+    branch:
+      - main
+      - woodpecker
     path:
       include:
         - backend/**
