@@ -10,6 +10,41 @@
 
   --ion-color-medium-contrast: #fff;
   --ion-color-medium-contrast-rgb: 255, 255, 255;
+
+  --scrollbar-width: 2px;
+  --scrollbar-thumb: var(--ion-color-medium, rgba(0, 0, 0, 0.3));
+  --scrollbar-radius: 1px;
+}
+
+*::-webkit-scrollbar {
+  width: var(--scrollbar-width);
+  height: var(--scrollbar-width);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: var(--scrollbar-radius);
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ion-content uses Shadow DOM — * selector doesn't penetrate */
+ion-content::part(scroll) {
+  &::-webkit-scrollbar {
+    width: var(--scrollbar-width);
+    height: var(--scrollbar-width);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: var(--scrollbar-radius);
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
 }
 
 .app-router-shell {
