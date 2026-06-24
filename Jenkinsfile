@@ -6,13 +6,54 @@ pipeline {
   }
 
   stages {
+    stage('Detect Changes') {
+      agent {
+        kubernetes {
+          defaultContainer 'git'
+          yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+    - name: git
+      image: alpine/git:2.47.2
+      command:
+        - cat
+      tty: true
+'''
+        }
+      }
+
+      steps {
+        script {
+          def changedFiles = sh(
+            returnStdout: true,
+            script: '''#!/bin/sh
+set -eu
+
+git config --global --add safe.directory "$PWD"
+
+if git rev-parse HEAD^ >/dev/null 2>&1; then
+  git diff --name-only HEAD^ HEAD
+else
+  git show --format= --name-only HEAD
+fi
+'''
+          ).trim().split('\\n').findAll { it }
+
+          env.PWA_CHECK_REQUIRED = changedFiles.any { path ->
+            path == 'Jenkinsfile' ||
+              path.startsWith('wetty-chat-mobile/')
+          }.toString()
+
+          echo "PWA check required: ${env.PWA_CHECK_REQUIRED}"
+        }
+      }
+    }
+
     stage('PWA Check') {
       when {
-        beforeAgent true
-        anyOf {
-          changeset 'Jenkinsfile'
-          changeset 'wetty-chat-mobile/**'
-        }
+        environment name: 'PWA_CHECK_REQUIRED', value: 'true'
       }
 
       agent {
