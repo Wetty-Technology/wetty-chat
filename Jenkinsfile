@@ -46,7 +46,13 @@ fi
               path.startsWith('wetty-chat-mobile/')
           }.toString()
 
+          env.BACKEND_CHECK_REQUIRED = changedFiles.any { path ->
+            path == 'Jenkinsfile' ||
+              path.startsWith('backend/')
+          }.toString()
+
           echo "PWA check required: ${env.PWA_CHECK_REQUIRED}"
+          echo "Backend check required: ${env.BACKEND_CHECK_REQUIRED}"
         }
       }
     }
@@ -155,6 +161,51 @@ npm run test:run
       post {
         always {
           junit allowEmptyResults: true, testResults: 'wetty-chat-mobile/test_output/report.xml'
+        }
+      }
+    }
+
+    stage('Backend Check') {
+      when {
+        environment name: 'BACKEND_CHECK_REQUIRED', value: 'true'
+      }
+
+      agent {
+        kubernetes {
+          defaultContainer 'rust'
+          yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+    - name: rust
+      image: ghcr.io/chahua-im/chahua-backend-builder-base:amd64-rust-1.95.0-trixie
+      command:
+        - cat
+      tty: true
+'''
+        }
+      }
+
+      steps {
+        dir('backend') {
+          sh '''#!/usr/bin/env bash
+set -euo pipefail
+
+curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C /usr/local/cargo/bin
+rustup component add rustfmt
+rustup component add clippy
+cargo fmt -- --check
+cargo clippy --all-targets --all-features -- -D warnings
+cargo check
+cargo nextest run --profile ci
+          '''
+        }
+      }
+
+      post {
+        always {
+          junit allowEmptyResults: true, testResults: 'backend/rust-test-report.xml'
         }
       }
     }
