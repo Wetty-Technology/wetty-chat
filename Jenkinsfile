@@ -3,59 +3,17 @@ pipeline {
 
   options {
     buildDiscarder(logRotator(numToKeepStr: '30'))
-    disableConcurrentBuilds(abortPrevious: true)
-    withChecks('wetty-chat / required-checks')
+    withChecks(name: 'wetty-chat / required-checks', includeStage: true)
   }
 
   stages {
-    stage('Detect Changes') {
-      agent {
-        kubernetes {
-          defaultContainer 'node'
-          yaml '''
-apiVersion: v1
-kind: Pod
-spec:
-  containers:
-    - name: node
-      image: node:22-bookworm
-      command:
-        - cat
-      tty: true
-'''
-        }
-      }
-
-      steps {
-        script {
-          def changedFiles = sh(
-            returnStdout: true,
-            script: '''#!/usr/bin/env bash
-set -euo pipefail
-
-git config --global --add safe.directory "$PWD"
-
-if git rev-parse HEAD^ >/dev/null 2>&1; then
-  git diff --name-only HEAD^ HEAD
-else
-  git show --format= --name-only HEAD
-fi
-'''
-          ).trim().split('\\n').findAll { it }
-
-          env.PWA_CHECK_REQUIRED = changedFiles.any { path ->
-            path == 'Jenkinsfile' ||
-              path.startsWith('wetty-chat-mobile/')
-          }.toString()
-
-          echo "PWA check required: ${env.PWA_CHECK_REQUIRED}"
-        }
-      }
-    }
-
     stage('PWA Check') {
       when {
-        environment name: 'PWA_CHECK_REQUIRED', value: 'true'
+        beforeAgent true
+        anyOf {
+          changeset 'Jenkinsfile'
+          changeset 'wetty-chat-mobile/**'
+        }
       }
 
       agent {
