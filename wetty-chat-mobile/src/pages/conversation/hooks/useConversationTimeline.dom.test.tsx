@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MessageResponse } from '@/api/messages';
 import { getMessages } from '@/api/messages';
 import { getThreadReadState } from '@/api/threads';
-import type { VirtualScrollHandle } from '@/components/chat/virtualScroll/types';
+import { DEFAULT_OFFSET_RATIO, type VirtualScrollHandle } from '@/components/chat/virtualScroll/types';
 import type { RootState } from '@/store';
 import { useConversationTimeline } from './useConversationTimeline';
 
@@ -185,7 +185,7 @@ describe('useConversationTimeline', () => {
         },
       }),
     );
-    expect(state.timeline.initialAnchor).toEqual({ type: 'message', messageId: '20', token: 1 });
+    expect(state.timeline.initialAnchor).toEqual({ type: 'message', messageId: '20', token: 1, align: 'top' });
   });
 
   it('loads older messages from the current older anchor', async () => {
@@ -227,7 +227,7 @@ describe('useConversationTimeline', () => {
 
     await expect(state.timeline.jumpToMessage('10')).resolves.toBe(true);
 
-    expect(scrollToMessageId).toHaveBeenCalledWith('10', 'smooth');
+    expect(scrollToMessageId).toHaveBeenCalledWith('10', 'smooth', 'top', DEFAULT_OFFSET_RATIO);
     expect(getMessages).not.toHaveBeenCalled();
   });
 });
