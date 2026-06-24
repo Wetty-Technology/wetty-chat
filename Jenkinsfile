@@ -57,15 +57,17 @@ fi
       }
     }
 
-    stage('PWA Check') {
-      when {
-        environment name: 'PWA_CHECK_REQUIRED', value: 'true'
-      }
+    stage('Run Applicable Checks') {
+      parallel {
+        stage('PWA Check') {
+          when {
+            environment name: 'PWA_CHECK_REQUIRED', value: 'true'
+          }
 
-      agent {
-        kubernetes {
-          defaultContainer 'node'
-          yaml '''
+          agent {
+            kubernetes {
+              defaultContainer 'node'
+              yaml '''
 apiVersion: v1
 kind: Pod
 spec:
@@ -76,104 +78,104 @@ spec:
         - cat
       tty: true
 '''
-        }
-      }
+            }
+          }
 
-      stages {
-        stage('Install Dependencies') {
-          steps {
-            dir('wetty-chat-mobile') {
-              sh '''#!/usr/bin/env bash
+          stages {
+            stage('Install Dependencies') {
+              steps {
+                dir('wetty-chat-mobile') {
+                  sh '''#!/usr/bin/env bash
 set -euo pipefail
 
 npm ci
-              '''
+                  '''
+                }
+              }
             }
-          }
-        }
 
-        stage('Run PWA Checks') {
-          parallel {
-            stage('Format') {
-              steps {
-                dir('wetty-chat-mobile') {
-                  sh '''#!/usr/bin/env bash
+            stage('Run PWA Checks') {
+              parallel {
+                stage('Format') {
+                  steps {
+                    dir('wetty-chat-mobile') {
+                      sh '''#!/usr/bin/env bash
 set -euo pipefail
 
 npm run format:ci
-                  '''
+                      '''
+                    }
+                  }
                 }
-              }
-            }
 
-            stage('Typecheck') {
-              steps {
-                dir('wetty-chat-mobile') {
-                  sh '''#!/usr/bin/env bash
+                stage('Typecheck') {
+                  steps {
+                    dir('wetty-chat-mobile') {
+                      sh '''#!/usr/bin/env bash
 set -euo pipefail
 
 npm run typecheck
-                  '''
+                      '''
+                    }
+                  }
                 }
-              }
-            }
 
-            stage('Lint') {
-              steps {
-                dir('wetty-chat-mobile') {
-                  sh '''#!/usr/bin/env bash
+                stage('Lint') {
+                  steps {
+                    dir('wetty-chat-mobile') {
+                      sh '''#!/usr/bin/env bash
 set -euo pipefail
 
 npm run lint
-                  '''
+                      '''
+                    }
+                  }
                 }
-              }
-            }
 
-            stage('Lingui') {
-              steps {
-                dir('wetty-chat-mobile') {
-                  sh '''#!/usr/bin/env bash
+                stage('Lingui') {
+                  steps {
+                    dir('wetty-chat-mobile') {
+                      sh '''#!/usr/bin/env bash
 set -euo pipefail
 
 npm run lingui:extract
 npm run lingui:compile
-                  '''
+                      '''
+                    }
+                  }
                 }
-              }
-            }
 
-            stage('Test') {
-              steps {
-                dir('wetty-chat-mobile') {
-                  sh '''#!/usr/bin/env bash
+                stage('Test') {
+                  steps {
+                    dir('wetty-chat-mobile') {
+                      sh '''#!/usr/bin/env bash
 set -euo pipefail
 
 npm run test:run
-                  '''
+                      '''
+                    }
+                  }
                 }
               }
             }
           }
+
+          post {
+            always {
+              junit allowEmptyResults: true, testResults: 'wetty-chat-mobile/test_output/report.xml'
+            }
+          }
         }
-      }
 
-      post {
-        always {
-          junit allowEmptyResults: true, testResults: 'wetty-chat-mobile/test_output/report.xml'
-        }
-      }
-    }
+        stage('Backend Check') {
+          when {
+            environment name: 'BACKEND_CHECK_REQUIRED', value: 'true'
+          }
 
-    stage('Backend Check') {
-      when {
-        environment name: 'BACKEND_CHECK_REQUIRED', value: 'true'
-      }
-
-      agent {
-        kubernetes {
-          defaultContainer 'rust'
-          yaml '''
+          agent {
+            kubernetes {
+              defaultContainer 'rust'
+              yaml '''
 apiVersion: v1
 kind: Pod
 spec:
@@ -184,12 +186,12 @@ spec:
         - cat
       tty: true
 '''
-        }
-      }
+            }
+          }
 
-      steps {
-        dir('backend') {
-          sh '''#!/usr/bin/env bash
+          steps {
+            dir('backend') {
+              sh '''#!/usr/bin/env bash
 set -euo pipefail
 
 curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C /usr/local/cargo/bin
@@ -197,15 +199,16 @@ rustup component add rustfmt
 rustup component add clippy
 cargo fmt -- --check
 cargo clippy --all-targets --all-features -- -D warnings
-cargo check
 cargo nextest run --profile ci
-          '''
-        }
-      }
+              '''
+            }
+          }
 
-      post {
-        always {
-          junit allowEmptyResults: true, testResults: 'backend/rust-test-report.xml'
+          post {
+            always {
+              junit allowEmptyResults: true, testResults: 'backend/rust-test-report.xml'
+            }
+          }
         }
       }
     }
