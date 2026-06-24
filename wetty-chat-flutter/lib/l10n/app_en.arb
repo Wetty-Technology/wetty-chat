@@ -256,6 +256,23 @@
   "copyMessageAction": "Copy",
   "@copyMessageAction": { "description": "Message action label for copying message text" },
 
+  "selectMessageAction": "Select",
+  "@selectMessageAction": { "description": "Message action label for selecting a message" },
+
+  "forwardMessagesAction": "Forward",
+  "@forwardMessagesAction": { "description": "Action label for forwarding selected messages" },
+
+  "forwardSelectedCount": "{count} selected",
+  "@forwardSelectedCount": {
+    "description": "Label showing the number of selected messages for forwarding",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+
   "edit": "Edit",
   "@edit": { "description": "Message action label for editing" },
 

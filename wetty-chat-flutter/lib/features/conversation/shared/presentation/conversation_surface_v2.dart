@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:chahua/app/theme/style_config.dart';
 import 'package:chahua/core/session/dev_session_store.dart';
 import 'package:chahua/features/shared/application/app_refresh_coordinator.dart';
+import 'package:chahua/features/conversation/compose/data/message_api_service_v2.dart';
 import 'package:chahua/features/conversation/compose/presentation/conversation_composer_view_model.dart';
 import 'package:chahua/features/conversation/pins/application/pinned_messages_provider.dart';
 import 'package:chahua/features/conversation/pins/domain/pinned_message.dart';
@@ -64,6 +65,9 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
   MessageVisibilityWindow? _visibleMessages;
   MessageVisibilityWindow? _pendingVisibilityWindow;
   bool _isVisibilityWindowUpdateScheduled = false;
+  final Set<int> _selectedForwardMessageIds = <int>{};
+
+  bool get _isForwardSelectionMode => _selectedForwardMessageIds.isNotEmpty;
 
   @override
   void initState() {
@@ -80,6 +84,7 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
     }
     _refreshCoordinator.unregisterConversationRecovery(oldWidget.identity);
     _visibleMessages = null;
+    _selectedForwardMessageIds.clear();
     _registerRecovery();
   }
 
@@ -167,6 +172,71 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
     setState(() {
       _activeOverlay = null;
     });
+  }
+
+  bool _canSelectForwardMessage(ConversationMessageV2 message) {
+    return message.serverMessageId != null &&
+        !message.isDeleted &&
+        message.content is! SystemMessageContent;
+  }
+
+  void _beginForwardSelection(ConversationMessageV2 message) {
+    final messageId = message.serverMessageId;
+    if (messageId == null || !_canSelectForwardMessage(message)) {
+      return;
+    }
+    setState(() {
+      _activeOverlay = null;
+      _selectedForwardMessageIds
+        ..clear()
+        ..add(messageId);
+    });
+  }
+
+  void _toggleForwardMessageSelection(ConversationMessageV2 message) {
+    final messageId = message.serverMessageId;
+    if (messageId == null || !_canSelectForwardMessage(message)) {
+      return;
+    }
+    setState(() {
+      if (!_selectedForwardMessageIds.remove(messageId)) {
+        _selectedForwardMessageIds.add(messageId);
+      }
+    });
+  }
+
+  void _clearForwardSelection() {
+    if (_selectedForwardMessageIds.isEmpty) {
+      return;
+    }
+    setState(() {
+      _selectedForwardMessageIds.clear();
+    });
+  }
+
+  Future<void> _forwardSelectedMessages() async {
+    final messageIds = _selectedForwardMessageIds.toList(growable: false);
+    if (messageIds.isEmpty) {
+      return;
+    }
+    try {
+      final response = await ref
+          .read(messageApiServiceV2Provider)
+          .forwardMessages(
+            destinationChatId: widget.identity.chatId,
+            messageIds: messageIds,
+          );
+      log('forward messages response: $response', name: 'ConversationForward');
+      if (!mounted) {
+        return;
+      }
+      _clearForwardSelection();
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      _showErrorDialog('$error');
+    }
   }
 
   void _handleMessageVisibilityChanged(MessageVisibilityWindow? window) {
@@ -371,6 +441,12 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
       conversationComposerViewModelProvider(widget.identity).notifier,
     );
     return <MessageOverlayActionV2>[
+      if (_canSelectForwardMessage(message))
+        MessageOverlayActionV2(
+          label: l10n.selectMessageAction,
+          icon: CupertinoIcons.checkmark_circle,
+          onPressed: () => _beginForwardSelection(message),
+        ),
       MessageOverlayActionV2(
         label: l10n.reply,
         icon: CupertinoIcons.reply,
@@ -492,6 +568,49 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
     return pins.last;
   }
 
+  Widget _buildForwardSelectionBar() {
+    final l10n = AppLocalizations.of(context)!;
+    final colors = context.appColors;
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.backgroundSecondary,
+        border: Border(
+          top: BorderSide(color: colors.separator),
+          bottom: BorderSide(color: colors.separator),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: SafeArea(
+        top: false,
+        bottom: false,
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                l10n.forwardSelectedCount(_selectedForwardMessageIds.length),
+                style: appBodyTextStyle(
+                  context,
+                  fontWeight: AppFontWeights.semibold,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            CupertinoButton(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              onPressed: _clearForwardSelection,
+              child: Text(l10n.cancel),
+            ),
+            CupertinoButton.filled(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              onPressed: () => unawaited(_forwardSelectedMessages()),
+              child: Text(l10n.forwardMessagesAction),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _openPinnedMessage(PinnedMessage pin) {
     final messageId = pin.messageId;
     if (messageId == null) {
@@ -585,9 +704,14 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
                       onMessageLongPress: _handleMessageLongPress,
                       onMessageVisibilityChanged:
                           _handleMessageVisibilityChanged,
+                      isForwardSelectionMode: _isForwardSelectionMode,
+                      selectedForwardMessageIds: _selectedForwardMessageIds,
+                      onToggleForwardMessageSelection:
+                          _toggleForwardMessageSelection,
                     ),
                   ),
                 ),
+                if (_isForwardSelectionMode) _buildForwardSelectionBar(),
                 ConversationComposeV2(
                   key: _composeKey,
                   identity: widget.identity,

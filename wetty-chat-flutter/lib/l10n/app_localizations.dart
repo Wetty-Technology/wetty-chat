@@ -609,6 +609,24 @@ abstract class AppLocalizations {
   /// **'Copy'**
   String get copyMessageAction;
 
+  /// Message action label for selecting a message
+  ///
+  /// In en, this message translates to:
+  /// **'Select'**
+  String get selectMessageAction;
+
+  /// Action label for forwarding selected messages
+  ///
+  /// In en, this message translates to:
+  /// **'Forward'**
+  String get forwardMessagesAction;
+
+  /// Label showing the number of selected messages for forwarding
+  ///
+  /// In en, this message translates to:
+  /// **'{count} selected'**
+  String forwardSelectedCount(int count);
+
   /// Message action label for editing
   ///
   /// In en, this message translates to:

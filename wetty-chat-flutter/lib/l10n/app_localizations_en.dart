@@ -267,6 +267,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get copyMessageAction => 'Copy';
 
   @override
+  String get selectMessageAction => 'Select';
+
+  @override
+  String get forwardMessagesAction => 'Forward';
+
+  @override
+  String forwardSelectedCount(int count) {
+    return '$count selected';
+  }
+
+  @override
   String get edit => 'Edit';
 
   @override

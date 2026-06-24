@@ -40,6 +40,9 @@ class MessageRowV2 extends StatefulWidget {
     this.onOpenAttachment,
     this.onOpenSticker,
     this.onFailedMessageAction,
+    this.isForwardSelectionMode = false,
+    this.isForwardSelected = false,
+    this.onToggleForwardSelected,
     this.showSenderName = true,
     this.showAvatar = true,
   });
@@ -54,6 +57,9 @@ class MessageRowV2 extends StatefulWidget {
   final ValueChanged<MessageAttachmentOpenRequest>? onOpenAttachment;
   final ValueChanged<String>? onOpenSticker;
   final ValueChanged<ConversationMessageV2>? onFailedMessageAction;
+  final bool isForwardSelectionMode;
+  final bool isForwardSelected;
+  final VoidCallback? onToggleForwardSelected;
   final bool showSenderName;
   final bool showAvatar;
 
@@ -135,6 +141,10 @@ class _MessageRowV2State extends State<MessageRowV2>
   }
 
   Color _resolveHighlightColor(BuildContext context, double progress) {
+    if (widget.isForwardSelected) {
+      final color = context.appColors.accentPrimary;
+      return color.withValues(alpha: color.a * 0.16);
+    }
     final highlight = _activeHighlight;
     if (highlight == null) {
       return CupertinoColors.transparent;
@@ -215,14 +225,20 @@ class _MessageRowV2State extends State<MessageRowV2>
             : null;
 
         return GestureDetector(
-          onLongPress: _isDesktopPlatform ? null : _handleLongPress,
-          onSecondaryTapUp: _isDesktopPlatform
-              ? (_) => _handleLongPress()
+          behavior: HitTestBehavior.translucent,
+          onTap: widget.isForwardSelectionMode
+              ? widget.onToggleForwardSelected
               : null,
+          onLongPress: widget.isForwardSelectionMode || _isDesktopPlatform
+              ? null
+              : _handleLongPress,
+          onSecondaryTapUp: widget.isForwardSelectionMode || !_isDesktopPlatform
+              ? null
+              : (_) => _handleLongPress(),
           child: Padding(
             padding: const EdgeInsets.only(bottom: _bottomSpacing),
             child: ReplySwipeActionV2(
-              enabled: _canReply,
+              enabled: !widget.isForwardSelectionMode && _canReply,
               onTriggered: widget.onReply,
               child: AnimatedBuilder(
                 animation: _highlightController,

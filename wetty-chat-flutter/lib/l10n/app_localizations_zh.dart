@@ -264,6 +264,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get copyMessageAction => '复制';
 
   @override
+  String get selectMessageAction => '选择';
+
+  @override
+  String get forwardMessagesAction => '转发';
+
+  @override
+  String forwardSelectedCount(int count) {
+    return '已选择 $count 条';
+  }
+
+  @override
   String get edit => '编辑';
 
   @override
@@ -777,6 +788,17 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get copyMessageAction => '複製';
+
+  @override
+  String get selectMessageAction => '選取';
+
+  @override
+  String get forwardMessagesAction => '轉發';
+
+  @override
+  String forwardSelectedCount(int count) {
+    return '已選取 $count 則';
+  }
 
   @override
   String get edit => '編輯';

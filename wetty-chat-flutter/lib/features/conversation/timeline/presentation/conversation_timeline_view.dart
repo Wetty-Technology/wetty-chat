@@ -52,6 +52,9 @@ class ConversationTimelineView extends ConsumerStatefulWidget {
     this.onStartThread,
     this.onMessageLongPress,
     this.onMessageVisibilityChanged,
+    this.isForwardSelectionMode = false,
+    this.selectedForwardMessageIds = const <int>{},
+    this.onToggleForwardMessageSelection,
   });
 
   final int chatId;
@@ -61,6 +64,9 @@ class ConversationTimelineView extends ConsumerStatefulWidget {
   final void Function(ConversationMessageV2 message)? onStartThread;
   final ValueChanged<MessageLongPressDetailsV2>? onMessageLongPress;
   final ValueChanged<MessageVisibilityWindow?>? onMessageVisibilityChanged;
+  final bool isForwardSelectionMode;
+  final Set<int> selectedForwardMessageIds;
+  final ValueChanged<ConversationMessageV2>? onToggleForwardMessageSelection;
 
   ConversationIdentity get _identity =>
       (chatId: chatId, threadRootId: threadRootId);
@@ -661,6 +667,7 @@ class _ConversationTimelineViewState
       itemCount: messages.length,
       itemBuilder: (context, index) {
         final message = messages[index];
+        final messageId = message.serverMessageId;
         final rowPresentation =
             rowPresentationByStableKey[message.stableKey] ??
             const (showSenderName: true, showAvatar: true);
@@ -673,6 +680,14 @@ class _ConversationTimelineViewState
                 : null,
             showSenderName: rowPresentation.showSenderName,
             showAvatar: rowPresentation.showAvatar,
+            isForwardSelectionMode: widget.isForwardSelectionMode,
+            isForwardSelected:
+                messageId != null &&
+                widget.selectedForwardMessageIds.contains(messageId),
+            onToggleForwardSelected:
+                widget.isForwardSelectionMode && messageId != null
+                ? () => widget.onToggleForwardMessageSelection?.call(message)
+                : null,
             onLongPress: _openMessageOverlay,
             onReply: () => ref
                 .read(
