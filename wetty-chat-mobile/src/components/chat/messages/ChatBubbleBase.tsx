@@ -400,7 +400,11 @@ export function ChatBubbleBase({
       {forwardedFrom && <ForwardedLabel name={forwardedFrom.sender.name} />}
       {forwardedFrom?.originalReplyTo && (
         <div className={styles.replyPreview}>
-          <div className={styles.replyPreviewName}>{forwardedFrom.originalReplyTo.sender.name ?? t`Unknown`}</div>
+          {forwardedFrom.originalReplyTo.forwardedFromName ? (
+            <ForwardedLabel name={forwardedFrom.originalReplyTo.forwardedFromName} />
+          ) : (
+            <div className={styles.replyPreviewName}>{forwardedFrom.originalReplyTo.sender.name ?? t`Unknown`}</div>
+          )}
           <div className={styles.replyPreviewText}>
             {formatMessagePreview(forwardedFrom.originalReplyTo, getNotificationPreviewLabels(locale))}
           </div>

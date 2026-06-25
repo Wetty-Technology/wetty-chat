@@ -79,6 +79,10 @@ export function StickerBubble({
         .join(' ')}
       style={bubbleStyle}
     >
+      {/* Intentional: forwarded stickers always render exactly like a normally
+          sent sticker — we deliberately do NOT show the inner forwarded reply
+          preview (forwardedFrom.originalReplyTo) here, unlike ChatBubbleBase.
+          A forwarded sticker should look identical to one you sent yourself. */}
       {forwardedFrom && <ForwardedLabel name={forwardedFrom.sender.name} />}
       {replyTo && (
         <div
