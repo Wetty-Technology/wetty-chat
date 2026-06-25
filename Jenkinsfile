@@ -81,19 +81,78 @@ spec:
             }
           }
 
-          steps {
-            dir('wetty-chat-mobile') {
-              sh '''#!/usr/bin/env bash
+          stages {
+            stage('Install Dependencies') {
+              steps {
+                dir('wetty-chat-mobile') {
+                  sh '''#!/usr/bin/env bash
 set -euo pipefail
 
 npm ci
+                  '''
+                }
+              }
+            }
+
+            stage('Format') {
+              steps {
+                dir('wetty-chat-mobile') {
+                  sh '''#!/usr/bin/env bash
+set -euo pipefail
+
 npm run format:ci
+                  '''
+                }
+              }
+            }
+
+            stage('Typecheck') {
+              steps {
+                dir('wetty-chat-mobile') {
+                  sh '''#!/usr/bin/env bash
+set -euo pipefail
+
 npm run typecheck
+                  '''
+                }
+              }
+            }
+
+            stage('Lint') {
+              steps {
+                dir('wetty-chat-mobile') {
+                  sh '''#!/usr/bin/env bash
+set -euo pipefail
+
 npm run lint
+                  '''
+                }
+              }
+            }
+
+            stage('Lingui') {
+              steps {
+                dir('wetty-chat-mobile') {
+                  sh '''#!/usr/bin/env bash
+set -euo pipefail
+
 npm run lingui:extract
 npm run lingui:compile
+                  '''
+                }
+              }
+            }
+
+            stage('Test') {
+              steps {
+                dir('wetty-chat-mobile') {
+                  sh '''#!/usr/bin/env bash
+set -euo pipefail
+
 npm run test:run
-              '''
+                  '''
+                }
+              }
             }
           }
 
@@ -126,18 +185,55 @@ spec:
             }
           }
 
-          steps {
-            dir('backend') {
-              sh '''#!/usr/bin/env bash
+          stages {
+            stage('Install Tools') {
+              steps {
+                dir('backend') {
+                  sh '''#!/usr/bin/env bash
 set -euo pipefail
 
 curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C /usr/local/cargo/bin
 rustup component add rustfmt
 rustup component add clippy
+                  '''
+                }
+              }
+            }
+
+            stage('Format') {
+              steps {
+                dir('backend') {
+                  sh '''#!/usr/bin/env bash
+set -euo pipefail
+
 cargo fmt -- --check
+                  '''
+                }
+              }
+            }
+
+            stage('Clippy') {
+              steps {
+                dir('backend') {
+                  sh '''#!/usr/bin/env bash
+set -euo pipefail
+
 cargo clippy --all-targets --all-features -- -D warnings
+                  '''
+                }
+              }
+            }
+
+            stage('Test') {
+              steps {
+                dir('backend') {
+                  sh '''#!/usr/bin/env bash
+set -euo pipefail
+
 cargo nextest run --profile ci
-              '''
+                  '''
+                }
+              }
             }
           }
 
