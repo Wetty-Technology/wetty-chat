@@ -128,7 +128,7 @@ rm -f chahua-staging.zip chahua-prod.zip
 
         stage('Trigger Staging Deploy') {
           steps {
-            build job: 'chahua/deploy/pwa-staging',
+            build job: 'chahua/deploy/pwa-staging-deploy',
               wait: false,
               parameters: [
                 [
