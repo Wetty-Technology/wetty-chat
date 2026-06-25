@@ -246,6 +246,135 @@ cargo nextest run --profile ci
             }
           }
         }
+
+        stage('Flutter') {
+          when {
+            anyOf {
+              changeset 'Jenkinsfile'
+              changeset 'wetty-chat-flutter/**'
+            }
+          }
+
+          agent {
+            kubernetes {
+              defaultContainer 'flutter'
+              yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+    - name: flutter
+      image: ghcr.io/cirruslabs/flutter:stable
+      command:
+        - cat
+      tty: true
+'''
+            }
+          }
+
+          stages {
+            stage('Install Tools') {
+              steps {
+                publishChecks name: 'checks / Flutter',
+                  title: 'Flutter',
+                  summary: 'Running Flutter checks',
+                  status: 'IN_PROGRESS',
+                  conclusion: 'NONE'
+
+                dir('wetty-chat-flutter') {
+                  sh '''#!/usr/bin/env bash
+set -euo pipefail
+
+flutter --version
+dart --version
+dart pub global activate junitreport
+                  '''
+                }
+              }
+            }
+
+            stage('Pub Get') {
+              steps {
+                dir('wetty-chat-flutter') {
+                  sh '''#!/usr/bin/env bash
+set -euo pipefail
+
+flutter pub get
+                  '''
+                }
+              }
+            }
+
+            stage('Format') {
+              steps {
+                dir('wetty-chat-flutter') {
+                  sh '''#!/usr/bin/env bash
+set -euo pipefail
+
+dart format --output=none --set-exit-if-changed .
+                  '''
+                }
+              }
+            }
+
+            stage('Analyze') {
+              steps {
+                dir('wetty-chat-flutter') {
+                  sh '''#!/usr/bin/env bash
+set -euo pipefail
+
+flutter analyze
+                  '''
+                }
+              }
+            }
+
+            stage('Test') {
+              steps {
+                dir('wetty-chat-flutter') {
+                  sh '''#!/usr/bin/env bash
+set -euo pipefail
+
+set +e
+flutter test --machine > test_results.jsonl
+test_status=$?
+set -e
+
+dart pub global run junitreport:tojunit \
+  --input test_results.jsonl \
+  --output flutter-test-report.xml
+
+exit "$test_status"
+                  '''
+                }
+              }
+            }
+          }
+
+          post {
+            failure {
+              publishChecks name: 'checks / Flutter',
+                title: 'Flutter',
+                summary: 'Flutter checks failed',
+                status: 'COMPLETED',
+                conclusion: 'FAILURE'
+            }
+
+            aborted {
+              publishChecks name: 'checks / Flutter',
+                title: 'Flutter',
+                summary: 'Flutter checks were aborted',
+                status: 'COMPLETED',
+                conclusion: 'CANCELED'
+            }
+
+            always {
+              junit allowEmptyResults: true,
+                checksName: 'checks / Flutter',
+                testResults: 'wetty-chat-flutter/flutter-test-report.xml'
+            }
+          }
+        }
       }
     }
   }
