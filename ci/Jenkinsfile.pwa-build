@@ -1,0 +1,132 @@
+pipeline {
+  agent none
+
+  options {
+    buildDiscarder(logRotator(numToKeepStr: '90'))
+  }
+
+  parameters {
+    string(name: 'GIT_COMMIT_SHA', defaultValue: '', description: 'Commit SHA that passed the main Jenkins checks.')
+  }
+
+  stages {
+    stage('Validate Input') {
+      steps {
+        script {
+          if (!params.GIT_COMMIT_SHA?.trim()) {
+            error('GIT_COMMIT_SHA is required')
+          }
+        }
+      }
+    }
+
+    stage('Build PWA Artifacts') {
+      agent {
+        kubernetes {
+          defaultContainer 'node'
+          yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+    - name: node
+      image: node:22-bookworm
+      command:
+        - cat
+      tty: true
+'''
+        }
+      }
+
+      stages {
+        stage('Checkout') {
+          steps {
+            checkout([
+              $class: 'GitSCM',
+              branches: [[name: params.GIT_COMMIT_SHA]],
+              userRemoteConfigs: [[
+                credentialsId: 'github-app',
+                refspec: '+refs/heads/*:refs/remotes/origin/*',
+                url: 'https://github.com/chahua-im/chahua.git'
+              ]]
+            ])
+          }
+        }
+
+        stage('Install Dependencies') {
+          steps {
+            dir('wetty-chat-mobile') {
+              sh '''#!/usr/bin/env bash
+set -euo pipefail
+
+npm ci
+
+if ! command -v zip >/dev/null; then
+  apt-get update
+  apt-get install -y --no-install-recommends zip
+fi
+              '''
+            }
+          }
+        }
+
+        stage('Build') {
+          parallel {
+            stage('Staging') {
+              steps {
+                dir('wetty-chat-mobile') {
+                  sh '''#!/usr/bin/env bash
+set -euo pipefail
+
+export CI_BUILD_VERSION="${BUILD_NUMBER}"
+npx vite build -c vite.config.staging.ts --mode development
+                  '''
+                }
+              }
+            }
+
+            stage('Prod') {
+              steps {
+                dir('wetty-chat-mobile') {
+                  sh '''#!/usr/bin/env bash
+set -euo pipefail
+
+export CI_BUILD_VERSION="${BUILD_NUMBER}"
+npx vite build --base=/ --outDir prod-dist -c vite.config.prod.ts
+                  '''
+                }
+              }
+            }
+          }
+        }
+
+        stage('Archive') {
+          steps {
+            dir('wetty-chat-mobile') {
+              sh '''#!/usr/bin/env bash
+set -euo pipefail
+
+rm -f chahua-staging.zip chahua-prod.zip
+(cd dist && zip -qr ../chahua-staging.zip .)
+(cd prod-dist && zip -qr ../chahua-prod.zip .)
+              '''
+            }
+
+            script {
+              writeFile file: 'pwa-artifact-metadata.json',
+                text: """{
+  "buildNumber": "${env.BUILD_NUMBER}",
+  "commitSha": "${params.GIT_COMMIT_SHA}"
+}
+"""
+            }
+
+            archiveArtifacts artifacts: 'wetty-chat-mobile/chahua-staging.zip, wetty-chat-mobile/chahua-prod.zip, pwa-artifact-metadata.json',
+              fingerprint: true,
+              onlyIfSuccessful: true
+          }
+        }
+      }
+    }
+  }
+}
