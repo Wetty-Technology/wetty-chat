@@ -134,7 +134,7 @@ rm -f chahua-staging.zip chahua-prod.zip
                 [
                   $class: 'RunParameterValue',
                   name: 'PWA_BUILD',
-                  runId: "${env.JENKINS_URL}job/chahua/job/chahua-pwa-build/${env.BUILD_NUMBER}/"
+                  runId: "chahua/chahua-pwa-build#${env.BUILD_NUMBER}"
                 ]
               ]
           }
