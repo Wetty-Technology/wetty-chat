@@ -63,6 +63,7 @@ spec:
             sh '''#!/usr/bin/env sh
 set -eu
 
+git config --global --add safe.directory "$WORKSPACE"
 git rev-parse --verify origin/main
 git merge-base --is-ancestor HEAD origin/main
             '''
