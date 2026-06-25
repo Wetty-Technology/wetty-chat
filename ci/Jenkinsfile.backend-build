@@ -1,0 +1,140 @@
+pipeline {
+  agent none
+
+  options {
+    buildDiscarder(logRotator(numToKeepStr: '90'))
+  }
+
+  parameters {
+    string(name: 'GIT_COMMIT_SHA', defaultValue: '', description: 'Commit SHA that passed the main Jenkins checks.')
+  }
+
+  environment {
+    BUILDKIT_HOST = 'tcp://buildkit.jenkins.svc.cluster.local:1234'
+    IMAGE_PREFIX = 'ghcr.io/chahua-im/chahua-backend'
+    BUILDER_TAG = 'rust-1.95.0-trixie'
+    RUNTIME_TAG = 'trixie'
+  }
+
+  stages {
+    stage('Validate Input') {
+      steps {
+        script {
+          env.BACKEND_BUILD_REF = params.GIT_COMMIT_SHA?.trim() ?: 'origin/main'
+        }
+      }
+    }
+
+    stage('Build Backend Image') {
+      agent {
+        kubernetes {
+          defaultContainer 'docker'
+          yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+    - name: docker
+      image: docker:27-cli
+      command:
+        - cat
+      tty: true
+'''
+        }
+      }
+
+      stages {
+        stage('Checkout') {
+          steps {
+            checkout([
+              $class: 'GitSCM',
+              branches: [[name: env.BACKEND_BUILD_REF]],
+              userRemoteConfigs: [[
+                credentialsId: 'github-app',
+                refspec: '+refs/heads/*:refs/remotes/origin/*',
+                url: 'https://github.com/chahua-im/chahua.git'
+              ]]
+            ])
+          }
+        }
+
+        stage('Validate Main Commit') {
+          steps {
+            sh '''#!/usr/bin/env sh
+set -eu
+
+git rev-parse --verify origin/main
+git merge-base --is-ancestor HEAD origin/main
+            '''
+          }
+        }
+
+        stage('Configure Buildx') {
+          steps {
+            sh '''#!/usr/bin/env sh
+set -eu
+
+docker buildx create \
+  --name chahua-builder \
+  --driver remote \
+  "$BUILDKIT_HOST" \
+  --use || docker buildx use chahua-builder
+
+docker buildx inspect --bootstrap
+            '''
+          }
+        }
+
+        stage('Login to GHCR') {
+          steps {
+            withCredentials([usernamePassword(credentialsId: 'ghcr', usernameVariable: 'GHCR_USERNAME', passwordVariable: 'GHCR_TOKEN')]) {
+              sh '''#!/usr/bin/env sh
+set -eu
+
+printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+              '''
+            }
+          }
+        }
+
+        stage('Build and Push') {
+          steps {
+            dir('backend') {
+              sh '''#!/usr/bin/env sh
+set -eu
+
+COMMIT_TAG="$(git rev-parse HEAD)"
+BUILDER_REPO="${IMAGE_PREFIX}-builder-base"
+RUNTIME_IMAGE="${IMAGE_PREFIX}-runtime-base:${RUNTIME_TAG}"
+
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  -f Dockerfile \
+  --build-arg BUILDER_BASE_REPOSITORY="${BUILDER_REPO}" \
+  --build-arg BUILDER_BASE_TAG="${BUILDER_TAG}" \
+  --build-arg RUNTIME_BASE_IMAGE="${RUNTIME_IMAGE}" \
+  --cache-from "type=registry,ref=${IMAGE_PREFIX}:buildcache" \
+  --cache-to "type=registry,ref=${IMAGE_PREFIX}:buildcache,mode=max" \
+  -t "${IMAGE_PREFIX}:${BUILD_NUMBER}" \
+  -t "${IMAGE_PREFIX}:${COMMIT_TAG}" \
+  --provenance=false \
+  --push \
+  .
+              '''
+            }
+          }
+        }
+      }
+
+      post {
+        always {
+          sh '''#!/usr/bin/env sh
+set -eu
+
+docker logout ghcr.io || true
+          '''
+        }
+      }
+    }
+  }
+}

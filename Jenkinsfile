@@ -401,5 +401,29 @@ exit "$test_status"
           ]
       }
     }
+
+    stage('Trigger Backend Image Build') {
+      when {
+        allOf {
+          not {
+            changeRequest()
+          }
+          branch 'main'
+          anyOf {
+            changeset 'ci/Jenkinsfile.backend-build'
+            changeset 'Jenkinsfile'
+            changeset 'backend/**'
+          }
+        }
+      }
+
+      steps {
+        build job: 'chahua/chahua-backend-build',
+          wait: false,
+          parameters: [
+            string(name: 'GIT_COMMIT_SHA', value: env.GIT_COMMIT)
+          ]
+      }
+    }
   }
 }
