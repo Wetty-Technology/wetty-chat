@@ -81,82 +81,19 @@ spec:
             }
           }
 
-          stages {
-            stage('Install Dependencies') {
-              steps {
-                dir('wetty-chat-mobile') {
-                  sh '''#!/usr/bin/env bash
+          steps {
+            dir('wetty-chat-mobile') {
+              sh '''#!/usr/bin/env bash
 set -euo pipefail
 
 npm ci
-                  '''
-                }
-              }
-            }
-
-            stage('Run PWA Checks') {
-              parallel {
-                stage('Format') {
-                  steps {
-                    dir('wetty-chat-mobile') {
-                      sh '''#!/usr/bin/env bash
-set -euo pipefail
-
 npm run format:ci
-                      '''
-                    }
-                  }
-                }
-
-                stage('Typecheck') {
-                  steps {
-                    dir('wetty-chat-mobile') {
-                      sh '''#!/usr/bin/env bash
-set -euo pipefail
-
 npm run typecheck
-                      '''
-                    }
-                  }
-                }
-
-                stage('Lint') {
-                  steps {
-                    dir('wetty-chat-mobile') {
-                      sh '''#!/usr/bin/env bash
-set -euo pipefail
-
 npm run lint
-                      '''
-                    }
-                  }
-                }
-
-                stage('Lingui') {
-                  steps {
-                    dir('wetty-chat-mobile') {
-                      sh '''#!/usr/bin/env bash
-set -euo pipefail
-
 npm run lingui:extract
 npm run lingui:compile
-                      '''
-                    }
-                  }
-                }
-
-                stage('Test') {
-                  steps {
-                    dir('wetty-chat-mobile') {
-                      sh '''#!/usr/bin/env bash
-set -euo pipefail
-
 npm run test:run
-                      '''
-                    }
-                  }
-                }
-              }
+              '''
             }
           }
 
