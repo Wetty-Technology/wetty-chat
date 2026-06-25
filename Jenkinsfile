@@ -249,30 +249,4 @@ cargo nextest run --profile ci
       }
     }
   }
-
-  post {
-    success {
-      publishChecks name: 'required-checks',
-        title: 'Required Checks',
-        summary: 'All applicable checks passed',
-        status: 'COMPLETED',
-        conclusion: 'SUCCESS'
-    }
-
-    failure {
-      publishChecks name: 'required-checks',
-        title: 'Required Checks',
-        summary: 'One or more applicable checks failed',
-        status: 'COMPLETED',
-        conclusion: 'FAILURE'
-    }
-
-    aborted {
-      publishChecks name: 'required-checks',
-        title: 'Required Checks',
-        summary: 'Build was aborted',
-        status: 'COMPLETED',
-        conclusion: 'CANCELED'
-    }
-  }
 }
