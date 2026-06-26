@@ -262,6 +262,9 @@
   "forwardMessagesAction": "Forward",
   "@forwardMessagesAction": { "description": "Action label for forwarding selected messages" },
 
+  "forwardCurrentChatLabel": "Current chat",
+  "@forwardCurrentChatLabel": { "description": "Label for the disabled current chat row in the forward destination picker" },
+
   "forwardSelectedCount": "{count} selected",
   "@forwardSelectedCount": {
     "description": "Label showing the number of selected messages for forwarding",

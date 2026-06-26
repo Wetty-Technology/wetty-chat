@@ -10,6 +10,7 @@ import 'package:chahua/core/session/dev_session_store.dart';
 import 'package:chahua/features/shared/application/app_refresh_coordinator.dart';
 import 'package:chahua/features/conversation/compose/data/message_api_service_v2.dart';
 import 'package:chahua/features/conversation/compose/presentation/conversation_composer_view_model.dart';
+import 'package:chahua/features/conversation/forwarding/presentation/forward_destination_picker.dart';
 import 'package:chahua/features/conversation/pins/application/pinned_messages_provider.dart';
 import 'package:chahua/features/conversation/pins/domain/pinned_message.dart';
 import 'package:chahua/features/conversation/pins/presentation/pinned_message_banner.dart';
@@ -214,7 +215,10 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
     });
   }
 
-  Future<void> _forwardSelectedMessages() async {
+  Future<void> _forwardSelectedMessages({
+    required int destinationChatId,
+    bool closePickerOnSuccess = false,
+  }) async {
     final messageIds = _selectedForwardMessageIds.toList(growable: false);
     if (messageIds.isEmpty) {
       return;
@@ -224,12 +228,15 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
           .read(messageApiServiceV2Provider)
           .forwardMessages(
             sourceChatId: widget.identity.chatId,
-            destinationChatId: widget.identity.chatId,
+            destinationChatId: destinationChatId,
             messageIds: messageIds,
           );
       log('forward messages response: $response', name: 'ConversationForward');
       if (!mounted) {
         return;
+      }
+      if (closePickerOnSuccess) {
+        Navigator.pop(context);
       }
       _clearForwardSelection();
     } catch (error) {
@@ -238,6 +245,24 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
       }
       _showErrorDialog('$error');
     }
+  }
+
+  void _openForwardDestinationPicker() {
+    if (_selectedForwardMessageIds.isEmpty) {
+      return;
+    }
+    showCupertinoModalPopup<void>(
+      context: context,
+      builder: (context) => ForwardDestinationPicker(
+        sourceChatId: widget.identity.chatId,
+        onForward: (destinationChatId) => unawaited(
+          _forwardSelectedMessages(
+            destinationChatId: destinationChatId,
+            closePickerOnSuccess: true,
+          ),
+        ),
+      ),
+    );
   }
 
   void _handleMessageVisibilityChanged(MessageVisibilityWindow? window) {
@@ -603,7 +628,7 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
             ),
             CupertinoButton.filled(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              onPressed: () => unawaited(_forwardSelectedMessages()),
+              onPressed: _openForwardDestinationPicker,
               child: Text(l10n.forwardMessagesAction),
             ),
           ],

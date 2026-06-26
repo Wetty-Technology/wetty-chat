@@ -1,0 +1,46 @@
+import 'package:chahua/features/chat_list/model/chat_list_item.dart';
+import 'package:chahua/features/conversation/forwarding/presentation/forward_destination_picker.dart';
+import 'package:chahua/l10n/app_localizations.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  testWidgets(
+    'current chat is disabled and another group can be forwarded to',
+    (tester) async {
+      int? forwardedChatId;
+
+      await tester.pumpWidget(
+        CupertinoApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: CupertinoPageScaffold(
+            child: ForwardDestinationPickerContent(
+              sourceChatId: 1,
+              groups: const [
+                ChatListItem(id: '1', name: 'Current group'),
+                ChatListItem(id: '2', name: 'Project group'),
+              ],
+              onForward: (chatId) {
+                forwardedChatId = chatId;
+              },
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Current chat'), findsOneWidget);
+
+      await tester.tap(find.text('Current group'));
+      await tester.tap(find.widgetWithText(CupertinoButton, 'Forward').last);
+
+      expect(forwardedChatId, isNull);
+
+      await tester.tap(find.text('Project group'));
+      await tester.pump();
+      await tester.tap(find.widgetWithText(CupertinoButton, 'Forward').last);
+
+      expect(forwardedChatId, 2);
+    },
+  );
+}

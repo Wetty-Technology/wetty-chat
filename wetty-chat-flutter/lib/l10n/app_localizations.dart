@@ -621,6 +621,12 @@ abstract class AppLocalizations {
   /// **'Forward'**
   String get forwardMessagesAction;
 
+  /// Label for the disabled current chat row in the forward destination picker
+  ///
+  /// In en, this message translates to:
+  /// **'Current chat'**
+  String get forwardCurrentChatLabel;
+
   /// Label showing the number of selected messages for forwarding
   ///
   /// In en, this message translates to:

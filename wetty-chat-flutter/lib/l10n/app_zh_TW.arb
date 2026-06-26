@@ -93,6 +93,7 @@
   "copyMessageAction": "複製",
   "selectMessageAction": "選取",
   "forwardMessagesAction": "轉發",
+  "forwardCurrentChatLabel": "目前聊天",
   "forwardSelectedCount": "已選取 {count} 則",
   "edit": "編輯",
   "delete": "刪除",

@@ -273,6 +273,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get forwardMessagesAction => 'Forward';
 
   @override
+  String get forwardCurrentChatLabel => 'Current chat';
+
+  @override
   String forwardSelectedCount(int count) {
     return '$count selected';
   }
