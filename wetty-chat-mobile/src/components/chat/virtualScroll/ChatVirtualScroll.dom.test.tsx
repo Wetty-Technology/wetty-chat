@@ -93,14 +93,15 @@ function rows(count: number): ChatRow[] {
   return Array.from({ length: count }, (_, index) => {
     const id = String(index + 1);
     return {
-      type: 'message',
-      key: `msg:${id}`,
-      messageId: id,
-      clientGeneratedId: `client-${id}`,
-      message: message(id),
+      type: 'group',
+      key: `grp:${id}`,
+      messages: [message(id)],
+      firstMessageId: id,
+      lastMessageId: id,
+      isSystem: false,
       showName: true,
-      showAvatar: true,
-    };
+      useStickyAvatar: true,
+    } satisfies ChatRow;
   });
 }
 
@@ -113,9 +114,9 @@ function renderVirtualScroll(
     <ChatVirtualScroll
       rows={nextRows}
       renderRow={(row) =>
-        row.type === 'message' ? (
-          <div data-testid={row.key} data-row-index={Number(row.messageId) - 1}>
-            {row.message.message}
+        row.type === 'group' ? (
+          <div data-testid={row.key} data-row-index={Number(row.firstMessageId) - 1}>
+            {row.messages[0].message}
           </div>
         ) : (
           <div data-testid={row.key}>{row.dateLabel}</div>
@@ -244,7 +245,7 @@ describe('ChatVirtualScroll realtime appends', () => {
     await flushLayout();
     currentViewportHeight = VIEWPORT_HEIGHT;
     await flushLayout(8);
-    expect(host.querySelector('[data-testid="msg:40"]')).not.toBeNull();
+    expect(host.querySelector('[data-testid="grp:40"]')).not.toBeNull();
 
     await act(async () => {
       scrollContainer!.scrollTop = 24 * ROW_HEIGHT;

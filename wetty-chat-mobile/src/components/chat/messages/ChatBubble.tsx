@@ -1,5 +1,6 @@
-import { useRef, useState } from 'react';
+import { useContext, useEffect, useRef, useState } from 'react';
 import styles from './ChatBubble.module.scss';
+import { SenderSwipeContext } from './SenderSwipeContext';
 import { ChatBubbleBase, type ChatBubbleBaseProps } from './ChatBubbleBase';
 import { StickerBubble, type StickerBubbleProps } from './StickerBubble';
 import { InviteBubble, type InviteBubbleProps } from './InviteBubble';
@@ -14,6 +15,10 @@ const LONG_PRESS_DELAY_MS = 350;
 type ChatBubbleInteractionProps = {
   swipeDirection?: 'left' | 'right';
   onLongPress?: (rect: DOMRect, interactionPos?: { x: number; y: number }) => void;
+  /** True for the last message in a SenderGroup — only it reports its swipe to the
+   *  group so the floating avatar can follow. Non-last messages never move the
+   *  shared avatar. */
+  isLastInGroup?: boolean;
 };
 
 type StickerChatBubbleProps = StickerBubbleProps &
@@ -84,10 +89,29 @@ function renderInnerBubble(props: ChatBubbleProps, bubbleRef: React.RefObject<HT
 }
 
 export function ChatBubble(props: ChatBubbleProps) {
-  const { swipeDirection = 'left', onLongPress, onReply } = props;
+  const { swipeDirection = 'left', onLongPress, onReply, isLastInGroup } = props;
   const swipeSign = swipeDirection === 'left' ? -1 : 1;
+  const swipeCtx = useContext(SenderSwipeContext);
+
   const [offset, setOffset] = useState(0);
   const [animating, setAnimating] = useState(false);
+
+  // Report this bubble's live swipe offset to the SenderGroup so the floating
+  // avatar can mirror it — but only for the last message in the group. The group
+  // applies the transform directly to the avatar DOM node (no React state), so
+  // this stays 60fps even for large groups. When the context is null (search /
+  // read-only / showAllAvatars inline mode) this is a no-op.
+  useEffect(() => {
+    if (!isLastInGroup || !swipeCtx) return;
+    swipeCtx.reportSwipe(offset * swipeSign, animating);
+  }, [offset, animating, isLastInGroup, swipeCtx, swipeSign]);
+
+  // On unmount, release the avatar so it doesn't keep a stale transform.
+  useEffect(() => {
+    return () => {
+      if (isLastInGroup && swipeCtx) swipeCtx.reportSwipe(0, false);
+    };
+  }, [isLastInGroup, swipeCtx]);
   const startX = useRef(0);
   const startY = useRef(0);
   const swiping = useRef(false);

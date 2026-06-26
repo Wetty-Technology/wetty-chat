@@ -4,12 +4,11 @@ import {
   getMessageLayoutStats,
   parseChatBubbleContentToRichItems,
 } from '@/utils/chatTextMeasure';
+import type { MessageResponse } from '@/api/messages';
 import type { ChatRow } from './types';
 
-export function estimateRowHeight(row: ChatRow, chatFontSizeStyle: string): number {
-  if (row.type === 'date') return 32;
-
-  const { message } = row;
+/** Estimate the rendered height of a single message's bubble row. */
+function estimateMessageHeight(message: MessageResponse, chatFontSizeStyle: string): number {
   if (message.isDeleted) return 48;
 
   let estimate = message.attachments?.length || message.sticker ? 220 : 76;
@@ -33,4 +32,14 @@ export function estimateRowHeight(row: ChatRow, chatFontSizeStyle: string): numb
   }
 
   return Math.min(estimate, 3000);
+}
+
+export function estimateRowHeight(row: ChatRow, chatFontSizeStyle: string): number {
+  if (row.type === 'date') return 32;
+
+  // Group rows: sum the estimated height of each message in the group. Each
+  // message is its own bubble row inside the SenderGroup, so the group's height
+  // is the sum of its members (plus small inter-bubble margins absorbed by the
+  // per-message estimate).
+  return row.messages.reduce((sum, message) => sum + estimateMessageHeight(message, chatFontSizeStyle), 0);
 }

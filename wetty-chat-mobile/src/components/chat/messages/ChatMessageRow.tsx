@@ -5,13 +5,17 @@ import { InviteMessageModal } from '@/components/invites/InviteMessageModal';
 import { ChatBubble } from './ChatBubble';
 import { type BubblePropsOverride } from './ChatBubbleBase';
 import { MessageDateSeparator } from './MessageDateSeparator';
+import { SenderGroup } from './SenderGroup';
 import { SystemMessage } from './SystemMessage';
+import { isInviteMessage, isStickerMessage } from './messageTypePredicates';
 import type { ChatRow } from '../virtualScroll/types';
 
-interface ChatMessageRowProps {
-  row: ChatRow;
-  currentUserId: number | string | null;
-  threadId?: string;
+/**
+ * Message-interaction callbacks shared by ChatMessageRow and MessageBubble.
+ * Declared once so a callback signature change propagates to both call sites
+ * via the type system instead of two parallel declarations.
+ */
+export interface ChatMessageHandlers {
   onReply: (message: MessageResponse) => void;
   onJumpToReply: (messageId: string) => void;
   onLongPress: (message: MessageResponse, rect: DOMRect, interactionPos?: { x: number; y: number }) => void;
@@ -21,18 +25,11 @@ interface ChatMessageRowProps {
   onStickerTap?: (stickerId: string) => void;
 }
 
-function isSystemMessage(message: MessageResponse): boolean {
-  return message.messageType === 'system';
+interface ChatMessageRowProps extends ChatMessageHandlers {
+  row: ChatRow;
+  currentUserId: number | string | null;
+  threadId?: string;
 }
-
-function isInviteMessage(message: MessageResponse): boolean {
-  return message.messageType === 'invite';
-}
-
-function isStickerMessage(message: MessageResponse): boolean {
-  return message.messageType === 'sticker';
-}
-
 export function ChatMessageRow({
   row,
   currentUserId,
@@ -45,33 +42,107 @@ export function ChatMessageRow({
   onReactionToggle,
   onStickerTap,
 }: ChatMessageRowProps) {
-  const [inviteCode, setInviteCode] = useState<string | null>(null);
-
   if (row.type === 'date') {
     return <MessageDateSeparator label={row.dateLabel} />;
   }
 
-  const msg = row.message;
-  const replyToMessage = msg.replyToMessage;
-  if (isSystemMessage(msg)) {
+  const { messages, useStickyAvatar, showName, isSystem } = row;
+
+  // System message groups render without an avatar container.
+  if (isSystem) {
+    const msg = messages[0];
     return <SystemMessage senderName={msg.sender.name} message={msg.isDeleted ? t`[Deleted]` : (msg.message ?? '')} />;
   }
 
+  const isSent = messages[0].sender.uid === currentUserId;
+
+  return (
+    <SenderGroup
+      useStickyAvatar={useStickyAvatar}
+      isSent={isSent}
+      sender={messages[0].sender}
+      onAvatarClick={onAvatarClick}
+    >
+      {messages.map((msg, index) => (
+        <MessageBubble
+          key={msg.clientGeneratedId || msg.id}
+          msg={msg}
+          index={index}
+          isSent={isSent}
+          useStickyAvatar={useStickyAvatar}
+          showName={showName}
+          threadId={threadId}
+          currentUserId={currentUserId}
+          onReply={onReply}
+          onJumpToReply={onJumpToReply}
+          onLongPress={onLongPress}
+          onAvatarClick={onAvatarClick}
+          onThreadClick={onThreadClick}
+          onReactionToggle={onReactionToggle}
+          onStickerTap={onStickerTap}
+          isLastInGroup={index === messages.length - 1}
+        />
+      ))}
+    </SenderGroup>
+  );
+}
+
+interface MessageBubbleProps extends ChatMessageHandlers {
+  msg: MessageResponse;
+  index: number;
+  isSent: boolean;
+  useStickyAvatar: boolean;
+  isLastInGroup: boolean;
+  showName: boolean;
+  threadId?: string;
+  currentUserId: number | string | null;
+}
+
+function MessageBubble({
+  msg,
+  index,
+  isSent,
+  useStickyAvatar,
+  isLastInGroup,
+  showName,
+  threadId,
+  currentUserId,
+  onReply,
+  onJumpToReply,
+  onLongPress,
+  onAvatarClick,
+  onThreadClick,
+  onReactionToggle,
+  onStickerTap,
+}: MessageBubbleProps) {
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
+
+  const replyToMessage = msg.replyToMessage;
+
+  // Sticky avatar (group-level, handled by SenderGroup) vs inline avatar
+  // (per-message, shown when showAllAvatars is on) are one concept's two
+  // polarities; derive the local render flag from the single upstream value.
+  const showInlineAvatar = !useStickyAvatar;
+
+  // Only the group's first bubble shows the sender name.
+  const showNameOnBubble = showName && index === 0;
+
   const sharedBubbleProps = {
     senderName: msg.sender.name ?? `User ${msg.sender.uid}`,
-    isSent: msg.sender.uid === currentUserId,
+    isSent,
     avatarUrl: msg.sender.avatarUrl ?? undefined,
     onReply: () => onReply(msg),
     onReplyTap: replyToMessage && !replyToMessage.isDeleted ? () => onJumpToReply(replyToMessage.id) : undefined,
     onLongPress: (rect: DOMRect, interactionPos?: { x: number; y: number }) => onLongPress(msg, rect, interactionPos),
-    showAvatar: row.showAvatar,
+    showAvatar: showInlineAvatar,
     timestamp: msg.createdAt,
     edited: msg.isEdited,
     threadInfo: !threadId ? msg.threadInfo : undefined,
     onThreadClick: () => onThreadClick(msg),
     onAvatarClick: () => onAvatarClick(msg.sender),
+    isLastInGroup,
     isConfirmed: !msg.id.startsWith('cg_'),
-    bubbleProps: { 'data-message-id': msg.id } as BubblePropsOverride,
+    bubbleProps: { 'data-message-id': msg.id, 'data-bubble-row': '' } as BubblePropsOverride,
     replyTo: replyToMessage
       ? {
           senderName: replyToMessage.sender.name ?? `User ${replyToMessage.sender.uid}`,
@@ -88,7 +159,7 @@ export function ChatMessageRow({
           {...sharedBubbleProps}
           messageType="invite"
           inviteCode={code}
-          showName={row.showName}
+          showName={showNameOnBubble}
           onOpen={() => setInviteCode(code)}
         />
         <InviteMessageModal inviteCode={inviteCode} onDismiss={() => setInviteCode(null)} />
@@ -115,7 +186,7 @@ export function ChatMessageRow({
       senderGender={msg.sender.gender}
       senderGroup={msg.sender.userGroup}
       message={msg.isDeleted ? t`[Deleted]` : (msg.message ?? '')}
-      showName={row.showName}
+      showName={showNameOnBubble}
       attachments={msg.attachments}
       reactions={msg.reactions}
       onReactionToggle={(emoji, currentlyReacted) => onReactionToggle(msg, emoji, currentlyReacted)}

@@ -1,3 +1,4 @@
+import { forwardRef } from 'react';
 import { IonIcon } from '@ionic/react';
 import { personCircle } from 'ionicons/icons';
 import styles from './UserAvatar.module.scss';
@@ -26,15 +27,15 @@ function colorForUser(name: string): string {
   return `hsl(${hue}, 55%, 50%)`;
 }
 
-export function UserAvatar({
-  name,
-  avatarUrl,
-  size = 36,
-  fallback = 'initials',
-  className,
-  style,
-  onClick,
-}: UserAvatarProps) {
+/**
+ * The avatar's root element is the div carrying `styles.avatar`; the forwarded
+ * ref targets that div so callers (e.g. SenderGroup's sticky avatar) can mutate
+ * its style directly (transform during swipe) without triggering React re-renders.
+ */
+export const UserAvatar = forwardRef<HTMLDivElement, UserAvatarProps>(function UserAvatar(
+  { name, avatarUrl, size = 36, fallback = 'initials', className, style, onClick },
+  ref,
+) {
   const base: React.CSSProperties = {
     width: size,
     height: size,
@@ -44,7 +45,7 @@ export function UserAvatar({
 
   if (avatarUrl) {
     return (
-      <div className={classes} style={base} onClick={onClick}>
+      <div ref={ref} className={classes} style={base} onClick={onClick}>
         <img src={avatarUrl} alt="" className={styles.image} />
       </div>
     );
@@ -53,6 +54,7 @@ export function UserAvatar({
   if (fallback === 'icon') {
     return (
       <div
+        ref={ref}
         className={`${classes} ${styles.iconFallback}`}
         style={{
           ...base,
@@ -67,6 +69,7 @@ export function UserAvatar({
 
   return (
     <div
+      ref={ref}
       className={`${classes} ${styles.fallback}`}
       style={{
         ...base,
@@ -78,4 +81,4 @@ export function UserAvatar({
       {getInitials(name)}
     </div>
   );
-}
+});
