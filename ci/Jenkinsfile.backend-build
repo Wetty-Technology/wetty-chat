@@ -39,6 +39,11 @@ spec:
   containers:
     - name: docker
       image: docker:27-cli
+      env:
+        - name: HOME
+          value: /home/jenkins/agent
+        - name: DOCKER_CONFIG
+          value: /home/jenkins/agent/.docker
       command:
         - cat
       tty: true
