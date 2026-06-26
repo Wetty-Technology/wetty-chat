@@ -1,10 +1,11 @@
 import type { Ref } from 'react';
 import { IonIcon } from '@ionic/react';
-import { arrowUndo, chatbubbles, checkmarkCircle, checkmarkCircleOutline } from 'ionicons/icons';
+import { chatbubbles, checkmarkCircle, checkmarkCircleOutline } from 'ionicons/icons';
 import { t } from '@lingui/core/macro';
 import { StickerImage } from '@/components/shared/StickerImage';
 import { useSelector } from 'react-redux';
 import styles from './ChatBubble.module.scss';
+import { HoverReplyButton } from './HoverReplyButton';
 import { formatMessagePreview, type PreviewMessage, getNotificationPreviewLabels } from '@/utils/messagePreview';
 import { selectEffectiveLocale } from '@/store/settingsSlice';
 import { UserAvatar } from '@/components/UserAvatar';
@@ -131,11 +132,7 @@ export function StickerBubble({
         <div className={styles.avatarSpacer} />
       )}
       {bubble}
-      {interactive && onReply && (
-        <button className={styles.hoverReplyBtn} onClick={onReply} aria-label={t`Reply`}>
-          <IonIcon icon={arrowUndo} />
-        </button>
-      )}
+      <HoverReplyButton interactive={interactive} onReply={onReply} />
     </div>
   );
 }
