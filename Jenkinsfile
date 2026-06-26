@@ -25,15 +25,7 @@ spec:
       }
 
       steps {
-        checkout([
-          $class: 'GitSCM',
-          branches: [[name: env.GIT_COMMIT ?: "origin/${env.BRANCH_NAME}"]],
-          userRemoteConfigs: [[
-            credentialsId: 'github-app',
-            refspec: '+refs/heads/*:refs/remotes/origin/* +refs/pull/*/head:refs/remotes/origin/PR-*',
-            url: 'https://github.com/chahua-im/chahua.git'
-          ]]
-        ])
+        checkout scm
 
         script {
           def readChangedFiles = { String mode, String baseRef ->
@@ -48,6 +40,7 @@ base_ref="$(cat .ci-diff-base)"
 
 case "$mode" in
   pr)
+    git fetch --no-tags origin "+refs/heads/${base_ref}:refs/remotes/origin/${base_ref}"
     git diff --name-only "origin/${base_ref}...HEAD" > .ci-changed-files
     ;;
   branch)
