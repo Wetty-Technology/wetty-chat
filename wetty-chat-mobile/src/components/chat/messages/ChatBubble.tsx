@@ -1,6 +1,4 @@
 import { useRef, useState } from 'react';
-import { IonIcon } from '@ionic/react';
-import { arrowUndo } from 'ionicons/icons';
 import styles from './ChatBubble.module.scss';
 import { ChatBubbleBase, type ChatBubbleBaseProps } from './ChatBubbleBase';
 import { StickerBubble, type StickerBubbleProps } from './StickerBubble';
@@ -9,6 +7,9 @@ import { InviteBubble, type InviteBubbleProps } from './InviteBubble';
 const SWIPE_THRESHOLD = 60;
 const SWIPE_MAX = 80;
 const LONG_PRESS_DELAY_MS = 350;
+
+// Progress ring geometry: circle r=13 within a 36x36 viewBox.
+// const REPLY_RING_CIRCUMFERENCE = 2 * Math.PI * 13; // disabled: progress ring hidden
 
 type ChatBubbleInteractionProps = {
   swipeDirection?: 'left' | 'right';
@@ -94,6 +95,15 @@ export function ChatBubble(props: ChatBubbleProps) {
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
 
+  // Ripple feedback: replays an expanding pulse each time the swipe first
+  // crosses the release threshold. rippleKey forces the element to remount so
+  // the CSS animation restarts on every crossing.
+  // const [rippleKey, setRippleKey] = useState(0); // disabled: ripple pulse hidden
+  const reachedThreshold = useRef(false);
+  // Burst feedback: the reply icon briefly expands then snaps back when the
+  // progress ring fills, as if it launched the ripple outward.
+  const [bursting, setBursting] = useState(false);
+
   function clearLongPress() {
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
@@ -145,6 +155,17 @@ export function ChatBubble(props: ChatBubbleProps) {
       swiping.current = true;
       setOffset(clamped);
     }
+
+    // Fire the ripple once, on the rising edge of crossing the threshold.
+    if (clamped >= SWIPE_THRESHOLD) {
+      if (!reachedThreshold.current) {
+        reachedThreshold.current = true;
+        // setRippleKey((k) => k + 1); // disabled: ripple pulse hidden
+        setBursting(true);
+      }
+    } else {
+      reachedThreshold.current = false;
+    }
   }
 
   function onTouchEnd() {
@@ -168,29 +189,82 @@ export function ChatBubble(props: ChatBubbleProps) {
   }
 
   const progress = Math.min(offset / SWIPE_THRESHOLD, 1);
+  // Fill only starts after 50% of the threshold — maps progress [0.5,1] → [0,1]
+  const fillProgress = Math.max(0, progress * 2 - 1);
 
   return (
-    <div className={styles.swipeContainer}>
+    <div className={styles.swipeRoot}>
       <div
-        className={styles.replyIcon}
+        className={`${styles.replyIcon}${bursting ? ` ${styles.replyIconBurst}` : ''}`}
         style={{
           opacity: progress,
           transform: `scale(${0.5 + progress * 0.5})`,
           [swipeDirection === 'left' ? 'right' : 'left']: 16,
         }}
+        onAnimationEnd={() => setBursting(false)}
       >
-        <IonIcon icon={arrowUndo} />
+        <svg className={styles.replyProgressRing} viewBox="0 0 36 36" aria-hidden="true">
+          {/* Progress ring (backdrop / track / fill) — disabled, keep code for re-enabling
+          {progress < 1 && (
+            <>
+              <circle className={styles.replyProgressBackdrop} cx="18" cy="18" r="13" />
+              <circle className={styles.replyProgressTrack} cx="18" cy="18" r="13" />
+              <circle
+                className={styles.replyProgressFill}
+                cx="18"
+                cy="18"
+                r="13"
+                style={{
+                  strokeDasharray: REPLY_RING_CIRCUMFERENCE,
+                  strokeDashoffset: REPLY_RING_CIRCUMFERENCE * (1 - progress),
+                }}
+              />
+            </>
+          )}
+          */}
+          {/* Ripple pulse — disabled, keep code for re-enabling
+          {rippleKey > 0 && <circle key={rippleKey} className={styles.replyProgressRipple} cx="18" cy="18" r="13" />}
+          */}
+          {/* Reply arrow icon — exact arrowUndoOutline path, scaled to 36×36 viewBox */}
+          <g transform="translate(7, 7) scale(0.044) rotate(90, 256, 256)">
+            {/* Outline layer — always visible */}
+            <path
+              d="M240 424v-96c116.4 0 159.39 33.76 208 96 0-119.23-39.57-240-208-240V88L64 256Z"
+              stroke="currentColor"
+              fill="none"
+              strokeWidth="35"
+              strokeLinejoin="round"
+            />
+            {/* Filled layer — clipped by progress */}
+            <g
+              style={{
+                clipPath:
+                  swipeDirection === 'left'
+                    ? `inset(0 0 0 ${(1 - fillProgress) * 100}%)`
+                    : `inset(0 ${(1 - fillProgress) * 100}% 0 0)`,
+              }}
+            >
+              <path
+                d="M240 424v-96c116.4 0 159.39 33.76 208 96 0-119.23-39.57-240-208-240V88L64 256Z"
+                fill="currentColor"
+                stroke="none"
+              />
+            </g>
+          </g>
+        </svg>
       </div>
-      <div
-        className={`${styles.swipeContent} ${animating ? styles.snapBack : ''}`}
-        style={{ transform: `translateX(${offset * swipeSign}px)` }}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-        onContextMenu={handleContextMenu}
-        onTransitionEnd={() => setAnimating(false)}
-      >
-        {renderInnerBubble(props, bubbleRef)}
+      <div className={styles.swipeContainer}>
+        <div
+          className={`${styles.swipeContent} ${animating ? styles.snapBack : ''}`}
+          style={{ transform: `translateX(${offset * swipeSign}px)` }}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          onContextMenu={handleContextMenu}
+          onTransitionEnd={() => setAnimating(false)}
+        >
+          {renderInnerBubble(props, bubbleRef)}
+        </div>
       </div>
     </div>
   );

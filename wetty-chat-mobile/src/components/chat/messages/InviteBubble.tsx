@@ -1,11 +1,12 @@
 import type { Ref } from 'react';
 import { IonIcon } from '@ionic/react';
-import { arrowUndo, chatbubbles } from 'ionicons/icons';
+import { chatbubbles } from 'ionicons/icons';
 import { t } from '@lingui/core/macro';
 import type { User } from '@/api/messages';
 import { useMouseDetected } from '@/hooks/platformHooks';
 import { InviteMessageCard } from './InviteMessageCard';
 import styles from './ChatBubble.module.scss';
+import { HoverReplyButton } from './HoverReplyButton';
 import type { BubblePropsOverride } from './ChatBubbleBase';
 
 export interface InviteBubbleProps {
@@ -88,11 +89,7 @@ export function InviteBubble({
   return (
     <div className={`${styles.chatRow} ${isSent ? styles.sent : styles.received}`}>
       {bubble}
-      {interactive && onReply && (
-        <button className={styles.hoverReplyBtn} onClick={onReply} aria-label={t`Reply`}>
-          <IonIcon icon={arrowUndo} />
-        </button>
-      )}
+      <HoverReplyButton interactive={interactive} onReply={onReply} />
     </div>
   );
 }

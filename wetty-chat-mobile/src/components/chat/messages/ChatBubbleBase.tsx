@@ -1,7 +1,6 @@
 import { useMemo, useState, type CSSProperties, type HTMLAttributes, type Ref } from 'react';
 import { IonIcon } from '@ionic/react';
 import {
-  arrowUndo,
   chatbubbles,
   checkmarkCircle,
   checkmarkCircleOutline,
@@ -12,6 +11,7 @@ import {
 import { t } from '@lingui/core/macro';
 import { useSelector } from 'react-redux';
 import styles from './ChatBubble.module.scss';
+import { HoverReplyButton } from './HoverReplyButton';
 import reactionStyles from './ReactionPill.module.scss';
 import { formatTime } from '@/utils/formatTime';
 import type { Attachment, MentionInfo, ReactionSummary, UserGroupTagInfo } from '@/api/messages';
@@ -528,11 +528,7 @@ export function ChatBubbleBase({
               <div className={styles.avatarSpacer} />
             )}
             {bubble}
-            {interactive && onReply && (
-              <button className={styles.hoverReplyBtn} onClick={onReply} aria-label={t`Reply`}>
-                <IonIcon icon={arrowUndo} />
-              </button>
-            )}
+            <HoverReplyButton interactive={interactive} onReply={onReply} />
           </div>
           {reactionsContent}
         </div>
