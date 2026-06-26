@@ -3,7 +3,7 @@ import type { MessageResponse } from '@/api/messages';
 import type { ChatRow } from './types';
 import { estimateRowHeight } from './rowHeightEstimator';
 
-type MessageChatRow = Extract<ChatRow, { type: 'message' }>;
+type GroupChatRow = Extract<ChatRow, { type: 'group' }>;
 
 function baseMessage(): MessageResponse {
   return {
@@ -22,47 +22,59 @@ function baseMessage(): MessageResponse {
   };
 }
 
-function messageRow(overrides: Partial<MessageChatRow> = {}): MessageChatRow {
+function groupRow(messages: MessageResponse[]): GroupChatRow {
   return {
-    type: 'message',
-    key: 'msg:1',
-    messageId: '1',
-    clientGeneratedId: 'client-1',
+    type: 'group',
+    key: `grp:${messages[0].clientGeneratedId || messages[0].id}`,
+    messages,
+    firstMessageId: messages[0].id,
+    lastMessageId: messages[messages.length - 1].id,
+    isSystem: false,
     showName: true,
-    showAvatar: true,
-    message: baseMessage(),
-    ...overrides,
+    useStickyAvatar: true,
   };
 }
 
 describe('estimateRowHeight', () => {
-  it('uses fixed compact estimates for date and deleted rows', () => {
+  it('uses a fixed estimate for date rows', () => {
     expect(estimateRowHeight({ type: 'date', key: 'date:1', dateLabel: 'Today' }, '14px')).toBe(32);
-    expect(estimateRowHeight(messageRow({ message: { ...baseMessage(), isDeleted: true } }), '14px')).toBe(48);
+  });
+
+  it('estimates a single-message group with a deleted message', () => {
+    expect(estimateRowHeight(groupRow([{ ...baseMessage(), isDeleted: true }]), '14px')).toBe(48);
   });
 
   it('adds reply affordance height to media-heavy estimates', () => {
     const base = estimateRowHeight(
-      messageRow({
-        message: {
+      groupRow([
+        {
           ...baseMessage(),
           attachments: [{ id: 'a1', url: 'u', kind: 'image/png', size: 1, fileName: 'a.png' }],
         },
-      }),
+      ]),
       '14px',
     );
     const withReply = estimateRowHeight(
-      messageRow({
-        message: {
+      groupRow([
+        {
           ...baseMessage(),
           attachments: [{ id: 'a1', url: 'u', kind: 'image/png', size: 1, fileName: 'a.png' }],
           replyToMessage: baseMessage(),
         },
-      }),
+      ]),
       '14px',
     );
 
     expect(base).toBe(220);
     expect(withReply).toBe(246);
+  });
+
+  it('sums the heights of all messages in a multi-message group', () => {
+    // Two deleted messages → 48 + 48 = 96.
+    const row = groupRow([
+      { ...baseMessage(), id: '1', isDeleted: true },
+      { ...baseMessage(), id: '2', isDeleted: true },
+    ]);
+    expect(estimateRowHeight(row, '14px')).toBe(96);
   });
 });

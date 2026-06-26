@@ -14,6 +14,12 @@
   --scrollbar-width: 2px;
   --scrollbar-thumb: var(--ion-color-medium, rgba(0, 0, 0, 0.3));
   --scrollbar-radius: 1px;
+
+  // Chat-layer avatar geometry. Consumed by ChatBubble (.chatRow avatar column)
+  // and SenderGroup (sticky avatar container) so both align to a single source
+  // of truth. Declared globally so they resolve regardless of mount order.
+  --avatar-size: 36px;
+  --avatar-column-gap: 12px;
 }
 
 *::-webkit-scrollbar {

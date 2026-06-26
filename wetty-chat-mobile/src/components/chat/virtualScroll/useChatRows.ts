@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { MessageResponse } from '@/api/messages';
+import { isSystemMessage } from '../messages/messageTypePredicates';
 import type { ChatRow } from './types';
-
 function formatDateKey(iso: string): string {
   const date = new Date(iso);
 
@@ -19,10 +19,6 @@ function isSameDate(a: string, b: string): boolean {
   return formatDateKey(a) === formatDateKey(b);
 }
 
-function isSystemMessage(message: MessageResponse): boolean {
-  return message.messageType === 'system';
-}
-
 export function useChatRows(
   messages: MessageResponse[],
   formatDateSeparator: (iso: string) => string,
@@ -30,51 +26,81 @@ export function useChatRows(
 ): ChatRow[] {
   return useMemo(() => {
     const rows: ChatRow[] = [];
+    let i = 0;
     let prevSenderUid: number | string | null = null;
+    let hasDateSeparator = true;
 
-    for (let i = 0; i < messages.length; i++) {
+    while (i < messages.length) {
       const msg = messages[i];
-      const prevMsg = messages[i - 1];
-      const nextMsg = messages[i + 1];
+      const prevMsg = i > 0 ? messages[i - 1] : undefined;
 
       // Date separator: always shown on the first message and on date boundaries.
       // The key must stay stable when older messages are prepended, otherwise
       // staging batches can get stranded waiting on a row that changed identity.
-      const isDateBoundary = prevMsg && !isSameDate(msg.createdAt, prevMsg.createdAt);
-      const isFirstMessage = i === 0;
-      if (isFirstMessage || isDateBoundary) {
+      const isDateBoundary = prevMsg ? !isSameDate(msg.createdAt, prevMsg.createdAt) : false;
+      if (i === 0 || isDateBoundary) {
         rows.push({
           type: 'date',
           key: `date:${formatDateKey(msg.createdAt)}`,
           dateLabel: formatDateSeparator(msg.createdAt),
         });
         prevSenderUid = null;
+        hasDateSeparator = true;
+      } else {
+        hasDateSeparator = false;
       }
 
       const isSystem = isSystemMessage(msg);
-      const nextIsSystem = nextMsg ? isSystemMessage(nextMsg) : false;
 
-      // Grouping
-      const hasDateSeparator = isFirstMessage || isDateBoundary;
-      const showName = !isSystem && (msg.sender.uid !== prevSenderUid || hasDateSeparator);
-      const isLastInGroup =
-        isSystem ||
-        !nextMsg ||
-        nextIsSystem ||
-        nextMsg.sender.uid !== msg.sender.uid ||
-        !isSameDate(msg.createdAt, nextMsg.createdAt);
+      if (isSystem) {
+        // System messages form their own single-message group with no avatar.
+        rows.push({
+          type: 'group',
+          key: `grp:${msg.clientGeneratedId || msg.id}`,
+          messages: [msg],
+          firstMessageId: msg.id,
+          lastMessageId: msg.id,
+          isSystem: true,
+          showName: false,
+          useStickyAvatar: false,
+        });
+        prevSenderUid = null;
+        i += 1;
+        continue;
+      }
+
+      // Gather a consecutive run of same-sender non-system messages within the
+      // same date into one group row. The avatar lives in a sticky container
+      // spanning the whole group, so the group is the atomic virtual-scroll unit.
+      const groupMessages: MessageResponse[] = [msg];
+      let j = i + 1;
+      while (j < messages.length) {
+        const next = messages[j];
+        if (isSystemMessage(next)) break;
+        if (next.sender.uid !== msg.sender.uid) break;
+        if (!isSameDate(msg.createdAt, next.createdAt)) break;
+        groupMessages.push(next);
+        j += 1;
+      }
+
+      const showName = msg.sender.uid !== prevSenderUid || hasDateSeparator;
+      // When showAllAvatars is on, every message renders its own inline avatar
+      // (current behavior), so the group-level sticky avatar is not used.
+      const useStickyAvatar = !showAllAvatars;
 
       rows.push({
-        type: 'message',
-        key: `msg:${msg.clientGeneratedId || msg.id}`,
-        messageId: msg.id,
-        clientGeneratedId: msg.clientGeneratedId ?? null,
-        message: msg,
+        type: 'group',
+        key: `grp:${msg.clientGeneratedId || msg.id}`,
+        messages: groupMessages,
+        firstMessageId: msg.id,
+        lastMessageId: groupMessages[groupMessages.length - 1].id,
+        isSystem: false,
         showName,
-        showAvatar: showAllAvatars || isLastInGroup,
+        useStickyAvatar,
       });
 
-      prevSenderUid = isSystem ? null : msg.sender.uid;
+      prevSenderUid = msg.sender.uid;
+      i = j;
     }
 
     return rows;

@@ -168,25 +168,6 @@
   margin-bottom: 6px;
 }
 
-/* Avatar */
-.message-avatar {
-  width: 36px;
-  flex-shrink: 0;
-  margin-right: 6px;
-}
-
-.message-avatar-img {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.message-avatar-spacer {
-  width: 32px;
-  height: 32px;
-}
-
 /* Bubble wrap */
 .message-bubble-wrap {
   display: flex;

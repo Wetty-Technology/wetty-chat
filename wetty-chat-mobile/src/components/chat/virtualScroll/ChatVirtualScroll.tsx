@@ -210,8 +210,12 @@ export function ChatVirtualScroll({
   const messageIdToTarget = useMemo(() => {
     const map = new Map<string, { key: string; index: number }>();
     rows.forEach((row, index) => {
-      if (row.type !== 'message') return;
-      map.set(row.messageId, { key: row.key, index });
+      if (row.type !== 'group') return;
+      // Map every messageId in the group to the group's row so that
+      // scrollToMessageId / resolveMessageTarget land on the containing group.
+      for (const msg of row.messages) {
+        map.set(msg.id, { key: row.key, index });
+      }
     });
     return map;
   }, [rows]);
@@ -435,12 +439,11 @@ export function ChatVirtualScroll({
 
     const containerRect = container.getBoundingClientRect();
     const mounted = mountedRef.current;
-    let nextMessageId: string | null = null;
+    let lastFullyVisibleId: string | null = null;
     let firstMessageId: string | null = null;
     let firstMessageIndex: number | null = null;
     let nextTopDateColliding = false;
     let nextHiddenDateRowKey: string | null = null;
-
     if (mounted) {
       const overlayHeight = overlayHeightRef.current || TOP_DATE_OVERLAY_FALLBACK_HEIGHT;
       const floatingTop = TOP_DATE_FLOATING_GAP_PX;
@@ -455,25 +458,30 @@ export function ChatVirtualScroll({
 
         const rowRect = rowNode.getBoundingClientRect();
         if (rowRect.height <= 0) continue;
-
-        if (row.type === 'message') {
+        if (row.type === 'group') {
           const fullyVisible = rowRect.bottom <= containerRect.bottom + 0.5;
           const partiallyVisible = rowRect.bottom > containerRect.top && rowRect.top < containerRect.bottom;
 
           if (partiallyVisible) {
-            firstMessageId = row.messageId;
+            // The topmost partially-visible group drives loadOlder / scroll-direction.
+            firstMessageId = row.firstMessageId;
             firstMessageIndex = index;
           }
 
-          if (fullyVisible && nextMessageId === null) {
-            nextMessageId = row.messageId;
+          // A fully-visible group ⇒ its last message is fully visible (the avatar
+          // rests at the group's bottom). lastFullyVisibleMessageId drives read
+          // receipts, so report the group's last message id.
+          if (fullyVisible && lastFullyVisibleId === null) {
+            lastFullyVisibleId = row.lastMessageId;
           }
-        } else if (row.type === 'date' && !nextTopDateColliding) {
-          const distanceFromTop = rowRect.top - containerRect.top;
-          const distanceBottom = distanceFromTop + rowRect.height;
-          const MARGIN = 1;
-          if (distanceBottom + MARGIN >= floatingTop && distanceFromTop - MARGIN <= floatingBottom) {
-            nextTopDateColliding = true;
+        } else if (row.type === 'date') {
+          if (!nextTopDateColliding) {
+            const distanceFromTop = rowRect.top - containerRect.top;
+            const distanceBottom = distanceFromTop + rowRect.height;
+            const MARGIN = 1;
+            if (distanceBottom + MARGIN >= floatingTop && distanceFromTop - MARGIN <= floatingBottom) {
+              nextTopDateColliding = true;
+            }
           }
         }
       }
@@ -501,9 +509,9 @@ export function ChatVirtualScroll({
       onTopDateCollidingChange?.(nextTopDateColliding);
     }
 
-    if (nextMessageId !== lastFullyVisibleMessageIdRef.current) {
-      lastFullyVisibleMessageIdRef.current = nextMessageId;
-      onLastFullyVisibleMessageChange?.(nextMessageId);
+    if (lastFullyVisibleId !== lastFullyVisibleMessageIdRef.current) {
+      lastFullyVisibleMessageIdRef.current = lastFullyVisibleId;
+      onLastFullyVisibleMessageChange?.(lastFullyVisibleId);
     }
 
     if (firstMessageId !== firstVisibleMessageIdRef.current) {
@@ -1116,7 +1124,7 @@ export function ChatVirtualScroll({
       const index = keyToIndex.get(key);
       if (index == null) return;
       const rowModel = rows[index];
-      const attachments = rowModel?.type === 'message' ? (rowModel.message.attachments ?? []) : [];
+      const attachments = rowModel?.type === 'group' ? rowModel.messages.flatMap((m) => m.attachments ?? []) : [];
       const hasAttachments = attachments.length > 0;
       const hasUnknownAttachmentDimensions = attachments.some(
         (attachment) =>
@@ -1198,8 +1206,14 @@ export function ChatVirtualScroll({
           strategy: 'natural-reflow',
         });
       }
+      // Row geometry changed (image loaded, content reflow). Recompute the
+      // last-visible / floating-avatar state so coverage doesn't lag a frame
+      // behind the new layout — the natural-reflow path (preserveContribution
+      // === 0) doesn't touch scrollTop, so without this the stale geometry
+      // would persist until the next user scroll.
+      updateLastFullyVisibleMessage();
     },
-    [keyToIndex, rows, scheduleBottomSettle, scrollToBottomInternal],
+    [keyToIndex, rows, scheduleBottomSettle, scrollToBottomInternal, updateLastFullyVisibleMessage],
   );
 
   const handleScrollIdle = useCallback(() => {

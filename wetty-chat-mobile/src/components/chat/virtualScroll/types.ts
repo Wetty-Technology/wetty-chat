@@ -6,16 +6,17 @@ import type { MessageResponse } from '@/api/messages';
 export type ChatRow =
   | { type: 'date'; key: string; dateLabel: string }
   | {
-      type: 'message';
+      type: 'group';
       key: string;
-      messageId: string;
-      clientGeneratedId?: string | null;
-      message: MessageResponse;
+      messages: MessageResponse[];
+      firstMessageId: string;
+      lastMessageId: string;
+      isSystem: boolean;
       showName: boolean;
-      showAvatar: boolean;
+      useStickyAvatar: boolean;
     };
 
-// Legacy compatibility for helper modules that still compile in-tree.
+// Range primitive shared by useCoreManager / useMountedWindow for mounted-window math.
 export interface CoreRange {
   start: number;
   end: number;

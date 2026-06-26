@@ -91,13 +91,13 @@
 }
 
 .chatRow {
-  --avatar-size: 36px;
+  /* --avatar-size defined at :root so SenderGroup can share it; --avatar-gap stays local. */
   --avatar-gap: 8px;
 
   display: flex;
   align-items: flex-end;
   gap: var(--avatar-gap);
-  padding: 4px 12px;
+  padding: 4px var(--avatar-column-gap);
 
   &.sent {
     flex-direction: row-reverse;
@@ -481,6 +481,10 @@
 .avatarSpacer {
   width: var(--avatar-size);
   flex-shrink: 0;
+  // The spacer only appears in sticky-avatar mode, where the floating avatar
+  // renders behind the (raised) message column. Let taps pass through so the
+  // avatar behind stays clickable.
+  pointer-events: none;
 }
 
 .messageWrapper {
