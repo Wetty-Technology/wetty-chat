@@ -23,7 +23,7 @@ export function useDocumentTitle(activeChatId: string | undefined, activeThreadI
   const threadUnreadCountRef = useRef(threadUnreadCount);
   const chatsWithUnreadRef = useRef(chatsWithUnread);
   const threadsWithUnreadRef = useRef(threadsWithUnread);
-  const baseTitleRef = useRef(document.title || BASE_TITLE);
+  const baseTitleRef = useRef((document.title || '').replace(/^\(\d+\)\s*/, '') || BASE_TITLE);
 
   function updateTitle() {
     if (isPageHidden()) {
