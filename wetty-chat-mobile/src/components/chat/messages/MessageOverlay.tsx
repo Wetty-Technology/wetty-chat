@@ -12,6 +12,7 @@ import styles from './MessageOverlay.module.scss';
 import { MAX_DISTINCT_REACTIONS_PER_MESSAGE } from '@/constants/emojiAndStickers';
 import { getOverlayPortalTarget } from '@/utils/dom';
 import { t } from '@lingui/core/macro';
+import { useMenuBgOpacity } from '@/store/advancedSettingsStore';
 
 export interface MessageOverlayAction {
   key: string;
@@ -96,6 +97,7 @@ export function MessageOverlay(props: MessageOverlayProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [presentToast] = useIonToast();
+  const menuBgOpacity = useMenuBgOpacity();
 
   const [actionListPage, setActionListPage] = useState(0);
   const actionListScrollRef = useRef<HTMLDivElement>(null);
@@ -441,7 +443,14 @@ export function MessageOverlay(props: MessageOverlayProps) {
       <div
         ref={contentRef}
         className={`${styles.content} ${isSent ? styles.contentSent : ''} ${styles.contentVisible}`}
-        style={{ top: sourceRect.top, left: sourceRect.left, visibility: 'hidden' }}
+        style={
+          {
+            top: sourceRect.top,
+            left: sourceRect.left,
+            visibility: 'hidden',
+            '--menu-bg-opacity': `${menuBgOpacity}%`,
+          } as React.CSSProperties
+        }
       >
         {/* Reaction bar — hidden for stickers and invites */}
         {!isSticker &&

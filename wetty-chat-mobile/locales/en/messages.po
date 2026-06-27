@@ -28,6 +28,9 @@ msgstr "1 day"
 msgid "1 hour"
 msgstr "1 hour"
 
+#~ msgid "100% (Default)"
+#~ msgstr "100% (Default)"
+
 msgid "24 hours"
 msgstr "24 hours"
 
@@ -63,6 +66,15 @@ msgstr "Add Sticker"
 
 msgid "Add to Favorites"
 msgstr "Add to Favorites"
+
+msgid "Advanced Settings"
+msgstr "Advanced Settings"
+
+msgid "Advanced settings disabled"
+msgstr "Advanced settings disabled"
+
+msgid "Advanced settings enabled"
+msgstr "Advanced settings enabled"
 
 msgid "Alex"
 msgstr "Alex"
@@ -197,6 +209,9 @@ msgstr "Copy"
 msgid "Copy code"
 msgstr "Copy code"
 
+msgid "Copy JWT Token"
+msgstr "Copy JWT Token"
+
 msgid "Copy the link below, or choose a group to send it to right now."
 msgstr "Copy the link below, or choose a group to send it to right now."
 
@@ -226,6 +241,18 @@ msgstr "Create new sticker pack"
 
 msgid "Creating…"
 msgstr "Creating…"
+
+msgid "Custom"
+msgstr "Custom"
+
+msgid "Default (100%)"
+msgstr "Default (100%)"
+
+msgid "Default (350ms)"
+msgstr "Default (350ms)"
+
+msgid "Delay"
+msgstr "Delay"
 
 msgid "Delete"
 msgstr "Delete"
@@ -273,8 +300,8 @@ msgstr "Description"
 msgid "Destination Group"
 msgstr "Destination Group"
 
-msgid "Reactions"
-msgstr "Reactions"
+msgid "Developer"
+msgstr "Developer"
 
 msgid "Discard"
 msgstr "Discard"
@@ -371,6 +398,9 @@ msgstr "Failed to add sticker to favorites"
 
 msgid "Failed to copy invite code"
 msgstr "Failed to copy invite code"
+
+msgid "Failed to copy token"
+msgstr "Failed to copy token"
 
 msgid "Failed to create chat"
 msgstr "Failed to create chat"
@@ -510,6 +540,12 @@ msgstr "Failed to update role"
 msgid "Failed to upload avatar"
 msgstr "Failed to upload avatar"
 
+msgid "Fast"
+msgstr "Fast"
+
+msgid "Fast (150ms)"
+msgstr "Fast (150ms)"
+
 msgid "Fav"
 msgstr "Fav"
 
@@ -608,6 +644,9 @@ msgstr "Join via Code"
 msgid "Joining…"
 msgstr "Joining…"
 
+msgid "JWT token copied"
+msgstr "JWT token copied"
+
 msgid "Keep messages"
 msgstr "Keep messages"
 
@@ -643,6 +682,9 @@ msgstr "Loading..."
 
 msgid "Loading…"
 msgstr "Loading…"
+
+msgid "Long Press Delay"
+msgstr "Long Press Delay"
 
 msgid "Manage"
 msgstr "Manage"
@@ -683,8 +725,14 @@ msgstr "Membership"
 msgid "Mention suggestions"
 msgstr "Mention suggestions"
 
+msgid "Menu Background Opacity"
+msgstr "Menu Background Opacity"
+
 msgid "Message"
 msgstr "Message"
+
+msgid "Message Actions"
+msgstr "Message Actions"
 
 msgid "Message cannot be empty"
 msgstr "Message cannot be empty"
@@ -818,6 +866,12 @@ msgstr "Only members of a selected group can use this invite link to join."
 msgid "Only the selected user can redeem this invite link to join."
 msgstr "Only the selected user can redeem this invite link to join."
 
+msgid "Opacity"
+msgstr "Opacity"
+
+msgid "Opaque"
+msgstr "Opaque"
+
 msgid "Open chat"
 msgstr "Open chat"
 
@@ -932,6 +986,9 @@ msgstr "Push notifications enabled"
 
 msgid "Push notifications turned off"
 msgstr "Push notifications turned off"
+
+msgid "Reactions"
+msgstr "Reactions"
 
 msgid "Read"
 msgstr "Read"
@@ -1104,6 +1161,12 @@ msgstr "Show \"All\" Tab in Chats"
 msgid "Show Avatars Next to All Messages"
 msgstr "Show Avatars Next to All Messages"
 
+msgid "Slow"
+msgstr "Slow"
+
+msgid "Slow (600ms)"
+msgstr "Slow (600ms)"
+
 msgid "Small"
 msgstr "Small"
 
@@ -1188,6 +1251,9 @@ msgstr "Thumbnail {0}"
 
 msgid "Today"
 msgstr "Today"
+
+msgid "Transparent"
+msgstr "Transparent"
 
 msgid "Try Again"
 msgstr "Try Again"
@@ -1274,6 +1340,9 @@ msgstr "User {uid}"
 
 msgid "User ID"
 msgstr "User ID"
+
+msgid "Very Slow (1000ms)"
+msgstr "Very Slow (1000ms)"
 
 msgid "Videos"
 msgstr "Videos"

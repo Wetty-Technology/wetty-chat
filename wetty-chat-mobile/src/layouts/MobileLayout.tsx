@@ -21,6 +21,9 @@ import GeneralSettingsPage from '@/pages/settings/general';
 import LanguagePage from '@/pages/settings/language';
 import StickerSettingsPage from '@/pages/settings/stickers';
 import StickerPackDetailPage from '@/pages/settings/sticker-pack-detail';
+import AdvancedSettingsPage from '@/pages/settings/advanced';
+import LongPressDelayPage from '@/pages/settings/long-press-delay';
+import MenuBgOpacityPage from '@/pages/settings/menu-bg-opacity';
 import NotFoundPage from '@/pages/not-found';
 import ComponentDemoPage from '@/pages/component-demo';
 
@@ -100,6 +103,9 @@ const MobileLayout: React.FC = () => {
         {whenFeature('savedMessages', <Route path="/settings/saved-messages" exact component={SavedMessagesPage} />)}
         <Route path="/settings/stickers/:packId" exact component={StickerPackDetailPage} />
         <Route path="/settings/stickers" exact component={StickerSettingsPage} />
+        <Route path="/settings/advanced" exact component={AdvancedSettingsPage} />
+        <Route path="/settings/advanced/long-press-delay" exact component={LongPressDelayPage} />
+        <Route path="/settings/advanced/menu-bg-opacity" exact component={MenuBgOpacityPage} />
         <Route path="/settings" exact component={SettingsPage} />
         <Redirect exact from="/" to="/chats" />
         <Route component={NotFoundPage} />

@@ -28,6 +28,9 @@ msgstr "1 天"
 msgid "1 hour"
 msgstr "1 小時"
 
+#~ msgid "100% (Default)"
+#~ msgstr "100%（預設）"
+
 msgid "24 hours"
 msgstr "24 小時"
 
@@ -63,6 +66,15 @@ msgstr "新增表情"
 
 msgid "Add to Favorites"
 msgstr "加入收藏"
+
+msgid "Advanced Settings"
+msgstr "進階設定"
+
+msgid "Advanced settings disabled"
+msgstr "已關閉進階設定"
+
+msgid "Advanced settings enabled"
+msgstr "已啟用進階設定"
 
 msgid "Alex"
 msgstr "風紀委員"
@@ -197,6 +209,9 @@ msgstr "複製"
 msgid "Copy code"
 msgstr "複製代碼"
 
+msgid "Copy JWT Token"
+msgstr "複製 JWT Token"
+
 msgid "Copy the link below, or choose a group to send it to right now."
 msgstr "複製下方連結，或立即選擇一個群組傳送。"
 
@@ -226,6 +241,18 @@ msgstr "建立新的表情包"
 
 msgid "Creating…"
 msgstr "建立中…"
+
+msgid "Custom"
+msgstr "自訂"
+
+msgid "Default (100%)"
+msgstr "預設（100%）"
+
+msgid "Default (350ms)"
+msgstr "預設 (350ms)"
+
+msgid "Delay"
+msgstr "延遲"
 
 msgid "Delete"
 msgstr "收回"
@@ -273,8 +300,8 @@ msgstr "描述"
 msgid "Destination Group"
 msgstr "目標群組"
 
-msgid "Reactions"
-msgstr "回應"
+msgid "Developer"
+msgstr "開發者"
 
 msgid "Discard"
 msgstr "放棄"
@@ -371,6 +398,9 @@ msgstr "添加貼紙到收藏失敗"
 
 msgid "Failed to copy invite code"
 msgstr "複製邀請碼失敗"
+
+msgid "Failed to copy token"
+msgstr "複製失敗"
 
 msgid "Failed to create chat"
 msgstr "建立聊天失敗"
@@ -510,6 +540,12 @@ msgstr "更新角色失敗"
 msgid "Failed to upload avatar"
 msgstr "上傳頭像失敗"
 
+msgid "Fast"
+msgstr "快速"
+
+msgid "Fast (150ms)"
+msgstr "快速 (150ms)"
+
 msgid "Fav"
 msgstr "收藏"
 
@@ -608,6 +644,9 @@ msgstr "透過邀請碼加入"
 msgid "Joining…"
 msgstr "正在加入…"
 
+msgid "JWT token copied"
+msgstr "JWT Token 已複製"
+
 msgid "Keep messages"
 msgstr "保留訊息"
 
@@ -643,6 +682,9 @@ msgstr "正在載入..."
 
 msgid "Loading…"
 msgstr "正在載入…"
+
+msgid "Long Press Delay"
+msgstr "長按延遲"
 
 msgid "Manage"
 msgstr "管理"
@@ -683,8 +725,14 @@ msgstr "成員資格"
 msgid "Mention suggestions"
 msgstr "提及建議"
 
+msgid "Menu Background Opacity"
+msgstr "選單背景不透明度"
+
 msgid "Message"
 msgstr "訊息"
+
+msgid "Message Actions"
+msgstr "訊息操作"
 
 msgid "Message cannot be empty"
 msgstr "訊息不能為空"
@@ -818,6 +866,12 @@ msgstr "只有所選群組的成員才能使用此邀請連結加入。"
 msgid "Only the selected user can redeem this invite link to join."
 msgstr "只有所選使用者才能兌換此邀請連結並加入。"
 
+msgid "Opacity"
+msgstr "不透明度"
+
+msgid "Opaque"
+msgstr "不透明"
+
 msgid "Open chat"
 msgstr "開啟聊天"
 
@@ -932,6 +986,9 @@ msgstr "推播通知已開啟"
 
 msgid "Push notifications turned off"
 msgstr "推播通知已關閉"
+
+msgid "Reactions"
+msgstr "回應"
 
 msgid "Read"
 msgstr "標記已讀"
@@ -1104,6 +1161,12 @@ msgstr "在聊天中顯示「全部」標籤"
 msgid "Show Avatars Next to All Messages"
 msgstr "在所有訊息旁顯示頭像"
 
+msgid "Slow"
+msgstr "慢速"
+
+msgid "Slow (600ms)"
+msgstr "慢速 (600ms)"
+
 msgid "Small"
 msgstr "小"
 
@@ -1188,6 +1251,9 @@ msgstr "縮圖 {0}"
 
 msgid "Today"
 msgstr "今天"
+
+msgid "Transparent"
+msgstr "透明"
 
 msgid "Try Again"
 msgstr "再試一次"
@@ -1274,6 +1340,9 @@ msgstr "使用者 {uid}"
 
 msgid "User ID"
 msgstr "使用者 ID"
+
+msgid "Very Slow (1000ms)"
+msgstr "很慢 (1000ms)"
 
 msgid "Videos"
 msgstr "影片"

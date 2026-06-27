@@ -23,11 +23,21 @@ import { Trans } from '@lingui/react/macro';
 import { FeatureGate } from '@/components/FeatureGate';
 import { CheckForUpdateItem } from '@/components/settings/CheckForUpdateItem';
 import { AppVersionItem } from '@/components/settings/AppVersionItem';
+import { useAdvancedSettingsUnlocked } from '@/store/advancedSettingsStore';
 import { SettingsProfileHero } from '@/components/settings/SettingsProfileHero';
 
 import { type PushNotificationErrorCode, usePushNotifications } from '@/hooks/usePushNotifications';
 import { t } from '@lingui/core/macro';
-import { bookmarkOutline, codeWorking, cog, happyOutline, logIn, logOut, notifications } from 'ionicons/icons';
+import {
+  bookmarkOutline,
+  codeWorking,
+  cog,
+  happyOutline,
+  logIn,
+  logOut,
+  notifications,
+  optionsOutline,
+} from 'ionicons/icons';
 import { BackButton } from '@/components/BackButton';
 import type { BackAction } from '@/types/back-action';
 
@@ -36,6 +46,7 @@ interface SettingsCoreProps {
   onOpenGeneral?: () => void;
   onOpenSavedMessages?: () => void;
   onOpenStickers?: () => void;
+  onOpenAdvanced?: () => void;
 }
 
 function getPermissionLabel(permission: NotificationPermission) {
@@ -67,7 +78,13 @@ function getPushErrorMessage(code: PushNotificationErrorCode) {
   }
 }
 
-export function SettingsCore({ backAction, onOpenGeneral, onOpenSavedMessages, onOpenStickers }: SettingsCoreProps) {
+export function SettingsCore({
+  backAction,
+  onOpenGeneral,
+  onOpenSavedMessages,
+  onOpenStickers,
+  onOpenAdvanced,
+}: SettingsCoreProps) {
   const {
     uid: currentUid,
     username,
@@ -77,6 +94,7 @@ export function SettingsCore({ backAction, onOpenGeneral, onOpenSavedMessages, o
   const [uidInput, setUidInput] = useState(() => String(currentUid || '1'));
   const [presentToast] = useIonToast();
   const history = useHistory();
+  const advancedUnlocked = useAdvancedSettingsUnlocked();
   const { permission, isSubscribed, loading, isCheckingSubscription, subscribeToPush, unsubscribeFromPush } =
     usePushNotifications();
 
@@ -258,6 +276,14 @@ export function SettingsCore({ backAction, onOpenGeneral, onOpenSavedMessages, o
         </IonListHeader>
         <IonList inset={true}>
           <CheckForUpdateItem />
+          {advancedUnlocked && (
+            <IonItem button detail={true} onClick={onOpenAdvanced ?? (() => history.push('/settings/advanced'))}>
+              <IonIcon aria-hidden="true" icon={optionsOutline} slot="start" color="medium" />
+              <IonLabel>
+                <Trans>Advanced Settings</Trans>
+              </IonLabel>
+            </IonItem>
+          )}
         </IonList>
         <AppVersionItem />
       </IonContent>
