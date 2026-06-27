@@ -3,20 +3,15 @@ import { IonCard, IonCardHeader, IonCardSubtitle, IonIcon, IonItem, IonLabel, Io
 import { chevronForward, mailOutline } from 'ionicons/icons';
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
-import type { User } from '@/api/messages';
-import { UserAvatar } from '@/components/UserAvatar';
 import { useInvitePreview } from '@/components/invites/useInvitePreview';
+import { UserAvatar } from '@/components/UserAvatar';
 import styles from './InviteMessageCard.module.scss';
 import { formatTime } from '@/utils/formatTime';
 
 interface InviteMessageCardProps {
   inviteCode: string;
-  sender: User;
   isSent: boolean;
-  showName: boolean;
-  showAvatar: boolean;
   timestamp: string;
-  onAvatarClick?: () => void;
   onOpen: () => void;
 }
 
@@ -60,18 +55,8 @@ function InviteCardBody({ viewState }: { viewState: CardBodyViewState }) {
   );
 }
 
-export function InviteMessageCard({
-  inviteCode,
-  sender,
-  isSent,
-  showName,
-  showAvatar,
-  timestamp,
-  onAvatarClick,
-  onOpen,
-}: InviteMessageCardProps) {
+export function InviteMessageCard({ inviteCode, isSent, timestamp, onOpen }: InviteMessageCardProps) {
   const { previewState, preview, displayName } = useInvitePreview(inviteCode);
-  const senderName = sender.name ?? `User ${sender.uid}`;
   let bodyViewState: CardBodyViewState;
   const inviteAvailable = previewState.kind === 'loaded' && !!preview;
 
@@ -97,37 +82,25 @@ export function InviteMessageCard({
   }
 
   return (
-    <div className={`${styles.row} ${isSent ? styles.rowSent : ''}`}>
-      {showAvatar ? (
-        <button type="button" className={styles.avatarButton} onClick={onAvatarClick}>
-          <UserAvatar name={senderName} avatarUrl={sender.avatarUrl} size={36} />
+    <div className={styles.content}>
+      <div className={`${styles.cardRow} ${isSent ? styles.sentRow : ''}`}>
+        <button
+          type="button"
+          className={`${styles.card} ${!inviteAvailable ? styles.cardDisabled : ''}`}
+          onClick={inviteAvailable ? onOpen : undefined}
+          disabled={!inviteAvailable}
+        >
+          <IonCard className={styles.ionCard}>
+            <IonCardHeader className={styles.cardHeader}>
+              <IonCardSubtitle className={styles.cardSubtitle}>
+                <IonIcon icon={mailOutline} />
+                <Trans>Group invite</Trans>
+              </IonCardSubtitle>
+            </IonCardHeader>
+            <InviteCardBody viewState={bodyViewState} />
+          </IonCard>
+          {timestamp && <span className={styles.inviteTimestamp}>{formatTime(timestamp)}</span>}
         </button>
-      ) : (
-        <div className={styles.avatarSpacer} />
-      )}
-
-      <div className={`${styles.content} inviteContent`}>
-        {showName && !isSent && <div className={styles.senderName}>{senderName}</div>}
-
-        <div className={`${styles.cardRow} ${isSent ? styles.sentRow : ''}`}>
-          <button
-            type="button"
-            className={`${styles.card} ${!inviteAvailable ? styles.cardDisabled : ''}`}
-            onClick={inviteAvailable ? onOpen : undefined}
-            disabled={!inviteAvailable}
-          >
-            <IonCard className={styles.ionCard}>
-              <IonCardHeader className={styles.cardHeader}>
-                <IonCardSubtitle className={styles.cardSubtitle}>
-                  <IonIcon icon={mailOutline} />
-                  <Trans>Group invite</Trans>
-                </IonCardSubtitle>
-              </IonCardHeader>
-              <InviteCardBody viewState={bodyViewState} />
-            </IonCard>
-            {timestamp && <span className={styles.inviteTimestamp}>{formatTime(timestamp)}</span>}
-          </button>
-        </div>
       </div>
     </div>
   );

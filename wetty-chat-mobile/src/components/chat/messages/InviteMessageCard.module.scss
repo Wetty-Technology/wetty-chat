@@ -1,43 +1,9 @@
-.row {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  padding: 2px 12px;
-}
-
-.rowSent {
-  justify-content: flex-end;
-}
-
-.rowSent .avatarButton,
-.rowSent .avatarSpacer {
-  order: 2;
-}
-
-.rowSent .content {
-  order: 1;
-}
-
-.avatarButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: none;
-  background: transparent;
-}
-
-.avatarSpacer {
-  width: var(--avatar-size);
-  flex: 0 0 var(--avatar-size);
-}
-
 .content {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 4px;
-  width: min(85%, 360px);
+  width: 100%;
   min-width: 0;
 }
 
@@ -51,13 +17,6 @@
 .sentRow {
   flex-direction: row-reverse;
   align-items: flex-end;
-}
-
-.senderName {
-  padding: 0 8px;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--ion-color-medium-shade);
 }
 
 .card {
