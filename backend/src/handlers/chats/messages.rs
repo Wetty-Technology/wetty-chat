@@ -12,8 +12,7 @@ use utoipa_axum::router::OpenApiRouter;
 use crate::{
     dto::{
         messages::{
-            ForwardMessageResponse, ForwardMessagesResponse, ListMessagesResponse, MessageResponse,
-            SearchMessagesResponse,
+            ForwardedMessageSnapshot, ListMessagesResponse, MessageResponse, SearchMessagesResponse,
         },
         ws::ServerWsMessage,
     },
@@ -121,8 +120,8 @@ fn validate_client_message_type(message_type: &MessageType) -> Result<(), AppErr
     Ok(())
 }
 
-fn forward_message_snapshot(response: MessageResponse) -> ForwardMessageResponse {
-    ForwardMessageResponse {
+fn forward_message_snapshot(response: MessageResponse) -> ForwardedMessageSnapshot {
+    ForwardedMessageSnapshot {
         original_message_id: response.id,
         original_chat_id: response.chat_id,
         message: response.message,
@@ -627,7 +626,7 @@ async fn post_message(
     ),
     request_body = ForwardMessagesBody,
     responses(
-        (status = CREATED, body = ForwardMessagesResponse),
+        (status = CREATED, body = MessageResponse),
     ),
     security(("uid_header" = []), ("bearer_jwt" = [])),
 )]
@@ -669,7 +668,7 @@ async fn forward_messages(
     }
 
     let source_messages = attach_metadata(conn, messages, &state, uid).await;
-    let forwarded_messages: Vec<ForwardMessageResponse> = source_messages
+    let forwarded_messages: Vec<ForwardedMessageSnapshot> = source_messages
         .into_iter()
         .map(forward_message_snapshot)
         .collect();
@@ -730,13 +729,7 @@ async fn forward_messages(
         SendMessageOutcome::Duplicate(response) => *response,
     };
 
-    Ok((
-        StatusCode::CREATED,
-        Json(ForwardMessagesResponse {
-            source_chat_id: body.source_chat_id,
-            messages: vec![message],
-        }),
-    ))
+    Ok((StatusCode::CREATED, Json(message)))
 }
 
 /// POST /chats/:chat_id/threads/:thread_id/messages — Send a message in a thread.
