@@ -261,6 +261,42 @@ class ThreadInfoDto {
 }
 
 @JsonSerializable(explicitToJson: true)
+class ForwardedMessageSnapshotDto {
+  const ForwardedMessageSnapshotDto({
+    required this.originalMessageId,
+    required this.originalChatId,
+    this.message,
+    this.messageType = 'text',
+    required this.sender,
+    this.originalCreatedAt,
+    this.replyToMessage,
+    this.attachments = const <AttachmentItemDto>[],
+    this.mentions = const <MentionInfoDto>[],
+  });
+
+  @FlexibleIntConverter()
+  final int originalMessageId;
+  @FlexibleIntConverter()
+  final int originalChatId;
+  final String? message;
+  @JsonKey(defaultValue: 'text')
+  final String messageType;
+  final UserDto sender;
+  @NullableDateTimeConverter()
+  final DateTime? originalCreatedAt;
+  final MessagePreviewDto? replyToMessage;
+  @JsonKey(defaultValue: <AttachmentItemDto>[])
+  final List<AttachmentItemDto> attachments;
+  @JsonKey(defaultValue: <MentionInfoDto>[])
+  final List<MentionInfoDto> mentions;
+
+  factory ForwardedMessageSnapshotDto.fromJson(Map<String, dynamic> json) =>
+      _$ForwardedMessageSnapshotDtoFromJson(json);
+
+  Map<String, dynamic> toJson() => _$ForwardedMessageSnapshotDtoToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
 class MessageItemDto {
   const MessageItemDto({
     required this.id,
@@ -280,6 +316,7 @@ class MessageItemDto {
     this.reactions = const [],
     this.mentions = const <MentionInfoDto>[],
     this.threadInfo,
+    this.forwardedMessages,
   });
 
   @FlexibleIntConverter()
@@ -311,6 +348,7 @@ class MessageItemDto {
   @JsonKey(defaultValue: <MentionInfoDto>[])
   final List<MentionInfoDto> mentions;
   final ThreadInfoDto? threadInfo;
+  final List<ForwardedMessageSnapshotDto>? forwardedMessages;
 
   factory MessageItemDto.fromJson(Map<String, dynamic> json) =>
       _$MessageItemDtoFromJson(json);

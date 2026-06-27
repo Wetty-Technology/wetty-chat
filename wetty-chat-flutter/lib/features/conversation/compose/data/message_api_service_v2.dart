@@ -71,7 +71,7 @@ class MessageApiServiceV2 {
     return MessageItemDto.fromJson(response.data!);
   }
 
-  Future<Map<String, dynamic>> forwardMessages({
+  Future<MessageItemDto> forwardMessages({
     required int sourceChatId,
     required int destinationChatId,
     required List<int> messageIds,
@@ -84,7 +84,7 @@ class MessageApiServiceV2 {
       '/chats/$destinationChatId/messages/forward',
       data: body.toJson(),
     );
-    return response.data ?? <String, dynamic>{};
+    return MessageItemDto.fromJson(response.data!);
   }
 
   Future<MessageItemDto> editMessage(

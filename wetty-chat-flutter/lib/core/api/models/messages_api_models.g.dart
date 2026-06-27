@@ -211,6 +211,56 @@ ThreadInfoDto _$ThreadInfoDtoFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$ThreadInfoDtoToJson(ThreadInfoDto instance) =>
     <String, dynamic>{'replyCount': instance.replyCount};
 
+ForwardedMessageSnapshotDto _$ForwardedMessageSnapshotDtoFromJson(
+  Map<String, dynamic> json,
+) => ForwardedMessageSnapshotDto(
+  originalMessageId: const FlexibleIntConverter().fromJson(
+    json['originalMessageId'],
+  ),
+  originalChatId: const FlexibleIntConverter().fromJson(json['originalChatId']),
+  message: json['message'] as String?,
+  messageType: json['messageType'] as String? ?? 'text',
+  sender: UserDto.fromJson(json['sender'] as Map<String, dynamic>),
+  originalCreatedAt: const NullableDateTimeConverter().fromJson(
+    json['originalCreatedAt'],
+  ),
+  replyToMessage: json['replyToMessage'] == null
+      ? null
+      : MessagePreviewDto.fromJson(
+          json['replyToMessage'] as Map<String, dynamic>,
+        ),
+  attachments:
+      (json['attachments'] as List<dynamic>?)
+          ?.map((e) => AttachmentItemDto.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      [],
+  mentions:
+      (json['mentions'] as List<dynamic>?)
+          ?.map((e) => MentionInfoDto.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      [],
+);
+
+Map<String, dynamic> _$ForwardedMessageSnapshotDtoToJson(
+  ForwardedMessageSnapshotDto instance,
+) => <String, dynamic>{
+  'originalMessageId': const FlexibleIntConverter().toJson(
+    instance.originalMessageId,
+  ),
+  'originalChatId': const FlexibleIntConverter().toJson(
+    instance.originalChatId,
+  ),
+  'message': instance.message,
+  'messageType': instance.messageType,
+  'sender': instance.sender.toJson(),
+  'originalCreatedAt': const NullableDateTimeConverter().toJson(
+    instance.originalCreatedAt,
+  ),
+  'replyToMessage': instance.replyToMessage?.toJson(),
+  'attachments': instance.attachments.map((e) => e.toJson()).toList(),
+  'mentions': instance.mentions.map((e) => e.toJson()).toList(),
+};
+
 MessageItemDto _$MessageItemDtoFromJson(
   Map<String, dynamic> json,
 ) => MessageItemDto(
@@ -253,6 +303,11 @@ MessageItemDto _$MessageItemDtoFromJson(
   threadInfo: json['threadInfo'] == null
       ? null
       : ThreadInfoDto.fromJson(json['threadInfo'] as Map<String, dynamic>),
+  forwardedMessages: (json['forwardedMessages'] as List<dynamic>?)
+      ?.map(
+        (e) => ForwardedMessageSnapshotDto.fromJson(e as Map<String, dynamic>),
+      )
+      .toList(),
 );
 
 Map<String, dynamic> _$MessageItemDtoToJson(MessageItemDto instance) =>
@@ -276,6 +331,9 @@ Map<String, dynamic> _$MessageItemDtoToJson(MessageItemDto instance) =>
       'reactions': instance.reactions.map((e) => e.toJson()).toList(),
       'mentions': instance.mentions.map((e) => e.toJson()).toList(),
       'threadInfo': instance.threadInfo?.toJson(),
+      'forwardedMessages': instance.forwardedMessages
+          ?.map((e) => e.toJson())
+          .toList(),
     };
 
 ListMessagesResponseDto _$ListMessagesResponseDtoFromJson(
