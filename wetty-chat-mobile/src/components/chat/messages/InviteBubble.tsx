@@ -2,9 +2,9 @@ import type { Ref } from 'react';
 import { IonIcon } from '@ionic/react';
 import { chatbubbles } from 'ionicons/icons';
 import { t } from '@lingui/core/macro';
-import type { User } from '@/api/messages';
 import { useMouseDetected } from '@/hooks/platformHooks';
 import { InviteMessageCard } from './InviteMessageCard';
+import { UserAvatar } from '@/components/UserAvatar';
 import styles from './ChatBubble.module.scss';
 import { HoverReplyButton } from './HoverReplyButton';
 import type { BubblePropsOverride } from './ChatBubbleBase';
@@ -33,7 +33,6 @@ export function InviteBubble({
   senderName,
   isSent,
   avatarUrl,
-  showName = true,
   showAvatar = true,
   onOpen,
   onReply,
@@ -50,8 +49,6 @@ export function InviteBubble({
   const interactive = interactionMode === 'interactive';
   const { className: bubbleClassName, style: bubbleStyle, ...bubbleRestProps } = bubblePropOverrides ?? {};
 
-  const sender: User = { uid: 0, name: senderName, avatarUrl, gender: 0 };
-
   const bubble = (
     <div
       ref={bubbleRef}
@@ -63,12 +60,8 @@ export function InviteBubble({
     >
       <InviteMessageCard
         inviteCode={inviteCode}
-        sender={sender}
         isSent={isSent}
-        showName={showName}
-        showAvatar={showAvatar}
         timestamp={timestamp ?? ''}
-        onAvatarClick={interactive ? onAvatarClick : undefined}
         onOpen={interactive && onOpen ? onOpen : () => {}}
       />
       {threadInfo && (
@@ -88,8 +81,23 @@ export function InviteBubble({
 
   return (
     <div className={`${styles.chatRow} ${isSent ? styles.sent : styles.received}`}>
-      {bubble}
-      <HoverReplyButton interactive={interactive} onReply={onReply} />
+      <div className={styles.messageColumn}>
+        <div className={styles.avatarBubbleRow}>
+          {showAvatar ? (
+            <UserAvatar
+              name={senderName}
+              avatarUrl={avatarUrl}
+              size={36}
+              className={styles.avatar}
+              onClick={interactive ? onAvatarClick : undefined}
+            />
+          ) : (
+            <div className={styles.avatarSpacer} />
+          )}
+          {bubble}
+          <HoverReplyButton interactive={interactive} onReply={onReply} />
+        </div>
+      </div>
     </div>
   );
 }
