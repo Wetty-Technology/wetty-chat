@@ -41,22 +41,10 @@
   width: 100%;
 }
 
-// Received: the message column sits BELOW the sticky avatar (z-index 1 < 2)
-// so the avatar is directly tappable — no pointer-events passthrough needed.
-// reportSwipe raises the column to z-index 3 while the last message is swiped,
-// so the left-sliding bubble paints OVER the avatar (original swipe visual).
-// Sent groups omit this class: sent swipes move the bubble away from the
-// right-side avatar, so the two never overlap regardless of z-index.
+// Received: the message column sits below the sticky avatar (z-index 1 < 2)
+// so the avatar is tappable at rest; reportSwipe raises it to z-index 3 while
+// any bubble is swiping so it paints OVER the avatar.
 .messageColumnAbove {
   position: relative;
   z-index: 1;
-}
-
-// Zero-height sentinel placed at the bottom of .messageColumn. An
-// IntersectionObserver watches it: when it intersects the viewport the group's
-// bottom is visible, so the sticky avatar is at rest (aligned with the last
-// message) and the avatar may slide with a swipe on that last message. When the
-// sentinel is out of view the group is still mid-scroll and the avatar stays put.
-.sentinel {
-  height: 0;
 }

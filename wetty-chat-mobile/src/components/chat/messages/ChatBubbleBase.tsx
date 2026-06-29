@@ -509,7 +509,7 @@ export function ChatBubbleBase({
 
   if (layout === 'bubble-only') {
     return (
-      <div className={`${styles.bubbleOnly} ${isSent ? styles.sent : styles.received}`}>
+      <div className={`${styles.bubbleOnly} ${isSent ? styles.sent : styles.received}`} data-message-row>
         <div className={styles.bubbleWrapper}>
           {bubble}
           {reactionsContent}
@@ -520,7 +520,7 @@ export function ChatBubbleBase({
 
   return (
     <>
-      <div className={`${styles.chatRow} ${isSent ? styles.sent : styles.received}`}>
+      <div className={`${styles.chatRow} ${isSent ? styles.sent : styles.received}`} data-message-row>
         <div className={styles.messageColumn}>
           <div className={styles.avatarBubbleRow}>
             {showAvatar ? (

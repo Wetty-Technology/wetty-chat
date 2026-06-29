@@ -622,19 +622,24 @@ export function ChatVirtualScroll({
   // Highlight the specific message bubble via DOM — avoids prop threading through
   // SenderGroup / ChatMessageRow / ChatBubble. Re-runs on every renderTick so the
   // highlight survives virtual-scroll remounts.
+  //
+  // Coupling note: this reaches into ChatBubble's DOM by querying the stable
+  // `data-message-row` attribute (set by ChatBubbleBase / StickerBubble /
+  // InviteBubble). If those components stop emitting the attribute the highlight
+  // will silently no-op — there is no compile-time link between the two.
   useLayoutEffect(() => {
     if (!highlightedMessageId) return;
 
     const container = containerRef.current;
     if (!container) return;
 
-    const target = container.querySelector(`[data-message-id="${highlightedMessageId}"]`);
+    const target = container.querySelector(`[data-message-id="${CSS.escape(highlightedMessageId)}"]`);
     if (!target) return;
 
-    const chatRow = target.closest('[class*="chatRow"]') ?? target.closest('[class*="bubbleOnly"]');
+    const chatRow = target.closest('[data-message-row]');
     if (!chatRow) return;
-
     const el = chatRow as HTMLElement;
+
     el.style.transition = 'background-color 100ms ease-out';
     el.style.backgroundColor = 'rgba(var(--ion-color-warning-rgb), 0.18)';
 
