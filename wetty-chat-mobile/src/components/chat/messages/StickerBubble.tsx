@@ -106,7 +106,11 @@ export function StickerBubble({
   );
 
   if (layout === 'bubble-only') {
-    return <div className={`${styles.bubbleOnly} ${isSent ? styles.sent : styles.received}`}>{bubble}</div>;
+    return (
+      <div className={`${styles.bubbleOnly} ${isSent ? styles.sent : styles.received}`} data-message-row>
+        {bubble}
+      </div>
+    );
   }
 
   return (
