@@ -18,7 +18,6 @@ class ForwardedMessageCard extends StatelessWidget {
       debugPrint('not a forwarded message');
       return const SizedBox.shrink();
     }
-    debugPrint('forwarded message: ${content.messages}');
 
     final theme = BubbleThemeV2.of(context);
     final l10n = AppLocalizations.of(context)!;

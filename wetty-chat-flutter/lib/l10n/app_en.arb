@@ -262,6 +262,9 @@
   "forwardMessagesAction": "Forward",
   "@forwardMessagesAction": { "description": "Action label for forwarding selected messages" },
 
+  "forwardMessagesFailed": "Failed to send",
+  "@forwardMessagesFailed": { "description": "Inline error shown when forwarding selected messages fails" },
+
   "forwardedMessagesTitle": "Forwarded",
   "@forwardedMessagesTitle": { "description": "Title for forwarded message cards and the forwarded messages viewer" },
 

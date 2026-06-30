@@ -273,6 +273,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get forwardMessagesAction => 'Forward';
 
   @override
+  String get forwardMessagesFailed => 'Failed to send';
+
+  @override
   String get forwardedMessagesTitle => 'Forwarded';
 
   @override

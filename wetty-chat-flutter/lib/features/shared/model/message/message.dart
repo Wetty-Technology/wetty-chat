@@ -1,5 +1,4 @@
 import 'package:chahua/core/api/models/messages_api_models.dart';
-import 'package:flutter/rendering.dart';
 
 import 'attachment.dart';
 import 'mention.dart';

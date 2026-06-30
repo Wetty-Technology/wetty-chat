@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,6 +10,8 @@ import 'package:chahua/features/chat_list/model/chat_list_item.dart';
 import 'package:chahua/features/shared/presentation/app_avatar.dart';
 import 'package:chahua/l10n/app_localizations.dart';
 
+typedef ForwardDestinationCallback = Future<void> Function(int chatId);
+
 class ForwardDestinationPicker extends ConsumerWidget {
   const ForwardDestinationPicker({
     super.key,
@@ -16,7 +20,7 @@ class ForwardDestinationPicker extends ConsumerWidget {
   });
 
   final int sourceChatId;
-  final ValueChanged<int> onForward;
+  final ForwardDestinationCallback onForward;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -49,7 +53,7 @@ class ForwardDestinationPickerContent extends StatefulWidget {
 
   final int sourceChatId;
   final List<ChatListItem> groups;
-  final ValueChanged<int> onForward;
+  final ForwardDestinationCallback onForward;
 
   @override
   State<ForwardDestinationPickerContent> createState() =>
@@ -59,28 +63,51 @@ class ForwardDestinationPickerContent extends StatefulWidget {
 class _ForwardDestinationPickerContentState
     extends State<ForwardDestinationPickerContent> {
   String? _selectedChatId;
+  bool _isForwarding = false;
+  String? _errorMessage;
 
   int? get _selectedDestinationChatId => int.tryParse(_selectedChatId ?? '');
 
   void _selectGroup(ChatListItem group) {
-    if (_isSourceChat(group)) {
+    if (_isForwarding) {
       return;
     }
     setState(() {
       _selectedChatId = group.id;
+      _errorMessage = null;
     });
   }
 
-  void _forward() {
+  Future<void> _forward() async {
     final destinationChatId = _selectedDestinationChatId;
-    if (destinationChatId == null) {
+    if (destinationChatId == null || _isForwarding) {
       return;
     }
-    widget.onForward(destinationChatId);
-  }
-
-  bool _isSourceChat(ChatListItem group) {
-    return group.id == widget.sourceChatId.toString();
+    setState(() {
+      _isForwarding = true;
+      _errorMessage = null;
+    });
+    try {
+      await widget.onForward(destinationChatId);
+      if (!mounted) {
+        return;
+      }
+      Navigator.pop(context);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      final l10n = AppLocalizations.of(context)!;
+      setState(() {
+        _errorMessage = l10n.forwardMessagesFailed;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isForwarding = false;
+        });
+      }
+    }
   }
 
   @override
@@ -93,11 +120,15 @@ class _ForwardDestinationPickerContentState
         children: [
           _Header(
             title: l10n.forwardMessagesAction,
-            canForward: _selectedDestinationChatId != null,
+            canForward: _selectedDestinationChatId != null && !_isForwarding,
+            isForwarding: _isForwarding,
+            hasError: _errorMessage != null,
             onCancel: () => Navigator.pop(context),
-            onForward: _forward,
+            onForward: () => unawaited(_forward()),
           ),
           Container(height: 1, color: context.appColors.separator),
+          if (_errorMessage case final errorMessage?)
+            _ForwardErrorBanner(message: errorMessage),
           Expanded(
             child: _GroupList(
               groups: widget.groups,
@@ -161,12 +192,16 @@ class _Header extends StatelessWidget {
   const _Header({
     required this.title,
     required this.canForward,
+    required this.isForwarding,
+    required this.hasError,
     required this.onCancel,
     required this.onForward,
   });
 
   final String title;
   final bool canForward;
+  final bool isForwarding;
+  final bool hasError;
   final VoidCallback onCancel;
   final VoidCallback onForward;
 
@@ -208,9 +243,59 @@ class _Header extends StatelessWidget {
               onPressed: canForward ? onForward : null,
               child: Align(
                 alignment: Alignment.centerRight,
-                child: Text(l10n.forwardMessagesAction),
+                child: isForwarding
+                    ? const CupertinoActivityIndicator()
+                    : Text(hasError ? l10n.retry : l10n.forwardMessagesAction),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ForwardErrorBanner extends StatelessWidget {
+  const _ForwardErrorBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemRed
+            .resolveFrom(context)
+            .withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: CupertinoColors.systemRed
+              .resolveFrom(context)
+              .withValues(alpha: 0.25),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.error,
+            style: appTextStyle(
+              context,
+              color: CupertinoColors.systemRed.resolveFrom(context),
+              fontSize: AppFontSizes.caption,
+              fontWeight: AppFontWeights.semibold,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            message,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: appMetaTextStyle(context, color: colors.textSecondary),
           ),
         ],
       ),
@@ -252,8 +337,8 @@ class _GroupList extends StatelessWidget {
         return _GroupRow(
           group: group,
           isCurrentChat: isSourceChat,
-          isSelected: !isSourceChat && group.id == selectedChatId,
-          onTap: isSourceChat ? null : () => onSelectGroup(group),
+          isSelected: group.id == selectedChatId,
+          onTap: () => onSelectGroup(group),
         );
       },
     );
@@ -279,55 +364,52 @@ class _GroupRow extends StatelessWidget {
     final colors = context.appColors;
     final name = group.name ?? '';
 
-    return Opacity(
-      opacity: isCurrentChat ? 0.48 : 1,
-      child: CupertinoButton(
-        padding: EdgeInsets.zero,
-        onPressed: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: Row(
-            children: [
-              AppAvatar(
-                name: name,
-                imageUrl: group.avatarUrl,
-                size: 44,
-                memCacheWidth: 96,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: appChatEntryTitleTextStyle(context),
-                    ),
-                    if (isCurrentChat)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Text(
-                          l10n.forwardCurrentChatLabel,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: appMetaTextStyle(context),
-                        ),
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      onPressed: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(
+          children: [
+            AppAvatar(
+              name: name,
+              imageUrl: group.avatarUrl,
+              size: 44,
+              memCacheWidth: 96,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: appChatEntryTitleTextStyle(context),
+                  ),
+                  if (isCurrentChat)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        l10n.forwardCurrentChatLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: appMetaTextStyle(context),
                       ),
-                  ],
-                ),
+                    ),
+                ],
               ),
-              const SizedBox(width: 8),
-              Icon(
-                isSelected
-                    ? CupertinoIcons.checkmark_circle_fill
-                    : CupertinoIcons.circle,
-                size: 22,
-                color: isSelected ? colors.accentPrimary : colors.inactive,
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              isSelected
+                  ? CupertinoIcons.checkmark_circle_fill
+                  : CupertinoIcons.circle,
+              size: 22,
+              color: isSelected ? colors.accentPrimary : colors.inactive,
+            ),
+          ],
         ),
       ),
     );

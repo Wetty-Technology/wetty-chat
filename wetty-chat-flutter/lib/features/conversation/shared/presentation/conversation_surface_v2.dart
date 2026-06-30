@@ -217,34 +217,23 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
 
   Future<void> _forwardSelectedMessages({
     required int destinationChatId,
-    bool closePickerOnSuccess = false,
   }) async {
     final messageIds = _selectedForwardMessageIds.toList(growable: false);
     if (messageIds.isEmpty) {
       return;
     }
-    try {
-      final response = await ref
-          .read(messageApiServiceV2Provider)
-          .forwardMessages(
-            sourceChatId: widget.identity.chatId,
-            destinationChatId: destinationChatId,
-            messageIds: messageIds,
-          );
-      log('forward messages response: $response', name: 'ConversationForward');
-      if (!mounted) {
-        return;
-      }
-      if (closePickerOnSuccess) {
-        Navigator.pop(context);
-      }
-      _clearForwardSelection();
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-      _showErrorDialog('$error');
+    final response = await ref
+        .read(messageApiServiceV2Provider)
+        .forwardMessages(
+          sourceChatId: widget.identity.chatId,
+          destinationChatId: destinationChatId,
+          messageIds: messageIds,
+        );
+    log('forward messages response: $response', name: 'ConversationForward');
+    if (!mounted) {
+      return;
     }
+    _clearForwardSelection();
   }
 
   void _openForwardDestinationPicker() {
@@ -255,12 +244,8 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
       context: context,
       builder: (context) => ForwardDestinationPicker(
         sourceChatId: widget.identity.chatId,
-        onForward: (destinationChatId) => unawaited(
-          _forwardSelectedMessages(
-            destinationChatId: destinationChatId,
-            closePickerOnSuccess: true,
-          ),
-        ),
+        onForward: (destinationChatId) =>
+            _forwardSelectedMessages(destinationChatId: destinationChatId),
       ),
     );
   }

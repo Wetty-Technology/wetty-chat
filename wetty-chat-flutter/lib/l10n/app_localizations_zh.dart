@@ -270,6 +270,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get forwardMessagesAction => '转发';
 
   @override
+  String get forwardMessagesFailed => '发送失败';
+
+  @override
   String get forwardedMessagesTitle => '转发消息';
 
   @override
@@ -808,6 +811,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get forwardMessagesAction => '轉發';
+
+  @override
+  String get forwardMessagesFailed => '傳送失敗';
 
   @override
   String get forwardedMessagesTitle => '轉發訊息';

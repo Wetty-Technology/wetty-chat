@@ -621,6 +621,12 @@ abstract class AppLocalizations {
   /// **'Forward'**
   String get forwardMessagesAction;
 
+  /// Inline error shown when forwarding selected messages fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to send'**
+  String get forwardMessagesFailed;
+
   /// Title for forwarded message cards and the forwarded messages viewer
   ///
   /// In en, this message translates to:
