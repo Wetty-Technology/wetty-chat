@@ -146,7 +146,7 @@ async fn mark_thread_read(
         }));
     }
 
-    let _ = thread_svc::ensure_thread_user_state(conn, chat_id, thread_root_id, uid)?;
+    let _ = thread_svc::ensure_thread_user_state(conn, chat_id, thread_root_id, uid, false)?;
     let read_state =
         thread_svc::mark_thread_read(conn, chat_id, thread_root_id, uid, body.message_id)?;
 
@@ -261,7 +261,7 @@ async fn subscribe_thread(
         return Err(AppError::NotFound("Thread root message not found"));
     }
 
-    let inserted = thread_svc::subscribe_to_thread(conn, chat_id, thread_root_id, uid)?;
+    let inserted = thread_svc::ensure_thread_subscription(conn, chat_id, thread_root_id, uid)?;
     if inserted {
         thread_svc::broadcast_thread_update_to_uids(
             conn,

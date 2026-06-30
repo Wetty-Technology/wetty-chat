@@ -707,13 +707,15 @@ pub(super) async fn post_thread_message(
         crate::services::threads::ensure_thread_subscription(conn, chat_id, thread_id, uid)?;
         crate::services::threads::mark_thread_as_read(conn, chat_id, thread_id, uid, response.id)?;
 
-        // Auto-subscribe the root message author
+        // Ensure the root author has an initial participant row without
+        // overriding any existing subscription or archive preference.
         if root_msg.sender_uid != uid {
-            crate::services::threads::ensure_thread_subscription(
+            crate::services::threads::ensure_thread_user_state(
                 conn,
                 chat_id,
                 thread_id,
                 root_msg.sender_uid,
+                true,
             )?;
         }
 

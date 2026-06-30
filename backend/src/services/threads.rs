@@ -22,47 +22,43 @@ use crate::services::ws_registry::ConnectionRegistry;
 use crate::AppState;
 use std::sync::Arc;
 
-/// Insert a subscription if one doesn't exist (auto-subscribe on participation).
-pub fn ensure_thread_subscription(
-    conn: &mut PgConnection,
-    chat_id: i64,
-    thread_root_id: i64,
-    uid: i32,
-) -> Result<bool, diesel::result::Error> {
-    let inserted = diesel::insert_into(thread_user_states::table)
-        .values((
-            thread_user_states::chat_id.eq(chat_id),
-            thread_user_states::thread_root_id.eq(thread_root_id),
-            thread_user_states::uid.eq(uid),
-            thread_user_states::subscribed_at.eq(Utc::now()),
-            thread_user_states::archived.eq(false),
-            thread_user_states::subscribed.eq(true),
-        ))
-        .on_conflict_do_nothing()
-        .execute(conn)?;
-    Ok(inserted > 0)
-}
-/// Ensure a row exists for read-position tracking (subscribed=false, for browsing users).
+/// Ensure a thread-user state row exists. This is an insert-only helper:
+/// conflicts preserve the user's current subscription, archive, and read state.
+///
+/// Expected behavior:
+/// - browsing/read tracking inserts `subscribed=false, archived=false`;
+/// - first participant tracking inserts `subscribed=true, archived=false`;
+/// - existing rows are never modified.
 pub fn ensure_thread_user_state(
     conn: &mut PgConnection,
     chat_id: i64,
     thread_root_id: i64,
     uid: i32,
+    subscribed: bool,
 ) -> Result<bool, diesel::result::Error> {
+    let subscribed_at = if subscribed {
+        Utc::now()
+    } else {
+        DateTime::UNIX_EPOCH
+    };
     let inserted = diesel::insert_into(thread_user_states::table)
         .values((
             thread_user_states::chat_id.eq(chat_id),
             thread_user_states::thread_root_id.eq(thread_root_id),
             thread_user_states::uid.eq(uid),
-            thread_user_states::subscribed_at.eq(DateTime::UNIX_EPOCH),
+            thread_user_states::subscribed_at.eq(subscribed_at),
             thread_user_states::archived.eq(false),
-            thread_user_states::subscribed.eq(false),
+            thread_user_states::subscribed.eq(subscribed),
         ))
         .on_conflict_do_nothing()
         .execute(conn)?;
     Ok(inserted > 0)
 }
-pub fn subscribe_to_thread(
+
+/// Ensure the user is subscribed to the thread. This may create a row or flip
+/// `subscribed` back to true, but archive state is owned only by archive and
+/// unarchive actions.
+pub fn ensure_thread_subscription(
     conn: &mut PgConnection,
     chat_id: i64,
     thread_root_id: i64,
@@ -70,12 +66,11 @@ pub fn subscribe_to_thread(
 ) -> Result<bool, diesel::result::Error> {
     let existing = get_subscription_state(conn, chat_id, thread_root_id, uid)?;
 
-    if let Some((archived, subscribed)) = existing {
-        if !archived && subscribed {
+    if let Some((_, subscribed)) = existing {
+        if subscribed {
             return Ok(false);
         }
 
-        // Either archived or unsubscribed — re-activate
         let updated = diesel::update(
             thread_user_states::table.filter(
                 thread_user_states::chat_id
@@ -86,7 +81,6 @@ pub fn subscribe_to_thread(
         )
         .set((
             thread_user_states::subscribed_at.eq(Utc::now()),
-            thread_user_states::archived.eq(false),
             thread_user_states::subscribed.eq(true),
         ))
         .execute(conn)?;
