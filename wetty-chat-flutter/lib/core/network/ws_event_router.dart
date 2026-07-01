@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 
@@ -171,6 +173,7 @@ final wsEventRouterProvider = Provider<void>((ref) {
       ref.read(conversationTimelineV2RealtimeApplierProvider).apply(event);
 
       // Handle how message event could affect the chat list
+      log("websocket event: $event", name: "ws_event_router");
       applyListProjectionEvent(event);
       applyAuxiliaryEvent(event);
     });

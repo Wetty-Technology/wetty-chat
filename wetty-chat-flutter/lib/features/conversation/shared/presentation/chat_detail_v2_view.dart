@@ -9,8 +9,9 @@ import 'package:go_router/go_router.dart';
 
 import 'package:chahua/app/routing/route_names.dart';
 import 'package:chahua/features/chat_list/presentation/chat_workspace_layout_scope.dart';
+import 'package:chahua/l10n/app_localizations.dart';
 
-class ChatDetailV2Page extends StatelessWidget {
+class ChatDetailV2Page extends StatefulWidget {
   const ChatDetailV2Page({
     super.key,
     required this.chatId,
@@ -21,23 +22,60 @@ class ChatDetailV2Page extends StatelessWidget {
   final LaunchRequest launchRequest;
 
   @override
+  State<ChatDetailV2Page> createState() => _ChatDetailV2PageState();
+}
+
+class _ChatDetailV2PageState extends State<ChatDetailV2Page> {
+  ForwardSelectionNavigationState? _forwardSelectionNavigationState;
+
+  void _handleForwardSelectionChanged(
+    ForwardSelectionNavigationState? selectionState,
+  ) {
+    if (!mounted) {
+      return;
+    }
+    if (_forwardSelectionNavigationState == selectionState) {
+      return;
+    }
+    setState(() {
+      _forwardSelectionNavigationState = selectionState;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isSplitLayout = ChatWorkspaceLayoutScope.isSplitLayout(context);
-    final ConversationIdentity identity = (chatId: chatId, threadRootId: null);
+    final ConversationIdentity identity = (
+      chatId: widget.chatId,
+      threadRootId: null,
+    );
+    final selectionState = _forwardSelectionNavigationState;
     return CupertinoPageScaffold(
       resizeToAvoidBottomInset: false,
       navigationBar: CupertinoNavigationBar(
-        automaticallyImplyLeading: !isSplitLayout,
-        middle: _ChatDetailTitle(chatId: chatId),
-        trailing: _ChatDetailActions(chatId: chatId),
+        automaticallyImplyLeading: selectionState == null && !isSplitLayout,
+        leading: selectionState == null
+            ? null
+            : _ForwardSelectionCancelButton(onPressed: selectionState.onCancel),
+        middle: selectionState == null
+            ? _ChatDetailTitle(chatId: widget.chatId)
+            : _ForwardSelectionTitle(
+                selectedCount: selectionState.selectedCount,
+              ),
+        trailing: selectionState == null
+            ? _ChatDetailActions(chatId: widget.chatId)
+            : _ForwardSelectionForwardButton(
+                onPressed: selectionState.onForward,
+              ),
       ),
       child: SafeArea(
         bottom: false,
         child: ConversationSurfaceV2(
           identity: identity,
-          launchRequest: launchRequest,
+          launchRequest: widget.launchRequest,
           onOpenThread: (message) => _openThread(context, message),
           onStartThread: (message) => _startThread(context, message),
+          onForwardSelectionChanged: _handleForwardSelectionChanged,
         ),
       ),
     );
@@ -48,7 +86,9 @@ class ChatDetailV2Page extends StatelessWidget {
     if (threadRootId == null) {
       return;
     }
-    context.push(AppRoutes.nestedThreadDetail('$chatId', '$threadRootId'));
+    context.push(
+      AppRoutes.nestedThreadDetail('${widget.chatId}', '$threadRootId'),
+    );
   }
 
   void _startThread(BuildContext context, ConversationMessageV2 message) {
@@ -56,7 +96,53 @@ class ChatDetailV2Page extends StatelessWidget {
     if (threadRootId == null) {
       return;
     }
-    context.push(AppRoutes.nestedNewThread('$chatId', '$threadRootId'));
+    context.push(
+      AppRoutes.nestedNewThread('${widget.chatId}', '$threadRootId'),
+    );
+  }
+}
+
+class _ForwardSelectionCancelButton extends StatelessWidget {
+  const _ForwardSelectionCancelButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      onPressed: onPressed,
+      child: Text(l10n.cancel),
+    );
+  }
+}
+
+class _ForwardSelectionTitle extends StatelessWidget {
+  const _ForwardSelectionTitle({required this.selectedCount});
+
+  final int selectedCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Text(l10n.forwardSelectedCount(selectedCount));
+  }
+}
+
+class _ForwardSelectionForwardButton extends StatelessWidget {
+  const _ForwardSelectionForwardButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      onPressed: onPressed,
+      child: Text(l10n.forwardMessagesAction),
+    );
   }
 }
 

@@ -36,6 +36,7 @@ class ConversationSurfaceV2 extends ConsumerStatefulWidget {
     this.onOpenThread,
     this.onStartThread,
     this.onMessageSent,
+    this.onForwardSelectionChanged,
   });
 
   final ConversationIdentity identity;
@@ -43,10 +44,24 @@ class ConversationSurfaceV2 extends ConsumerStatefulWidget {
   final void Function(ConversationMessageV2 message)? onOpenThread;
   final void Function(ConversationMessageV2 message)? onStartThread;
   final Future<void> Function()? onMessageSent;
+  final ValueChanged<ForwardSelectionNavigationState?>?
+  onForwardSelectionChanged;
 
   @override
   ConsumerState<ConversationSurfaceV2> createState() =>
       _ConversationSurfaceV2State();
+}
+
+class ForwardSelectionNavigationState {
+  const ForwardSelectionNavigationState({
+    required this.selectedCount,
+    required this.onCancel,
+    required this.onForward,
+  });
+
+  final int selectedCount;
+  final VoidCallback onCancel;
+  final VoidCallback onForward;
 }
 
 class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
@@ -70,6 +85,24 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
 
   bool get _isForwardSelectionMode => _selectedForwardMessageIds.isNotEmpty;
 
+  void _notifyForwardSelectionChanged() {
+    final callback = widget.onForwardSelectionChanged;
+    if (callback == null) {
+      return;
+    }
+    if (_selectedForwardMessageIds.isEmpty) {
+      callback(null);
+      return;
+    }
+    callback(
+      ForwardSelectionNavigationState(
+        selectedCount: _selectedForwardMessageIds.length,
+        onCancel: _clearForwardSelection,
+        onForward: _openForwardDestinationPicker,
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -86,11 +119,17 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
     _refreshCoordinator.unregisterConversationRecovery(oldWidget.identity);
     _visibleMessages = null;
     _selectedForwardMessageIds.clear();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _notifyForwardSelectionChanged();
+      }
+    });
     _registerRecovery();
   }
 
   @override
   void dispose() {
+    widget.onForwardSelectionChanged?.call(null);
     _refreshCoordinator.unregisterConversationRecovery(widget.identity);
     super.dispose();
   }
@@ -192,6 +231,7 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
         ..clear()
         ..add(messageId);
     });
+    _notifyForwardSelectionChanged();
   }
 
   void _toggleForwardMessageSelection(ConversationMessageV2 message) {
@@ -204,6 +244,7 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
         _selectedForwardMessageIds.add(messageId);
       }
     });
+    _notifyForwardSelectionChanged();
   }
 
   void _clearForwardSelection() {
@@ -213,6 +254,7 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
     setState(() {
       _selectedForwardMessageIds.clear();
     });
+    _notifyForwardSelectionChanged();
   }
 
   Future<void> _forwardSelectedMessages({
@@ -581,49 +623,6 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
     return pins.last;
   }
 
-  Widget _buildForwardSelectionBar() {
-    final l10n = AppLocalizations.of(context)!;
-    final colors = context.appColors;
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.backgroundSecondary,
-        border: Border(
-          top: BorderSide(color: colors.separator),
-          bottom: BorderSide(color: colors.separator),
-        ),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: SafeArea(
-        top: false,
-        bottom: false,
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                l10n.forwardSelectedCount(_selectedForwardMessageIds.length),
-                style: appBodyTextStyle(
-                  context,
-                  fontWeight: AppFontWeights.semibold,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            CupertinoButton(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              onPressed: _clearForwardSelection,
-              child: Text(l10n.cancel),
-            ),
-            CupertinoButton.filled(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              onPressed: _openForwardDestinationPicker,
-              child: Text(l10n.forwardMessagesAction),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   void _openPinnedMessage(PinnedMessage pin) {
     final messageId = pin.messageId;
     if (messageId == null) {
@@ -724,7 +723,6 @@ class _ConversationSurfaceV2State extends ConsumerState<ConversationSurfaceV2> {
                     ),
                   ),
                 ),
-                if (_isForwardSelectionMode) _buildForwardSelectionBar(),
                 ConversationComposeV2(
                   key: _composeKey,
                   identity: widget.identity,
