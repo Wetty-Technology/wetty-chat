@@ -5,8 +5,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter/widgets.dart';
-import 'package:path/path.dart' as path;
-import 'package:path_provider/path_provider.dart';
+
+import 'app_cache_directory.dart';
+import 'app_cache_file_system.dart';
 
 class ImageCacheService {
   ImageCacheService({
@@ -20,6 +21,10 @@ class ImageCacheService {
                cacheNamespace,
                stalePeriod: stalePeriod,
                maxNrOfCacheObjects: maxNrOfCacheObjects,
+               repo: CacheObjectProvider(
+                 path: appCacheMetadataDatabasePath(cacheNamespace),
+               ),
+               fileSystem: AppCacheFileSystem(cacheNamespace),
              ),
            );
 
@@ -62,14 +67,7 @@ class ImageCacheService {
   }
 
   Future<Directory> _cacheDirectory() async {
-    final temporaryDirectory = await getTemporaryDirectory();
-    final directory = Directory(
-      path.join(temporaryDirectory.path, _cacheNamespace),
-    );
-    if (!await directory.exists()) {
-      await directory.create(recursive: true);
-    }
-    return directory;
+    return resolveAppCacheDirectory(_cacheNamespace);
   }
 
   Future<int> _directorySize(Directory directory) async {

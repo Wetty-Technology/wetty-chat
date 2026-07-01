@@ -173,7 +173,6 @@ final wsEventRouterProvider = Provider<void>((ref) {
       ref.read(conversationTimelineV2RealtimeApplierProvider).apply(event);
 
       // Handle how message event could affect the chat list
-      log("websocket event: $event", name: "ws_event_router");
       applyListProjectionEvent(event);
       applyAuxiliaryEvent(event);
     });

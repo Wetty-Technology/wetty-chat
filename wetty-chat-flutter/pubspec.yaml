@@ -42,6 +42,7 @@ dependencies:
   video_thumbnail: ^0.5.6
   gal: ^2.3.2
   emoji_picker_flutter: ^4.4.0
+  file: ^7.0.1
 
 dev_dependencies:
   build_runner: ^2.8.0
