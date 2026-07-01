@@ -268,6 +268,9 @@
   "forwardedMessagesTitle": "Forwarded",
   "@forwardedMessagesTitle": { "description": "Title for forwarded message cards and the forwarded messages viewer" },
 
+  "forwardedChatHistoryTitle": "Chat History",
+  "@forwardedChatHistoryTitle": { "description": "Header shown above the preview lines in a forwarded chat history card" },
+
   "forwardedMessagesCount": "{count, plural, =0{No messages} =1{1 message} other{{count} messages}}",
   "@forwardedMessagesCount": {
     "description": "Label showing how many messages are inside a forwarded message card",
@@ -275,6 +278,17 @@
       "count": {
         "type": "int",
         "example": "2"
+      }
+    }
+  },
+
+  "forwardedMessagesFooterCount": "{count, plural, =0{Forwarded no messages} =1{Forwarded 1 message} other{Forwarded {count} messages}}",
+  "@forwardedMessagesFooterCount": {
+    "description": "Footer label showing how many messages are inside a forwarded chat history card",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "5"
       }
     }
   },

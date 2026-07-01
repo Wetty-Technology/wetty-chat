@@ -279,6 +279,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get forwardedMessagesTitle => 'Forwarded';
 
   @override
+  String get forwardedChatHistoryTitle => 'Chat History';
+
+  @override
   String forwardedMessagesCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -286,6 +289,18 @@ class AppLocalizationsEn extends AppLocalizations {
       other: '$count messages',
       one: '1 message',
       zero: 'No messages',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String forwardedMessagesFooterCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Forwarded $count messages',
+      one: 'Forwarded 1 message',
+      zero: 'Forwarded no messages',
     );
     return '$_temp0';
   }

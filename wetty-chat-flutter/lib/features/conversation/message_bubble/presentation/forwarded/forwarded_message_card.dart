@@ -35,55 +35,18 @@ class ForwardedMessageCard extends StatelessWidget {
               color: theme.metaColor.withValues(alpha: theme.metaColor.a * 0.2),
             ),
           ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  CupertinoIcons.arrowshape_turn_up_right,
-                  size: 20,
-                  color: theme.metaColor,
-                ),
-                const SizedBox(width: 10),
-                Flexible(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        l10n.forwardedMessagesTitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: appBubbleTextStyle(
-                          context,
-                          color: theme.textColor,
-                          fontSize: AppFontSizes.body,
-                          fontWeight: AppFontWeights.semibold,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        l10n.forwardedMessagesCount(content.messages.length),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: appBubbleMetaTextStyle(
-                          context,
-                          color: theme.metaColor,
-                          fontSize: AppFontSizes.caption,
-                          fontWeight: AppFontWeights.regular,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Icon(
-                  CupertinoIcons.chevron_forward,
-                  size: 18,
-                  color: theme.metaColor,
-                ),
-              ],
+          child: SizedBox(
+            width: (theme.maxBubbleWidth * 0.4).clamp(
+              220.0,
+              theme.maxBubbleWidth,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: _ForwardedHistoryPreview(
+                messages: content.messages,
+                theme: theme,
+                l10n: l10n,
+              ),
             ),
           ),
         ),
@@ -101,6 +64,147 @@ class ForwardedMessageCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ForwardedHistoryPreview extends StatelessWidget {
+  const _ForwardedHistoryPreview({
+    required this.messages,
+    required this.theme,
+    required this.l10n,
+  });
+
+  static const int _previewLimit = 3;
+
+  final List<ForwardedMessageSnapshot> messages;
+  final BubbleThemeV2 theme;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final previewMessages = messages.take(_previewLimit);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                l10n.forwardedChatHistoryTitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: appBubbleTextStyle(
+                  context,
+                  color: theme.textColor,
+                  fontSize: AppFontSizes.body,
+                  fontWeight: AppFontWeights.semibold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              for (final message in previewMessages) ...[
+                _ForwardedPreviewLine(
+                  message: message,
+                  theme: theme,
+                  l10n: l10n,
+                ),
+                const SizedBox(height: 4),
+              ],
+              Text(
+                l10n.forwardedMessagesFooterCount(messages.length),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: appBubbleMetaTextStyle(
+                  context,
+                  color: theme.metaColor,
+                  fontSize: AppFontSizes.caption,
+                  fontWeight: AppFontWeights.regular,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        Icon(CupertinoIcons.chevron_forward, size: 18, color: theme.metaColor),
+      ],
+    );
+  }
+}
+
+class _ForwardedPreviewLine extends StatelessWidget {
+  const _ForwardedPreviewLine({
+    required this.message,
+    required this.theme,
+    required this.l10n,
+  });
+
+  final ForwardedMessageSnapshot message;
+  final BubbleThemeV2 theme;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final senderName = _senderName(message.sender, l10n);
+    final preview = _messagePreview(message.content, l10n);
+    return Text(
+      '$senderName: $preview',
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: appBubbleTextStyle(
+        context,
+        color: theme.textColor,
+        fontSize: AppFontSizes.body,
+        fontWeight: AppFontWeights.regular,
+      ),
+    );
+  }
+}
+
+String _senderName(User sender, AppLocalizations l10n) {
+  final name = sender.name?.trim();
+  if (name != null && name.isNotEmpty) {
+    return name;
+  }
+  return l10n.userFallbackName(sender.uid);
+}
+
+String _messagePreview(MessageContent content, AppLocalizations l10n) {
+  return switch (content) {
+    TextMessageContent(:final text, :final attachments, :final mentions) =>
+      formatMessagePreview(
+        message: text,
+        messageType: 'text',
+        attachments: attachments,
+        mentions: mentions,
+        l10n: l10n,
+      ),
+    AudioMessageContent(:final text, :final mentions) => formatMessagePreview(
+      message: text,
+      messageType: 'audio',
+      mentions: mentions,
+      l10n: l10n,
+    ),
+    StickerMessageContent(:final sticker) => formatMessagePreview(
+      messageType: 'sticker',
+      sticker: sticker,
+      l10n: l10n,
+    ),
+    InviteMessageContent(:final text, :final mentions) => formatMessagePreview(
+      message: text,
+      messageType: 'invite',
+      mentions: mentions,
+      l10n: l10n,
+    ),
+    ForwardedMessageContent() => formatMessagePreview(
+      messageType: 'forwarded',
+      l10n: l10n,
+    ),
+    SystemMessageContent(:final text) => formatMessagePreview(
+      message: text,
+      messageType: 'system',
+      l10n: l10n,
+    ),
+  };
 }
 
 class ForwardedMessagesViewer extends StatefulWidget {

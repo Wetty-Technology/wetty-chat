@@ -14,14 +14,19 @@ void main() {
   ) async {
     await _pumpRow(tester, MessageRowV2(message: _forwardedMessage()));
 
-    expect(find.text('Forwarded'), findsOneWidget);
-    expect(find.text('2 messages'), findsOneWidget);
+    expect(find.text('Chat History'), findsOneWidget);
+    expect(find.text('Bob: First forwarded message'), findsOneWidget);
+    expect(find.text('Carol: [Image]'), findsOneWidget);
+    expect(find.text('Alice: See you tomorrow'), findsOneWidget);
+    expect(find.text('Dave: Hidden fourth message'), findsNothing);
+    expect(find.text('Forwarded 4 messages'), findsOneWidget);
 
-    await tester.tap(find.text('Forwarded'));
-    await tester.pumpAndSettle();
+    await tester.tap(find.text('Chat History'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.byType(ForwardedMessagesViewer), findsOneWidget);
-    expect(find.byType(MessageRowV2), findsNWidgets(2));
+    expect(find.byType(MessageRowV2), findsWidgets);
   });
 }
 
@@ -61,7 +66,32 @@ ConversationMessageV2 _forwardedMessage() {
           originalChatId: 1,
           sender: const User(uid: 3, name: 'Carol'),
           originalCreatedAt: DateTime(2026, 6, 26, 11, 1),
-          content: const TextMessageContent(text: 'Second forwarded message'),
+          content: const TextMessageContent(
+            text: '',
+            attachments: [
+              AttachmentItem(
+                id: 'image-1',
+                url: 'https://example.com/image.png',
+                kind: 'image/png',
+                size: 120,
+                fileName: 'image.png',
+              ),
+            ],
+          ),
+        ),
+        ForwardedMessageSnapshot(
+          originalMessageId: 12,
+          originalChatId: 1,
+          sender: const User(uid: 1, name: 'Alice'),
+          originalCreatedAt: DateTime(2026, 6, 26, 11, 2),
+          content: const TextMessageContent(text: 'See you tomorrow'),
+        ),
+        ForwardedMessageSnapshot(
+          originalMessageId: 13,
+          originalChatId: 1,
+          sender: const User(uid: 4, name: 'Dave'),
+          originalCreatedAt: DateTime(2026, 6, 26, 11, 3),
+          content: const TextMessageContent(text: 'Hidden fourth message'),
         ),
       ],
     ),

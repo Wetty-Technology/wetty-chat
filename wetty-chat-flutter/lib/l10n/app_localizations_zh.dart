@@ -276,8 +276,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get forwardedMessagesTitle => '转发消息';
 
   @override
+  String get forwardedChatHistoryTitle => '聊天记录';
+
+  @override
   String forwardedMessagesCount(int count) {
     return '包含 $count 条消息';
+  }
+
+  @override
+  String forwardedMessagesFooterCount(int count) {
+    return '转发了 $count 条消息';
   }
 
   @override
@@ -819,8 +827,16 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get forwardedMessagesTitle => '轉發訊息';
 
   @override
+  String get forwardedChatHistoryTitle => '聊天記錄';
+
+  @override
   String forwardedMessagesCount(int count) {
     return '包含 $count 則訊息';
+  }
+
+  @override
+  String forwardedMessagesFooterCount(int count) {
+    return '轉發了 $count 則訊息';
   }
 
   @override

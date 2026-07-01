@@ -633,11 +633,23 @@ abstract class AppLocalizations {
   /// **'Forwarded'**
   String get forwardedMessagesTitle;
 
+  /// Header shown above the preview lines in a forwarded chat history card
+  ///
+  /// In en, this message translates to:
+  /// **'Chat History'**
+  String get forwardedChatHistoryTitle;
+
   /// Label showing how many messages are inside a forwarded message card
   ///
   /// In en, this message translates to:
   /// **'{count, plural, =0{No messages} =1{1 message} other{{count} messages}}'**
   String forwardedMessagesCount(int count);
+
+  /// Footer label showing how many messages are inside a forwarded chat history card
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Forwarded no messages} =1{Forwarded 1 message} other{Forwarded {count} messages}}'**
+  String forwardedMessagesFooterCount(int count);
 
   /// Label for the disabled current chat row in the forward destination picker
   ///
